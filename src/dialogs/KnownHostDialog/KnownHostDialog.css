@@ -1,0 +1,8 @@
+.KnownHostDialog .MuiDialog-paper {
+  width: 100%;
+  max-width: 420px;
+}
+
+.dialog-content__subtitle.MuiTypography-root {
+  margin-bottom: 20px;
+}

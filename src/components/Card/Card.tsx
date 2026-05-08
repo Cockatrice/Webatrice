@@ -1,0 +1,19 @@
+import { CardDTO } from '@app/services';
+
+import './Card.css';
+
+interface CardProps {
+  card: CardDTO;
+}
+
+const Card = ({ card }: CardProps) => {
+  if (!card) {
+    return null;
+  }
+
+  const src = `https://api.scryfall.com/cards/${card.identifiers?.scryfallId}?format=image`;
+
+  return <img className="card" src={src} alt={card.name} />;
+};
+
+export default Card;

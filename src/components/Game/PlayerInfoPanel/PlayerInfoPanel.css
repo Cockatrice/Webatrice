@@ -1,0 +1,179 @@
+.player-info-panel {
+  width: 150px;
+  height: 100%;
+  padding: 8px 6px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  background: #0a1225;
+  border-right: 1px solid #1a2b52;
+  color: #e5ecf7;
+  font-size: 12px;
+  overflow: hidden;
+}
+
+.player-info-panel--empty {
+  opacity: 0.4;
+}
+
+.player-info-panel__header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #1a2b52;
+}
+
+.player-info-panel__host-badge {
+  color: var(--color-highlight-yellow);
+  font-size: 13px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.player-info-panel__name {
+  flex: 1;
+  font-weight: 700;
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Life lives in the header slot where ping used to be. Rendered through
+   the shared counter-circle markup so its UL wrapper is cosmetic-only. */
+.player-info-panel__life-slot {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.player-info-panel__flag {
+  align-self: flex-start;
+  padding: 1px 6px;
+  background: #6a2626;
+  color: #ffdede;
+  font-size: 10px;
+  font-weight: 600;
+  border-radius: 3px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.player-info-panel__flag--ready {
+  background: #22562b;
+  color: #dfffe3;
+}
+
+/* Two columns: counters (narrow, left-aligned) and zones (Deck/Graveyard/
+   Exile rendered as 3 vertically-stacked thumbnails). */
+.player-info-panel__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  gap: 6px;
+}
+
+/* Counter column runs full panel height; rows of equal share keep the
+   first counter flush to the top (no drift between opponent and local
+   panels) and let circles scale to fit — or shrink when there are many. */
+.player-info-panel__counters {
+  list-style: none;
+  padding: 2px 0;
+  margin: 0;
+  min-height: 0;
+  display: grid;
+  grid-auto-rows: minmax(0, 1fr);
+  justify-items: start;
+  align-content: stretch;
+  gap: 3px;
+}
+
+.player-info-panel__counter {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 1;
+  height: 100%;
+  width: auto;
+  max-width: 30px;
+  max-height: 30px;
+  min-width: 18px;
+  min-height: 18px;
+  box-sizing: border-box;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.4);
+  user-select: none;
+}
+
+/* The Life pill sits in the fixed-height header slot, outside the grid,
+   so it keeps a constant size regardless of counter count. */
+.player-info-panel__counter--life {
+  width: 32px;
+  height: 32px;
+  max-width: none;
+  max-height: none;
+  aspect-ratio: auto;
+  border-width: 2px;
+}
+
+.player-info-panel__counter[role='button'] {
+  cursor: pointer;
+}
+
+.player-info-panel__counter[role='button']:hover {
+  border-color: rgba(255, 255, 255, 0.7);
+}
+
+.player-info-panel__counter-value {
+  color: #ffffff;
+  font-weight: 800;
+  font-size: 12px;
+  line-height: 1;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.player-info-panel__counter--life .player-info-panel__counter-value {
+  font-size: 13px;
+}
+
+/* Zones column: 4 rows (Deck, Hand, Graveyard, Exile), each row gets an
+   equal share of the remaining body height. minmax(0, 1fr) + min-height on
+   the column lets each ZoneStack thumb shrink when the rail is short
+   instead of overflowing the panel. All four zones render as landscape
+   thumbs, matching desktop's info panel. */
+.player-info-panel__zones {
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+  display: grid;
+  grid-template-rows: repeat(4, minmax(0, 1fr));
+  justify-items: center;
+  align-items: center;
+  gap: 4px;
+}
+
+.player-info-panel__new-counter {
+  margin-top: 8px;
+  padding: 3px 6px;
+  background: transparent;
+  border: 1px dashed #355090;
+  color: #8ab0ff;
+  font: inherit;
+  font-size: 11px;
+  border-radius: 3px;
+  cursor: pointer;
+  text-align: center;
+}
+
+.player-info-panel__new-counter:hover {
+  background: rgba(138, 176, 255, 0.08);
+  color: #b8d0ff;
+}
