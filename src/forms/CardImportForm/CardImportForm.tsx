@@ -1,5 +1,4 @@
-import { ReactNode } from 'react';
-import { Form, Field } from 'react-final-form';
+import { DragEvent, KeyboardEvent, ReactNode, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import Button from '@mui/material/Button';
@@ -8,15 +7,12 @@ import Step from '@mui/material/Step';
 import StepLabel from '@mui/material/StepLabel';
 import CircularProgress from '@mui/material/CircularProgress';
 
-import { InputField, VirtualList } from '@app/components';
+import { VirtualList } from '@app/components';
 import type { App } from '@app/types';
 
 import { useCardImportForm } from './useCardImportForm';
 
 import './CardImportForm.css';
-
-const CARDS_URL = 'https://www.mtgjson.com/api/v5/AllPrintings.json';
-const TOKENS_URL = 'https://raw.githubusercontent.com/Cockatrice/Magic-Token/master/tokens.xml';
 
 interface CardImportFormProps {
   onSubmit: () => void;
@@ -45,30 +41,140 @@ const ErrorMessage = ({ error }: ErrorMessageProps): ReactNode => (
 interface CardsImportedProps {
   cards: App.Card[];
   sets: App.Set[];
+  tokens?: App.Token[];
+  formats?: App.Format[];
+  acceptedFiles?: string[];
+  skippedFiles?: string[];
 }
 
-const CardsImported = ({ cards, sets }: CardsImportedProps) => {
+const CardsImported = ({ cards, sets, tokens, formats, acceptedFiles, skippedFiles }: CardsImportedProps) => {
   const { t } = useTranslation();
   const items: ReactNode[] = [
     (
       <div key='import-summary'>
-        <strong>{t('CardImportForm.message.importSummary', { count: cards.length })}</strong>
+        <strong>{t('CardImportForm.message.importSummary', {
+          cards: cards.length,
+          sets: sets.length,
+          tokens: tokens?.length ?? 0,
+          formats: formats?.length ?? 0,
+        })}</strong>
       </div>
     ),
     (<div key='spacer' className='spacer' />),
     ...sets.map(set => (
-      <div key={set.code ?? set.name}>
-        {t('CardImportForm.message.setSummary', { name: set.name, count: set.cards.length })}
+      <div key={set.name?.value ?? set.longname?.value}>
+        {set.longname?.value ?? set.name?.value}
       </div>
     )),
   ];
 
   return (
-    <div className='card-import-list'>
-      <VirtualList
-        items={items}
-        size={15}
+    <div>
+      <div className='card-import-list'>
+        <VirtualList items={items} size={15} />
+      </div>
+      {(acceptedFiles?.length || skippedFiles?.length) ? (
+        <div className='cardImportForm-fileList'>
+          {acceptedFiles?.length ? (
+            <div>
+              {t('CardImportForm.message.acceptedFiles', { files: acceptedFiles.join(', ') })}
+            </div>
+          ) : null}
+          {skippedFiles?.length ? (
+            <div className='skipped'>
+              {t('CardImportForm.message.skippedFiles', { files: skippedFiles.join(', ') })}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
+  );
+};
+
+interface DropZoneProps {
+  onFiles: (files: File[]) => void;
+  disabled?: boolean;
+}
+
+const DropZone = ({ onFiles, disabled }: DropZoneProps) => {
+  const { t } = useTranslation();
+  const [active, setActive] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const onDragOver = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setActive(true);
+  };
+
+  const onDragLeave = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setActive(false);
+  };
+
+  const onDrop = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setActive(false);
+    if (disabled) {
+      return;
+    }
+    const files = Array.from(e.dataTransfer.files);
+    if (files.length) {
+      onFiles(files);
+    }
+  };
+
+  const onBrowseClick = () => {
+    if (disabled) {
+      return;
+    }
+    inputRef.current?.click();
+  };
+
+  const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      onBrowseClick();
+    }
+  };
+
+  const onPickerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    if (files.length) {
+      onFiles(files);
+    }
+    e.target.value = '';
+  };
+
+  return (
+    <div
+      className={`cardImportForm-dropzone${active ? ' is-active' : ''}`}
+      onDragOver={onDragOver}
+      onDragLeave={onDragLeave}
+      onDrop={onDrop}
+      onClick={onBrowseClick}
+      onKeyDown={onKeyDown}
+      role='button'
+      tabIndex={0}
+    >
+      <div>{t('CardImportForm.message.dropzone')}</div>
+      <Button variant='outlined' size='small' onClick={(e) => {
+        e.stopPropagation(); onBrowseClick();
+      }} disabled={disabled} sx={{ mt: 1 }}>
+        {t('CardImportForm.button.browseFiles')}
+      </Button>
+      <input
+        ref={inputRef}
+        type='file'
+        accept='.xml'
+        multiple
+        onChange={onPickerChange}
       />
+      <div className='cardImportForm-help'>
+        <div>{t('CardImportForm.message.oracleHelp')}</div>
+        <div><strong>Windows:</strong> <code>%APPDATA%\Cockatrice\</code></div>
+        <div><strong>macOS:</strong> <code>~/Library/Application Support/Cockatrice/</code></div>
+        <div><strong>Linux:</strong> <code>~/.local/share/Cockatrice/</code></div>
+      </div>
     </div>
   );
 };
@@ -78,116 +184,77 @@ const CardImportForm = ({ onSubmit: onClose }: CardImportFormProps) => {
   const {
     loading,
     activeStep,
+    steps,
     importedCards,
     importedSets,
+    ingest,
     error,
     handleBack,
-    handleCardDownload,
-    handleCardSave,
-    handleTokenDownload,
+    handleLocalFiles,
+    handleLocalSave,
   } = useCardImportForm();
 
-  const steps = [
-    t('CardImportForm.steps.importSets'),
-    t('CardImportForm.steps.saveSets'),
-    t('CardImportForm.steps.importTokens'),
-    t('CardImportForm.steps.finished'),
-  ];
+  const renderLocalImport = (): ReactNode => (
+    <div className='cardImportForm'>
+      <div className='cardImportForm-content'>
+        <DropZone onFiles={handleLocalFiles} disabled={loading} />
+      </div>
+      <div className='cardImportForm-error'>
+        <ErrorMessage error={error} />
+      </div>
+    </div>
+  );
+
+  const renderLocalReview = (): ReactNode => (
+    <div className='cardImportForm'>
+      <div className='cardImportForm-content'>
+        <CardsImported
+          cards={importedCards}
+          sets={importedSets}
+          tokens={ingest?.tokens}
+          formats={ingest?.formats}
+          acceptedFiles={ingest?.acceptedFiles}
+          skippedFiles={ingest?.skippedFiles}
+        />
+      </div>
+      <div className='cardImportForm-actions'>
+        <BackButton click={handleBack} disabled={loading} />
+        <Button color='primary' onClick={handleLocalSave} disabled={loading}>
+          {t('CardImportForm.button.save')}
+        </Button>
+      </div>
+      <div className='cardImportForm-error'>
+        <ErrorMessage error={error} />
+      </div>
+    </div>
+  );
+
+  const renderFinished = (): ReactNode => (
+    <div className='cardImportForm'>
+      <div className='cardImportForm-content done'>{t('CardImportForm.message.finished')}</div>
+      <div className='cardImportForm-actions'>
+        <Button color='primary' onClick={onClose}>{t('CardImportForm.button.done')}</Button>
+      </div>
+    </div>
+  );
 
   const getStepContent = (stepIndex: number): ReactNode => {
-    switch (stepIndex) {
-      case 0: return (
-        <Form
-          onSubmit={handleCardDownload}
-          initialValues={{ cardDownloadUrl: CARDS_URL }}
-        >
-          {({ handleSubmit }) => (
-            <form className='cardImportForm' onSubmit={handleSubmit}>
-              <div className='cardImportForm-item'>
-                <Field label={t('CardImportForm.label.downloadUrl')} name='cardDownloadUrl' component={InputField} />
-              </div>
-
-              <div className='cardImportForm-actions'>
-                <Button color='primary' type='submit' disabled={loading}>
-                  {t('CardImportForm.button.import')}
-                </Button>
-              </div>
-
-              <div className='cardImportForm-error'>
-                <ErrorMessage error={error} />
-              </div>
-            </form>
-          )}
-        </Form>
-      );
-
-      case 1: return (
-        <div className='cardImportForm'>
-          <div className='cardImportForm-content'>
-            <CardsImported cards={importedCards} sets={importedSets} />
-          </div>
-
-          <div className='cardImportForm-actions'>
-            <BackButton click={handleBack} disabled={loading} />
-            <Button color='primary' onClick={handleCardSave} disabled={loading}>
-              {t('CardImportForm.button.save')}
-            </Button>
-          </div>
-
-          <div className='cardImportForm-error'>
-            <ErrorMessage error={error} />
-          </div>
-        </div>
-      );
-
-      case 2: return (
-        <Form
-          onSubmit={handleTokenDownload}
-          initialValues={{ tokenDownloadUrl: TOKENS_URL }}
-        >
-          {({ handleSubmit }) => (
-            <form className='cardImportForm' onSubmit={handleSubmit}>
-              <div className='cardImportForm-content'>
-                <Field label={t('CardImportForm.label.downloadUrl')} name='tokenDownloadUrl' component={InputField} />
-              </div>
-
-              <div className='cardImportForm-actions'>
-                <BackButton click={handleBack} disabled={loading} />
-                <Button color='primary' type='submit' disabled={loading}>
-                  {t('CardImportForm.button.import')}
-                </Button>
-              </div>
-
-              <div className='cardImportForm-error'>
-                <ErrorMessage error={error} />
-              </div>
-            </form>
-          )}
-        </Form>
-      );
-
-      case 3: return (
-        <div className='cardImportForm'>
-          <div className='cardImportForm-content done'>{t('CardImportForm.message.finished')}</div>
-
-          <div className='cardImportForm-actions'>
-            <BackButton click={handleBack} disabled={loading} />
-            <Button color='primary' onClick={onClose}>{t('CardImportForm.button.done')}</Button>
-          </div>
-        </div>
-      );
-
+    const stepKey = steps[stepIndex]?.key;
+    switch (stepKey) {
+      case 'importFiles': return renderLocalImport();
+      case 'reviewAndSave': return renderLocalReview();
+      case 'finished': return renderFinished();
       default:
-        throw new Error(`CardImportForm: unknown step index ${stepIndex}`);
+        throw new Error(`CardImportForm: unknown step key ${stepKey} at index ${stepIndex}`);
     }
   };
 
   return (
     <div>
       <Stepper activeStep={activeStep} alternativeLabel>
-        {steps.map((label) => (
-          <Step key={label}>
-            <StepLabel>{label}</StepLabel>
+        {steps.map(({ key, label }) => (
+          <Step key={key}>
+            <StepLabel>{t(label)}</StepLabel>
           </Step>
         ))}
       </Stepper>

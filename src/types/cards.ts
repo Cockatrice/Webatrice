@@ -1,100 +1,92 @@
+/**
+ * Types here mirror the Cockatrice XML4 schema (`carddatabase_v4/cards.xsd`).
+ * Webatrice consumes Oracle's XML output directly, so every leaf preserves the
+ * `<element attr="...">value</element>` shape produced by the XML parser:
+ * `{ value: <text>, ...attributes }`. The wrapper isn't a DB artifact — it's
+ * the bridge between XML and IndexedDB and avoids re-shaping ~30k records.
+ */
+
+export interface XmlNode<V = string> {
+  value: V;
+  [attribute: string]: unknown;
+}
+
+export interface CardInSet extends XmlNode<string> {
+  picurl?: string;
+  picURL?: string;
+  num?: string;
+  rarity?: string;
+  uuid?: string;
+  muid?: string;
+  isOnlineOnly?: string;
+  isRebalanced?: string;
+  flavorName?: string;
+}
+
+export interface RelatedCard extends XmlNode<string> {
+  attach?: string;
+  count?: string;
+  exclude?: string;
+  persistent?: string;
+}
+
+export interface CardProperties {
+  value: Record<string, XmlNode<string>>;
+}
+
 export class Card {
-  artist: string;
-  availability: string[];
-  borderColor: string;
-  colorIdentity: string[];
-  colors: string[];
-  convertedManaCost: number;
-  edhrecRank: number;
-  flavorText: string;
-  identifiers: {
-    cardKingdomId: string;
-    mcmId: string;
-    mcmMetaId: string;
-    mtgjsonV4Id: string;
-    multiverseId: string;
-    scryfallId: string;
-    scryfallIllustrationId: string;
-    scryfallOracleId: string;
-    tcgplayerProductId: string;
-  };
-  isOnlineOnly: boolean;
-  layout: string;
-  legalities: {
-    brawl: string;
-    commander: string;
-    duel: string;
-    future: string;
-    gladiator: string;
-    historic: string;
-    legacy: string;
-    modern: string;
-    pauper: string;
-    penny: string;
-    pioneer: string;
-    premodern: string;
-    standard: string;
-    vintage: string;
-  };
-  manaCost: string;
-  name: string;
-  originalText: string;
-  originalType: string;
-  power: string;
-  printings: string[];
-  rarity: string;
-  rulings: {
-    date: string;
-    text: string;
-  }[];
-  side: string;
-  setCode: string;
-  subtypes: string[];
-  supertypes: string[];
-  text: string;
-  toughness: string;
-  type: string;
-  types: string[];
-  uuid: string;
-  variations: string[];
+  name: XmlNode<string>;
+  text?: XmlNode<string>;
+  prop?: CardProperties;
+  set: CardInSet | CardInSet[];
+  related?: RelatedCard[];
+  'reverse-related'?: RelatedCard[];
+  token?: XmlNode<string>;
+  tablerow?: XmlNode<string>;
+  cipt?: XmlNode<string>;
+  upsidedown?: XmlNode<string>;
+  landscapeOrientation?: XmlNode<string>;
 }
 
 export class Set {
-  baseSetSize: number;
-  block: string;
-  cards: string[];
-  code: string;
-  isOnlineOnly: boolean;
-  name: string;
-  releaseDate: string;
-  totalSetSize: number;
-  type: string;
+  name: XmlNode<string>;
+  longname?: XmlNode<string>;
+  settype?: XmlNode<string>;
+  releasedate?: XmlNode<string>;
+  priority?: XmlNode<string>;
 }
 
-/**
- * Token fields are shaped `{ value: string }` because Cockatrice serves tokens
- * as XML (tokens.xml), and each leaf preserves the XML element's text content
- * alongside its attributes. The wrapper is not a DB artifact — it mirrors the
- * `<element attr="...">value</element>` shape produced by CardImporterService's
- * parseXmlAttributes.
- */
 export class Token {
-  name: { value: string };
-  prop: {
-    value: {
-      cmc: { value: string; };
-      colors: { value: string; };
-      maintype: { value: string; };
-      pt: { value: string; };
-      type: { value: string; };
-    };
-  };
-  related: { value: string; }[];
-  'reverse-related': { value: string; }[];
-  set: {
-    value: string;
-    picURL: string;
-  }[];
-  tablerow: { value: string; };
-  text: { value: string; };
+  name: XmlNode<string>;
+  text?: XmlNode<string>;
+  prop?: CardProperties;
+  set?: CardInSet | CardInSet[];
+  related?: RelatedCard[];
+  'reverse-related'?: RelatedCard[];
+  tablerow?: XmlNode<string>;
+}
+
+export interface AllowedCount {
+  max: string;
+  label: string;
+}
+
+export class Format {
+  formatName: string;
+  minDeckSize?: number;
+  maxDeckSize?: number;
+  maxSideboardSize?: number;
+  allowedCounts?: AllowedCount[];
+}
+
+export type ImportSource = 'oracle-local-fs';
+
+export class Info {
+  id: 'singleton';
+  source: ImportSource;
+  sourceUrl?: string;
+  sourceVersion?: string;
+  author?: string;
+  createdAt?: string;
+  importedAt: string;
 }

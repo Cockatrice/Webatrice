@@ -9,7 +9,7 @@ export class SetDTO extends App.Set {
   }
 
   static get(name: string) {
-    return dexieService.sets.where('name').equalsIgnoreCase(name).first();
+    return dexieService.sets.where('name.value').equalsIgnoreCase(name).first();
   }
 
   static bulkAdd(sets: SetDTO[]): Promise<IndexableType> {

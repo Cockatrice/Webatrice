@@ -26,7 +26,8 @@ vi.mock('dexie', () => {
   };
   class FakeDexie {
     version() {
-      return { stores: () => this };
+      const chain = { stores: () => chain, upgrade: () => chain };
+      return chain;
     }
     open() {
       return Promise.resolve(this);

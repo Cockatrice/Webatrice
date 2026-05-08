@@ -1,26 +1,29 @@
 import { useEffect, useState } from 'react';
 
-import { cardImporterService, CardDTO, SetDTO, TokenDTO } from '@app/services';
+import { localOracleImportService, IngestResult } from '@app/services';
 import type { App } from '@app/types';
 
 export interface CardImportForm {
   loading: boolean;
   activeStep: number;
+  steps: { key: string; label: string }[];
   importedCards: App.Card[];
   importedSets: App.Set[];
+  ingest: IngestResult | null;
   error: string | null;
-  handleNext: () => void;
   handleBack: () => void;
-  handleCardDownload: (args: { cardDownloadUrl: string }) => void;
-  handleCardSave: () => Promise<void>;
-  handleTokenDownload: (args: { tokenDownloadUrl: string }) => void;
+  handleLocalFiles: (files: File[]) => Promise<void>;
+  handleLocalSave: () => Promise<void>;
 }
+
+const STEP_KEYS = ['importFiles', 'reviewAndSave', 'finished'] as const;
 
 export function useCardImportForm(): CardImportForm {
   const [loading, setLoading] = useState(false);
   const [activeStep, setActiveStep] = useState(0);
   const [importedCards, setImportedCards] = useState<App.Card[]>([]);
   const [importedSets, setImportedSets] = useState<App.Set[]>([]);
+  const [ingest, setIngest] = useState<IngestResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -29,66 +32,64 @@ export function useCardImportForm(): CardImportForm {
     }
   }, [loading]);
 
-  const handleNext = () => {
-    setActiveStep((prevActiveStep) => prevActiveStep + 1);
-  };
+  const steps = STEP_KEYS.map(key => ({ key, label: `CardImportForm.steps.${key}` }));
 
+  const handleNext = () => setActiveStep(s => s + 1);
   const handleBack = () => {
-    setActiveStep((prevActiveStep) => prevActiveStep - 1);
+    setError(null);
+    setActiveStep(s => Math.max(0, s - 1));
   };
 
-  const handleCardDownload = ({ cardDownloadUrl }: { cardDownloadUrl: string }) => {
+  const handleLocalFiles = async (files: File[]) => {
     setLoading(true);
-
-    cardImporterService.importCards(cardDownloadUrl)
-      .then(({ cards, sets }) => {
-        setImportedCards(cards);
-        setImportedSets(sets);
-
-        handleNext();
-      })
-      .catch(({ message }) => setError(message))
-      .finally(() => setLoading(false));
-  };
-
-  const handleCardSave = async () => {
-    setLoading(true);
-
     try {
-      await CardDTO.bulkAdd(importedCards);
-      await SetDTO.bulkAdd(importedSets);
+      const result = await localOracleImportService.ingest(files);
+      if (result.acceptedFiles.length === 0) {
+        throw new Error('No recognized files. Expected cards.xml, tokens.xml, or spoiler.xml.');
+      }
+      setIngest(result);
+      setImportedCards(result.cards);
+      setImportedSets(result.sets);
+      handleNext();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  const handleLocalSave = async () => {
+    if (!ingest) {
+      return;
+    }
+    setLoading(true);
+    try {
+      await localOracleImportService.persist({
+        cards: ingest.cards,
+        sets: ingest.sets,
+        tokens: ingest.tokens,
+        formats: ingest.formats,
+        info: ingest.info,
+      });
       handleNext();
     } catch (e) {
       console.error(e);
-      setError('Failed to save cards');
+      setError('Failed to save imported data');
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
-  };
-
-  const handleTokenDownload = ({ tokenDownloadUrl }: { tokenDownloadUrl: string }) => {
-    setLoading(true);
-
-    cardImporterService.importTokens(tokenDownloadUrl)
-      .then(async (tokens) => {
-        await TokenDTO.bulkAdd(tokens);
-        handleNext();
-      })
-      .catch(({ message }) => setError(message))
-      .finally(() => setLoading(false));
   };
 
   return {
     loading,
     activeStep,
+    steps,
     importedCards,
     importedSets,
+    ingest,
     error,
-    handleNext,
     handleBack,
-    handleCardDownload,
-    handleCardSave,
-    handleTokenDownload,
+    handleLocalFiles,
+    handleLocalSave,
   };
 }

@@ -8,9 +8,18 @@ interface CardProps {
   card: CardDTO;
 }
 
-// @TODO add missing fields (loyalty, hand, etc)
-
 const CardDetails = ({ card }: CardProps) => {
+  const props = card?.prop?.value;
+  const manacost = props?.manacost?.value;
+  const cmc = props?.cmc?.value;
+  const coloridentity = props?.coloridentity?.value;
+  const colors = props?.colors?.value;
+  const maintype = props?.maintype?.value;
+  const type = props?.type?.value;
+  const side = props?.side?.value;
+  const layout = props?.layout?.value;
+  const pt = props?.pt?.value;
+
   return (
     <div className='cardDetails'>
       <div className='cardDetails-card'>
@@ -23,105 +32,85 @@ const CardDetails = ({ card }: CardProps) => {
             <div className='cardDetails-attributes'>
               <div className='cardDetails-attribute'>
                 <span className='cardDetails-attribute__label'>Name:</span>
-                <span className='cardDetails-attribute__value'>{card.name}</span>
+                <span className='cardDetails-attribute__value'>{card.name?.value}</span>
               </div>
 
-              {
-                (!card.power && !card.toughness) ? null : (
-                  <div className='cardDetails-attribute'>
-                    <span className='cardDetails-attribute__label'>P/T:</span>
-                    <span className='cardDetails-attribute__value'>{card.power ?? 0}/{card.toughness ?? 0}</span>
-                  </div>
-                )
-              }
+              {pt && (
+                <div className='cardDetails-attribute'>
+                  <span className='cardDetails-attribute__label'>P/T:</span>
+                  <span className='cardDetails-attribute__value'>{pt}</span>
+                </div>
+              )}
 
-              {
-                !card.manaCost ? null : (
-                  <div className='cardDetails-attribute'>
-                    <span className='cardDetails-attribute__label'>Cost:</span>
-                    <span className='cardDetails-attribute__value'>{card.manaCost.replace(/\{|\}/g, '')}</span>
-                  </div>
-                )
-              }
+              {manacost && (
+                <div className='cardDetails-attribute'>
+                  <span className='cardDetails-attribute__label'>Cost:</span>
+                  <span className='cardDetails-attribute__value'>{manacost.replace(/\{|\}/g, '')}</span>
+                </div>
+              )}
 
-              {
-                !card.convertedManaCost ? null : (
-                  <div className='cardDetails-attribute'>
-                    <span className='cardDetails-attribute__label'>CMC:</span>
-                    <span className='cardDetails-attribute__value'>{card.convertedManaCost}</span>
-                  </div>
-                )
-              }
+              {cmc && (
+                <div className='cardDetails-attribute'>
+                  <span className='cardDetails-attribute__label'>CMC:</span>
+                  <span className='cardDetails-attribute__value'>{cmc}</span>
+                </div>
+              )}
 
-              {
-                !card.colorIdentity?.length ? null : (
-                  <div className='cardDetails-attribute'>
-                    <span className='cardDetails-attribute__label'>Identity:</span>
-                    <span className='cardDetails-attribute__value'>{card.colorIdentity.join('')}</span>
-                  </div>
-                )
-              }
+              {coloridentity && (
+                <div className='cardDetails-attribute'>
+                  <span className='cardDetails-attribute__label'>Identity:</span>
+                  <span className='cardDetails-attribute__value'>{coloridentity}</span>
+                </div>
+              )}
 
-              {
-                !card.colors?.length ? null : (
-                  <div className='cardDetails-attribute'>
-                    <span className='cardDetails-attribute__label'>Color(s):</span>
-                    <span className='cardDetails-attribute__value'>{card.colors.join('')}</span>
-                  </div>
-                )
-              }
+              {colors && (
+                <div className='cardDetails-attribute'>
+                  <span className='cardDetails-attribute__label'>Color(s):</span>
+                  <span className='cardDetails-attribute__value'>{colors}</span>
+                </div>
+              )}
 
-              {
-                !card.types?.length ? null : (
-                  <div className='cardDetails-attribute'>
-                    <span className='cardDetails-attribute__label'>Main Type:</span>
-                    <span className='cardDetails-attribute__value'>{card.types.join(', ')}</span>
-                  </div>
-                )
-              }
+              {maintype && (
+                <div className='cardDetails-attribute'>
+                  <span className='cardDetails-attribute__label'>Main Type:</span>
+                  <span className='cardDetails-attribute__value'>{maintype}</span>
+                </div>
+              )}
 
-              {
-                !card.type ? null : (
-                  <div className='cardDetails-attribute'>
-                    <span className='cardDetails-attribute__label'>Type:</span>
-                    <span className='cardDetails-attribute__value'>{card.type}</span>
-                  </div>
-                )
-              }
+              {type && (
+                <div className='cardDetails-attribute'>
+                  <span className='cardDetails-attribute__label'>Type:</span>
+                  <span className='cardDetails-attribute__value'>{type}</span>
+                </div>
+              )}
 
-              {
-                !card.side ? null : (
-                  <div className='cardDetails-attribute'>
-                    <span className='cardDetails-attribute__label'>Side:</span>
-                    <span className='cardDetails-attribute__value'>{card.side}</span>
-                  </div>
-                )
-              }
+              {side && (
+                <div className='cardDetails-attribute'>
+                  <span className='cardDetails-attribute__label'>Side:</span>
+                  <span className='cardDetails-attribute__value'>{side}</span>
+                </div>
+              )}
 
-              {
-                !card.layout ? null : (
-                  <div className='cardDetails-attribute'>
-                    <span className='cardDetails-attribute__label'>Layout:</span>
-                    <span className='cardDetails-attribute__value'>{card.layout}</span>
-                  </div>
-                )
-              }
+              {layout && (
+                <div className='cardDetails-attribute'>
+                  <span className='cardDetails-attribute__label'>Layout:</span>
+                  <span className='cardDetails-attribute__value'>{layout}</span>
+                </div>
+              )}
             </div>
 
-            <div className='cardDetails-text'>
-              <div className='cardDetails-text__current'>
-                {card.text?.trim()}
+            {card.text?.value && (
+              <div className='cardDetails-text'>
+                <div className='cardDetails-text__current'>
+                  {card.text.value.trim()}
+                </div>
               </div>
-
-              <div className='cardDetails-text__flavor'>
-                {card.flavorText?.trim()}
-              </div>
-            </div>
+            )}
           </div>
         )
       }
     </div>
   );
-}
+};
 
 export default CardDetails;

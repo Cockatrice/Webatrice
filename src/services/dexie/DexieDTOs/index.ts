@@ -3,3 +3,5 @@ export * from './SetDTO';
 export * from './SettingDTO';
 export * from './TokenDTO';
 export * from './HostDTO';
+export * from './FormatDTO';
+export * from './InfoDTO';
