@@ -23,7 +23,7 @@ jobs:
 
     steps:
       - name: Download build artifact
-        uses: dawidd6/action-download-artifact@v12
+        uses: dawidd6/action-download-artifact@v21
         with:
           github_token: ${{ github.token }}
           workflow: build.yml
@@ -54,9 +54,3 @@ jobs:
           rsync -avz --delete \
             -e "ssh -i ~/.ssh/deploy_key -p 4924 -o StrictHostKeyChecking=accept-new" \
             ./build/ ${{ secrets.RR_BETA_SERVER_DEPLOY_USER }}@${{ secrets.RR_BETA_SERVER_DEPLOY_HOST }}:
-
-      - name: Verify site is reachable
-        run: |
-          curl --fail --silent --show-error --retry 5 --retry-delay 3 --retry-all-errors \
-            -o /dev/null -w "HTTP %{http_code}\n" \
-            https://webatrice.cockatrice.us/

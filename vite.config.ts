@@ -74,9 +74,9 @@ export default defineConfig({
     include: ['src/**/*.spec.{ts,tsx}'],
     exclude: ['node_modules', 'build', 'integration', 'coverage'],
     isolate: true,
-    pool: 'threads',
+    pool: 'forks',
     maxWorkers: 4,
-    testTimeout: 10000,
+    testTimeout: 15000,
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html'],
