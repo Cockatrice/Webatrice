@@ -2,6 +2,7 @@ import { create } from '@bufbuild/protobuf';
 import { App, Data } from '@app/types';
 import { roomsReducer } from './rooms.reducer';
 import { Actions } from './rooms.actions';
+import { Actions as GameActions } from '../game/game.actions';
 import { MAX_ROOM_MESSAGES } from './rooms.types';
 import { DEFAULT_GAME_FILTERS } from './gameFilters';
 import { makeGame, makeMessage, makeRoom, makeRoomsState, makeUser } from './__mocks__/rooms-fixtures';
@@ -439,5 +440,48 @@ describe('SET_GAME_FILTERS / CLEAR_GAME_FILTERS', () => {
     });
     const result = roomsReducer(state, Actions.clearGameFilters({ roomId: 1 }));
     expect(result.gameFilters[1]).toEqual(DEFAULT_GAME_FILTERS);
+  });
+});
+
+
+describe('Cross-slice cleanup on game removal', () => {
+  it('GAME_LEFT strips the gameId from joinedGameIds across rooms', () => {
+    const state = makeRoomsState({
+      joinedGameIds: { 1: { 5: true, 6: true }, 2: { 5: true } },
+    });
+    const result = roomsReducer(state, GameActions.gameLeft({ gameId: 5 }));
+    expect(result.joinedGameIds[1][5]).toBeUndefined();
+    expect(result.joinedGameIds[2][5]).toBeUndefined();
+    expect(result.joinedGameIds[1][6]).toBe(true);
+  });
+
+  it('GAME_LEFT clears selectedGameIds entries pointing at the leaving game', () => {
+    const state = makeRoomsState({
+      selectedGameIds: { 1: 5, 2: 7, 3: 5 },
+    });
+    const result = roomsReducer(state, GameActions.gameLeft({ gameId: 5 }));
+    expect(result.selectedGameIds[1]).toBeUndefined();
+    expect(result.selectedGameIds[3]).toBeUndefined();
+    expect(result.selectedGameIds[2]).toBe(7);
+  });
+
+  it('GAME_CLOSED strips joined/selected entries the same way', () => {
+    const state = makeRoomsState({
+      joinedGameIds: { 1: { 5: true } },
+      selectedGameIds: { 1: 5 },
+    });
+    const result = roomsReducer(state, GameActions.gameClosed({ gameId: 5 }));
+    expect(result.joinedGameIds[1][5]).toBeUndefined();
+    expect(result.selectedGameIds[1]).toBeUndefined();
+  });
+
+  it('KICKED strips joined/selected entries the same way', () => {
+    const state = makeRoomsState({
+      joinedGameIds: { 1: { 5: true } },
+      selectedGameIds: { 1: 5 },
+    });
+    const result = roomsReducer(state, GameActions.kicked({ gameId: 5 }));
+    expect(result.joinedGameIds[1][5]).toBeUndefined();
+    expect(result.selectedGameIds[1]).toBeUndefined();
   });
 });

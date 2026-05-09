@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useNavigate, generatePath } from 'react-router-dom';
 
-import { useWebClient } from '@app/hooks';
+import { useLeaveGame, useWebClient } from '@app/hooks';
 import { GameSelectors, RoomsSelectors, ServerSelectors, useAppSelector } from '@app/store';
 import { App } from '@app/types';
 
@@ -47,6 +47,7 @@ export function useLeftNav(): LeftNav {
   const isModerator = useAppSelector(ServerSelectors.getIsUserModerator);
   const navigate = useNavigate();
   const webClient = useWebClient();
+  const leaveGameRequest = useLeaveGame();
   const [anchorEl, setAnchorEl] = useState<Element | null>(null);
   const [showCardImportDialog, setShowCardImportDialog] = useState(false);
 
@@ -76,7 +77,7 @@ export function useLeftNav(): LeftNav {
 
   const leaveGame = (event: React.MouseEvent, gameId: number) => {
     event.preventDefault();
-    webClient.request.game.leaveGame(gameId);
+    leaveGameRequest(gameId);
   };
 
   const openImportCardWizard = () => {

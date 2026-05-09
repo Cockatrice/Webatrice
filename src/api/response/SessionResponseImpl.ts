@@ -1,6 +1,6 @@
 import { Data } from '@app/types';
 import { WebsocketTypes } from '@app/websocket/types';
-import { GameDispatch, RoomsDispatch, ServerDispatch } from '@app/store';
+import { GameDispatch, ServerDispatch } from '@app/store';
 
 type LoginSuccess = WebsocketTypes.LoginSuccessContext;
 type PendingActivation = WebsocketTypes.PendingActivationContext;
@@ -67,11 +67,6 @@ export class SessionResponseImpl implements WebsocketTypes.ISessionResponse {
   }
 
   updateStatus(state: WebsocketTypes.StatusEnum, description: string): void {
-    if (state === WebsocketTypes.StatusEnum.DISCONNECTED) {
-      GameDispatch.clearStore();
-      RoomsDispatch.clearStore();
-      ServerDispatch.clearStore();
-    }
     ServerDispatch.updateStatus(state, description);
   }
 

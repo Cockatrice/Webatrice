@@ -79,6 +79,11 @@ export const connectionReducers = {
     status: { ...state.status },
   })) as CaseReducer<ServerState>,
 
+  disconnected: ((state) => ({
+    ...initialState,
+    status: { ...state.status },
+  })) as CaseReducer<ServerState>,
+
   serverMessage: ((state, action) => {
     state.info.message = action.payload.message;
   }) as CaseReducer<ServerState, PayloadAction<{ message: string }>>,

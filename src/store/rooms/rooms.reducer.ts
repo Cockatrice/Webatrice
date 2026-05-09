@@ -2,9 +2,22 @@ import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { App, Data, Enriched } from '@app/types';
 
 import { mergeSetFields, normalizeGameObject, normalizeGametypeMap, normalizeRoomInfo, normalizeUserMessage } from '../common';
+import { Actions as GameActions } from '../game/game.actions';
+import { Actions as ServerActions } from '../server/server.actions';
 
 import { GameFilters, RoomsState } from './rooms.interfaces';
 import { DEFAULT_GAME_FILTERS } from './gameFilters';
+
+function removeGameFromRooms(state: RoomsState, gameId: number): void {
+  for (const roomId of Object.keys(state.joinedGameIds)) {
+    delete state.joinedGameIds[Number(roomId)][gameId];
+  }
+  for (const [roomId, selected] of Object.entries(state.selectedGameIds)) {
+    if (selected === gameId) {
+      state.selectedGameIds[Number(roomId)] = undefined;
+    }
+  }
+}
 
 export const MAX_ROOM_MESSAGES = 1000;
 
@@ -217,6 +230,22 @@ export const roomsSlice = createSlice({
     clearJoinGameError: (state) => {
       state.joinGameError = null;
     },
+  },
+  extraReducers: (builder) => {
+    // When a game is removed from the games slice (self-leave, host closed,
+    // or local kick), strip the gameId from joinedGameIds and clear it from
+    // selectedGameIds. The action payloads don't carry a roomId, so iterate.
+    const onGameRemoved = (
+      state: RoomsState,
+      action: { payload: { gameId: number } },
+    ) => {
+      removeGameFromRooms(state, action.payload.gameId);
+    };
+    builder
+      .addCase(GameActions.gameLeft, onGameRemoved)
+      .addCase(GameActions.gameClosed, onGameRemoved)
+      .addCase(GameActions.kicked, onGameRemoved)
+      .addCase(ServerActions.disconnected, () => initialState);
   },
 });
 

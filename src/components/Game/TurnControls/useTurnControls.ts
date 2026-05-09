@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 
-import { LoadingState, useCurrentGame, useSettings, useWebClient } from '@app/hooks';
+import { LoadingState, useCurrentGame, useLeaveGame, useSettings, useWebClient } from '@app/hooks';
 import { GameSelectors, useAppSelector } from '@app/store';
 
 /**
@@ -52,6 +52,7 @@ export function useTurnControls({
   onRequestUnconcede,
 }: UseTurnControlsArgs): TurnControls {
   const webClient = useWebClient();
+  const leaveGame = useLeaveGame();
   const { game, localPlayer, isSpectator, isJudge, isHost, isStarted } = useCurrentGame(gameId);
   const { status: settingsStatus, value: settings, update: updateSettings } = useSettings();
   const invertVerticalCoordinate = settings?.invertVerticalCoordinate ?? false;
@@ -157,7 +158,7 @@ export function useTurnControls({
     if (!canLeave || !hasLiveGame) {
       return;
     }
-    webClient.request.game.leaveGame(gameId);
+    leaveGame(gameId);
   };
 
   const handleToggleInvert = () => {

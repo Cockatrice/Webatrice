@@ -26,9 +26,10 @@ describe('useGameLifecycle', () => {
     const store = makeStore();
     const onKicked = vi.fn();
     const onGameClosed = vi.fn();
+    const onGameLeft = vi.fn();
 
     renderHook(
-      () => useGameLifecycle(42, { onKicked, onGameClosed }),
+      () => useGameLifecycle(42, { onKicked, onGameClosed, onGameLeft }),
       { wrapper: wrap(store) },
     );
 
@@ -38,15 +39,17 @@ describe('useGameLifecycle', () => {
 
     expect(onKicked).toHaveBeenCalledTimes(1);
     expect(onGameClosed).not.toHaveBeenCalled();
+    expect(onGameLeft).not.toHaveBeenCalled();
   });
 
   it('invokes onGameClosed when a gameClosed action targets this gameId', () => {
     const store = makeStore();
     const onKicked = vi.fn();
     const onGameClosed = vi.fn();
+    const onGameLeft = vi.fn();
 
     renderHook(
-      () => useGameLifecycle(42, { onKicked, onGameClosed }),
+      () => useGameLifecycle(42, { onKicked, onGameClosed, onGameLeft }),
       { wrapper: wrap(store) },
     );
 
@@ -56,53 +59,81 @@ describe('useGameLifecycle', () => {
 
     expect(onGameClosed).toHaveBeenCalledTimes(1);
     expect(onKicked).not.toHaveBeenCalled();
+    expect(onGameLeft).not.toHaveBeenCalled();
   });
 
-  it('ignores kicked/closed actions for a different gameId', () => {
+  it('invokes onGameLeft when a gameLeft action targets this gameId', () => {
     const store = makeStore();
     const onKicked = vi.fn();
     const onGameClosed = vi.fn();
+    const onGameLeft = vi.fn();
 
     renderHook(
-      () => useGameLifecycle(42, { onKicked, onGameClosed }),
+      () => useGameLifecycle(42, { onKicked, onGameClosed, onGameLeft }),
+      { wrapper: wrap(store) },
+    );
+
+    act(() => {
+      store.dispatch({ type: GameTypes.GAME_LEFT, payload: { gameId: 42 } });
+    });
+
+    expect(onGameLeft).toHaveBeenCalledTimes(1);
+    expect(onKicked).not.toHaveBeenCalled();
+    expect(onGameClosed).not.toHaveBeenCalled();
+  });
+
+  it('ignores lifecycle actions for a different gameId', () => {
+    const store = makeStore();
+    const onKicked = vi.fn();
+    const onGameClosed = vi.fn();
+    const onGameLeft = vi.fn();
+
+    renderHook(
+      () => useGameLifecycle(42, { onKicked, onGameClosed, onGameLeft }),
       { wrapper: wrap(store) },
     );
 
     act(() => {
       store.dispatch({ type: GameTypes.KICKED, payload: { gameId: 7 } });
       store.dispatch({ type: GameTypes.GAME_CLOSED, payload: { gameId: 7 } });
+      store.dispatch({ type: GameTypes.GAME_LEFT, payload: { gameId: 7 } });
     });
 
     expect(onKicked).not.toHaveBeenCalled();
     expect(onGameClosed).not.toHaveBeenCalled();
+    expect(onGameLeft).not.toHaveBeenCalled();
   });
 
   it('is inert when gameId is undefined', () => {
     const store = makeStore();
     const onKicked = vi.fn();
     const onGameClosed = vi.fn();
+    const onGameLeft = vi.fn();
 
     renderHook(
-      () => useGameLifecycle(undefined, { onKicked, onGameClosed }),
+      () => useGameLifecycle(undefined, { onKicked, onGameClosed, onGameLeft }),
       { wrapper: wrap(store) },
     );
 
     act(() => {
       store.dispatch({ type: GameTypes.KICKED, payload: { gameId: 42 } });
       store.dispatch({ type: GameTypes.GAME_CLOSED, payload: { gameId: 42 } });
+      store.dispatch({ type: GameTypes.GAME_LEFT, payload: { gameId: 42 } });
     });
 
     expect(onKicked).not.toHaveBeenCalled();
     expect(onGameClosed).not.toHaveBeenCalled();
+    expect(onGameLeft).not.toHaveBeenCalled();
   });
 
   it('ignores unrelated action types', () => {
     const store = makeStore();
     const onKicked = vi.fn();
     const onGameClosed = vi.fn();
+    const onGameLeft = vi.fn();
 
     renderHook(
-      () => useGameLifecycle(42, { onKicked, onGameClosed }),
+      () => useGameLifecycle(42, { onKicked, onGameClosed, onGameLeft }),
       { wrapper: wrap(store) },
     );
 
@@ -112,5 +143,6 @@ describe('useGameLifecycle', () => {
 
     expect(onKicked).not.toHaveBeenCalled();
     expect(onGameClosed).not.toHaveBeenCalled();
+    expect(onGameLeft).not.toHaveBeenCalled();
   });
 });

@@ -5,6 +5,7 @@ const a = Actions;
 export const Types = {
   INITIALIZED: a.initialized.type,
   CLEAR_STORE: a.clearStore.type,
+  DISCONNECTED: a.disconnected.type,
   CONNECTION_ATTEMPTED: a.connectionAttempted.type,
   LOGIN_SUCCESSFUL: a.loginSuccessful.type,
   LOGIN_FAILED: a.loginFailed.type,

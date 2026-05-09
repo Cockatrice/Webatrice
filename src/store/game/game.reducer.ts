@@ -1,4 +1,5 @@
 import { createSlice } from '@reduxjs/toolkit';
+import { Actions as ServerActions } from '../server/server.actions';
 import { GamesState } from './game.interfaces';
 import { arrowReducers } from './game.reducer.arrow';
 import { cardReducers } from './game.reducer.card';
@@ -23,6 +24,9 @@ export const gamesSlice = createSlice({
     ...counterReducers,
     ...arrowReducers,
     ...chatReducers,
+  },
+  extraReducers: (builder) => {
+    builder.addCase(ServerActions.disconnected, () => initialState);
   },
 });
 

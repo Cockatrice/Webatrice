@@ -25,5 +25,8 @@ export function useGameLifecycleNavigation(gameId: number | undefined): void {
       gameClosedToast.openToast();
       navigate(App.RouteEnum.SERVER);
     },
+    onGameLeft: () => {
+      navigate(App.RouteEnum.SERVER);
+    },
   });
 }
