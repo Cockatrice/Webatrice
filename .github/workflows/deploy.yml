@@ -53,7 +53,7 @@ jobs:
         run: |
           rsync -avz --delete \
             -e "ssh -i ~/.ssh/deploy_key -p 4924 -o StrictHostKeyChecking=accept-new" \
-            ./build/ ${{ secrets.RR_BETA_SERVER_DEPLOY_USER }}@${{ secrets.RR_BETA_SERVER_DEPLOY_HOST }}:/var/www/webatrice.cockatrice.us/
+            ./build/ ${{ secrets.RR_BETA_SERVER_DEPLOY_USER }}@${{ secrets.RR_BETA_SERVER_DEPLOY_HOST }}:
 
       - name: Verify site is reachable
         run: |
