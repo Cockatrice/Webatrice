@@ -39,10 +39,10 @@ jobs:
         run: npm run lint
 
       - name: Test
-        run: npm run test
+        run: npm run test:coverage
 
       - name: Integration tests
-        run: npm run test:integration
+        run: npm run test:integration:coverage
 
       - name: Build
         run: npm run build

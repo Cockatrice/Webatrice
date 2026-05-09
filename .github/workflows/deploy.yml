@@ -23,7 +23,7 @@ jobs:
 
     steps:
       - name: Download build artifact
-        uses: dawidd6/action-download-artifact@v6
+        uses: dawidd6/action-download-artifact@v12
         with:
           github_token: ${{ github.token }}
           workflow: build.yml

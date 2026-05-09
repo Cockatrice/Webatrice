@@ -31,9 +31,10 @@ jobs:
         run: echo "$GITHUB_SHA" > build/.deploy-sha
 
       - name: Upload build artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: webatrice-build
           path: build/
+          include-hidden-files: true
           retention-days: 30
           if-no-files-found: error
