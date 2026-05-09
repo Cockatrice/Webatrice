@@ -1,0 +1,61 @@
+name: Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: "Optional build.yml run ID to deploy (defaults to latest successful master build)"
+        required: false
+        type: string
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  deploy:
+    name: Deploy to DigitalOcean droplet
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download build artifact
+        uses: dawidd6/action-download-artifact@v6
+        with:
+          github_token: ${{ github.token }}
+          workflow: build.yml
+          workflow_conclusion: success
+          branch: master
+          event: workflow_dispatch
+          name: webatrice-build
+          path: build/
+          run_id: ${{ inputs.run_id }}
+          if_no_artifact_found: fail
+
+      - name: Read release SHA
+        id: sha
+        run: |
+          sha="$(cat build/.deploy-sha)"
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          echo "Deploying commit \`$sha\` to webatrice.cockatrice.us" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Set up SSH
+        uses: shimataro/ssh-key-action@v2
+        with:
+          key: ${{ secrets.RR_BETA_SERVER_PRIVATE_SSH_KEY }}
+          name: deploy_key
+
+      - name: Sync release to droplet
+        run: |
+          rsync -avz --delete \
+            -e "ssh -i ~/.ssh/deploy_key -p 4924 -o StrictHostKeyChecking=accept-new" \
+            ./build/ ${{ secrets.RR_BETA_SERVER_DEPLOY_USER }}@${{ secrets.RR_BETA_SERVER_DEPLOY_HOST }}:/var/www/webatrice.cockatrice.us/
+
+      - name: Verify site is reachable
+        run: |
+          curl --fail --silent --show-error --retry 5 --retry-delay 3 --retry-all-errors \
+            -o /dev/null -w "HTTP %{http_code}\n" \
+            https://webatrice.cockatrice.us/

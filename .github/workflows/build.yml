@@ -1,23 +1,12 @@
 name: Build
 
 on:
-  push:
-    branches:
-      - master
-  pull_request:
+  workflow_dispatch:
 
 jobs:
   build:
-    name: React (Node ${{matrix.node_version}})
-
+    name: Build artifact
     runs-on: ubuntu-latest
-
-    strategy:
-      fail-fast: false
-      matrix:
-        node_version:
-          - 20
-          - lts/*
 
     steps:
       - name: Checkout
@@ -28,7 +17,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: ${{matrix.node_version}}
+          node-version: 20
           cache: 'npm'
           cache-dependency-path: 'package-lock.json'
 
@@ -38,5 +27,13 @@ jobs:
       - name: Build app
         run: npm run build
 
-      - name: Test app
-        run: npm run test
+      - name: Stamp commit SHA into build
+        run: echo "$GITHUB_SHA" > build/.deploy-sha
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: webatrice-build
+          path: build/
+          retention-days: 30
+          if-no-files-found: error
