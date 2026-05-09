@@ -46,7 +46,7 @@ jobs:
         uses: shimataro/ssh-key-action@v2
         with:
           key: ${{ secrets.RR_BETA_SERVER_PRIVATE_SSH_KEY }}
-          known_hosts: ${{ secrets.RR_BETA_SERVER_SSH_KNOWN_HOSTS }}
+          known_hosts: ${{ secrets.RR_BETA_SERVER_KNOWN_HOSTS }}
           name: deploy_key
 
       - name: Sync release to droplet
