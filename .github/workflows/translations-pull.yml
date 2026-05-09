@@ -13,7 +13,7 @@ on:
 jobs:
   translations:
     # Do not run the scheduled workflow on forks
-    if: github.event_name != 'schedule' || github.repository_owner == 'seavor'
+    if: github.event_name != 'schedule' || github.repository_owner == 'Cockatrice'
 
     name: Pull languages
     runs-on: ubuntu-latest
@@ -25,7 +25,7 @@ jobs:
       - name: Pull translated strings from Transifex
         uses: transifex/cli-action@v2
         with:
-          # used config file: https://github.com/seavor/Webatrice/blob/master/.tx/config
+          # used config file: https://github.com/Cockatrice/Webatrice/blob/master/.tx/config
           # https://github.com/transifex/cli#pulling-files-from-transifex
           token: ${{ secrets.TX_TOKEN }}
           args: pull --force --all
@@ -51,7 +51,7 @@ jobs:
             *After merging, all new languages and translations are available in the next build.*
 
             [1]: https://explore.transifex.com/cockatrice/cockatrice/
-            [2]: https://github.com/seavor/Webatrice/actions/workflows/translations-pull.yml?query=branch%3Amaster
+            [2]: https://github.com/Cockatrice/Webatrice/actions/workflows/translations-pull.yml?query=branch%3Amaster
           labels: |
             CI
             Translation
