@@ -15,12 +15,12 @@ export { default as GameArrowOverlay } from './GameArrowOverlay/GameArrowOverlay
 export { default as GameLog } from './GameLog/GameLog';
 export { default as HandContextMenu } from './HandContextMenu/HandContextMenu';
 export { default as HandZone } from './HandZone/HandZone';
-export { default as OpponentSelector } from './OpponentSelector/OpponentSelector';
 export { default as PhaseBar } from './PhaseBar/PhaseBar';
 export { default as PlayerBoard } from './PlayerBoard/PlayerBoard';
 export { default as PlayerContextMenu } from './PlayerContextMenu/PlayerContextMenu';
 export { default as PlayerInfoPanel } from './PlayerInfoPanel/PlayerInfoPanel';
 export { default as PlayerList } from './PlayerList/PlayerList';
+export { default as PlayerSlotSelector } from './PlayerSlotSelector/PlayerSlotSelector';
 export { default as RightPanel } from './RightPanel/RightPanel';
 export { default as StackColumn } from './StackColumn/StackColumn';
 export { default as TurnControls } from './TurnControls/TurnControls';

@@ -10,7 +10,7 @@ import { useGameArrowInteractions, type GameArrowInteractions } from './useGameA
 import { useGameDialogs, type GameDialogs } from './useGameDialogs';
 import { useGameDnd, type GameDnd } from './useGameDnd';
 import { useGameLifecycleNavigation } from './useGameLifecycleNavigation';
-import { useGameOpponentSelector, type GameOpponentSelector } from './useGameOpponentSelector';
+import { useGamePlayerSlots, type GamePlayerSlots } from './useGamePlayerSlots';
 
 export interface Game extends CurrentGame {
   boardRef: RefObject<HTMLDivElement>;
@@ -21,9 +21,11 @@ export interface Game extends CurrentGame {
   isRotated: boolean;
   toggleRotated: () => void;
   localAccess: GameAccess;
-  opponentAccess: GameAccess;
+  slotAAccess: GameAccess;
+  slotBAccess: GameAccess;
   deckSelectOpen: boolean;
-  opponents: GameOpponentSelector;
+  showHandZone: boolean;
+  slots: GamePlayerSlots;
   arrows: GameArrowInteractions;
   dialogs: GameDialogs;
   dnd: GameDnd;
@@ -48,9 +50,10 @@ export function useGame(): Game {
   const [isRotated, setIsRotated] = useState(false);
   const toggleRotated = useCallback(() => setIsRotated((prev) => !prev), []);
 
-  const opponents = useGameOpponentSelector(game);
+  const slots = useGamePlayerSlots(game);
   const localAccess = useGameAccess(gameId, game?.localPlayerId);
-  const opponentAccess = useGameAccess(gameId, opponents.shownOpponentId);
+  const slotAAccess = useGameAccess(gameId, slots.slotAPlayerId);
+  const slotBAccess = useGameAccess(gameId, slots.slotBPlayerId);
 
   const arrows = useGameArrowInteractions({ gameId, game, boardRef, cardRegistry });
   const dialogs = useGameDialogs({
@@ -75,6 +78,20 @@ export function useGame(): Game {
     !current.isJudge &&
     !localPlayer.properties.readyStart;
 
+  // Hand zone visibility: as an active player you only see your own hand;
+  // as a spectator you only see hands when the game was created with
+  // omniscient spectators (`spectators_omniscient` on ServerInfo_Game). The
+  // desktop server uses the same flag to gate sending real card data to
+  // spectators (server_game.cpp:298-315), so when it's false the hand zone
+  // would only show face-down placeholders anyway.
+  const showHandZone =
+    game != null &&
+    slots.slotAPlayerId != null &&
+    (
+      (!isSpectator && slots.slotAPlayerId === game.localPlayerId) ||
+      (isSpectator && (game.info.spectatorsOmniscient ?? false))
+    );
+
   return {
     ...current,
     boardRef,
@@ -85,9 +102,11 @@ export function useGame(): Game {
     isRotated,
     toggleRotated,
     localAccess,
-    opponentAccess,
+    slotAAccess,
+    slotBAccess,
     deckSelectOpen,
-    opponents,
+    showHandZone,
+    slots,
     arrows,
     dialogs,
     dnd,

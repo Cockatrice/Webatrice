@@ -116,7 +116,7 @@ describe('Game orchestration (M4–M6)', () => {
     });
 
     fireEvent.click(screen.getByRole('button', { name: /kick/i }));
-    // P3 also appears in the OpponentSelector; pick the one inside the
+    // P3 also appears in the slot selectors; pick the one inside the
     // MUI Menu popup.
     const menuItem = (await screen.findAllByText('P3')).find((el) => el.closest('[role="menuitem"]'));
     fireEvent.click(menuItem!);

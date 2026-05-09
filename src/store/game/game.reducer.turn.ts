@@ -28,7 +28,22 @@ export const turnReducers = {
     }
 
     if (data.playerList?.length > 0) {
-      game.players = normalizePlayers(data.playerList);
+      // Cockatrice's Server_Game::sendGameStateToPlayers (server_game.cpp:280)
+      // always emits playerList with withUserInfo=false, so the wire payload's
+      // properties.userInfo is undefined for every player on resync (game
+      // start, post-concede/unconcede, etc.). Carry the previously-known
+      // userInfo forward per playerId so names don't flip to "(unknown)" mid-
+      // game. Individual Event_PlayerJoined still carries full userInfo.
+      const previous = game.players;
+      const next = normalizePlayers(data.playerList);
+      for (const idStr of Object.keys(next)) {
+        const id = Number(idStr);
+        const prevUserInfo = previous[id]?.properties.userInfo;
+        if (prevUserInfo && !next[id].properties.userInfo) {
+          next[id].properties.userInfo = prevUserInfo;
+        }
+      }
+      game.players = next;
     }
     const wasStarted = game.started;
     if (isFieldSet(data, Data.Event_GameStateChangedSchema.field.gameStarted)) {

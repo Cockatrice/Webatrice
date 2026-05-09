@@ -110,27 +110,33 @@ describe('Game container', () => {
     expect(screen.queryByTestId('game-empty')).not.toBeInTheDocument();
   });
 
-  it('does not render the opponent selector in a 2-player game', () => {
+  it('renders both player slot selectors whenever there is a seated player', () => {
     renderWithProviders(<Game />, {
       preloadedState: buildGame({ localId: 1, opponentIds: [2] }),
     });
 
-    expect(screen.queryByTestId('opponent-selector')).not.toBeInTheDocument();
+    expect(screen.getByTestId('player-slot-selector-a')).toBeInTheDocument();
+    expect(screen.getByTestId('player-slot-selector-b')).toBeInTheDocument();
   });
 
-  it('renders the opponent selector in a 3+ player game', () => {
+  it('renders both slot selectors in a 3+ player game', () => {
     renderWithProviders(<Game />, {
       preloadedState: buildGame({ localId: 1, opponentIds: [2, 3] }),
     });
 
-    expect(screen.getByTestId('opponent-selector')).toBeInTheDocument();
+    expect(screen.getByTestId('player-slot-selector-a')).toBeInTheDocument();
+    expect(screen.getByTestId('player-slot-selector-b')).toBeInTheDocument();
   });
 
-  it('defaults to showing the first opponent', () => {
+  it('defaults slot A to the local player and slot B to an opponent', () => {
     renderWithProviders(<Game />, {
       preloadedState: buildGame({ localId: 1, opponentIds: [2, 3] }),
     });
 
+    // Slot A defaults to localPlayerId=1 (bottom board); slot B defaults to
+    // the first non-local seated player (id 2). Player 3 is reachable via
+    // the slot B dropdown.
+    expect(screen.getByTestId('player-board-1')).toBeInTheDocument();
     expect(screen.getByTestId('player-board-2')).toBeInTheDocument();
     expect(screen.queryByTestId('player-board-3')).not.toBeInTheDocument();
   });

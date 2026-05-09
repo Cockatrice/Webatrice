@@ -8,10 +8,10 @@ import {
   GameArrowOverlay,
   HandContextMenu,
   HandZone,
-  OpponentSelector,
   PhaseBar,
   PlayerBoard,
   PlayerContextMenu,
+  PlayerSlotSelector,
   RightPanel,
   ZoneContextMenu,
 } from '@app/components';
@@ -42,7 +42,6 @@ function Game() {
     gameId,
     game,
     localPlayer,
-    isSpectator,
     boardRef,
     cardRegistry,
     sensors,
@@ -50,10 +49,11 @@ function Game() {
     setHoveredCard,
     isRotated,
     toggleRotated,
-    localAccess,
-    opponentAccess,
+    slotAAccess,
+    slotBAccess,
     deckSelectOpen,
-    opponents,
+    showHandZone,
+    slots,
     arrows,
     dialogs,
     dnd,
@@ -77,10 +77,19 @@ function Game() {
               ref={boardRef}
               onMouseDown={arrows.handleBoardMouseDown}
             >
-              <OpponentSelector
-                opponents={opponents.opponents}
-                selectedPlayerId={opponents.shownOpponentId}
-                onSelect={opponents.setSelectedOpponentId}
+              <PlayerSlotSelector
+                label="Player 2"
+                slot="b"
+                players={slots.players}
+                selectedPlayerId={slots.slotBPlayerId}
+                onSelect={slots.setSlotBPlayerId}
+              />
+              <PlayerSlotSelector
+                label="Player 1"
+                slot="a"
+                players={slots.players}
+                selectedPlayerId={slots.slotAPlayerId}
+                onSelect={slots.setSlotAPlayerId}
               />
 
               {!game && (
@@ -89,7 +98,7 @@ function Game() {
                 </div>
               )}
 
-              {game && opponents.shownOpponentId != null && (
+              {game && slots.slotBPlayerId != null && slots.slotAPlayerId != null && (
                 <div
                   className={
                     'game__board-inner' +
@@ -98,15 +107,15 @@ function Game() {
                 >
                   <PlayerBoard
                     gameId={gameId!}
-                    playerId={opponents.shownOpponentId}
+                    playerId={slots.slotBPlayerId}
                     mirrored
-                    canAct={opponentAccess.canAct}
-                    canEditCounters={opponentAccess.canAct}
+                    canAct={slotBAccess.canAct}
+                    canEditCounters={slotBAccess.canAct}
                     arrowSourceKey={arrows.arrowSourceKey}
                     onCardHover={setHoveredCard}
                     onCardClick={arrows.handleCardClick}
                     onCardContextMenu={(card, e) =>
-                      dialogs.handleCardContextMenu(opponents.shownOpponentId!, App.ZoneName.TABLE, card, e)
+                      dialogs.handleCardContextMenu(slots.slotBPlayerId!, App.ZoneName.TABLE, card, e)
                     }
                     onCardDoubleClick={(card) =>
                       arrows.handleCardDoubleClick(App.ZoneName.TABLE, card)
@@ -114,42 +123,38 @@ function Game() {
                     onZoneClick={dialogs.handleZoneClick}
                     onZoneContextMenu={dialogs.handleZoneContextMenu}
                   />
-                  {!isSpectator && (
-                    <>
-                      <PlayerBoard
-                        gameId={gameId!}
-                        playerId={game.localPlayerId}
-                        canAct={localAccess.canAct}
-                        canEditCounters={localAccess.canAct}
-                        arrowSourceKey={arrows.arrowSourceKey}
-                        onCardHover={setHoveredCard}
-                        onCardClick={arrows.handleCardClick}
-                        onCardContextMenu={(card, e) =>
-                          dialogs.handleCardContextMenu(game.localPlayerId, App.ZoneName.TABLE, card, e)
-                        }
-                        onCardDoubleClick={(card) =>
-                          arrows.handleCardDoubleClick(App.ZoneName.TABLE, card)
-                        }
-                        onZoneClick={dialogs.handleZoneClick}
-                        onZoneContextMenu={dialogs.handleZoneContextMenu}
-                        onRequestCreateCounter={dialogs.openCreateCounter}
-                        onPlayerContextMenu={dialogs.handlePlayerContextMenu}
-                      />
-                      {localPlayer && (
-                        <HandZone
-                          gameId={gameId!}
-                          playerId={game.localPlayerId}
-                          canAct={localAccess.canAct}
-                          arrowSourceKey={arrows.arrowSourceKey}
-                          onCardHover={setHoveredCard}
-                          onCardClick={arrows.handleCardClick}
-                          onCardContextMenu={(card, e) =>
-                            dialogs.handleCardContextMenu(game.localPlayerId, App.ZoneName.HAND, card, e)
-                          }
-                          onZoneContextMenu={dialogs.handleHandContextMenu}
-                        />
-                      )}
-                    </>
+                  <PlayerBoard
+                    gameId={gameId!}
+                    playerId={slots.slotAPlayerId}
+                    canAct={slotAAccess.canAct}
+                    canEditCounters={slotAAccess.canAct}
+                    arrowSourceKey={arrows.arrowSourceKey}
+                    onCardHover={setHoveredCard}
+                    onCardClick={arrows.handleCardClick}
+                    onCardContextMenu={(card, e) =>
+                      dialogs.handleCardContextMenu(slots.slotAPlayerId!, App.ZoneName.TABLE, card, e)
+                    }
+                    onCardDoubleClick={(card) =>
+                      arrows.handleCardDoubleClick(App.ZoneName.TABLE, card)
+                    }
+                    onZoneClick={dialogs.handleZoneClick}
+                    onZoneContextMenu={dialogs.handleZoneContextMenu}
+                    onRequestCreateCounter={dialogs.openCreateCounter}
+                    onPlayerContextMenu={dialogs.handlePlayerContextMenu}
+                  />
+                  {showHandZone && (
+                    <HandZone
+                      gameId={gameId!}
+                      playerId={slots.slotAPlayerId}
+                      canAct={slotAAccess.canAct}
+                      arrowSourceKey={arrows.arrowSourceKey}
+                      onCardHover={setHoveredCard}
+                      onCardClick={arrows.handleCardClick}
+                      onCardContextMenu={(card, e) =>
+                        dialogs.handleCardContextMenu(slots.slotAPlayerId!, App.ZoneName.HAND, card, e)
+                      }
+                      onZoneContextMenu={dialogs.handleHandContextMenu}
+                    />
                   )}
                 </div>
               )}
@@ -282,7 +287,7 @@ function Game() {
                 zoneLabel={dialogs.revealState.zoneLabel}
                 showCountInput={dialogs.revealState.showCountInput}
                 defaultCount={dialogs.revealState.defaultCount}
-                players={opponents.revealPlayers}
+                players={slots.revealPlayers}
                 onSubmit={dialogs.revealState.onSubmit}
                 onCancel={dialogs.closeReveal}
               />

@@ -1,6 +1,5 @@
-.opponent-selector {
+.player-slot-selector {
   position: absolute;
-  top: 8px;
   right: 120px;
   z-index: 10;
   display: flex;
@@ -13,14 +12,24 @@
   color: #e5ecf7;
 }
 
-.opponent-selector__label {
+/* Slot B is the top, mirrored opponent half. */
+.player-slot-selector[data-slot='b'] {
+  top: 8px;
+}
+
+/* Slot A is the bottom, local-side half. */
+.player-slot-selector[data-slot='a'] {
+  bottom: 184px;
+}
+
+.player-slot-selector__label {
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 1px;
   text-transform: uppercase;
 }
 
-.opponent-selector__select {
+.player-slot-selector__select {
   min-width: 120px;
   color: #e5ecf7;
 }

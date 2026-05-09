@@ -115,6 +115,40 @@ describe('2B: Game state & player management', () => {
     expect(player.arrows[3]).toEqual(arrow);
   });
 
+  it('GAME_STATE_CHANGED with playerList lacking userInfo → preserves previously-known userInfo per player', () => {
+    // Regression: Cockatrice's Server_Game::sendGameStateToPlayers always
+    // emits Event_GameStateChanged with withUserInfo=false on resync (game
+    // start, post-concede/unconcede). Without preservation, every name in
+    // the UI would flip to "(unknown)" once the game starts.
+    const state = makeState({
+      games: {
+        1: makeGameEntry({
+          players: {
+            1: makePlayerEntry({
+              properties: makePlayerProperties({ playerId: 1, userInfo: { name: 'Alice' } }),
+            }),
+          },
+        }),
+      },
+    });
+    const playerList: Data.ServerInfo_Player[] = [
+      create(Data.ServerInfo_PlayerSchema, {
+        properties: makePlayerProperties({ playerId: 1 }),
+        deckList: 'some deck',
+        zoneList: [],
+        counterList: [],
+        arrowList: [],
+      }),
+    ];
+
+    const result = gamesReducer(state, Actions.gameStateChanged({
+      gameId: 1,
+      data: { playerList },
+    }));
+
+    expect(result.games[1].players[1].properties.userInfo?.name).toBe('Alice');
+  });
+
   it('GAME_STATE_CHANGED with scalar fields → updates started, activePlayerId, activePhase, secondsElapsed', () => {
     const state = makeState();
     const result = gamesReducer(state, Actions.gameStateChanged({
