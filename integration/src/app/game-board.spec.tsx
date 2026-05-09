@@ -197,7 +197,7 @@ describe('Game board integration', () => {
     expect(screen.queryByTestId('player-board-1')).not.toBeInTheDocument();
   });
 
-  it('hides the opponent selector for 2-player games but shows it for 3+', async () => {
+  it('renders both player slot selectors in 2-player and 3+ player games', async () => {
     renderAppScreen(<Game />);
 
     act(() => {
@@ -214,7 +214,11 @@ describe('Game board integration', () => {
       expect(screen.getByTestId('player-board-1')).toBeInTheDocument();
     });
 
-    expect(screen.queryByTestId('opponent-selector')).not.toBeInTheDocument();
+    // Both slots are visible regardless of player count: slot A is the
+    // local-side board (defaulted to the user), slot B is the mirrored
+    // opponent-side board (defaulted to the next seated player).
+    expect(screen.getByTestId('player-slot-selector-a')).toBeInTheDocument();
+    expect(screen.getByTestId('player-slot-selector-b')).toBeInTheDocument();
 
     act(() => {
       GameDispatch.gameStateChanged(
@@ -224,7 +228,10 @@ describe('Game board integration', () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByTestId('opponent-selector')).toBeInTheDocument();
+      // Adding a third player keeps both selectors mounted; the new player
+      // appears as an additional dropdown option in each.
+      expect(screen.getByTestId('player-slot-selector-a')).toBeInTheDocument();
+      expect(screen.getByTestId('player-slot-selector-b')).toBeInTheDocument();
     });
   });
 
