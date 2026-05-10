@@ -192,9 +192,13 @@ describe('Battlefield', () => {
       expect(row2.querySelector('img[alt="Aura"]')).toBeNull();
     });
 
-    it('lays out attached children with horizontal left/width offsets sized to the stack', () => {
-      // Two attachments → stackFactor = 1 + 2 × 0.3 = 1.6.
-      // Card width = 100 / 1.6 = 62.5%. Children left at 18.75% and 37.5%.
+    it('fans attachments to the left of the parent (parent rightmost, on top)', () => {
+      // Two attachments → stackFactor = 1 + 2/3 = 5/3. Card width = 60%.
+      // Reversed fan (matches desktop): parent at left=40%, first-attached
+      // child[0] just left of parent at 20%, second-attached child[1] at 0%.
+      // z-order: parent=3 (top), child[0]=2, child[1]=1.
+      // Children also sit slightly higher than parent (top ≈ 1.96%) so they
+      // peek above the parent's top edge.
       const cards = [
         makeCard({ id: 1, name: 'Creature', x: 0, y: 0 }),
         attachedChild({ id: 2, name: 'AuraA', attachCardId: 1 }),
@@ -205,16 +209,28 @@ describe('Battlefield', () => {
         { preloadedState: stateWithBattlefield(cards) },
       );
 
+      const parent = container.querySelector(
+        '.attachment-stack__parent',
+      ) as HTMLElement;
+      expect(parent.style.left).toBe('40%');
+      expect(parent.style.width).toBe('60%');
+      // parent top = 14 / 204 ≈ 6.86%
+      expect(parent.style.top).toBe('6.86%');
+      expect(parent.style.zIndex).toBe('3');
+
       const children = Array.from(
         container.querySelectorAll('.attachment-stack__child'),
       ) as HTMLElement[];
       expect(children).toHaveLength(2);
-      expect(children[0].style.left).toBe('18.75%');
-      expect(children[0].style.width).toBe('62.5%');
-      expect(children[0].style.zIndex).toBe('1');
-      expect(children[1].style.left).toBe('37.5%');
-      expect(children[1].style.width).toBe('62.5%');
-      expect(children[1].style.zIndex).toBe('2');
+      expect(children[0].style.left).toBe('20%');
+      expect(children[0].style.width).toBe('60%');
+      // child top = 6 / 204 ≈ 2.94%
+      expect(children[0].style.top).toBe('2.94%');
+      expect(children[0].style.zIndex).toBe('2');
+      expect(children[1].style.left).toBe('0%');
+      expect(children[1].style.width).toBe('60%');
+      expect(children[1].style.top).toBe('2.94%');
+      expect(children[1].style.zIndex).toBe('1');
     });
 
     it('does not flip the stack direction on an inverted (opponent) board', () => {
@@ -227,17 +243,39 @@ describe('Battlefield', () => {
         { preloadedState: stateWithBattlefield(cards) },
       );
 
-      // One attachment → stackFactor = 1.3. Child left at 0.3 × 100 / 1.3 ≈ 23.08%
-      // (AttachmentStack rounds to hundredths to avoid float artifacts).
+      // One attachment → stackFactor = 4/3. Reversed fan keeps the child at
+      // left=0 (leftmost) and parent at left=25% (rightmost), regardless of
+      // board mirror state.
       const child = container.querySelector('.attachment-stack__child') as HTMLElement;
-      expect(child.style.left).toBe('23.08%');
+      expect(child.style.left).toBe('0%');
+      const parent = container.querySelector(
+        '.attachment-stack__parent',
+      ) as HTMLElement;
+      expect(parent.style.left).toBe('25%');
+    });
+
+    it('omits the parent Y offset when the card has no attachments', () => {
+      // Standalone card (N=0): parentTopPct must be 0 so cards on the table
+      // without attachments stay vertically centered in their lane. Mirrors
+      // desktop's `if (numberAttachedCards) actualY += 15` guard.
+      const cards = [makeCard({ id: 1, name: 'Solo', x: 0, y: 0 })];
+      const { container } = renderWithProviders(
+        <Battlefield gameId={1} playerId={1} />,
+        { preloadedState: stateWithBattlefield(cards) },
+      );
+
+      const parent = container.querySelector(
+        '.attachment-stack__parent',
+      ) as HTMLElement;
+      expect(parent.style.top).toBe('0%');
+      expect(parent.style.left).toBe('0%');
+      expect(parent.style.width).toBe('100%');
     });
 
     it('sizes the outer stack column to accommodate the full attachment footprint', () => {
-      // Two attachments → stackFactor 1.6; stack column aspect-ratio = 233.6 / 204.
-      // The outer column scales with lane height via aspect-ratio rather than
-      // a fixed pixel width, so sibling card slots inside share proportional
-      // width automatically.
+      // Two attachments → stackFactor 5/3; width footprint = 146 × 5/3 ≈ 243.33.
+      // Height footprint = 204 + 14 (parent Y offset, since N > 0) = 218.
+      // Stack column aspect-ratio = 243.33 / 218.
       const cards = [
         makeCard({ id: 1, name: 'Creature', x: 0, y: 0 }),
         attachedChild({ id: 2, name: 'AuraA', attachCardId: 1 }),
@@ -251,7 +289,7 @@ describe('Battlefield', () => {
       const stackColumn = container.querySelector(
         '.battlefield-stack-column',
       ) as HTMLElement;
-      expect(stackColumn.style.aspectRatio).toBe('233.6 / 204');
+      expect(stackColumn.style.aspectRatio).toBe('243.33 / 218');
     });
 
     it('attached children render with the card-slot testid so they remain interactive', () => {
@@ -266,6 +304,50 @@ describe('Battlefield', () => {
       const slots = screen.getAllByTestId('card-slot');
       expect(slots).toHaveLength(2);
       expect(slots.map((s) => s.getAttribute('data-card-id'))).toEqual(['1', '2']);
+    });
+
+    it('re-renders when a card becomes attached via cardAttached dispatch', () => {
+      // Regression: after right-click → "Attach to card…" → click target,
+      // the source card was visually staying as a standalone in its lane
+      // until any subsequent action triggered another render. The dispatch
+      // path itself is fine — this test pins the dispatch → DOM update so
+      // any future selector-cache or memoization regression surfaces here.
+      const parent = makeCard({ id: 10, name: 'Creature', x: 0, y: 0 });
+      const source = makeCard({ id: 11, name: 'Aura', x: 3, y: 0 });
+      const { store, container } = renderWithProviders(
+        <Battlefield gameId={1} playerId={1} />,
+        { preloadedState: stateWithBattlefield([parent, source]) },
+      );
+
+      const row0Before = screen.getByTestId('battlefield-row-0');
+      expect(
+        row0Before.querySelectorAll('[data-testid="battlefield-stack-column"]'),
+      ).toHaveLength(2);
+      expect(container.querySelectorAll('.attachment-stack__child')).toHaveLength(0);
+
+      act(() => {
+        store.dispatch(
+          Actions.cardAttached({
+            gameId: 1,
+            playerId: 1,
+            data: create(Data.Event_AttachCardSchema, {
+              startZone: App.ZoneName.TABLE,
+              cardId: 11,
+              targetPlayerId: 1,
+              targetZone: App.ZoneName.TABLE,
+              targetCardId: 10,
+            }),
+          }),
+        );
+      });
+
+      const row0After = screen.getByTestId('battlefield-row-0');
+      expect(
+        row0After.querySelectorAll('[data-testid="battlefield-stack-column"]'),
+      ).toHaveLength(1);
+      const children = container.querySelectorAll('.attachment-stack__child');
+      expect(children).toHaveLength(1);
+      expect(children[0].querySelector('img')?.getAttribute('alt')).toBe('Aura');
     });
   });
 
@@ -289,12 +371,16 @@ describe('Battlefield', () => {
         stacks[0].querySelectorAll('.battlefield-stack-column__slot'),
       ) as HTMLElement[];
       expect(slots).toHaveLength(3);
-      // Positions are expressed as percentages of the stack column (width 244
-      // for a 3-card stack) so they scale with lane height. 49/244 ≈ 20.08%;
-      // 98/244 ≈ 40.16%.
+      // Positions are expressed as percentages of the stack column footprint
+      // (width 244, height 228 for a 3-card stack with 12px stair-step) so
+      // they scale with lane height. 49/244 ≈ 20.08%; 98/244 ≈ 40.16%; 12/228
+      // ≈ 5.26%; 24/228 ≈ 10.53%.
       expect(slots[0].style.left).toBe('0%');
       expect(slots[1].style.left).toBe('20.08%');
       expect(slots[2].style.left).toBe('40.16%');
+      expect(slots[0].style.top).toBe('0%');
+      expect(slots[1].style.top).toBe('5.26%');
+      expect(slots[2].style.top).toBe('10.53%');
       expect(slots[0].style.zIndex).toBe('1');
       expect(slots[2].style.zIndex).toBe('3');
       // containerize sanity: the stack column width accommodates 3 cards.
@@ -329,7 +415,9 @@ describe('Battlefield', () => {
       expect(stack.style.aspectRatio).toBe('146 / 204');
     });
 
-    it('sizes a 3-card stack to fit the rightmost sub-position (aspect-ratio 244/204)', () => {
+    it('sizes a 3-card stack to fit both the rightmost sub-position and the diagonal pile (aspect-ratio 244/228)', () => {
+      // Width: 146 + 2 × 49 = 244. Height: 204 + 2 × 12 = 228 (each subPos
+      // shifts down by STACKED_CARD_OFFSET_Y_PX so a 3-card pile bulges 24px).
       const cards = [
         makeCard({ id: 1, name: 'A', x: 0, y: 0 }),
         makeCard({ id: 2, name: 'B', x: 1, y: 0 }),
@@ -340,7 +428,7 @@ describe('Battlefield', () => {
         { preloadedState: stateWithBattlefield(cards) },
       );
       const stack = container.querySelector('.battlefield-stack-column') as HTMLElement;
-      expect(stack.style.aspectRatio).toBe('244 / 204');
+      expect(stack.style.aspectRatio).toBe('244 / 228');
     });
 
     it('preserves empty stack columns so a card at gridX=7 renders at visual column 2', () => {

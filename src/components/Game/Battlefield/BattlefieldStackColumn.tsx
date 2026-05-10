@@ -2,49 +2,48 @@ import { Data } from '@app/types';
 
 import AttachmentStack from './AttachmentStack';
 import {
+  ATTACH_OFFSET_FRACTION,
+  ATTACH_PARENT_OFFSET_Y_PX,
   CARD_HEIGHT_PX,
   CARD_WIDTH_PX,
   STACKED_CARD_OFFSET_X_PX,
+  STACKED_CARD_OFFSET_Y_PX,
 } from './gridMath';
 
 import './BattlefieldStackColumn.css';
 
-// Keep in sync with AttachmentStack.OFFSET_FRACTION. Attachments peek 30% of a
-// card width past their predecessor; a parent with N attachments occupies
-// CARD_WIDTH_PX × (1 + N × 0.3) horizontally.
-const ATTACH_OFFSET_FRACTION = 0.3;
-
 const EMPTY_ATTACHMENTS: Data.ServerInfo_Card[] = [];
 
-export interface BattlefieldStackColumnProps {
-  cards: Data.ServerInfo_Card[]; // 1..MAX_SUBPOS cards, sorted by sub-position
-  attachmentsByParent: ReadonlyMap<number, Data.ServerInfo_Card[]>;
-  draggable: boolean;
-  ownerPlayerId: number;
-  arrowSourceKey: string | null;
-  onCardHover?: (card: Data.ServerInfo_Card) => void;
-  onCardClick?: (playerId: number, zone: string, card: Data.ServerInfo_Card) => void;
-  onCardContextMenu?: (card: Data.ServerInfo_Card, event: React.MouseEvent) => void;
-  onCardDoubleClick?: (card: Data.ServerInfo_Card) => void;
-}
+const round = (n: number): number => Math.round(n * 100) / 100;
 
-// Width of a stack column = right-edge extent of its widest-positioned card.
-// Each card sits at left = subPos × OFFSET; a card with K attachments extends
-// rightward to (subPos × OFFSET) + CARD_WIDTH × (1 + K × 0.3). We take the max
-// across all cards so attachments on an early sub-position don't overlap the
-// neighbor stack.
-function computeStackWidth(
+// Footprint of a stack column in nominal pixels (146×204 reference card).
+// - Width: rightmost extent across all cards in the stack, including each
+//   card's attachment fan (parent + N×fraction). Prevents an attachment on
+//   subPos 0 from overlapping the next stack.
+// - Height: bottommost extent. Subpos cards stair-step down by
+//   STACKED_CARD_OFFSET_Y_PX, and a card *with* attachments shifts its parent
+//   further down by ATTACH_PARENT_OFFSET_Y_PX (the fan's Y offset is only
+//   applied when N > 0, matching desktop's `if (numberAttachedCards)` guard).
+// The stack column scales with lane height via aspect-ratio; per-slot
+// left/top/width/height are expressed as percentages of this footprint so
+// positions stay proportional at any zoom level.
+function computeStackFootprint(
   cards: Data.ServerInfo_Card[],
   attachmentsByParent: ReadonlyMap<number, Data.ServerInfo_Card[]>,
-): number {
+): { widthPx: number; heightPx: number } {
   let maxRight = CARD_WIDTH_PX;
+  let maxBottom = CARD_HEIGHT_PX;
   cards.forEach((card, subPos) => {
     const attachCount = attachmentsByParent.get(card.id)?.length ?? 0;
     const cardWidth = CARD_WIDTH_PX * (1 + attachCount * ATTACH_OFFSET_FRACTION);
     const leftOffset = subPos * STACKED_CARD_OFFSET_X_PX;
     maxRight = Math.max(maxRight, leftOffset + cardWidth);
+
+    const stackTop = subPos * STACKED_CARD_OFFSET_Y_PX;
+    const parentTop = stackTop + (attachCount > 0 ? ATTACH_PARENT_OFFSET_Y_PX : 0);
+    maxBottom = Math.max(maxBottom, parentTop + CARD_HEIGHT_PX);
   });
-  return Math.round(maxRight * 100) / 100;
+  return { widthPx: round(maxRight), heightPx: round(maxBottom) };
 }
 
 function slotWidthFor(card: Data.ServerInfo_Card, attachmentsByParent: ReadonlyMap<number, Data.ServerInfo_Card[]>): number {
@@ -52,35 +51,45 @@ function slotWidthFor(card: Data.ServerInfo_Card, attachmentsByParent: ReadonlyM
   return CARD_WIDTH_PX * (1 + attachCount * ATTACH_OFFSET_FRACTION);
 }
 
+export interface BattlefieldStackColumnProps {
+  cards: Data.ServerInfo_Card[]; // 1..MAX_SUBPOS cards, sorted by sub-position
+  attachmentsByParent: ReadonlyMap<number, Data.ServerInfo_Card[]>;
+  draggable: boolean;
+  ownerPlayerId: number;
+  ownerPlayerName?: string;
+  arrowSourceKey: string | null;
+  onCardHover?: (card: Data.ServerInfo_Card) => void;
+  onCardClick?: (playerId: number, zone: string, card: Data.ServerInfo_Card) => void;
+  onCardContextMenu?: (card: Data.ServerInfo_Card, event: React.MouseEvent) => void;
+  onCardDoubleClick?: (card: Data.ServerInfo_Card) => void;
+}
+
 function BattlefieldStackColumn({
   cards,
   attachmentsByParent,
   draggable,
   ownerPlayerId,
+  ownerPlayerName,
   arrowSourceKey,
   onCardHover,
   onCardClick,
   onCardContextMenu,
   onCardDoubleClick,
 }: BattlefieldStackColumnProps) {
-  const widthPx = computeStackWidth(cards, attachmentsByParent);
-
-  // Stack column scales with lane height via aspect-ratio. Its rendered
-  // width = laneHeight × widthPx / CARD_HEIGHT_PX; per-slot left/width are
-  // expressed as percentages of that, so positions stay proportional at any
-  // zoom level. widthPx is the nominal (146/49/ratio) footprint.
-  const round = (n: number) => Math.round(n * 100) / 100;
+  const { widthPx, heightPx } = computeStackFootprint(cards, attachmentsByParent);
+  const slotHeightPct = round((CARD_HEIGHT_PX * 100) / heightPx);
 
   return (
     <div
       className="battlefield-stack-column"
       data-testid="battlefield-stack-column"
-      style={{ aspectRatio: `${widthPx} / ${CARD_HEIGHT_PX}` }}
+      style={{ aspectRatio: `${widthPx} / ${heightPx}` }}
     >
       {cards.map((card, subPos) => {
         const slotWidth = slotWidthFor(card, attachmentsByParent);
         const leftPct = round((subPos * STACKED_CARD_OFFSET_X_PX * 100) / widthPx);
         const widthPct = round((slotWidth * 100) / widthPx);
+        const topPct = round((subPos * STACKED_CARD_OFFSET_Y_PX * 100) / heightPx);
         return (
           <div
             key={card.id}
@@ -88,7 +97,9 @@ function BattlefieldStackColumn({
             data-sub-position={subPos}
             style={{
               left: `${leftPct}%`,
+              top: `${topPct}%`,
               width: `${widthPct}%`,
+              height: `${slotHeightPct}%`,
               // Later sub-positions render on top of earlier ones, matching
               // desktop's paint order where cards added later overlay neighbors.
               zIndex: subPos + 1,
@@ -99,6 +110,7 @@ function BattlefieldStackColumn({
               attachments={attachmentsByParent.get(card.id) ?? EMPTY_ATTACHMENTS}
               draggable={draggable}
               ownerPlayerId={ownerPlayerId}
+              ownerPlayerName={ownerPlayerName}
               arrowSourceKey={arrowSourceKey}
               onCardHover={onCardHover}
               onCardClick={onCardClick}

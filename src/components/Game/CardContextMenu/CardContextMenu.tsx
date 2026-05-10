@@ -4,6 +4,12 @@ import Divider from '@mui/material/Divider';
 
 import { Data } from '@app/types';
 
+import {
+  COUNTER_TYPE_COUNT,
+  COUNTER_TYPE_LABELS,
+  counterColorForId,
+} from '../CardSlot/counterColors';
+
 import { useCardContextMenu } from './useCardContextMenu';
 
 import './CardContextMenu.css';
@@ -19,10 +25,19 @@ export interface CardContextMenuProps {
   onClose: () => void;
   onRequestSetPT: () => void;
   onRequestSetAnnotation: () => void;
-  onRequestSetCounter: () => void;
+  onRequestSetCounter: (counterId: number) => void;
   onRequestDrawArrow: () => void;
   onRequestAttach: () => void;
   onRequestMoveToLibraryAt: () => void;
+}
+
+const COUNTER_TYPE_IDS: ReadonlyArray<number> = Array.from(
+  { length: COUNTER_TYPE_COUNT },
+  (_, i) => i,
+);
+
+function hasCounter(card: Data.ServerInfo_Card, counterId: number): boolean {
+  return card.counterList.some((c) => c.id === counterId && c.value > 0);
 }
 
 function CardContextMenu(props: CardContextMenuProps) {
@@ -74,9 +89,46 @@ function CardContextMenu(props: CardContextMenuProps) {
           <MenuItem onClick={handleSetPT}>Set P/T…</MenuItem>
           <MenuItem onClick={handleSetAnnotation}>Set Annotation…</MenuItem>
           <Divider />
-          <MenuItem onClick={() => handleCardCounterDelta(+1)}>Add counter</MenuItem>
-          <MenuItem onClick={() => handleCardCounterDelta(-1)}>Remove counter</MenuItem>
-          <MenuItem onClick={handleSetCardCounter}>Set counter…</MenuItem>
+          {COUNTER_TYPE_IDS.map((id) => (
+            <MenuItem
+              key={`add-counter-${id}`}
+              onClick={() => handleCardCounterDelta(id, +1)}
+            >
+              <span
+                className="card-context-menu__counter-chip"
+                style={{ background: counterColorForId(id) }}
+                aria-hidden="true"
+              />
+              Add {COUNTER_TYPE_LABELS[id]} counter
+            </MenuItem>
+          ))}
+          {COUNTER_TYPE_IDS.map((id) => (
+            <MenuItem
+              key={`remove-counter-${id}`}
+              onClick={() => handleCardCounterDelta(id, -1)}
+              disabled={!hasCounter(card, id)}
+            >
+              <span
+                className="card-context-menu__counter-chip"
+                style={{ background: counterColorForId(id) }}
+                aria-hidden="true"
+              />
+              Remove {COUNTER_TYPE_LABELS[id]} counter
+            </MenuItem>
+          ))}
+          {COUNTER_TYPE_IDS.map((id) => (
+            <MenuItem
+              key={`set-counter-${id}`}
+              onClick={() => handleSetCardCounter(id)}
+            >
+              <span
+                className="card-context-menu__counter-chip"
+                style={{ background: counterColorForId(id) }}
+                aria-hidden="true"
+              />
+              Set {COUNTER_TYPE_LABELS[id]} counter…
+            </MenuItem>
+          ))}
           <Divider />
         </>
       )}

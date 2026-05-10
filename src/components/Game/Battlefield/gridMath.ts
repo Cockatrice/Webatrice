@@ -23,6 +23,29 @@ export const MARGIN_LEFT_PX = 8; // matches .battlefield__row horizontal padding
 export const ROW_COUNT = 3;
 export const MAX_SUBPOS = 3; // cards per stack column before overflow
 
+// Diagonal pile within a stack column (port of desktop STACKED_CARD_OFFSET_Y =
+// PADDING_Y/3 = 10px on a 102px card ≈ 10% of card height). Web tuning: 12px
+// (~6% of card height) — visually readable diagonal at typical zoom. The
+// stack column's aspect-ratio height grows with the bulge (see
+// computeStackFootprint in BattlefieldStackColumn) because rows have ~4px
+// vertical padding and `overflow-y: hidden`, so cards cannot bulge past lane.
+// Cards in a 3-card stack shrink ~5% relative to standalone (244/228 vs
+// 244/204); ~11% in the worst case combined with attachments below.
+export const STACKED_CARD_OFFSET_Y_PX = 12;
+
+// Attachment fan vertical offsets (port of desktop's table_zone.cpp:166-185
+// `if (numberAttachedCards) actualY += 15;` and `childY = y + 5`). Parent
+// shifts down only when it has attachments; children sit slightly higher than
+// parent so they peek above its top edge. Web values keep the desktop's
+// parent:child ratio of ~3:1 while staying within the shrink budget.
+export const ATTACH_PARENT_OFFSET_Y_PX = 14;
+export const ATTACH_CHILD_OFFSET_Y_PX = 6;
+
+// Per-attachment width contribution. Desktop uses STACKED_CARD_OFFSET_X /
+// CARD_WIDTH = 24/72 = exactly 1/3. Single source of truth so AttachmentStack
+// (visual layout) and BattlefieldStackColumn (footprint sizing) cannot drift.
+export const ATTACH_OFFSET_FRACTION = 1 / 3;
+
 export function clampRow(y: number): number {
   if (y < 0) {
     return 0;

@@ -1,6 +1,6 @@
 import { CaseReducer, PayloadAction } from '@reduxjs/toolkit';
 import { create, isFieldSet } from '@bufbuild/protobuf';
-import { Data, Enriched } from '@app/types';
+import { App, Data, Enriched } from '@app/types';
 import { GamesState } from './game.interfaces';
 import { buildEmptyCard, pushEventMessage } from './game.reducer.helpers';
 import {
@@ -71,11 +71,18 @@ export const cardReducers = {
     sourceZone.cardCount = Math.max(0, sourceZone.cardCount - 1);
 
     const effectiveNewId = newCardId >= 0 ? newCardId : (removedCard?.id ?? resolvedCardId);
+    // Counters represent battlefield-only state in MTG; leaving the table
+    // discards them. Mirrors Cockatrice's CardItem::resetState() which
+    // clears `counters` on any zone transition out of play. Done client-side
+    // because Servatrice does not always emit a zeroing cardCounterChanged
+    // event on zone exit; this guard makes the divergence safe either way.
+    const isLeavingBattlefield =
+      startZone === App.ZoneName.TABLE && effectiveTargetZone !== App.ZoneName.TABLE;
     const movedCard: Data.ServerInfo_Card = removedCard
       ? {
         ...removedCard, id: effectiveNewId, name: cardName || removedCard.name,
         x, y, faceDown, providerId: newCardProviderId || removedCard.providerId,
-        counterList: [...removedCard.counterList],
+        counterList: isLeavingBattlefield ? [] : [...removedCard.counterList],
       }
       : buildEmptyCard(effectiveNewId, cardName, x, y, faceDown, newCardProviderId ?? '');
 
@@ -101,18 +108,21 @@ export const cardReducers = {
     const { gameId, playerId, data } = action.payload;
     const { zoneName, cardId, cardName, faceDown, cardProviderId } = data;
     const game = state.games[gameId];
-    const card = game?.players[playerId]?.zones[zoneName]?.byId[cardId];
-    if (!game || !card) {
+    const zone = game?.players[playerId]?.zones[zoneName];
+    const card = zone?.byId[cardId];
+    if (!game || !zone || !card) {
       return;
     }
     const previousName = card.name;
-    card.faceDown = faceDown;
-    if (cardName) {
-      card.name = cardName;
-    }
-    if (cardProviderId) {
-      card.providerId = cardProviderId;
-    }
+    // Replace the card object so Immer's structural sharing fires — see the
+    // comment on cardAttached for why mutating proto fields in place leaves
+    // the zone reference unchanged and breaks re-render.
+    zone.byId[cardId] = {
+      ...card,
+      faceDown,
+      name: cardName || card.name,
+      providerId: cardProviderId || card.providerId,
+    };
     pushEventMessage(game, playerId, formatCardFlipped(game, playerId, data, previousName));
   }) as CaseReducer<GamesState, PayloadAction<{ gameId: number; playerId: number; data: Data.Event_FlipCard }>>,
 
@@ -138,14 +148,33 @@ export const cardReducers = {
     const { gameId, playerId, data } = action.payload;
     const { startZone, cardId, targetPlayerId, targetZone, targetCardId } = data;
     const game = state.games[gameId];
-    const card = game?.players[playerId]?.zones[startZone]?.byId[cardId];
-    if (!game || !card) {
+    const zone = game?.players[playerId]?.zones[startZone];
+    const card = zone?.byId[cardId];
+    if (!game || !zone || !card) {
       return;
     }
     const sourceCardName = card.name;
-    card.attachPlayerId = targetPlayerId;
-    card.attachZone = targetZone;
-    card.attachCardId = targetCardId;
+    // Replace the card in byId rather than mutating it in place. Cards are
+    // protobuf-es messages, which Immer does not recognise as draftable —
+    // mutating `card.attachCardId` directly leaves the surrounding zone /
+    // byId references unchanged, so the WeakMap-keyed selectors in
+    // game.selectors.ts return stale arrays and the UI doesn't re-render
+    // until something else dirties the zone. Assigning a fresh object to
+    // `zone.byId[cardId]` triggers Immer's normal structural-sharing path.
+    //
+    // Unattach: desktop's actUnattach sends Event_AttachCard with target_*
+    // fields unset. proto3 surfaces unset numerics as 0 and strings as '',
+    // not -1. Detect via empty targetZone (attach always specifies a zone)
+    // and write -1 / '' / -1 explicitly so downstream code (`isAttachedChild`
+    // in useBattlefield, `materializeAttachmentsByParent`) recognizes the
+    // card as detached.
+    const isUnattach = !targetZone;
+    zone.byId[cardId] = {
+      ...card,
+      attachPlayerId: isUnattach ? -1 : targetPlayerId,
+      attachZone: isUnattach ? '' : targetZone,
+      attachCardId: isUnattach ? -1 : targetCardId,
+    };
     pushEventMessage(game, playerId, formatCardAttached(game, playerId, data, sourceCardName));
   }) as CaseReducer<GamesState, PayloadAction<{ gameId: number; playerId: number; data: Data.Event_AttachCard }>>,
 
@@ -173,20 +202,34 @@ export const cardReducers = {
     const { gameId, playerId, data } = action.payload;
     const { zoneName, cardId, attribute, attrValue } = data;
     const game = state.games[gameId];
-    const card = game?.players[playerId]?.zones[zoneName]?.byId[cardId];
-    if (!game || !card) {
+    const zone = game?.players[playerId]?.zones[zoneName];
+    const card = zone?.byId[cardId];
+    if (!game || !zone || !card) {
       return;
     }
     const cardName = card.name;
+    // Build a new card object with the changed attribute, then assign it
+    // back to byId. See cardAttached for why in-place field mutation on a
+    // protobuf message would leave the zone reference untouched and the UI
+    // frozen until another action dirties the zone.
+    let updated: Data.ServerInfo_Card = card;
     switch (attribute as Data.CardAttribute) {
-      case Data.CardAttribute.AttrTapped: card.tapped = attrValue === '1'; break;
-      case Data.CardAttribute.AttrAttacking: card.attacking = attrValue === '1'; break;
-      case Data.CardAttribute.AttrFaceDown: card.faceDown = attrValue === '1'; break;
-      case Data.CardAttribute.AttrColor: card.color = attrValue; break;
-      case Data.CardAttribute.AttrPT: card.pt = attrValue; break;
-      case Data.CardAttribute.AttrAnnotation: card.annotation = attrValue; break;
-      case Data.CardAttribute.AttrDoesntUntap: card.doesntUntap = attrValue === '1'; break;
+      case Data.CardAttribute.AttrTapped:
+        updated = { ...card, tapped: attrValue === '1' }; break;
+      case Data.CardAttribute.AttrAttacking:
+        updated = { ...card, attacking: attrValue === '1' }; break;
+      case Data.CardAttribute.AttrFaceDown:
+        updated = { ...card, faceDown: attrValue === '1' }; break;
+      case Data.CardAttribute.AttrColor:
+        updated = { ...card, color: attrValue }; break;
+      case Data.CardAttribute.AttrPT:
+        updated = { ...card, pt: attrValue }; break;
+      case Data.CardAttribute.AttrAnnotation:
+        updated = { ...card, annotation: attrValue }; break;
+      case Data.CardAttribute.AttrDoesntUntap:
+        updated = { ...card, doesntUntap: attrValue === '1' }; break;
     }
+    zone.byId[cardId] = updated;
     pushEventMessage(game, playerId, formatCardAttrChanged(game, playerId, data, cardName));
   }) as CaseReducer<GamesState, PayloadAction<{ gameId: number; playerId: number; data: Data.Event_SetCardAttr }>>,
 
@@ -194,22 +237,33 @@ export const cardReducers = {
     const { gameId, playerId, data } = action.payload;
     const { zoneName, cardId, counterId, counterValue } = data;
     const game = state.games[gameId];
-    const card = game?.players[playerId]?.zones[zoneName]?.byId[cardId];
-    if (!game || !card) {
+    const zone = game?.players[playerId]?.zones[zoneName];
+    const card = zone?.byId[cardId];
+    if (!game || !zone || !card) {
       return;
     }
     const cardName = card.name;
     const previousValue = card.counterList.find(c => c.id === counterId)?.value ?? 0;
+    // Build a fresh counterList, then assign a new card object — see
+    // cardAttached for why in-place mutation on the proto card leaves the
+    // surrounding zone reference unchanged and stops the UI from updating.
+    let nextCounterList: Data.ServerInfo_CardCounter[];
     if (counterValue <= 0) {
-      card.counterList = card.counterList.filter(c => c.id !== counterId);
+      nextCounterList = card.counterList.filter(c => c.id !== counterId);
     } else {
       const idx = card.counterList.findIndex(c => c.id === counterId);
       if (idx >= 0) {
-        card.counterList[idx] = { ...card.counterList[idx], value: counterValue };
+        nextCounterList = card.counterList.map((c, i) =>
+          i === idx ? { ...c, value: counterValue } : c,
+        );
       } else {
-        card.counterList.push(create(Data.ServerInfo_CardCounterSchema, { id: counterId, value: counterValue }));
+        nextCounterList = [
+          ...card.counterList,
+          create(Data.ServerInfo_CardCounterSchema, { id: counterId, value: counterValue }),
+        ];
       }
     }
+    zone.byId[cardId] = { ...card, counterList: nextCounterList };
     pushEventMessage(
       game,
       playerId,

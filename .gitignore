@@ -6,6 +6,7 @@
 .pnp.js
 
 # AI generated docs
+.claude/settings.local.json
 /plans
 
 # generated ./src files

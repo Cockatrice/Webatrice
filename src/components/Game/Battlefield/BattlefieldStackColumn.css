@@ -7,11 +7,9 @@
 
 .battlefield-stack-column__slot {
   position: absolute;
-  top: 0;
-  height: 100%;
-  /* left + zIndex set inline per sub-position */
-  /* AttachmentStack fills this slot; its own width is self-managed via flex
-     basis + max-width inline styles. */
+  /* top, height, left, width, zIndex set inline per sub-position. height is
+     a percentage of the column footprint (< 100% when the column is taller
+     than a single card to accommodate stack/attachment Y bulge). */
   display: flex;
   align-items: center;
 }

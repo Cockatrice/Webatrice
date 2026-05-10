@@ -32,8 +32,6 @@ type DropShape = {
   // Drop-point is expressed as the card center's x relative to the row's
   // content edge (same convention as gridMath.mapToGridX).
   pointerXInRow?: number;
-  attachTarget?: boolean;
-  targetCardId?: number;
 };
 
 const ROW_LEFT = 500;
@@ -87,8 +85,6 @@ function buildEvent(d: DropShape): DragEndEvent {
           targetZone: d.targetZone,
           row: d.targetRow ?? 0,
           rowCards: d.rowCards ?? [],
-          attachTarget: d.attachTarget,
-          targetCardId: d.targetCardId,
         },
       },
       disabled: false,
@@ -304,10 +300,14 @@ describe('useGameDnd', () => {
     });
   });
 
-  describe('attach drops', () => {
-    it('dispatches attachCard when dropping a table card onto another table card', () => {
+  describe('drag-drop never attaches (Cockatrice parity)', () => {
+    it('dispatches moveCard, not attachCard, even when targeting a table row that contains another card', () => {
+      // Card slots are no longer drop targets; drops always land on the row
+      // and resolve via grid math. Attach is right-click-menu-only — see
+      // cockatrice/src/game/board/card_item.cpp `drawAttachArrow`.
       const { webClient, handleDragEnd } = setupHook();
       const source = makeCard({ id: 90, x: 0, y: 0 });
+      const occupant = makeCard({ id: 91, x: 0, y: 0 });
       handleDragEnd(
         buildEvent({
           sourceCard: source,
@@ -316,13 +316,15 @@ describe('useGameDnd', () => {
           targetPlayerId: 1,
           targetZone: App.ZoneName.TABLE,
           targetRow: 0,
-          attachTarget: true,
-          targetCardId: 91,
+          rowCards: [occupant],
+          pointerXInRow: 0,
         }),
       );
 
-      expect(webClient.request.game.attachCard).toHaveBeenCalledTimes(1);
-      expect(webClient.request.game.moveCard).not.toHaveBeenCalled();
+      expect(webClient.request.game.attachCard).not.toHaveBeenCalled();
+      expect(webClient.request.game.moveCard).toHaveBeenCalledTimes(1);
+      // closestGridPoint bumps to subPos 1 since base is occupied → x=1.
+      expect(webClient.request.game.moveCard.mock.calls[0][1].x).toBe(1);
     });
   });
 });

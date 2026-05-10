@@ -57,10 +57,51 @@ describe('CardSlot', () => {
     expect(screen.getByText('5/5')).toBeInTheDocument();
   });
 
-  it('renders annotation overlay when annotation is set', () => {
+  it('does not render a standalone annotation overlay (annotation feeds the owner pill instead)', () => {
     const card = makeCard({ annotation: 'note' });
     render(<CardSlot card={card} />);
-    expect(screen.getByText('note')).toBeInTheDocument();
+    // No owner gate, so nothing should display "note".
+    expect(screen.queryByText('note')).not.toBeInTheDocument();
+  });
+
+  it('owner pill shows card.annotation when set (server-populated owner name)', () => {
+    const card = makeCard({ annotation: 'Bob' });
+    render(<CardSlot card={card} ownerPlayerName="bob_user" />);
+    // Annotation wins over the resolved player name.
+    expect(screen.getByText('Bob')).toBeInTheDocument();
+    expect(screen.queryByText('bob_user')).not.toBeInTheDocument();
+  });
+
+  it('owner pill falls back to ownerPlayerName when annotation is empty', () => {
+    const card = makeCard({ annotation: '' });
+    render(<CardSlot card={card} ownerPlayerName="Alice" />);
+    expect(screen.getByText('Alice')).toBeInTheDocument();
+  });
+
+  it('renders the card name as a top overlay (full-text, no ellipsis)', () => {
+    const card = makeCard({ name: 'Lightning Bolt' });
+    render(<CardSlot card={card} />);
+    const nameEls = screen.getAllByText('Lightning Bolt');
+    const overlay = nameEls.find((el) => el.classList.contains('card-slot__name'));
+    expect(overlay).toBeDefined();
+    expect(overlay).not.toHaveStyle({ textOverflow: 'ellipsis' });
+  });
+
+  it('renders the owner overlay only when ownerPlayerName is provided', () => {
+    const card = makeCard({ name: 'Bear' });
+    const { unmount } = render(<CardSlot card={card} />);
+    expect(screen.queryByText('Alice')).not.toBeInTheDocument();
+    unmount();
+
+    render(<CardSlot card={card} ownerPlayerName="Alice" />);
+    expect(screen.getByText('Alice')).toBeInTheDocument();
+  });
+
+  it('suppresses name and owner overlays when face-down', () => {
+    const card = makeCard({ name: 'Hidden', faceDown: true });
+    render(<CardSlot card={card} ownerPlayerName="Alice" />);
+    expect(screen.queryByText('Hidden')).not.toBeInTheDocument();
+    expect(screen.queryByText('Alice')).not.toBeInTheDocument();
   });
 
   it('renders a counter badge per card counter', () => {

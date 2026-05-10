@@ -1,4 +1,5 @@
 import { screen, fireEvent } from '@testing-library/react';
+import { create } from '@bufbuild/protobuf';
 import { App, Data } from '@app/types';
 
 import { createMockWebClient, renderWithProviders } from '../../../__test-utils__';
@@ -213,7 +214,8 @@ describe('CardContextMenu', () => {
     expect(screen.queryByText('Flip')).not.toBeInTheDocument();
     expect(screen.queryByText('Tap')).not.toBeInTheDocument();
     expect(screen.queryByText('Set P/T…')).not.toBeInTheDocument();
-    expect(screen.queryByText('Set counter…')).not.toBeInTheDocument();
+    expect(screen.queryByText('Add A counter')).not.toBeInTheDocument();
+    expect(screen.queryByText('Set A counter…')).not.toBeInTheDocument();
     expect(screen.queryByText('Send to Hand')).not.toBeInTheDocument();
     expect(screen.queryByText('Attach to card…')).not.toBeInTheDocument();
 
@@ -261,14 +263,14 @@ describe('CardContextMenu', () => {
     }));
   });
 
-  it('adds a counter via incCardCounter (+1 on id 0)', () => {
+  it('adds an A-type counter via incCardCounter (+1 on id 0)', () => {
     const webClient = createMockWebClient();
     renderWithProviders(
       <CardContextMenu {...defaultProps} card={makeCard({ id: 9 })} />,
       { webClient },
     );
 
-    fireEvent.click(screen.getByText('Add counter'));
+    fireEvent.click(screen.getByText('Add A counter'));
 
     expect(webClient.request.game.incCardCounter).toHaveBeenCalledWith(1, {
       zone: App.ZoneName.TABLE,
@@ -278,14 +280,46 @@ describe('CardContextMenu', () => {
     });
   });
 
-  it('removes a counter via incCardCounter (-1 on id 0)', () => {
+  it('adds a B-type counter via incCardCounter (+1 on id 1)', () => {
     const webClient = createMockWebClient();
     renderWithProviders(
       <CardContextMenu {...defaultProps} card={makeCard({ id: 9 })} />,
       { webClient },
     );
 
-    fireEvent.click(screen.getByText('Remove counter'));
+    fireEvent.click(screen.getByText('Add B counter'));
+
+    expect(webClient.request.game.incCardCounter).toHaveBeenCalledWith(1, {
+      zone: App.ZoneName.TABLE,
+      cardId: 9,
+      counterId: 1,
+      counterDelta: 1,
+    });
+  });
+
+  it('disables Remove A counter when card has no A counters', () => {
+    renderWithProviders(
+      <CardContextMenu {...defaultProps} card={makeCard({ id: 9 })} />,
+    );
+
+    const item = screen.getByText('Remove A counter').closest('li');
+    expect(item).toHaveClass('Mui-disabled');
+  });
+
+  it('removes a counter via incCardCounter (-1 on the matching id) when present', () => {
+    const webClient = createMockWebClient();
+    const card = makeCard({
+      id: 9,
+      counterList: [
+        create(Data.ServerInfo_CardCounterSchema, { id: 0, value: 2 }),
+      ],
+    });
+    renderWithProviders(
+      <CardContextMenu {...defaultProps} card={card} />,
+      { webClient },
+    );
+
+    fireEvent.click(screen.getByText('Remove A counter'));
 
     expect(webClient.request.game.incCardCounter).toHaveBeenCalledWith(1, {
       zone: App.ZoneName.TABLE,
@@ -295,7 +329,7 @@ describe('CardContextMenu', () => {
     });
   });
 
-  it('defers "Set counter…" to the parent callback', () => {
+  it('defers "Set A counter…" to the parent callback with the matching id', () => {
     const onRequestSetCounter = vi.fn();
     renderWithProviders(
       <CardContextMenu
@@ -305,9 +339,9 @@ describe('CardContextMenu', () => {
       />,
     );
 
-    fireEvent.click(screen.getByText('Set counter…'));
+    fireEvent.click(screen.getByText('Set A counter…'));
 
-    expect(onRequestSetCounter).toHaveBeenCalled();
+    expect(onRequestSetCounter).toHaveBeenCalledWith(0);
   });
 
   it('defers "Draw arrow from here" to the parent callback', () => {

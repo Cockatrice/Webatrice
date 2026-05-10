@@ -5,7 +5,7 @@ import { createCardRegistry } from '../../components/Game/CardRegistry/CardRegis
 import { combineReducers } from '@reduxjs/toolkit';
 
 import { gamesReducer } from '../../store/game/game.reducer';
-import { makeGameEntry, makePlayerEntry, makePlayerProperties } from '../../store/game/__mocks__/fixtures';
+import { makeCard, makeGameEntry, makePlayerEntry, makePlayerProperties } from '../../store/game/__mocks__/fixtures';
 import type { GamesState } from '../../store/game/game.interfaces';
 import { makeReduxWebClientHookWrapper } from '../../__test-utils__/makeHookWrapper';
 import { App } from '../../types';
@@ -191,6 +191,66 @@ describe('useGameArrowInteractions', () => {
       window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
     });
     expect(result.current.arrowSourceKey).toBeNull();
+  });
+
+  describe('context-menu attach flow', () => {
+    // Regression: dnd-kit's PointerSensor used to fire onDragStart on every
+    // pointerdown (no activationConstraint), which routed through
+    // cancelPendingOnDragStart and wiped pendingAttach before the click
+    // event reached handleCardClick. The fix adds `distance: 8` to the
+    // sensor in useGame.ts; this spec covers handleCardClick's contract
+    // directly so the click-through-attach path is no longer untested.
+
+    it('dispatches attachCard when handleCardClick fires on a different card while pendingAttach is set', () => {
+      const { result, webClient } = setup();
+
+      act(() => {
+        result.current.startPendingAttach({
+          sourcePlayerId: 1,
+          sourceZone: App.ZoneName.TABLE,
+          sourceCardId: 5,
+        });
+      });
+      expect(result.current.arrowSourceKey).not.toBeNull();
+
+      act(() => {
+        result.current.handleCardClick(2, App.ZoneName.TABLE, makeCard({ id: 99 }));
+      });
+
+      expect(webClient.request.game.attachCard).toHaveBeenCalledTimes(1);
+      expect(webClient.request.game.attachCard).toHaveBeenCalledWith(
+        1,
+        expect.objectContaining({
+          startZone: App.ZoneName.TABLE,
+          cardId: 5,
+          targetPlayerId: 2,
+          targetZone: App.ZoneName.TABLE,
+          targetCardId: 99,
+        }),
+      );
+      // Pending state cleared after dispatch so subsequent clicks don't
+      // re-attach.
+      expect(result.current.arrowSourceKey).toBeNull();
+    });
+
+    it('cancels pendingAttach without dispatching attachCard when the user clicks the source card itself', () => {
+      const { result, webClient } = setup();
+
+      act(() => {
+        result.current.startPendingAttach({
+          sourcePlayerId: 1,
+          sourceZone: App.ZoneName.TABLE,
+          sourceCardId: 5,
+        });
+      });
+
+      act(() => {
+        result.current.handleCardClick(1, App.ZoneName.TABLE, makeCard({ id: 5 }));
+      });
+
+      expect(webClient.request.game.attachCard).not.toHaveBeenCalled();
+      expect(result.current.arrowSourceKey).toBeNull();
+    });
   });
 
   it('ESC does not cancel while a MUI dialog is open', () => {

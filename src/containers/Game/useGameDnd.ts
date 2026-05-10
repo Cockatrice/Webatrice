@@ -74,37 +74,13 @@ export function useGameDnd({ gameId, onDragStart }: UseGameDndArgs): GameDnd {
         targetPlayerId: number;
         targetZone: string;
         row?: number;
-        attachTarget?: boolean;
-        targetCardId?: number;
         rowCards?: Data.ServerInfo_Card[];
       };
 
-      // Drop onto another card on the table → attach source to target.
-      // Desktop's actAttach is only initiated from a table card, so source
-      // must also be TABLE. Non-TABLE drops onto a table card fall through
-      // to the normal moveCard branch (drop becomes "move to that row").
-      if (
-        target.attachTarget &&
-        target.targetCardId != null &&
-        source.sourceZone === App.ZoneName.TABLE
-      ) {
-        // Guard no-op self-drop (source === target).
-        if (
-          source.sourcePlayerId === target.targetPlayerId &&
-          source.sourceZone === target.targetZone &&
-          source.card.id === target.targetCardId
-        ) {
-          return;
-        }
-        webClient.request.game.attachCard(gameId, {
-          startZone: source.sourceZone,
-          cardId: source.card.id,
-          targetPlayerId: target.targetPlayerId,
-          targetZone: target.targetZone,
-          targetCardId: target.targetCardId,
-        });
-        return;
-      }
+      // Drag-drop never attaches — desktop attaches via right-click menu →
+      // CardItem::drawAttachArrow (cockatrice/src/game/board/card_item.cpp).
+      // A drop on a card falls through to the BattlefieldRow droppable below
+      // and resolves through grid math (stack/move).
 
       const sameZone =
         source.sourcePlayerId === target.targetPlayerId &&

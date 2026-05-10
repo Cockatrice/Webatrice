@@ -1,8 +1,12 @@
 import { makeCard } from '../../../store/game/__mocks__/fixtures';
 import {
+  ATTACH_OFFSET_FRACTION,
+  CARD_HEIGHT_PX,
   CARD_WIDTH_PX,
+  MAX_SUBPOS,
   PADDING_X_PX,
   STACKED_CARD_OFFSET_X_PX,
+  STACKED_CARD_OFFSET_Y_PX,
   applyInvertY,
   closestGridPoint,
   mapToGridX,
@@ -123,6 +127,24 @@ describe('gridMath', () => {
       // gridX = 4 with base occupied → returns base+1 = 4.
       expect(closestGridPoint(4, new Set([3]))).toBe(4);
       expect(closestGridPoint(5, new Set([3, 4]))).toBe(5);
+    });
+  });
+
+  describe('attachment + stack constants', () => {
+    it('uses the desktop WIDTH/3 attachment fraction exactly', () => {
+      expect(ATTACH_OFFSET_FRACTION).toBeCloseTo(1 / 3);
+    });
+
+    it('keeps stack Y bulge within ~15% of card height so cards do not shrink dramatically', () => {
+      // A full 3-card stack adds (MAX_SUBPOS - 1) * STACKED_CARD_OFFSET_Y_PX
+      // to the column's aspect-ratio height. Capping at ~15% of card height
+      // bounds the in-stack card shrink (vs standalone cards in the same
+      // lane). Tightening this further than 15% trades visible-diagonal
+      // readability for marginal extra card size.
+      expect(STACKED_CARD_OFFSET_Y_PX).toBeGreaterThan(0);
+      expect((MAX_SUBPOS - 1) * STACKED_CARD_OFFSET_Y_PX).toBeLessThan(
+        CARD_HEIGHT_PX * 0.15,
+      );
     });
   });
 

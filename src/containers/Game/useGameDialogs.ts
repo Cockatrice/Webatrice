@@ -4,6 +4,8 @@ import { DEFAULT_DIE_COUNT, DEFAULT_DIE_SIDES, type SideboardPlanMove } from '@a
 import { useWebClient, type GameAccess } from '@app/hooks';
 import { App, Data, type Enriched } from '@app/types';
 
+import { COUNTER_TYPE_LABELS } from '../../components/Game/CardSlot/counterColors';
+
 export interface AnchorPosition {
   top: number;
   left: number;
@@ -113,6 +115,7 @@ export interface GameDialogs {
     annotation: string;
     destroyOnZoneChange: boolean;
     faceDown: boolean;
+    providerId?: string;
   }) => void;
 
   sideboardOpen: boolean;
@@ -139,7 +142,7 @@ export interface GameDialogs {
   // Card context menu action handlers
   handleRequestSetPT: () => void;
   handleRequestSetAnnotation: () => void;
-  handleRequestSetCardCounter: () => void;
+  handleRequestSetCardCounter: (counterId: number) => void;
   handleRequestDrawArrow: () => void;
   handleRequestAttach: () => void;
   handleRequestMoveToLibraryAt: () => void;
@@ -314,14 +317,15 @@ export function useGameDialogs({
     });
   }, [cardMenu, gameId, webClient]);
 
-  const handleRequestSetCardCounter = useCallback(() => {
+  const handleRequestSetCardCounter = useCallback((counterId: number) => {
     const menu = cardMenu;
     if (!menu || gameId == null) {
       return;
     }
-    const existing = menu.card.counterList.find((c) => c.id === 0);
+    const existing = menu.card.counterList.find((c) => c.id === counterId);
+    const label = COUNTER_TYPE_LABELS[counterId] ?? String(counterId);
     setPrompt({
-      title: 'Set card counter',
+      title: `Set ${label} counter`,
       label: 'Counter value',
       initialValue: String(existing?.value ?? 0),
       validate: (v) => (/^-?\d+$/.test(v) ? null : 'Enter an integer'),
@@ -329,7 +333,7 @@ export function useGameDialogs({
         webClient.request.game.setCardCounter(gameId, {
           zone: menu.sourceZone,
           cardId: menu.card.id,
-          counterId: 0,
+          counterId,
           counterValue: Number(value),
         });
         setPrompt(null);
@@ -469,6 +473,7 @@ export function useGameDialogs({
       annotation: string;
       destroyOnZoneChange: boolean;
       faceDown: boolean;
+      providerId?: string;
     }) => {
       if (gameId == null) {
         return;
@@ -484,6 +489,7 @@ export function useGameDialogs({
         y: 0,
         faceDown: args.faceDown,
         targetCardId: -1,
+        cardProviderId: args.providerId ?? '',
       });
       setCreateTokenOpen(false);
     },

@@ -25,7 +25,12 @@ export function getScryfallUrlByName(
   name: string,
   size: App.ScryfallImageSize = App.ScryfallImageSize.Small,
 ): string {
-  const exact = encodeURIComponent(name);
+  // Cockatrice's tokens.xml namespaces token entries with a trailing
+  // "Token" tag (commonly parenthesized as "(Token)") to disambiguate from
+  // real cards of the same name. Scryfall uses the unsuffixed printed name,
+  // so strip the suffix — with or without parens — before the lookup.
+  const cleaned = name.replace(/\s*\(?\bToken\b\)?\s*$/i, '');
+  const exact = encodeURIComponent(cleaned);
   return `${SCRYFALL_API}/cards/named?exact=${exact}&format=image&version=${size}`;
 }
 

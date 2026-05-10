@@ -3,6 +3,7 @@ import { memo } from 'react';
 import type { Data } from '@app/types';
 import { cx } from '@app/utils';
 
+import { counterColorForId } from './counterColors';
 import { useCardSlot } from './useCardSlot';
 
 import './CardSlot.css';
@@ -15,6 +16,10 @@ export interface CardSlotProps {
    *  as `ownerPlayerId`, not `sourcePlayerId`, because it reflects the card
    *  in the game state rather than any drag origin. */
   ownerPlayerId?: number;
+  /** Display name of the owning player, painted under the card name. Only
+   *  passed by battlefield callers; other zones leave it undefined so the
+   *  owner pill is suppressed. */
+  ownerPlayerName?: string;
   zone?: string;
   onClick?: (card: Data.ServerInfo_Card) => void;
   onDoubleClick?: (card: Data.ServerInfo_Card) => void;
@@ -27,13 +32,14 @@ function CardSlot({
   draggable = false,
   isArrowSource = false,
   ownerPlayerId,
+  ownerPlayerName,
   zone,
   onClick,
   onDoubleClick,
   onContextMenu,
   onMouseEnter,
 }: CardSlotProps) {
-  const { smallUrl, attributes, listeners, isDragging, isOver, rootRef } = useCardSlot({
+  const { smallUrl, attributes, listeners, isDragging, rootRef } = useCardSlot({
     card,
     draggable,
     ownerPlayerId,
@@ -46,7 +52,6 @@ function CardSlot({
     'card-slot--attacking': card.attacking,
     'card-slot--dragging': isDragging,
     'card-slot--arrow-source': isArrowSource,
-    'card-slot--attach-over': isOver,
   });
 
   return (
@@ -72,8 +77,19 @@ function CardSlot({
         )
       )}
 
-      {card.annotation && !card.faceDown && (
-        <div className="card-slot__annotation">{card.annotation}</div>
+      {!card.faceDown && (card.name || (ownerPlayerName && (card.annotation || ownerPlayerName))) && (
+        <div className="card-slot__top">
+          {card.name && <div className="card-slot__name">{card.name}</div>}
+          {ownerPlayerName && (
+            // Source the owner label from card.annotation when the server
+            // has populated it (Servatrice writes the owning player's name
+            // there for enemy-battlefield cards). Falls back to the resolved
+            // player username when annotation is empty.
+            <div className="card-slot__owner">
+              {card.annotation || ownerPlayerName}
+            </div>
+          )}
+        </div>
       )}
 
       {card.pt && !card.faceDown && (
@@ -83,7 +99,11 @@ function CardSlot({
       {card.counterList.length > 0 && !card.faceDown && (
         <div className="card-slot__counters">
           {card.counterList.map((c) => (
-            <span key={c.id} className="card-slot__counter">
+            <span
+              key={c.id}
+              className={`card-slot__counter card-slot__counter--pos-${c.id}`}
+              style={{ background: counterColorForId(c.id) }}
+            >
               {c.value}
             </span>
           ))}

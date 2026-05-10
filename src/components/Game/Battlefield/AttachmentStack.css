@@ -7,18 +7,18 @@
 }
 
 .attachment-stack__parent {
-  position: relative;
+  position: absolute;
   height: 100%;
   display: flex;
   align-items: center;
-  /* width set inline per-stack */
+  /* left, top, width, z-index set inline per-stack so the parent can sit
+     rightmost in the fan (matches desktop's parent-on-top layout). */
 }
 
 .attachment-stack__child {
   position: absolute;
-  top: 0;
   height: 100%;
   display: flex;
   align-items: center;
-  /* left, width, z-index set inline per-child */
+  /* left, top, width, z-index set inline per-child */
 }

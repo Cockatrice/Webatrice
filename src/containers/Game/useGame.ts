@@ -42,7 +42,16 @@ export function useGame(): Game {
 
   const boardRef = useRef<HTMLDivElement>(null);
   const cardRegistry = useMemo(() => createCardRegistry(), []);
-  const sensors = useSensors(useSensor(PointerSensor), useSensor(KeyboardSensor));
+  // 8px activation distance distinguishes a tap from a drag. Without it,
+  // every pointerdown fires onDragStart → cancelPendingOnDragStart, which
+  // wipes any armed pendingArrow / pendingAttach before the click event
+  // can reach handleCardClick — silently breaking the right-click → "Attach
+  // to card…" / "Draw arrow" flows. Matches ARROW_DRAG_THRESHOLD_PX in
+  // useGameArrowInteractions so click-vs-drag is consistent across the app.
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor),
+  );
   const [hoveredCard, setHoveredCard] = useState<Data.ServerInfo_Card | null>(null);
   // View-only 90° rotation; local to this tab, mirrors desktop's
   // Player::actRotateLocal which applies a QGraphicsView transform with no

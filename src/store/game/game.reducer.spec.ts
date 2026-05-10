@@ -605,6 +605,70 @@ describe('2C: CARD_MOVED', () => {
     expect(movedCard.counterList).not.toBe(card.counterList);
   });
 
+  it('CARD_MOVED table → grave: counters are cleared (Cockatrice resetState parity)', () => {
+    const cardCounter = create(Data.ServerInfo_CardCounterSchema, { id: 1, value: 3 });
+    const card = makeCard({ id: 10, counterList: [cardCounter] });
+    const state = makeState({
+      games: {
+        1: makeGameEntry({
+          players: {
+            1: makePlayerEntry({
+              zones: {
+                table: makeZoneEntry({ name: 'table', cards: [card], cardCount: 1 }),
+                grave: makeZoneEntry({ name: 'grave', cardCount: 0 }),
+              },
+            }),
+          },
+        }),
+      },
+    });
+
+    const result = gamesReducer(state, Actions.cardMoved({
+      gameId: 1,
+      playerId: 1,
+      data: {
+        cardId: 10, cardName: '', startPlayerId: 1, startZone: 'table',
+        position: -1, targetPlayerId: 1, targetZone: 'grave',
+        x: 0, y: 0, newCardId: -1, faceDown: false, newCardProviderId: '',
+      },
+    }));
+
+    const movedCard = cardsIn(result, 1, 1, 'grave')[0];
+    expect(movedCard.counterList).toEqual([]);
+  });
+
+  it('CARD_MOVED intra-table reorder preserves counters', () => {
+    const cardCounter = create(Data.ServerInfo_CardCounterSchema, { id: 1, value: 3 });
+    const card = makeCard({ id: 10, counterList: [cardCounter] });
+    const state = makeState({
+      games: {
+        1: makeGameEntry({
+          players: {
+            1: makePlayerEntry({
+              zones: {
+                table: makeZoneEntry({ name: 'table', cards: [card], cardCount: 1 }),
+              },
+            }),
+          },
+        }),
+      },
+    });
+
+    const result = gamesReducer(state, Actions.cardMoved({
+      gameId: 1,
+      playerId: 1,
+      data: {
+        cardId: 10, cardName: '', startPlayerId: 1, startZone: 'table',
+        position: -1, targetPlayerId: 1, targetZone: 'table',
+        x: 4, y: 0, newCardId: -1, faceDown: false, newCardProviderId: '',
+      },
+    }));
+
+    const movedCard = cardsIn(result, 1, 1, 'table')[0];
+    expect(movedCard.counterList).toHaveLength(1);
+    expect(movedCard.counterList[0].value).toBe(3);
+  });
+
   it('intra-zone TABLE move: card stays in the zone with updated x/y', () => {
     const card = makeCard({ id: 10, x: 0, y: 0, name: 'InPlace' });
     const state = makeState({
@@ -813,6 +877,32 @@ describe('2D: Card mutations', () => {
     expect(card.attachCardId).toBe(99);
   });
 
+  it('CARD_ATTACHED with empty target (proto3 unset target_* fields) → resets to -1 / "" / -1 (unattach)', () => {
+    // Server sends Event_AttachCard with no target fields when actUnattach
+    // is invoked; proto3 surfaces unset numerics as 0 and strings as ''. The
+    // reducer must explicitly map that back to -1 so isAttachedChild treats
+    // the card as detached and it reappears in its lane.
+    const { state } = stateWithCardInZone('table');
+    // First attach the card so it has positive target ids to clear.
+    const attached = gamesReducer(state, Actions.cardAttached({
+      gameId: 1,
+      playerId: 1,
+      data: { startZone: 'table', cardId: 5, targetPlayerId: 2, targetZone: 'table', targetCardId: 99 },
+    }));
+    expect(cardsIn(attached, 1, 1, 'table')[0].attachCardId).toBe(99);
+
+    // Now unattach (proto3-style unset target fields).
+    const unattached = gamesReducer(attached, Actions.cardAttached({
+      gameId: 1,
+      playerId: 1,
+      data: { startZone: 'table', cardId: 5, targetPlayerId: 0, targetZone: '', targetCardId: 0 },
+    }));
+    const card = cardsIn(unattached, 1, 1, 'table')[0];
+    expect(card.attachPlayerId).toBe(-1);
+    expect(card.attachZone).toBe('');
+    expect(card.attachCardId).toBe(-1);
+  });
+
   it('TOKEN_CREATED → builds full CardInfo, appends to zone, increments cardCount', () => {
     const state = makeState({
       games: {
@@ -852,6 +942,72 @@ describe('2D: Card mutations', () => {
     expect(tableCards[0].id).toBe(77);
     expect(tableCards[0].name).toBe('Goblin');
     expect(tableCards[0].destroyOnZoneChange).toBe(true);
+  });
+
+  // Regression: cards are protobuf-es messages and Immer doesn't draft them.
+  // Reducers that mutated `card.someField` in place left the surrounding
+  // zone reference unchanged, which made the WeakMap-keyed selectors in
+  // game.selectors.ts hand back stale arrays — the UI froze until another
+  // action dirtied the zone. Each affected reducer now assigns a fresh
+  // object to `zone.byId[cardId]` so Immer's structural sharing fires.
+  // These tests pin the contract: the zone reference MUST change after the
+  // reducer runs.
+  describe('zone reference invariant on per-card mutations', () => {
+    function stateWithTableCards(cards: ReturnType<typeof makeCard>[]) {
+      return makeState({
+        games: {
+          1: makeGameEntry({
+            players: {
+              1: makePlayerEntry({
+                zones: {
+                  table: makeZoneEntry({ name: 'table', cards }),
+                },
+              }),
+            },
+          }),
+        },
+      });
+    }
+
+    it('cardAttached produces a new zone reference', () => {
+      const state = stateWithTableCards([makeCard({ id: 1 }), makeCard({ id: 2 })]);
+      const before = state.games[1].players[1].zones['table'];
+      const result = gamesReducer(state, Actions.cardAttached({
+        gameId: 1, playerId: 1,
+        data: { startZone: 'table', cardId: 1, targetPlayerId: 1, targetZone: 'table', targetCardId: 2 },
+      }));
+      expect(result.games[1].players[1].zones['table']).not.toBe(before);
+    });
+
+    it('cardFlipped produces a new zone reference', () => {
+      const state = stateWithTableCards([makeCard({ id: 1, faceDown: false })]);
+      const before = state.games[1].players[1].zones['table'];
+      const result = gamesReducer(state, Actions.cardFlipped({
+        gameId: 1, playerId: 1,
+        data: { zoneName: 'table', cardId: 1, cardName: '', faceDown: true, cardProviderId: '' },
+      }));
+      expect(result.games[1].players[1].zones['table']).not.toBe(before);
+    });
+
+    it('cardAttrChanged produces a new zone reference', () => {
+      const state = stateWithTableCards([makeCard({ id: 1, tapped: false })]);
+      const before = state.games[1].players[1].zones['table'];
+      const result = gamesReducer(state, Actions.cardAttrChanged({
+        gameId: 1, playerId: 1,
+        data: { zoneName: 'table', cardId: 1, attribute: Data.CardAttribute.AttrTapped, attrValue: '1' },
+      }));
+      expect(result.games[1].players[1].zones['table']).not.toBe(before);
+    });
+
+    it('cardCounterChanged produces a new zone reference', () => {
+      const state = stateWithTableCards([makeCard({ id: 1 })]);
+      const before = state.games[1].players[1].zones['table'];
+      const result = gamesReducer(state, Actions.cardCounterChanged({
+        gameId: 1, playerId: 1,
+        data: { zoneName: 'table', cardId: 1, counterId: 0, counterValue: 1 },
+      }));
+      expect(result.games[1].players[1].zones['table']).not.toBe(before);
+    });
   });
 });
 

@@ -34,8 +34,8 @@ export interface CardContextMenu {
   handleDoesntUntapToggle: () => void;
   handleSetPT: () => void;
   handleSetAnnotation: () => void;
-  handleCardCounterDelta: (delta: number) => void;
-  handleSetCardCounter: () => void;
+  handleCardCounterDelta: (counterId: number, delta: number) => void;
+  handleSetCardCounter: (counterId: number) => void;
   handleDrawArrow: () => void;
   handleAttach: () => void;
   handleUnattach: () => void;
@@ -52,7 +52,7 @@ export interface UseCardContextMenuArgs {
   onClose: () => void;
   onRequestSetPT: () => void;
   onRequestSetAnnotation: () => void;
-  onRequestSetCounter: () => void;
+  onRequestSetCounter: (counterId: number) => void;
   onRequestDrawArrow: () => void;
   onRequestAttach: () => void;
   onRequestMoveToLibraryAt: () => void;
@@ -151,21 +151,21 @@ export function useCardContextMenu({
     onClose();
   };
 
-  const handleCardCounterDelta = (delta: number) => {
+  const handleCardCounterDelta = (counterId: number, delta: number) => {
     if (!ready) {
       return;
     }
     webClient.request.game.incCardCounter(gameId, {
       zone: sourceZone!,
       cardId: card!.id,
-      counterId: 0,
+      counterId,
       counterDelta: delta,
     });
     onClose();
   };
 
-  const handleSetCardCounter = () => {
-    onRequestSetCounter();
+  const handleSetCardCounter = (counterId: number) => {
+    onRequestSetCounter(counterId);
     onClose();
   };
 
