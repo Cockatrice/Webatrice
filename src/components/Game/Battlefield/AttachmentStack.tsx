@@ -16,7 +16,6 @@ export interface AttachmentStackProps {
   attachments: Data.ServerInfo_Card[];
   draggable: boolean;
   ownerPlayerId: number;
-  ownerPlayerName?: string;
   arrowSourceKey: string | null;
   onCardHover?: (card: Data.ServerInfo_Card) => void;
   onCardClick?: (playerId: number, zone: string, card: Data.ServerInfo_Card) => void;
@@ -31,7 +30,6 @@ function AttachmentStack({
   attachments,
   draggable,
   ownerPlayerId,
-  ownerPlayerName,
   arrowSourceKey,
   onCardHover,
   onCardClick,
@@ -77,7 +75,6 @@ function AttachmentStack({
           card={parent}
           draggable={draggable}
           ownerPlayerId={ownerPlayerId}
-          ownerPlayerName={ownerPlayerName}
           zone={App.ZoneName.TABLE}
           isArrowSource={arrowSourceKey === parentKey}
           onMouseEnter={onCardHover}
@@ -107,7 +104,6 @@ function AttachmentStack({
               card={child}
               draggable={draggable}
               ownerPlayerId={ownerPlayerId}
-              ownerPlayerName={ownerPlayerName}
               zone={App.ZoneName.TABLE}
               isArrowSource={arrowSourceKey === childKey}
               onMouseEnter={onCardHover}

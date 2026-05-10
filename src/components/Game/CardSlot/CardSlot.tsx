@@ -1,6 +1,6 @@
 import { memo } from 'react';
 
-import type { Data } from '@app/types';
+import { App, type Data } from '@app/types';
 import { cx } from '@app/utils';
 
 import { counterColorForId } from './counterColors';
@@ -16,10 +16,6 @@ export interface CardSlotProps {
    *  as `ownerPlayerId`, not `sourcePlayerId`, because it reflects the card
    *  in the game state rather than any drag origin. */
   ownerPlayerId?: number;
-  /** Display name of the owning player, painted under the card name. Only
-   *  passed by battlefield callers; other zones leave it undefined so the
-   *  owner pill is suppressed. */
-  ownerPlayerName?: string;
   zone?: string;
   onClick?: (card: Data.ServerInfo_Card) => void;
   onDoubleClick?: (card: Data.ServerInfo_Card) => void;
@@ -32,7 +28,6 @@ function CardSlot({
   draggable = false,
   isArrowSource = false,
   ownerPlayerId,
-  ownerPlayerName,
   zone,
   onClick,
   onDoubleClick,
@@ -77,16 +72,12 @@ function CardSlot({
         )
       )}
 
-      {!card.faceDown && (card.name || (ownerPlayerName && (card.annotation || ownerPlayerName))) && (
+      {!card.faceDown && (card.name || (zone === App.ZoneName.TABLE && card.annotation)) && (
         <div className="card-slot__top">
           {card.name && <div className="card-slot__name">{card.name}</div>}
-          {ownerPlayerName && (
-            // Source the owner label from card.annotation when the server
-            // has populated it (Servatrice writes the owning player's name
-            // there for enemy-battlefield cards). Falls back to the resolved
-            // player username when annotation is empty.
+          {zone === App.ZoneName.TABLE && card.annotation && (
             <div className="card-slot__owner">
-              {card.annotation || ownerPlayerName}
+              {card.annotation.replace(/^Owner:\s*/i, '')}
             </div>
           )}
         </div>

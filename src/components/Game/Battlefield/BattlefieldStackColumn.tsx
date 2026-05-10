@@ -56,7 +56,6 @@ export interface BattlefieldStackColumnProps {
   attachmentsByParent: ReadonlyMap<number, Data.ServerInfo_Card[]>;
   draggable: boolean;
   ownerPlayerId: number;
-  ownerPlayerName?: string;
   arrowSourceKey: string | null;
   onCardHover?: (card: Data.ServerInfo_Card) => void;
   onCardClick?: (playerId: number, zone: string, card: Data.ServerInfo_Card) => void;
@@ -69,7 +68,6 @@ function BattlefieldStackColumn({
   attachmentsByParent,
   draggable,
   ownerPlayerId,
-  ownerPlayerName,
   arrowSourceKey,
   onCardHover,
   onCardClick,
@@ -110,7 +108,6 @@ function BattlefieldStackColumn({
               attachments={attachmentsByParent.get(card.id) ?? EMPTY_ATTACHMENTS}
               draggable={draggable}
               ownerPlayerId={ownerPlayerId}
-              ownerPlayerName={ownerPlayerName}
               arrowSourceKey={arrowSourceKey}
               onCardHover={onCardHover}
               onCardClick={onCardClick}

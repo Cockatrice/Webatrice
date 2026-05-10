@@ -2,7 +2,7 @@ import { ReactElement } from 'react';
 import { render as rtlRender, screen, fireEvent } from '@testing-library/react';
 import { create } from '@bufbuild/protobuf';
 import { DndContext } from '@dnd-kit/core';
-import { Data } from '@app/types';
+import { App, Data } from '@app/types';
 
 import { makeCard } from '../../../store/game/__mocks__/fixtures';
 import CardSlot from './CardSlot';
@@ -57,25 +57,37 @@ describe('CardSlot', () => {
     expect(screen.getByText('5/5')).toBeInTheDocument();
   });
 
-  it('does not render a standalone annotation overlay (annotation feeds the owner pill instead)', () => {
+  it('does not render the annotation when zone is not TABLE', () => {
     const card = makeCard({ annotation: 'note' });
-    render(<CardSlot card={card} />);
-    // No owner gate, so nothing should display "note".
+    render(<CardSlot card={card} zone={App.ZoneName.HAND} />);
     expect(screen.queryByText('note')).not.toBeInTheDocument();
   });
 
-  it('owner pill shows card.annotation when set (server-populated owner name)', () => {
+  it('renders card.annotation as the owner pill on the battlefield', () => {
     const card = makeCard({ annotation: 'Bob' });
-    render(<CardSlot card={card} ownerPlayerName="bob_user" />);
-    // Annotation wins over the resolved player name.
+    render(<CardSlot card={card} zone={App.ZoneName.TABLE} />);
     expect(screen.getByText('Bob')).toBeInTheDocument();
-    expect(screen.queryByText('bob_user')).not.toBeInTheDocument();
   });
 
-  it('owner pill falls back to ownerPlayerName when annotation is empty', () => {
+  it('does not render any pill when annotation is empty even on battlefield', () => {
     const card = makeCard({ annotation: '' });
-    render(<CardSlot card={card} ownerPlayerName="Alice" />);
-    expect(screen.getByText('Alice')).toBeInTheDocument();
+    const { container } = render(<CardSlot card={card} zone={App.ZoneName.TABLE} />);
+    expect(container.querySelector('.card-slot__owner')).toBeNull();
+  });
+
+  it('renders the annotation pill for an enemy\'s card on the local battlefield', () => {
+    // The server populates card.annotation whenever the card's owner differs
+    // from the controller — including stolen / cloned cards on YOUR table.
+    const card = makeCard({ annotation: 'Owner: Bob' });
+    render(<CardSlot card={card} zone={App.ZoneName.TABLE} />);
+    expect(screen.getByText('Bob')).toBeInTheDocument();
+  });
+
+  it('strips a leading "Owner: " prefix from the annotation pill', () => {
+    const card = makeCard({ annotation: 'Owner: Bob' });
+    render(<CardSlot card={card} zone={App.ZoneName.TABLE} />);
+    expect(screen.getByText('Bob')).toBeInTheDocument();
+    expect(screen.queryByText('Owner: Bob')).not.toBeInTheDocument();
   });
 
   it('renders the card name as a top overlay (full-text, no ellipsis)', () => {
@@ -87,19 +99,19 @@ describe('CardSlot', () => {
     expect(overlay).not.toHaveStyle({ textOverflow: 'ellipsis' });
   });
 
-  it('renders the owner overlay only when ownerPlayerName is provided', () => {
-    const card = makeCard({ name: 'Bear' });
+  it('renders the annotation pill only when zone is TABLE', () => {
+    const card = makeCard({ name: 'Bear', annotation: 'Alice' });
     const { unmount } = render(<CardSlot card={card} />);
     expect(screen.queryByText('Alice')).not.toBeInTheDocument();
     unmount();
 
-    render(<CardSlot card={card} ownerPlayerName="Alice" />);
+    render(<CardSlot card={card} zone={App.ZoneName.TABLE} />);
     expect(screen.getByText('Alice')).toBeInTheDocument();
   });
 
-  it('suppresses name and owner overlays when face-down', () => {
-    const card = makeCard({ name: 'Hidden', faceDown: true });
-    render(<CardSlot card={card} ownerPlayerName="Alice" />);
+  it('suppresses name and annotation overlays when face-down', () => {
+    const card = makeCard({ name: 'Hidden', annotation: 'Alice', faceDown: true });
+    render(<CardSlot card={card} zone={App.ZoneName.TABLE} />);
     expect(screen.queryByText('Hidden')).not.toBeInTheDocument();
     expect(screen.queryByText('Alice')).not.toBeInTheDocument();
   });

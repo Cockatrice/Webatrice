@@ -82,6 +82,16 @@ export function useKnownHostsComponent({
     testConnection(selectedHost);
   }, [selectedHost]);
 
+  // Resume the test when status was wiped without the selected host changing —
+  // this happens after `serverSlice.actions.disconnected()` resets it to null.
+  // testConnectionStarted immediately bumps it to 'testing', so this won't
+  // loop through success/failed transitions.
+  useEffect(() => {
+    if (selectedHost && testConnectionStatus === null) {
+      testConnection(selectedHost);
+    }
+  }, [testConnectionStatus]);
+
   useReduxEffect<{ supportsHashedPassword: boolean }>(({ payload: { supportsHashedPassword } }) => {
     const host = pendingTestRef.current;
     if (!host) {

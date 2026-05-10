@@ -1,5 +1,4 @@
 import { Data } from '@app/types';
-import { GameSelectors, useAppSelector } from '@app/store';
 
 import BattlefieldRow from './BattlefieldRow';
 import BattlefieldStackColumn from './BattlefieldStackColumn';
@@ -36,16 +35,6 @@ function Battlefield({
     mirrored,
   });
 
-  // Owner pill only carries information for opponents — your own cards don't
-  // need an "Alice" tag on every permanent. Suppressed when this battlefield
-  // belongs to the local player.
-  const ownerPlayerName = useAppSelector((state) => {
-    if (playerId === GameSelectors.getLocalPlayerId(state, gameId)) {
-      return undefined;
-    }
-    return GameSelectors.getPlayer(state, gameId, playerId)?.properties.userInfo?.name;
-  });
-
   return (
     <div className="battlefield" data-testid="battlefield">
       {rowOrder.map((rowIdx) => (
@@ -80,7 +69,6 @@ function Battlefield({
                 attachmentsByParent={attachmentsByParent}
                 draggable={canAct}
                 ownerPlayerId={playerId}
-                ownerPlayerName={ownerPlayerName}
                 arrowSourceKey={arrowSourceKey}
                 onCardHover={onCardHover}
                 onCardClick={onCardClick}
