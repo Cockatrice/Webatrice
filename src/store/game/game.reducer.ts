@@ -7,6 +7,7 @@ import { chatReducers } from './game.reducer.chat';
 import { counterReducers } from './game.reducer.counter';
 import { lifecycleReducers } from './game.reducer.lifecycle';
 import { playerReducers } from './game.reducer.player';
+import { primitiveReducers } from './game.reducer.primitives';
 import { turnReducers } from './game.reducer.turn';
 
 export { MAX_GAME_MESSAGES } from './game.reducer.helpers';
@@ -21,6 +22,7 @@ export const gamesSlice = createSlice({
     ...turnReducers,
     ...playerReducers,
     ...cardReducers,
+    ...primitiveReducers,
     ...counterReducers,
     ...arrowReducers,
     ...chatReducers,

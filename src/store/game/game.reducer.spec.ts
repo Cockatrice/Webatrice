@@ -1,8 +1,11 @@
 import { create } from '@bufbuild/protobuf';
+import { configureStore, PayloadAction } from '@reduxjs/toolkit';
 import { Data } from '@app/types';
+import { listenerMiddleware } from '../listenerMiddleware';
 import { gamesReducer } from './game.reducer';
 import { GamesState } from './game.interfaces';
 import { Actions } from './game.actions';
+import './game.listeners';
 import {
   makeArrow,
   makeCard,
@@ -18,6 +21,24 @@ import {
 function cardsIn(state: GamesState, gameId: number, playerId: number, zoneName: string): Data.ServerInfo_Card[] {
   const zone = state.games[gameId]?.players[playerId]?.zones[zoneName];
   return zone ? zone.order.map(id => zone.byId[id]) : [];
+}
+
+// cardMoved is now interpreted by a listener middleware that decomposes it
+// into primitive dispatches. To exercise the full pipeline in tests, route
+// the action through a configured store rather than calling the reducer
+// directly.
+function dispatchCardMoved(
+  state: GamesState,
+  action: PayloadAction<{ gameId: number; playerId: number; data: Data.Event_MoveCard }>
+): GamesState {
+  const store = configureStore({
+    preloadedState: { games: state },
+    reducer: { games: gamesReducer },
+    middleware: (getDefault) => getDefault({ serializableCheck: false, immutableCheck: false })
+      .prepend(listenerMiddleware.middleware),
+  });
+  store.dispatch(action);
+  return store.getState().games;
 }
 
 
@@ -313,7 +334,7 @@ describe('2C: CARD_MOVED', () => {
 
   it('moves card by cardId ≥ 0 from source to target zone', () => {
     const { state } = stateWithCard();
-    const result = gamesReducer(state, Actions.cardMoved({
+    const result = dispatchCardMoved(state, Actions.cardMoved({
       gameId: 1,
       playerId: 1,
       data: {
@@ -358,7 +379,7 @@ describe('2C: CARD_MOVED', () => {
       },
     });
 
-    const result = gamesReducer(state, Actions.cardMoved({
+    const result = dispatchCardMoved(state, Actions.cardMoved({
       gameId: 1,
       playerId: 1,
       data: {
@@ -397,7 +418,7 @@ describe('2C: CARD_MOVED', () => {
       },
     });
 
-    const result = gamesReducer(state, Actions.cardMoved({
+    const result = dispatchCardMoved(state, Actions.cardMoved({
       gameId: 1,
       playerId: 1,
       data: {
@@ -445,7 +466,7 @@ describe('2C: CARD_MOVED', () => {
       },
     });
 
-    const result = gamesReducer(state, Actions.cardMoved({
+    const result = dispatchCardMoved(state, Actions.cardMoved({
       gameId: 1,
       playerId: 1,
       data: {
@@ -470,7 +491,7 @@ describe('2C: CARD_MOVED', () => {
 
   it('assigns newCardId when newCardId ≥ 0', () => {
     const { state } = stateWithCard();
-    const result = gamesReducer(state, Actions.cardMoved({
+    const result = dispatchCardMoved(state, Actions.cardMoved({
       gameId: 1,
       playerId: 1,
       data: {
@@ -494,7 +515,7 @@ describe('2C: CARD_MOVED', () => {
 
   it('applies newCardProviderId and cardName to moved card', () => {
     const { state } = stateWithCard({ name: 'Old Name', providerId: 'old-prov' });
-    const result = gamesReducer(state, Actions.cardMoved({
+    const result = dispatchCardMoved(state, Actions.cardMoved({
       gameId: 1,
       playerId: 1,
       data: {
@@ -520,7 +541,7 @@ describe('2C: CARD_MOVED', () => {
 
   it('CARD_MOVED → no-ops when targetZone does not exist on player', () => {
     const { state } = stateWithCard();
-    const result = gamesReducer(state, Actions.cardMoved({
+    const result = dispatchCardMoved(state, Actions.cardMoved({
       gameId: 1,
       playerId: 1,
       data: {
@@ -558,7 +579,7 @@ describe('2C: CARD_MOVED', () => {
       },
     });
 
-    const result = gamesReducer(state, Actions.cardMoved({
+    const result = dispatchCardMoved(state, Actions.cardMoved({
       gameId: 1,
       playerId: 1,
       data: {
@@ -590,7 +611,7 @@ describe('2C: CARD_MOVED', () => {
       },
     });
 
-    const result = gamesReducer(state, Actions.cardMoved({
+    const result = dispatchCardMoved(state, Actions.cardMoved({
       gameId: 1,
       playerId: 1,
       data: {
@@ -623,7 +644,7 @@ describe('2C: CARD_MOVED', () => {
       },
     });
 
-    const result = gamesReducer(state, Actions.cardMoved({
+    const result = dispatchCardMoved(state, Actions.cardMoved({
       gameId: 1,
       playerId: 1,
       data: {
@@ -654,7 +675,7 @@ describe('2C: CARD_MOVED', () => {
       },
     });
 
-    const result = gamesReducer(state, Actions.cardMoved({
+    const result = dispatchCardMoved(state, Actions.cardMoved({
       gameId: 1,
       playerId: 1,
       data: {
@@ -685,7 +706,7 @@ describe('2C: CARD_MOVED', () => {
       },
     });
 
-    const result = gamesReducer(state, Actions.cardMoved({
+    const result = dispatchCardMoved(state, Actions.cardMoved({
       gameId: 1,
       playerId: 1,
       data: {
@@ -721,7 +742,7 @@ describe('2C: CARD_MOVED', () => {
     });
     const originalZone = state.games[1].players[1].zones['table'];
 
-    const result = gamesReducer(state, Actions.cardMoved({
+    const result = dispatchCardMoved(state, Actions.cardMoved({
       gameId: 1,
       playerId: 1,
       data: {
@@ -755,7 +776,7 @@ describe('2C: CARD_MOVED', () => {
       },
     });
 
-    const result = gamesReducer(state, Actions.cardMoved({
+    const result = dispatchCardMoved(state, Actions.cardMoved({
       gameId: 1,
       playerId: 1,
       data: {
@@ -792,7 +813,7 @@ describe('2C: CARD_MOVED', () => {
       },
     });
 
-    const result = gamesReducer(state, Actions.cardMoved({
+    const result = dispatchCardMoved(state, Actions.cardMoved({
       gameId: 1,
       playerId: 1,
       data: {
@@ -863,7 +884,7 @@ describe('2C: CARD_MOVED', () => {
       // Servatrice reassigns the parent's id on cross-player move
       // (server_abstract_player.cpp:447-450). The wire carries cardId=old,
       // newCardId=new.
-      const result = gamesReducer(state, Actions.cardMoved({
+      const result = dispatchCardMoved(state, Actions.cardMoved({
         gameId: 1,
         playerId: 1,
         data: {
@@ -892,7 +913,7 @@ describe('2C: CARD_MOVED', () => {
 
     it('intra-table same-player move leaves children pointers as-is (no-op rewrite)', () => {
       const state = stateWithParentAndChildren();
-      const result = gamesReducer(state, Actions.cardMoved({
+      const result = dispatchCardMoved(state, Actions.cardMoved({
         gameId: 1,
         playerId: 1,
         data: {
@@ -943,7 +964,7 @@ describe('2C: CARD_MOVED', () => {
         },
       });
 
-      const result = gamesReducer(state, Actions.cardMoved({
+      const result = dispatchCardMoved(state, Actions.cardMoved({
         gameId: 1,
         playerId: 1,
         data: {
@@ -1071,7 +1092,7 @@ describe('2D: Card mutations', () => {
       data: { startZone: 'table', cardId: 5, targetPlayerId: 0, targetZone: '', targetCardId: 0 },
     }));
 
-    const moved = gamesReducer(detached, Actions.cardMoved({
+    const moved = dispatchCardMoved(detached, Actions.cardMoved({
       gameId: 1,
       playerId: 1,
       data: {
@@ -1103,7 +1124,7 @@ describe('2D: Card mutations', () => {
       data: { startZone: 'table', cardId: 5, targetPlayerId: 1, targetZone: 'table', targetCardId: 99 },
     }));
 
-    const moved = gamesReducer(attached, Actions.cardMoved({
+    const moved = dispatchCardMoved(attached, Actions.cardMoved({
       gameId: 1,
       playerId: 1,
       data: {
@@ -1735,7 +1756,7 @@ describe('2L: Null-guard / missing entity early-returns', () => {
 
   it('CARD_MOVED with unknown gameId → state unchanged', () => {
     const state = makeState();
-    expect(gamesReducer(state, Actions.cardMoved({
+    expect(dispatchCardMoved(state, Actions.cardMoved({
       gameId: UNKNOWN_GAME, playerId: 1,
       data: {
         cardId: 1, cardName: '', startPlayerId: 1, startZone: 'hand', position: -1,
@@ -1746,7 +1767,7 @@ describe('2L: Null-guard / missing entity early-returns', () => {
 
   it('CARD_MOVED with unknown sourcePlayer → state unchanged', () => {
     const state = makeState();
-    expect(gamesReducer(state, Actions.cardMoved({
+    expect(dispatchCardMoved(state, Actions.cardMoved({
       gameId: 1, playerId: 1,
       data: {
         cardId: 1, cardName: '', startPlayerId: UNKNOWN_PLAYER, startZone: 'hand', position: -1,
@@ -1757,7 +1778,7 @@ describe('2L: Null-guard / missing entity early-returns', () => {
 
   it('CARD_MOVED with unknown sourceZone → state unchanged', () => {
     const state = makeState();
-    expect(gamesReducer(state, Actions.cardMoved({
+    expect(dispatchCardMoved(state, Actions.cardMoved({
       gameId: 1, playerId: 1,
       data: {
         cardId: 1, cardName: '', startPlayerId: 1, startZone: 'nonexistent', position: -1,

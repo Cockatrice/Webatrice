@@ -1,149 +1,27 @@
 import { CaseReducer, PayloadAction } from '@reduxjs/toolkit';
 import { create, isFieldSet } from '@bufbuild/protobuf';
-import { App, Data, Enriched } from '@app/types';
+import { Data, Enriched } from '@app/types';
 import { GamesState } from './game.interfaces';
-import { buildEmptyCard, pushEventMessage } from './game.reducer.helpers';
+import { pushEventMessage } from './game.reducer.helpers';
 import {
   formatCardAttached,
   formatCardAttrChanged,
   formatCardCounterChanged,
   formatCardDestroyed,
   formatCardFlipped,
-  formatCardMoved,
   formatCardsDrawn,
   formatTokenCreated,
   formatZonePropertiesChanged,
 } from './messageLog';
 
 export const cardReducers = {
-  cardMoved: ((state, action) => {
-    const { gameId, data } = action.payload;
-    const {
-      cardId, cardName, startPlayerId, startZone, position,
-      targetPlayerId, targetZone, x, y, newCardId, faceDown, newCardProviderId,
-    } = data;
-
-    // Server omits target_zone when it equals start_zone (proto3 strips the
-    // default empty string). Desktop's GameEventHandler applies the same
-    // fallback; without it, intra-zone moves silently bail at the zone lookup.
-    const effectiveTargetZone = targetZone || startZone;
-
-    const game = state.games[gameId];
-    if (!game) {
-      return;
-    }
-
-    const sourcePlayer = game.players[startPlayerId];
-    const sourceZone = sourcePlayer?.zones[startZone];
-    if (!sourcePlayer || !sourceZone) {
-      return;
-    }
-
-    const targetPlayer = game.players[targetPlayerId];
-    const targetZoneEntry = targetPlayer?.zones[effectiveTargetZone];
-    if (!targetPlayer || !targetZoneEntry) {
-      return;
-    }
-
-    let resolvedCardId = -1;
-    if (cardId >= 0) {
-      resolvedCardId = cardId;
-    } else if (position >= 0 && position < sourceZone.order.length) {
-      resolvedCardId = sourceZone.order[position];
-    }
-
-    // If the card can't be resolved and no newCardId is provided, the event
-    // is malformed — bail out to avoid creating phantom cards with id -1.
-    if (resolvedCardId < 0 && newCardId < 0) {
-      return;
-    }
-
-    // Remove from source zone if the card was resolved to a known entry
-    let removedCard: Data.ServerInfo_Card | undefined;
-    if (resolvedCardId >= 0) {
-      removedCard = sourceZone.byId[resolvedCardId];
-      const idx = sourceZone.order.indexOf(resolvedCardId);
-      if (idx >= 0) {
-        sourceZone.order.splice(idx, 1);
-      }
-      delete sourceZone.byId[resolvedCardId];
-    }
-    sourceZone.cardCount = Math.max(0, sourceZone.cardCount - 1);
-
-    const effectiveNewId = newCardId >= 0 ? newCardId : (removedCard?.id ?? resolvedCardId);
-    // Counters represent battlefield-only state in MTG; leaving the table
-    // discards them. Mirrors Cockatrice's CardItem::resetState() which
-    // clears `counters` on any zone transition out of play. Done client-side
-    // because Servatrice does not always emit a zeroing cardCounterChanged
-    // event on zone exit; this guard makes the divergence safe either way.
-    const isLeavingBattlefield =
-      startZone === App.ZoneName.TABLE && effectiveTargetZone !== App.ZoneName.TABLE;
-    const movedCard: Data.ServerInfo_Card = removedCard
-      ? {
-        ...removedCard, id: effectiveNewId, name: cardName || removedCard.name,
-        x, y, faceDown, providerId: newCardProviderId || removedCard.providerId,
-        counterList: isLeavingBattlefield ? [] : [...removedCard.counterList],
-      }
-      : buildEmptyCard(effectiveNewId, cardName, x, y, faceDown, newCardProviderId ?? '');
-
-    targetZoneEntry.order.push(movedCard.id);
-    targetZoneEntry.byId[movedCard.id] = movedCard;
-    targetZoneEntry.cardCount++;
-
-    // TABLE→TABLE: when a parent with attachments moves to a different player's
-    // table, Servatrice does NOT emit unattach events for the children — its
-    // pre-move unattach loop only fires when the zone *names* differ
-    // (server_abstract_player.cpp:376). It also reassigns the parent's id on
-    // cross-player move (line 449). Cockatrice desktop survives this via
-    // pointer-linkage: `cardAdded` reparents children's QGraphicsItems into
-    // the new zone (card_zone.cpp:19). Our wire-data-driven model has no
-    // pointer linkage — instead, walk every player's table and rewrite each
-    // attached child's parent pointer to the new (player, id). Same-player
-    // intra-table moves preserve the parent id, so the rewrite is a no-op
-    // pass and stays cheap.
-    if (
-      resolvedCardId >= 0 &&
-      startZone === App.ZoneName.TABLE &&
-      effectiveTargetZone === App.ZoneName.TABLE
-    ) {
-      for (const otherPlayer of Object.values(game.players)) {
-        const otherTable = otherPlayer?.zones[App.ZoneName.TABLE];
-        if (!otherTable) {
-          continue;
-        }
-        for (const childId of otherTable.order) {
-          const child = otherTable.byId[childId];
-          if (!child) {
-            continue;
-          }
-          if (
-            child.attachPlayerId === startPlayerId &&
-            child.attachZone === App.ZoneName.TABLE &&
-            child.attachCardId === resolvedCardId
-          ) {
-            otherTable.byId[childId] = {
-              ...child,
-              attachPlayerId: targetPlayerId,
-              attachCardId: effectiveNewId,
-            };
-          }
-        }
-      }
-    }
-
-    pushEventMessage(
-      game,
-      action.payload.playerId,
-      // Pass the defaulted targetZone through so isSameZoneReorder in the
-      // formatter correctly suppresses the log line for intra-zone reorders.
-      formatCardMoved(
-        game,
-        action.payload.playerId,
-        { ...data, targetZone: effectiveTargetZone },
-        { resolvedCardName: removedCard?.name ?? '' },
-      ),
-    );
-  }) as CaseReducer<GamesState, PayloadAction<{ gameId: number; playerId: number; data: Data.Event_MoveCard }>>,
+  // No-op reducer: the wire-shaped `cardMoved` action is interpreted by the
+  // listener middleware in game.listeners.ts, which decomposes it into
+  // primitive dispatches (cardMovedBetweenZones, cardAttachmentReparented,
+  // gameMessageAppended). The action is retained here so the listener has
+  // an actionCreator to subscribe to and so external dispatch sites keep
+  // their existing signature.
+  cardMoved: () => {},
 
   cardFlipped: ((state, action) => {
     const { gameId, playerId, data } = action.payload;

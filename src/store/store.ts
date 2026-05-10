@@ -2,7 +2,9 @@ import { configureStore, isPlain } from '@reduxjs/toolkit';
 import { isMessage } from '@bufbuild/protobuf';
 import { useDispatch, useSelector } from 'react-redux';
 import rootReducer from './rootReducer';
-import { serverListenerMiddleware } from './server';
+import { listenerMiddleware } from './listenerMiddleware';
+import './server/server.listeners';
+import './game/game.listeners';
 
 // Protobuf-es v2 messages are plain objects with $typeName/$unknown siblings;
 // bytes fields are Uint8Array and int64/uint64 are BigInt. All four pass through.
@@ -20,7 +22,7 @@ export const storeMiddlewareOptions = {
 export const store = configureStore({
   reducer: rootReducer,
   middleware: (getDefaultMiddleware) => getDefaultMiddleware(storeMiddlewareOptions)
-    .concat(serverListenerMiddleware.middleware),
+    .concat(listenerMiddleware.middleware),
 });
 export type RootState = ReturnType<typeof store.getState>;
 export type AppDispatch = typeof store.dispatch;

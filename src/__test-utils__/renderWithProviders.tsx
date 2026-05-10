@@ -40,7 +40,10 @@ import { WebClientContext } from '../hooks/useWebClient';
 import type { WebClient } from '@app/websocket';
 import rootReducer from '../store/rootReducer';
 import { ToastProvider } from '../components/Toast/ToastContext';
+import { listenerMiddleware } from '../store/listenerMiddleware';
 import { storeMiddlewareOptions } from '../store/store';
+import '../store/server/server.listeners';
+import '../store/game/game.listeners';
 import type { RootState } from '../store/store';
 import { createMockWebClient } from './mockWebClient';
 
@@ -79,7 +82,8 @@ function createTestStore(preloadedState?: Partial<RootState>) {
     // Share the production middleware config so the serializableCheck
     // tolerates protobuf messages (isMessage) the same way the real store
     // does — otherwise every proto-payload dispatch in tests spams stderr.
-    middleware: (getDefaultMiddleware) => getDefaultMiddleware(storeMiddlewareOptions),
+    middleware: (getDefaultMiddleware) => getDefaultMiddleware(storeMiddlewareOptions)
+      .concat(listenerMiddleware.middleware),
   });
 }
 
