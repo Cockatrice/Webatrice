@@ -2,8 +2,10 @@ import { RefObject, useCallback, useEffect, useMemo, useRef, useState } from 're
 
 import type { CardRegistry } from '@app/components';
 import { makeCardKey } from '@app/components';
-import { useWebClient } from '@app/hooks';
+import { useSettings, useWebClient } from '@app/hooks';
 import { App, Data, type Enriched } from '@app/types';
+
+import { playCardViaTableRow } from './playCard';
 
 interface PendingArrow {
   sourcePlayerId: number;
@@ -87,6 +89,8 @@ export function useGameArrowInteractions({
   cardRegistry,
 }: UseGameArrowInteractionsArgs): GameArrowInteractions {
   const webClient = useWebClient();
+  const { value: settings } = useSettings();
+  const invertVerticalCoordinate = settings?.invertVerticalCoordinate ?? false;
 
   const [pendingArrow, setPendingArrow] = useState<PendingArrow | null>(null);
   const [pendingAttach, setPendingAttach] = useState<PendingAttach | null>(null);
@@ -360,22 +364,43 @@ export function useGameArrowInteractions({
 
   const handleCardDoubleClick = useCallback(
     (sourceZone: string, card: Data.ServerInfo_Card) => {
-      if (sourceZone !== App.ZoneName.TABLE || gameId == null) {
+      if (gameId == null) {
         return;
       }
       // Desktop's arrow drag owns the pointer while active; mirror that by
-      // short-circuiting tap-toggle while a pending arrow/attach is armed.
+      // short-circuiting double-click while a pending arrow/attach is armed.
       if (pendingArrow || pendingAttach) {
         return;
       }
-      webClient.request.game.setCardAttr(gameId, {
-        zone: sourceZone,
-        cardId: card.id,
-        attribute: Data.CardAttribute.AttrTapped,
-        attrValue: card.tapped ? '0' : '1',
-      });
+      if (sourceZone === App.ZoneName.TABLE) {
+        webClient.request.game.setCardAttr(gameId, {
+          zone: sourceZone,
+          cardId: card.id,
+          attribute: Data.CardAttribute.AttrTapped,
+          attrValue: card.tapped ? '0' : '1',
+        });
+        return;
+      }
+      if (sourceZone === App.ZoneName.HAND && game?.localPlayerId != null) {
+        const localPlayerId = game.localPlayerId;
+        // Hand-zone visibility is gated on the local player being in slotA
+        // (see useGame.ts:96-102), so the local target is never per-player
+        // mirrored. The user's invertVerticalCoordinate setting still flips
+        // the rendered row order; honor it when picking wire y.
+        void playCardViaTableRow({
+          webClient,
+          gameId,
+          localPlayerId,
+          sourcePlayerId: localPlayerId,
+          sourceZone: App.ZoneName.HAND,
+          card,
+          faceDown: false,
+          isInverted: invertVerticalCoordinate,
+          tableZone: game.players[localPlayerId]?.zones[App.ZoneName.TABLE],
+        });
+      }
     },
-    [gameId, pendingArrow, pendingAttach, webClient],
+    [gameId, game, invertVerticalCoordinate, pendingArrow, pendingAttach, webClient],
   );
 
   const startPendingArrow = useCallback((source: PendingArrow) => {

@@ -27,6 +27,8 @@ export interface CardContextMenu {
   isOwnedByLocal: boolean;
   canAttach: boolean;
   isAttached: boolean;
+  canPlay: boolean;
+  canPeek: boolean;
   moveTargets: ReadonlyArray<MoveTarget>;
   handleFlip: () => void;
   handleTapToggle: () => void;
@@ -39,6 +41,9 @@ export interface CardContextMenu {
   handleDrawArrow: () => void;
   handleAttach: () => void;
   handleUnattach: () => void;
+  handlePlay: () => void;
+  handlePlayFaceDown: () => void;
+  handlePeek: () => void;
   handleMove: (target: MoveTarget) => void;
   handleMoveToLibraryAt: () => void;
 }
@@ -55,6 +60,7 @@ export interface UseCardContextMenuArgs {
   onRequestSetCounter: (counterId: number) => void;
   onRequestDrawArrow: () => void;
   onRequestAttach: () => void;
+  onRequestPlay: (faceDown: boolean) => void;
   onRequestMoveToLibraryAt: () => void;
 }
 
@@ -70,6 +76,7 @@ export function useCardContextMenu({
   onRequestSetCounter,
   onRequestDrawArrow,
   onRequestAttach,
+  onRequestPlay,
   onRequestMoveToLibraryAt,
 }: UseCardContextMenuArgs): CardContextMenu {
   const webClient = useWebClient();
@@ -86,6 +93,13 @@ export function useCardContextMenu({
   // Desktop's actAttach is only available from a table card; other zones
   // never expose the attach arrow.
   const canAttach = ready && sourceZone === App.ZoneName.TABLE;
+  // Desktop's aPlay / aPlayFacedown are exposed on cards in any non-TABLE
+  // zone (hand / grave / exile / stack). See card_menu.cpp:201-303.
+  const canPlay = ready && isOwnedByLocal && sourceZone !== App.ZoneName.TABLE;
+  // Desktop's aPeek is only available on face-down table cards
+  // (player_actions.cpp:1822 — Command_RevealCards to self).
+  const canPeek =
+    ready && isOwnedByLocal && sourceZone === App.ZoneName.TABLE && (card!.faceDown ?? false);
 
   const setAttr = (attribute: Data.CardAttribute, value: string) => {
     if (!ready) {
@@ -216,11 +230,45 @@ export function useCardContextMenu({
     onClose();
   };
 
+  const handlePlay = () => {
+    if (!canPlay) {
+      return;
+    }
+    onRequestPlay(false);
+    onClose();
+  };
+
+  const handlePlayFaceDown = () => {
+    if (!canPlay) {
+      return;
+    }
+    onRequestPlay(true);
+    onClose();
+  };
+
+  const handlePeek = () => {
+    if (!ready) {
+      return;
+    }
+    // Cockatrice's actPeek (player_actions.cpp:1822) reveals the face-down
+    // card to the local player only — never broadcasts. Setting playerId to
+    // the local player matches that scope.
+    webClient.request.game.revealCards(gameId, {
+      zoneName: sourceZone!,
+      cardId: [card!.id],
+      playerId: localPlayerId!,
+      topCards: -1,
+    });
+    onClose();
+  };
+
   return {
     ready,
     isOwnedByLocal,
     canAttach,
     isAttached,
+    canPlay,
+    canPeek,
     moveTargets: CARD_MOVE_TARGETS,
     handleFlip,
     handleTapToggle,
@@ -233,6 +281,9 @@ export function useCardContextMenu({
     handleDrawArrow,
     handleAttach,
     handleUnattach,
+    handlePlay,
+    handlePlayFaceDown,
+    handlePeek,
     handleMove,
     handleMoveToLibraryAt,
   };

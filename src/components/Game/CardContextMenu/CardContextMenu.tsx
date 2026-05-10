@@ -10,6 +10,7 @@ import {
   counterColorForId,
 } from '../CardSlot/counterColors';
 
+import NestedMenuItem from './NestedMenuItem';
 import { useCardContextMenu } from './useCardContextMenu';
 
 import './CardContextMenu.css';
@@ -28,6 +29,7 @@ export interface CardContextMenuProps {
   onRequestSetCounter: (counterId: number) => void;
   onRequestDrawArrow: () => void;
   onRequestAttach: () => void;
+  onRequestPlay: (faceDown: boolean) => void;
   onRequestMoveToLibraryAt: () => void;
 }
 
@@ -47,6 +49,8 @@ function CardContextMenu(props: CardContextMenuProps) {
     isOwnedByLocal,
     canAttach,
     isAttached,
+    canPlay,
+    canPeek,
     moveTargets,
     handleFlip,
     handleTapToggle,
@@ -59,6 +63,9 @@ function CardContextMenu(props: CardContextMenuProps) {
     handleDrawArrow,
     handleAttach,
     handleUnattach,
+    handlePlay,
+    handlePlayFaceDown,
+    handlePeek,
     handleMove,
     handleMoveToLibraryAt,
   } = useCardContextMenu(props);
@@ -76,6 +83,13 @@ function CardContextMenu(props: CardContextMenuProps) {
       data-testid="card-context-menu"
       className="card-context-menu"
     >
+      {canPlay && (
+        <>
+          <MenuItem onClick={handlePlay}>Play</MenuItem>
+          <MenuItem onClick={handlePlayFaceDown}>Play face down</MenuItem>
+          <Divider />
+        </>
+      )}
       {isOwnedByLocal && (
         <>
           <MenuItem onClick={handleFlip}>Flip</MenuItem>
@@ -83,52 +97,44 @@ function CardContextMenu(props: CardContextMenuProps) {
           <MenuItem onClick={handleFaceDownToggle}>
             {card.faceDown ? 'Face Up' : 'Face Down'}
           </MenuItem>
+          {canPeek && <MenuItem onClick={handlePeek}>Peek</MenuItem>}
           <MenuItem onClick={handleDoesntUntapToggle}>
             {card.doesntUntap ? 'Allow Untap' : 'Doesn\'t Untap'}
           </MenuItem>
           <MenuItem onClick={handleSetPT}>Set P/T…</MenuItem>
           <MenuItem onClick={handleSetAnnotation}>Set Annotation…</MenuItem>
           <Divider />
-          {COUNTER_TYPE_IDS.map((id) => (
-            <MenuItem
-              key={`add-counter-${id}`}
-              onClick={() => handleCardCounterDelta(id, +1)}
-            >
-              <span
-                className="card-context-menu__counter-chip"
-                style={{ background: counterColorForId(id) }}
-                aria-hidden="true"
-              />
-              Add {COUNTER_TYPE_LABELS[id]} counter
-            </MenuItem>
-          ))}
-          {COUNTER_TYPE_IDS.map((id) => (
-            <MenuItem
-              key={`remove-counter-${id}`}
-              onClick={() => handleCardCounterDelta(id, -1)}
-              disabled={!hasCounter(card, id)}
-            >
-              <span
-                className="card-context-menu__counter-chip"
-                style={{ background: counterColorForId(id) }}
-                aria-hidden="true"
-              />
-              Remove {COUNTER_TYPE_LABELS[id]} counter
-            </MenuItem>
-          ))}
-          {COUNTER_TYPE_IDS.map((id) => (
-            <MenuItem
-              key={`set-counter-${id}`}
-              onClick={() => handleSetCardCounter(id)}
-            >
-              <span
-                className="card-context-menu__counter-chip"
-                style={{ background: counterColorForId(id) }}
-                aria-hidden="true"
-              />
-              Set {COUNTER_TYPE_LABELS[id]} counter…
-            </MenuItem>
-          ))}
+          <NestedMenuItem label="Counters" parentMenuOpen={isOpen}>
+            {COUNTER_TYPE_IDS.map((id) => (
+              <NestedMenuItem
+                key={`counter-${id}`}
+                parentMenuOpen={isOpen}
+                label={
+                  <>
+                    <span
+                      className="card-context-menu__counter-chip"
+                      style={{ background: counterColorForId(id) }}
+                      aria-hidden="true"
+                    />
+                    {COUNTER_TYPE_LABELS[id]}
+                  </>
+                }
+              >
+                <MenuItem onClick={() => handleCardCounterDelta(id, +1)}>
+                  Add Counter
+                </MenuItem>
+                <MenuItem
+                  onClick={() => handleCardCounterDelta(id, -1)}
+                  disabled={!hasCounter(card, id)}
+                >
+                  Remove Counter
+                </MenuItem>
+                <MenuItem onClick={() => handleSetCardCounter(id)}>
+                  Set Counter…
+                </MenuItem>
+              </NestedMenuItem>
+            ))}
+          </NestedMenuItem>
           <Divider />
         </>
       )}

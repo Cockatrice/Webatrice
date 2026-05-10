@@ -1,11 +1,17 @@
 import { useWebClient } from '@app/hooks';
 
+export type HandSortKey = 'name' | 'maintype' | 'manacost';
+
 export interface HandContextMenu {
   handleChoose: () => void;
   handleSameSize: () => void;
   handleMinusOne: () => void;
   handleRevealHand: () => void;
   handleRevealRandom: () => void;
+  handleViewHand: () => void;
+  handleSortBy: (key: HandSortKey) => void;
+  handleMoveToDeck: (top: boolean) => void;
+  handleMoveToZone: (zone: string) => void;
 }
 
 export interface UseHandContextMenuArgs {
@@ -15,6 +21,10 @@ export interface UseHandContextMenuArgs {
   onRequestChooseMulligan: () => void;
   onRequestRevealHand: () => void;
   onRequestRevealRandom: () => void;
+  onRequestViewHand: () => void;
+  onRequestSortHandBy: (key: HandSortKey) => void;
+  onRequestMoveHandToDeck: (top: boolean) => void;
+  onRequestMoveHandToZone: (zone: string) => void;
 }
 
 export function useHandContextMenu({
@@ -24,6 +34,10 @@ export function useHandContextMenu({
   onRequestChooseMulligan,
   onRequestRevealHand,
   onRequestRevealRandom,
+  onRequestViewHand,
+  onRequestSortHandBy,
+  onRequestMoveHandToDeck,
+  onRequestMoveHandToZone,
 }: UseHandContextMenuArgs): HandContextMenu {
   const webClient = useWebClient();
 
@@ -71,5 +85,47 @@ export function useHandContextMenu({
     onClose();
   };
 
-  return { handleChoose, handleSameSize, handleMinusOne, handleRevealHand, handleRevealRandom };
+  const handleViewHand = () => {
+    if (gameId <= 0) {
+      return;
+    }
+    onRequestViewHand();
+    onClose();
+  };
+
+  const handleSortBy = (key: HandSortKey) => {
+    if (gameId <= 0) {
+      return;
+    }
+    onRequestSortHandBy(key);
+    onClose();
+  };
+
+  const handleMoveToDeck = (top: boolean) => {
+    if (gameId <= 0) {
+      return;
+    }
+    onRequestMoveHandToDeck(top);
+    onClose();
+  };
+
+  const handleMoveToZone = (zone: string) => {
+    if (gameId <= 0) {
+      return;
+    }
+    onRequestMoveHandToZone(zone);
+    onClose();
+  };
+
+  return {
+    handleChoose,
+    handleSameSize,
+    handleMinusOne,
+    handleRevealHand,
+    handleRevealRandom,
+    handleViewHand,
+    handleSortBy,
+    handleMoveToDeck,
+    handleMoveToZone,
+  };
 }

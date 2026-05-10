@@ -160,20 +160,3 @@
   gap: 4px;
 }
 
-.player-info-panel__new-counter {
-  margin-top: 8px;
-  padding: 3px 6px;
-  background: transparent;
-  border: 1px dashed #355090;
-  color: #8ab0ff;
-  font: inherit;
-  font-size: 11px;
-  border-radius: 3px;
-  cursor: pointer;
-  text-align: center;
-}
-
-.player-info-panel__new-counter:hover {
-  background: rgba(138, 176, 255, 0.08);
-  color: #b8d0ff;
-}

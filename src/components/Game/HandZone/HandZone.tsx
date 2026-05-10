@@ -15,6 +15,7 @@ export interface HandZoneProps {
   onCardHover?: (card: Data.ServerInfo_Card) => void;
   onCardClick?: (playerId: number, zone: string, card: Data.ServerInfo_Card) => void;
   onCardContextMenu?: (card: Data.ServerInfo_Card, event: React.MouseEvent) => void;
+  onCardDoubleClick?: (card: Data.ServerInfo_Card) => void;
   onZoneContextMenu?: (event: React.MouseEvent) => void;
 }
 
@@ -26,6 +27,7 @@ function HandZone({
   onCardHover,
   onCardClick,
   onCardContextMenu,
+  onCardDoubleClick,
   onZoneContextMenu,
 }: HandZoneProps) {
   const { cards, setNodeRef, isOver, handleZoneContextMenu } = useHandZone({
@@ -56,6 +58,7 @@ function HandZone({
               onMouseEnter={onCardHover}
               onClick={(c) => onCardClick?.(playerId, App.ZoneName.HAND, c)}
               onContextMenu={onCardContextMenu}
+              onDoubleClick={onCardDoubleClick}
             />
           );
         })}

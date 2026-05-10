@@ -169,8 +169,8 @@
  * leaving room for the new name/owner pills. */
 .card-slot__counters {
   position: absolute;
-  left: 4px;
-  top: 44px;
+  left: 2px;
+  bottom: 0;
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 2px;

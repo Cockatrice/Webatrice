@@ -58,7 +58,13 @@ function ZoneStack({
       data-testid={`zone-stack-${zoneName}`}
       onMouseEnter={() => topCard && onCardHover?.(topCard)}
       onClick={() => onClick?.(zoneName)}
-      onContextMenu={(e) => onContextMenu?.(zoneName, e)}
+      onContextMenu={(e) => {
+        // Stop bubbling so the parent PlayerInfoPanel's onContextMenu (player
+        // menu) doesn't also fire — without this, right-clicking a zone stack
+        // opens both menus on top of each other.
+        e.stopPropagation();
+        onContextMenu?.(zoneName, e);
+      }}
       onKeyDown={(e) => {
         if (onClick && (e.key === 'Enter' || e.key === ' ')) {
           e.preventDefault();

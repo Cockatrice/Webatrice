@@ -20,6 +20,17 @@ const defaultProps = {
   onRequestDumpN: () => {},
   onRequestRevealTopN: () => {},
   onRequestRevealZone: () => {},
+  onRequestUndoDraw: () => {},
+  onRequestDrawBottom: () => {},
+  onRequestMoveTopCardToZone: () => {},
+  onRequestPlayTop: () => {},
+  onRequestMoveTopNToZone: () => {},
+  onRequestShuffleTopN: () => {},
+  onRequestShuffleBottomN: () => {},
+  onRequestViewZone: () => {},
+  onRequestMoveAllFromZoneToDeck: () => {},
+  onRequestMoveAllFromZoneTo: () => {},
+  onRequestRevealRandomFromZone: () => {},
 };
 
 function stateWithDeckZone(overrides: Partial<ReturnType<typeof makeZoneEntry>> = {}) {

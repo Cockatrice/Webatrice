@@ -17,7 +17,6 @@ import {
 } from '@app/components';
 import {
   ConfirmDialog,
-  CreateCounterDialog,
   CreateTokenDialog,
   DeckSelectDialog,
   GameInfoDialog,
@@ -139,7 +138,6 @@ function Game() {
                     }
                     onZoneClick={dialogs.handleZoneClick}
                     onZoneContextMenu={dialogs.handleZoneContextMenu}
-                    onRequestCreateCounter={dialogs.openCreateCounter}
                     onPlayerContextMenu={dialogs.handlePlayerContextMenu}
                   />
                   {showHandZone && (
@@ -152,6 +150,9 @@ function Game() {
                       onCardClick={arrows.handleCardClick}
                       onCardContextMenu={(card, e) =>
                         dialogs.handleCardContextMenu(slots.slotAPlayerId!, App.ZoneName.HAND, card, e)
+                      }
+                      onCardDoubleClick={(card) =>
+                        arrows.handleCardDoubleClick(App.ZoneName.HAND, card)
                       }
                       onZoneContextMenu={dialogs.handleHandContextMenu}
                     />
@@ -201,6 +202,7 @@ function Game() {
               onRequestSetCounter={dialogs.handleRequestSetCardCounter}
               onRequestDrawArrow={dialogs.handleRequestDrawArrow}
               onRequestAttach={dialogs.handleRequestAttach}
+              onRequestPlay={dialogs.handleRequestPlayFromCardMenu}
               onRequestMoveToLibraryAt={dialogs.handleRequestMoveToLibraryAt}
             />
 
@@ -215,6 +217,17 @@ function Game() {
               onRequestDumpN={dialogs.handleRequestDumpN}
               onRequestRevealTopN={dialogs.handleRequestRevealTopN}
               onRequestRevealZone={dialogs.handleRequestRevealZone}
+              onRequestUndoDraw={dialogs.handleRequestUndoDraw}
+              onRequestDrawBottom={dialogs.handleRequestDrawBottom}
+              onRequestMoveTopCardToZone={dialogs.handleRequestMoveTopCardToZone}
+              onRequestPlayTop={dialogs.handleRequestPlayTop}
+              onRequestMoveTopNToZone={dialogs.handleRequestMoveTopNToZone}
+              onRequestShuffleTopN={dialogs.handleRequestShuffleTopN}
+              onRequestShuffleBottomN={dialogs.handleRequestShuffleBottomN}
+              onRequestViewZone={dialogs.handleRequestViewZone}
+              onRequestMoveAllFromZoneToDeck={dialogs.handleRequestMoveAllFromZoneToDeck}
+              onRequestMoveAllFromZoneTo={dialogs.handleRequestMoveAllFromZoneTo}
+              onRequestRevealRandomFromZone={dialogs.handleRequestRevealRandomFromZone}
             />
 
             <PlayerContextMenu
@@ -234,6 +247,10 @@ function Game() {
               onRequestChooseMulligan={dialogs.handleRequestChooseMulligan}
               onRequestRevealHand={dialogs.handleRequestRevealHand}
               onRequestRevealRandom={dialogs.handleRequestRevealRandom}
+              onRequestViewHand={dialogs.handleRequestViewHand}
+              onRequestSortHandBy={dialogs.handleRequestSortHandBy}
+              onRequestMoveHandToDeck={dialogs.handleRequestMoveHandToDeck}
+              onRequestMoveHandToZone={dialogs.handleRequestMoveHandToZone}
             />
 
             {dialogs.prompt && (
@@ -255,12 +272,6 @@ function Game() {
               lastCount={dialogs.lastDieCount}
               onSubmit={dialogs.handleRollDieSubmit}
               onCancel={dialogs.closeRollDie}
-            />
-
-            <CreateCounterDialog
-              isOpen={dialogs.createCounterOpen}
-              onSubmit={dialogs.handleCreateCounterSubmit}
-              onCancel={dialogs.closeCreateCounter}
             />
 
             <CreateTokenDialog

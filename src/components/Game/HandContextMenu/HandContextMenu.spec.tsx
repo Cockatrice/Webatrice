@@ -13,6 +13,10 @@ function render(overrides: Partial<React.ComponentProps<typeof HandContextMenu>>
     onRequestChooseMulligan: vi.fn(),
     onRequestRevealHand: vi.fn(),
     onRequestRevealRandom: vi.fn(),
+    onRequestViewHand: vi.fn(),
+    onRequestSortHandBy: vi.fn(),
+    onRequestMoveHandToDeck: vi.fn(),
+    onRequestMoveHandToZone: vi.fn(),
     ...overrides,
   };
   const webClient = createMockWebClient();

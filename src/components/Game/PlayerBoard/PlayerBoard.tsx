@@ -20,7 +20,6 @@ export interface PlayerBoardProps {
   onCardDoubleClick?: (card: Data.ServerInfo_Card) => void;
   onZoneClick?: (playerId: number, zoneName: string) => void;
   onZoneContextMenu?: (playerId: number, zoneName: string, event: React.MouseEvent) => void;
-  onRequestCreateCounter?: () => void;
   onPlayerContextMenu?: (event: React.MouseEvent) => void;
 }
 
@@ -37,7 +36,6 @@ function PlayerBoard({
   onCardDoubleClick,
   onZoneClick,
   onZoneContextMenu,
-  onRequestCreateCounter,
   onPlayerContextMenu,
 }: PlayerBoardProps) {
   return (
@@ -49,7 +47,6 @@ function PlayerBoard({
         gameId={gameId}
         playerId={playerId}
         canEdit={canEditCounters}
-        onRequestCreateCounter={onRequestCreateCounter}
         onContextMenu={onPlayerContextMenu}
         onCardHover={onCardHover}
         onZoneClick={onZoneClick}

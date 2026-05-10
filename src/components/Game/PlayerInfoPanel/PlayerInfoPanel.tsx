@@ -20,7 +20,6 @@ export interface PlayerInfoPanelProps {
   gameId: number;
   playerId: number;
   canEdit?: boolean;
-  onRequestCreateCounter?: () => void;
   onContextMenu?: (event: React.MouseEvent) => void;
   onCardHover?: (card: Data.ServerInfo_Card) => void;
   onZoneClick?: (playerId: number, zoneName: string) => void;
@@ -31,7 +30,6 @@ function PlayerInfoPanel({
   gameId,
   playerId,
   canEdit = false,
-  onRequestCreateCounter,
   onContextMenu,
   onCardHover,
   onZoneClick,
@@ -141,16 +139,6 @@ function PlayerInfoPanel({
           })}
         </div>
       </div>
-
-      {canEdit && onRequestCreateCounter && (
-        <button
-          type="button"
-          className="player-info-panel__new-counter"
-          onClick={onRequestCreateCounter}
-        >
-          + New counter
-        </button>
-      )}
     </div>
   );
 }

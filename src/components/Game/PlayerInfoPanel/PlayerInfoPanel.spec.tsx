@@ -1,6 +1,6 @@
 import { screen, fireEvent } from '@testing-library/react';
 import { create } from '@bufbuild/protobuf';
-import { Data } from '@app/types';
+import { App, Data } from '@app/types';
 
 import { createMockWebClient, makeStoreState, renderWithProviders, makeUser } from '../../../__test-utils__';
 import {
@@ -375,30 +375,25 @@ describe('PlayerInfoPanel', () => {
       expect(onContextMenu).toHaveBeenCalled();
     });
 
-    it('fires onRequestCreateCounter when "+ New counter" is clicked', () => {
-      const onRequestCreateCounter = vi.fn();
+    it('does not bubble a zone-stack right-click up to the panel-level onContextMenu', () => {
+      const onContextMenu = vi.fn();
+      const onZoneContextMenu = vi.fn();
       renderWithProviders(
         <PlayerInfoPanel
           gameId={1}
           playerId={1}
           canEdit
-          onRequestCreateCounter={onRequestCreateCounter}
+          onContextMenu={onContextMenu}
+          onZoneContextMenu={onZoneContextMenu}
         />,
         { preloadedState: statefulPlayer({ counters: { 1: life } }) },
       );
 
-      fireEvent.click(screen.getByText('+ New counter'));
+      fireEvent.contextMenu(screen.getByTestId(`zone-stack-${App.ZoneName.DECK}`));
 
-      expect(onRequestCreateCounter).toHaveBeenCalled();
+      expect(onZoneContextMenu).toHaveBeenCalled();
+      expect(onContextMenu).not.toHaveBeenCalled();
     });
 
-    it('does not render the new-counter button when canEdit is false', () => {
-      renderWithProviders(
-        <PlayerInfoPanel gameId={1} playerId={1} onRequestCreateCounter={() => {}} />,
-        { preloadedState: statefulPlayer({ counters: {} }) },
-      );
-
-      expect(screen.queryByText('+ New counter')).not.toBeInTheDocument();
-    });
   });
 });

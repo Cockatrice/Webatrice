@@ -5,7 +5,6 @@ export type { AuthDialogShellProps } from './AuthDialogShell/AuthDialogShell';
 export type { AlertDialogProps, AlertDialogSeverity } from './AlertDialog/AlertDialog';
 export { default as CardImportDialog } from './CardImportDialog/CardImportDialog';
 export { default as ConfirmDialog } from './ConfirmDialog/ConfirmDialog';
-export { default as CreateCounterDialog } from './CreateCounterDialog/CreateCounterDialog';
 export { default as CreateGameDialog } from './CreateGameDialog/CreateGameDialog';
 export { default as CreateTokenDialog } from './CreateTokenDialog/CreateTokenDialog';
 export { default as DeckSelectDialog } from './DeckSelectDialog/DeckSelectDialog';

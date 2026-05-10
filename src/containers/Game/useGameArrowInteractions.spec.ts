@@ -1,5 +1,6 @@
 import { createRef } from 'react';
-import { act, renderHook } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
+import { vi } from 'vitest';
 
 import { createCardRegistry } from '../../components/Game/CardRegistry/CardRegistryContext';
 import { combineReducers } from '@reduxjs/toolkit';
@@ -9,7 +10,14 @@ import { makeCard, makeGameEntry, makePlayerEntry, makePlayerProperties } from '
 import type { GamesState } from '../../store/game/game.interfaces';
 import { makeReduxWebClientHookWrapper } from '../../__test-utils__/makeHookWrapper';
 import { App } from '../../types';
+import { CardDTO } from '../../services/dexie/DexieDTOs/CardDTO';
 import { useGameArrowInteractions } from './useGameArrowInteractions';
+
+vi.mock('../../services/dexie/DexieDTOs/CardDTO', () => ({
+  CardDTO: { get: vi.fn() },
+}));
+
+vi.mock('../../hooks/useSettings');
 
 function setup({ localPlayerId = 1 }: { localPlayerId?: number } = {}) {
   const game = makeGameEntry({
@@ -250,6 +258,158 @@ describe('useGameArrowInteractions', () => {
 
       expect(webClient.request.game.attachCard).not.toHaveBeenCalled();
       expect(result.current.arrowSourceKey).toBeNull();
+    });
+  });
+
+  describe('handleCardDoubleClick — hand → play', () => {
+    function makeCardMeta(tablerow: string | null) {
+      if (tablerow == null) {
+        return { name: { value: 'Foo' } };
+      }
+      return { name: { value: 'Foo' }, tablerow: { value: tablerow } };
+    }
+
+    afterEach(() => {
+      vi.mocked(CardDTO.get).mockReset();
+    });
+
+    it('moves an instant/sorcery (tablerow=3) from hand to STACK', async () => {
+      vi.mocked(CardDTO.get).mockResolvedValue(makeCardMeta('3') as never);
+      const { result, webClient } = setup({ localPlayerId: 1 });
+
+      act(() => {
+        result.current.handleCardDoubleClick(App.ZoneName.HAND, makeCard({ id: 7, name: 'Counterspell' }));
+      });
+
+      await waitFor(() => {
+        expect(webClient.request.game.moveCard).toHaveBeenCalled();
+      });
+      expect(webClient.request.game.moveCard).toHaveBeenCalledWith(
+        1,
+        expect.objectContaining({
+          startZone: App.ZoneName.HAND,
+          targetZone: App.ZoneName.STACK,
+          cardsToMove: { card: [expect.objectContaining({ cardId: 7 })] },
+        }),
+      );
+    });
+
+    it('moves a creature (tablerow=1) from hand to TABLE row y=1', async () => {
+      vi.mocked(CardDTO.get).mockResolvedValue(makeCardMeta('1') as never);
+      const { result, webClient } = setup({ localPlayerId: 1 });
+
+      act(() => {
+        result.current.handleCardDoubleClick(App.ZoneName.HAND, makeCard({ id: 8, name: 'Bear' }));
+      });
+
+      await waitFor(() => {
+        expect(webClient.request.game.moveCard).toHaveBeenCalled();
+      });
+      expect(webClient.request.game.moveCard).toHaveBeenCalledWith(
+        1,
+        expect.objectContaining({
+          startZone: App.ZoneName.HAND,
+          targetZone: App.ZoneName.TABLE,
+          y: 1,
+        }),
+      );
+    });
+
+    it('moves an artifact/enchantment (tablerow=2) from hand to TABLE top row y=0', async () => {
+      vi.mocked(CardDTO.get).mockResolvedValue(makeCardMeta('2') as never);
+      const { result, webClient } = setup({ localPlayerId: 1 });
+
+      act(() => {
+        result.current.handleCardDoubleClick(App.ZoneName.HAND, makeCard({ id: 9, name: 'Sol Ring' }));
+      });
+
+      await waitFor(() => {
+        expect(webClient.request.game.moveCard).toHaveBeenCalled();
+      });
+      expect(webClient.request.game.moveCard).toHaveBeenCalledWith(
+        1,
+        expect.objectContaining({
+          startZone: App.ZoneName.HAND,
+          targetZone: App.ZoneName.TABLE,
+          y: 0,
+        }),
+      );
+    });
+
+    it('moves a land (tablerow=0) from hand to TABLE bottom row y=2', async () => {
+      vi.mocked(CardDTO.get).mockResolvedValue(makeCardMeta('0') as never);
+      const { result, webClient } = setup({ localPlayerId: 1 });
+
+      act(() => {
+        result.current.handleCardDoubleClick(App.ZoneName.HAND, makeCard({ id: 10, name: 'Forest' }));
+      });
+
+      await waitFor(() => {
+        expect(webClient.request.game.moveCard).toHaveBeenCalled();
+      });
+      expect(webClient.request.game.moveCard).toHaveBeenCalledWith(
+        1,
+        expect.objectContaining({
+          startZone: App.ZoneName.HAND,
+          targetZone: App.ZoneName.TABLE,
+          y: 2,
+        }),
+      );
+    });
+
+    it('defaults missing tablerow to TABLE top row y=0', async () => {
+      vi.mocked(CardDTO.get).mockResolvedValue(makeCardMeta(null) as never);
+      const { result, webClient } = setup({ localPlayerId: 1 });
+
+      act(() => {
+        result.current.handleCardDoubleClick(App.ZoneName.HAND, makeCard({ id: 11, name: 'Mystery Card' }));
+      });
+
+      await waitFor(() => {
+        expect(webClient.request.game.moveCard).toHaveBeenCalled();
+      });
+      expect(webClient.request.game.moveCard).toHaveBeenCalledWith(
+        1,
+        expect.objectContaining({
+          startZone: App.ZoneName.HAND,
+          targetZone: App.ZoneName.TABLE,
+          y: 0,
+        }),
+      );
+    });
+
+    it('defaults to top row when CardDTO.get returns nothing', async () => {
+      vi.mocked(CardDTO.get).mockResolvedValue(undefined as never);
+      const { result, webClient } = setup({ localPlayerId: 1 });
+
+      act(() => {
+        result.current.handleCardDoubleClick(App.ZoneName.HAND, makeCard({ id: 12, name: 'Unknown' }));
+      });
+
+      await waitFor(() => {
+        expect(webClient.request.game.moveCard).toHaveBeenCalled();
+      });
+      expect(webClient.request.game.moveCard).toHaveBeenCalledWith(
+        1,
+        expect.objectContaining({
+          targetZone: App.ZoneName.TABLE,
+          y: 0,
+        }),
+      );
+    });
+
+    it('still toggles tap on TABLE double-click (existing behavior preserved)', () => {
+      const { result, webClient } = setup({ localPlayerId: 1 });
+
+      act(() => {
+        result.current.handleCardDoubleClick(
+          App.ZoneName.TABLE,
+          makeCard({ id: 5, tapped: false }),
+        );
+      });
+
+      expect(webClient.request.game.setCardAttr).toHaveBeenCalled();
+      expect(webClient.request.game.moveCard).not.toHaveBeenCalled();
     });
   });
 

@@ -19,6 +19,7 @@ const defaultProps = {
   onRequestSetCounter: () => {},
   onRequestDrawArrow: () => {},
   onRequestAttach: () => {},
+  onRequestPlay: () => {},
   onRequestMoveToLibraryAt: () => {},
 };
 
@@ -48,6 +49,10 @@ describe('CardContextMenu', () => {
     expect(screen.getByText('Doesn\'t Untap')).toBeInTheDocument();
     expect(screen.getByText('Set P/T…')).toBeInTheDocument();
     expect(screen.getByText('Set Annotation…')).toBeInTheDocument();
+    // Counter actions live behind a "Counters > Counter {label}" submenu
+    // chain (see desktop card_menu.cpp: aAddCounter[i]/aRemoveCounter[i]/
+    // aSetCounter[i] grouped per type). Surfaced lazily.
+    expect(screen.getByText('Counters')).toBeInTheDocument();
     expect(screen.getByText('Send to Hand')).toBeInTheDocument();
     expect(screen.getByText('Send to Graveyard')).toBeInTheDocument();
     expect(screen.getByText('Send to Exile')).toBeInTheDocument();
@@ -214,8 +219,7 @@ describe('CardContextMenu', () => {
     expect(screen.queryByText('Flip')).not.toBeInTheDocument();
     expect(screen.queryByText('Tap')).not.toBeInTheDocument();
     expect(screen.queryByText('Set P/T…')).not.toBeInTheDocument();
-    expect(screen.queryByText('Add A counter')).not.toBeInTheDocument();
-    expect(screen.queryByText('Set A counter…')).not.toBeInTheDocument();
+    expect(screen.queryByText('Counters')).not.toBeInTheDocument();
     expect(screen.queryByText('Send to Hand')).not.toBeInTheDocument();
     expect(screen.queryByText('Attach to card…')).not.toBeInTheDocument();
 
@@ -263,6 +267,14 @@ describe('CardContextMenu', () => {
     }));
   });
 
+  // Per-counter actions live three levels deep: Counters ▸ {label} ▸
+  // {Add|Remove|Set Counter}. Tests navigate the chain via clicks on the
+  // intermediate triggers, which mirrors the user's path through the menu.
+  function openCounterSubmenu(label: string) {
+    fireEvent.click(screen.getByText('Counters'));
+    fireEvent.click(screen.getByText(label));
+  }
+
   it('adds an A-type counter via incCardCounter (+1 on id 0)', () => {
     const webClient = createMockWebClient();
     renderWithProviders(
@@ -270,7 +282,8 @@ describe('CardContextMenu', () => {
       { webClient },
     );
 
-    fireEvent.click(screen.getByText('Add A counter'));
+    openCounterSubmenu('A');
+    fireEvent.click(screen.getByText('Add Counter'));
 
     expect(webClient.request.game.incCardCounter).toHaveBeenCalledWith(1, {
       zone: App.ZoneName.TABLE,
@@ -287,7 +300,8 @@ describe('CardContextMenu', () => {
       { webClient },
     );
 
-    fireEvent.click(screen.getByText('Add B counter'));
+    openCounterSubmenu('B');
+    fireEvent.click(screen.getByText('Add Counter'));
 
     expect(webClient.request.game.incCardCounter).toHaveBeenCalledWith(1, {
       zone: App.ZoneName.TABLE,
@@ -297,12 +311,13 @@ describe('CardContextMenu', () => {
     });
   });
 
-  it('disables Remove A counter when card has no A counters', () => {
+  it('disables Remove Counter when card has no counters of that type', () => {
     renderWithProviders(
       <CardContextMenu {...defaultProps} card={makeCard({ id: 9 })} />,
     );
 
-    const item = screen.getByText('Remove A counter').closest('li');
+    openCounterSubmenu('A');
+    const item = screen.getByText('Remove Counter').closest('li');
     expect(item).toHaveClass('Mui-disabled');
   });
 
@@ -319,7 +334,8 @@ describe('CardContextMenu', () => {
       { webClient },
     );
 
-    fireEvent.click(screen.getByText('Remove A counter'));
+    openCounterSubmenu('A');
+    fireEvent.click(screen.getByText('Remove Counter'));
 
     expect(webClient.request.game.incCardCounter).toHaveBeenCalledWith(1, {
       zone: App.ZoneName.TABLE,
@@ -329,7 +345,7 @@ describe('CardContextMenu', () => {
     });
   });
 
-  it('defers "Set A counter…" to the parent callback with the matching id', () => {
+  it('defers "Set Counter…" to the parent callback with the matching id', () => {
     const onRequestSetCounter = vi.fn();
     renderWithProviders(
       <CardContextMenu
@@ -339,7 +355,8 @@ describe('CardContextMenu', () => {
       />,
     );
 
-    fireEvent.click(screen.getByText('Set A counter…'));
+    openCounterSubmenu('A');
+    fireEvent.click(screen.getByText('Set Counter…'));
 
     expect(onRequestSetCounter).toHaveBeenCalledWith(0);
   });
