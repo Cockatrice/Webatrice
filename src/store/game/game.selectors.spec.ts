@@ -202,8 +202,43 @@ describe('Selectors', () => {
       });
     }
 
-    it('returns an empty map when the TABLE zone is absent', () => {
-      const state = makeState();
+    function stateWithTwoTables(
+      player1Cards: ReturnType<typeof makeCard>[],
+      player2Cards: ReturnType<typeof makeCard>[],
+    ): GamesState {
+      return makeState({
+        games: {
+          1: makeGameEntry({
+            localPlayerId: 1,
+            players: {
+              1: makePlayerEntry({
+                zones: {
+                  [App.ZoneName.TABLE]: makeZoneEntry({
+                    name: App.ZoneName.TABLE,
+                    withCoords: true,
+                    cardCount: player1Cards.length,
+                    cards: player1Cards,
+                  }),
+                },
+              }),
+              2: makePlayerEntry({
+                zones: {
+                  [App.ZoneName.TABLE]: makeZoneEntry({
+                    name: App.ZoneName.TABLE,
+                    withCoords: true,
+                    cardCount: player2Cards.length,
+                    cards: player2Cards,
+                  }),
+                },
+              }),
+            },
+          }),
+        },
+      });
+    }
+
+    it('returns an empty map when the game is missing', () => {
+      const state = makeState({ games: {} });
       const result = Selectors.getAttachmentsByParent(rootState(state), 1, 1);
       expect(result.size).toBe(0);
     });
@@ -229,41 +264,37 @@ describe('Selectors', () => {
       const state = stateWithTable(cards);
       const result = Selectors.getAttachmentsByParent(rootState(state), 1, 1);
       expect(result.size).toBe(1);
-      expect(result.get(10)?.map((c) => c.name)).toEqual(['Aura']);
+      expect(result.get(10)?.map((e) => e.card.name)).toEqual(['Aura']);
+      expect(result.get(10)?.[0].ownerPlayerId).toBe(1);
     });
 
-    it('buckets multiple children under the same parent, sorted by id', () => {
+    it('keeps multiple children in zone-insertion order (matches Cockatrice attachedCards iterator)', () => {
+      // Cards are listed in the fixture in zone.order: [creature(5), 30, 10, 20].
+      // Cockatrice paints attached cards in the order they were appended to
+      // the parent's attachedCards list (table_zone.cpp:172). zone.order is a
+      // stable proxy for that — first card to enter the zone is iterated first.
       const cards = [
         makeCard({ id: 5, name: 'Creature' }),
         makeCard({
-          id: 30, name: 'Aura C',
+          id: 30, name: 'Aura first',
           attachPlayerId: 1, attachZone: App.ZoneName.TABLE, attachCardId: 5,
         }),
         makeCard({
-          id: 10, name: 'Aura A',
+          id: 10, name: 'Aura middle',
           attachPlayerId: 1, attachZone: App.ZoneName.TABLE, attachCardId: 5,
         }),
         makeCard({
-          id: 20, name: 'Aura B',
+          id: 20, name: 'Aura last',
           attachPlayerId: 1, attachZone: App.ZoneName.TABLE, attachCardId: 5,
         }),
       ];
       const state = stateWithTable(cards);
       const result = Selectors.getAttachmentsByParent(rootState(state), 1, 1);
-      expect(result.get(5)?.map((c) => c.name)).toEqual(['Aura A', 'Aura B', 'Aura C']);
-    });
-
-    it('ignores attachments pointing to a different player', () => {
-      const cards = [
-        makeCard({ id: 1, name: 'Creature' }),
-        makeCard({
-          id: 2, name: 'Cross-player ref',
-          attachPlayerId: 99, attachZone: App.ZoneName.TABLE, attachCardId: 1,
-        }),
-      ];
-      const state = stateWithTable(cards);
-      const result = Selectors.getAttachmentsByParent(rootState(state), 1, 1);
-      expect(result.size).toBe(0);
+      expect(result.get(5)?.map((e) => e.card.name)).toEqual([
+        'Aura first',
+        'Aura middle',
+        'Aura last',
+      ]);
     });
 
     it('ignores attachments pointing to a non-TABLE zone', () => {
@@ -279,7 +310,7 @@ describe('Selectors', () => {
       expect(result.size).toBe(0);
     });
 
-    it('returns a stable Map reference for the same zone object', () => {
+    it('returns a stable Map reference for the same state object', () => {
       const cards = [
         makeCard({ id: 1, name: 'Creature' }),
         makeCard({
@@ -291,6 +322,59 @@ describe('Selectors', () => {
       const a = Selectors.getAttachmentsByParent(rootState(state), 1, 1);
       const b = Selectors.getAttachmentsByParent(rootState(state), 1, 1);
       expect(a).toBe(b);
+    });
+
+    describe('cross-player attach', () => {
+      it('surfaces an aura in player 1\'s zone parented to player 2\'s creature under player 2', () => {
+        // Mirrors Servatrice cmdAttachCard cross-player branch: the aura
+        // stays in its original owner's table, only the parent pointer
+        // crosses player boundaries. The renderer for player 2's
+        // battlefield must still see the aura nested under their creature.
+        const player1Cards = [
+          makeCard({
+            id: 11, name: 'Aura on enemy',
+            attachPlayerId: 2, attachZone: App.ZoneName.TABLE, attachCardId: 21,
+          }),
+        ];
+        const player2Cards = [
+          makeCard({ id: 21, name: 'Creature' }),
+        ];
+        const state = stateWithTwoTables(player1Cards, player2Cards);
+
+        const forParent = Selectors.getAttachmentsByParent(rootState(state), 1, 2);
+        expect(forParent.get(21)?.map((e) => e.card.name)).toEqual(['Aura on enemy']);
+        expect(forParent.get(21)?.[0].ownerPlayerId).toBe(1);
+
+        // The aura must NOT also appear under its own owner's parents — its
+        // attachPlayerId is 2, not 1.
+        const forOwner = Selectors.getAttachmentsByParent(rootState(state), 1, 1);
+        expect(forOwner.size).toBe(0);
+      });
+
+      it('groups children from multiple owners under a shared parent in player-id order', () => {
+        const player1Cards = [
+          makeCard({ id: 11, name: 'P1 creature' }),
+          makeCard({
+            id: 12, name: 'P1 aura',
+            attachPlayerId: 2, attachZone: App.ZoneName.TABLE, attachCardId: 21,
+          }),
+        ];
+        const player2Cards = [
+          makeCard({ id: 21, name: 'P2 creature' }),
+          makeCard({
+            id: 22, name: 'P2 aura',
+            attachPlayerId: 2, attachZone: App.ZoneName.TABLE, attachCardId: 21,
+          }),
+        ];
+        const state = stateWithTwoTables(player1Cards, player2Cards);
+        const forP2 = Selectors.getAttachmentsByParent(rootState(state), 1, 2);
+        // Player 1 iterated before player 2 → P1's aura first, P2's aura
+        // second.
+        expect(forP2.get(21)?.map((e) => `${e.ownerPlayerId}:${e.card.name}`)).toEqual([
+          '1:P1 aura',
+          '2:P2 aura',
+        ]);
+      });
     });
   });
 

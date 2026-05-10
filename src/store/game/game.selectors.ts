@@ -8,7 +8,19 @@ interface State {
 
 const EMPTY_ARRAY: Data.ServerInfo_Card[] = [];
 const EMPTY_OBJECT = {} as Record<string, never>;
-const EMPTY_ATTACHMENTS: ReadonlyMap<number, Data.ServerInfo_Card[]> = new Map();
+const EMPTY_ATTACHMENTS: ReadonlyMap<number, AttachedChild[]> = new Map();
+
+/**
+ * An attached child plus the player whose zone it actually lives in. The
+ * server keeps cross-player attachments in the original owner's zone (only
+ * the parent pointer crosses player boundaries — see Servatrice
+ * `cmdAttachCard`), so a child rendered under an opponent's creature still
+ * needs its own owner id for click/drag/arrow plumbing.
+ */
+export interface AttachedChild {
+  card: Data.ServerInfo_Card;
+  ownerPlayerId: number;
+}
 
 /**
  * Memoized cache for materialized zone card arrays. Keyed by the zone object
@@ -29,50 +41,66 @@ function materializeZoneCards(zone: Enriched.ZoneEntry): Data.ServerInfo_Card[] 
 }
 
 /**
- * Memoized cache for the parent-id → attached-children map for a TABLE zone.
- * Keyed by the zone identity so re-renders reuse the same Map reference unless
- * the reducer has produced a new zone object.
+ * Memoized cache for the (parent-owner → parent-card-id → children) lookup.
+ * Keyed by the game's `players` map identity. Immer rebuilds that map any
+ * time a reducer mutates a nested zone, so this WeakMap entry naturally
+ * invalidates whenever a card field changes anywhere in the game.
+ *
+ * Cross-player attachments are surfaced under the *parent's* owner — that
+ * matches Cockatrice's `setAttachedTo` which calls
+ * `attachedTo->getZone()->reorganizeCards()` so the child paints next to
+ * the parent regardless of which player's table the child lives in.
  */
 const attachmentsByParentCache = new WeakMap<
-  Enriched.ZoneEntry,
-  ReadonlyMap<number, Data.ServerInfo_Card[]>
+  { [playerId: number]: Enriched.PlayerEntry },
+  ReadonlyMap<number, ReadonlyMap<number, AttachedChild[]>>
 >();
 
-function materializeAttachmentsByParent(
-  zone: Enriched.ZoneEntry,
-  playerId: number,
-): ReadonlyMap<number, Data.ServerInfo_Card[]> {
-  const cached = attachmentsByParentCache.get(zone);
+function materializeAllAttachments(
+  players: { [playerId: number]: Enriched.PlayerEntry },
+): ReadonlyMap<number, ReadonlyMap<number, AttachedChild[]>> {
+  const cached = attachmentsByParentCache.get(players);
   if (cached) {
     return cached;
   }
-  const map = new Map<number, Data.ServerInfo_Card[]>();
-  for (const card of materializeZoneCards(zone)) {
-    // Only the webclient-owned parent-pointer side of attachment is encoded:
-    // desktop maintains a child list, but here every child points up via
-    // attachCardId. Skip unattached cards and any pointer to a different
-    // player / zone (the protocol allows cross-player attach).
-    if (card.attachCardId == null || card.attachCardId === -1) {
+  const result = new Map<number, Map<number, AttachedChild[]>>();
+  // Iterate players in id order so the order children appear in a parent's
+  // bucket is deterministic across re-renders, even when two different
+  // players have both attached cards onto the same parent.
+  const playerIds = Object.keys(players).map(Number).sort((a, b) => a - b);
+  for (const ownerPlayerId of playerIds) {
+    const tableZone = players[ownerPlayerId]?.zones[App.ZoneName.TABLE];
+    if (!tableZone) {
       continue;
     }
-    if (card.attachPlayerId !== playerId) {
-      continue;
+    // materializeZoneCards iterates in zone.order — i.e. the order each card
+    // entered the zone. Pushing in that order matches Cockatrice's
+    // `QListIterator` over `attachedCards`, which yields cards in the order
+    // they were added to the parent's child list (table_zone.cpp:172). No
+    // explicit sort needed; the bucket is naturally in insertion order.
+    for (const card of materializeZoneCards(tableZone)) {
+      if (card.attachCardId == null || card.attachCardId === -1) {
+        continue;
+      }
+      if (card.attachZone !== App.ZoneName.TABLE) {
+        continue;
+      }
+      const parentPlayerId = card.attachPlayerId;
+      let byParentCard = result.get(parentPlayerId);
+      if (!byParentCard) {
+        byParentCard = new Map<number, AttachedChild[]>();
+        result.set(parentPlayerId, byParentCard);
+      }
+      let bucket = byParentCard.get(card.attachCardId);
+      if (!bucket) {
+        bucket = [];
+        byParentCard.set(card.attachCardId, bucket);
+      }
+      bucket.push({ card, ownerPlayerId });
     }
-    if (card.attachZone !== App.ZoneName.TABLE) {
-      continue;
-    }
-    let bucket = map.get(card.attachCardId);
-    if (!bucket) {
-      bucket = [];
-      map.set(card.attachCardId, bucket);
-    }
-    bucket.push(card);
   }
-  for (const bucket of map.values()) {
-    bucket.sort((a, b) => a.id - b.id);
-  }
-  attachmentsByParentCache.set(zone, map);
-  return map;
+  attachmentsByParentCache.set(players, result);
+  return result;
 }
 
 export const Selectors = {
@@ -116,13 +144,24 @@ export const Selectors = {
     return zone ? materializeZoneCards(zone) : EMPTY_ARRAY;
   },
 
+  /**
+   * Returns attachments parented to cards owned by `parentPlayerId` — i.e.
+   * the children that should render nested under that player's battlefield
+   * cards. Children may live in a different player's TABLE zone (cross-player
+   * attach: your aura on opponent's creature); the selector pulls them in
+   * regardless and tags each with its owner via `AttachedChild.ownerPlayerId`.
+   */
   getAttachmentsByParent: (
     { games }: State,
     gameId: number,
-    playerId: number,
-  ): ReadonlyMap<number, Data.ServerInfo_Card[]> => {
-    const zone = games.games[gameId]?.players[playerId]?.zones[App.ZoneName.TABLE];
-    return zone ? materializeAttachmentsByParent(zone, playerId) : EMPTY_ATTACHMENTS;
+    parentPlayerId: number,
+  ): ReadonlyMap<number, AttachedChild[]> => {
+    const game = games.games[gameId];
+    if (!game) {
+      return EMPTY_ATTACHMENTS;
+    }
+    const all = materializeAllAttachments(game.players);
+    return all.get(parentPlayerId) ?? EMPTY_ATTACHMENTS;
   },
 
   getCounters: ({ games }: State, gameId: number, playerId: number) =>

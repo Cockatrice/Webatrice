@@ -1,4 +1,5 @@
 import { App, Data } from '@app/types';
+import type { AttachedChild } from '@app/store';
 
 import CardSlot from '../CardSlot/CardSlot';
 import { makeCardKey } from '../CardRegistry/CardRegistryContext';
@@ -13,9 +14,13 @@ import './AttachmentStack.css';
 
 export interface AttachmentStackProps {
   parent: Data.ServerInfo_Card;
-  attachments: Data.ServerInfo_Card[];
-  draggable: boolean;
+  // The parent's owner — drives the parent's CardSlot wiring. Children carry
+  // their own ownerPlayerId in `AttachedChild` so a cross-player attachment
+  // (your aura on opponent's creature) keeps click/drag tied to the actual
+  // owning player.
   ownerPlayerId: number;
+  attachments: AttachedChild[];
+  draggable: boolean;
   arrowSourceKey: string | null;
   onCardHover?: (card: Data.ServerInfo_Card) => void;
   onCardClick?: (playerId: number, zone: string, card: Data.ServerInfo_Card) => void;
@@ -83,8 +88,12 @@ function AttachmentStack({
           onDoubleClick={onCardDoubleClick}
         />
       </div>
-      {attachments.map((child, i) => {
-        const childKey = makeCardKey(ownerPlayerId, App.ZoneName.TABLE, child.id);
+      {attachments.map((entry, i) => {
+        const { card: child, ownerPlayerId: childOwnerId } = entry;
+        // Each child wires to its own owner — for a cross-player attach the
+        // child still lives in the original owner's zone (Servatrice never
+        // moves it), so click/drag/arrow lookups need that owner id.
+        const childKey = makeCardKey(childOwnerId, App.ZoneName.TABLE, child.id);
         // Child i sits (N - 1 - i) slots from the left → first-attached
         // (i=0) ends up just left of parent with the highest child z, matching
         // desktop's "j=1 = closest to parent = highest screen X = highest z".
@@ -103,11 +112,11 @@ function AttachmentStack({
             <CardSlot
               card={child}
               draggable={draggable}
-              ownerPlayerId={ownerPlayerId}
+              ownerPlayerId={childOwnerId}
               zone={App.ZoneName.TABLE}
               isArrowSource={arrowSourceKey === childKey}
               onMouseEnter={onCardHover}
-              onClick={(c) => onCardClick?.(ownerPlayerId, App.ZoneName.TABLE, c)}
+              onClick={(c) => onCardClick?.(childOwnerId, App.ZoneName.TABLE, c)}
               onContextMenu={onCardContextMenu}
               onDoubleClick={onCardDoubleClick}
             />

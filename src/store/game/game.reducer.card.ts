@@ -90,6 +90,47 @@ export const cardReducers = {
     targetZoneEntry.byId[movedCard.id] = movedCard;
     targetZoneEntry.cardCount++;
 
+    // TABLE→TABLE: when a parent with attachments moves to a different player's
+    // table, Servatrice does NOT emit unattach events for the children — its
+    // pre-move unattach loop only fires when the zone *names* differ
+    // (server_abstract_player.cpp:376). It also reassigns the parent's id on
+    // cross-player move (line 449). Cockatrice desktop survives this via
+    // pointer-linkage: `cardAdded` reparents children's QGraphicsItems into
+    // the new zone (card_zone.cpp:19). Our wire-data-driven model has no
+    // pointer linkage — instead, walk every player's table and rewrite each
+    // attached child's parent pointer to the new (player, id). Same-player
+    // intra-table moves preserve the parent id, so the rewrite is a no-op
+    // pass and stays cheap.
+    if (
+      resolvedCardId >= 0 &&
+      startZone === App.ZoneName.TABLE &&
+      effectiveTargetZone === App.ZoneName.TABLE
+    ) {
+      for (const otherPlayer of Object.values(game.players)) {
+        const otherTable = otherPlayer?.zones[App.ZoneName.TABLE];
+        if (!otherTable) {
+          continue;
+        }
+        for (const childId of otherTable.order) {
+          const child = otherTable.byId[childId];
+          if (!child) {
+            continue;
+          }
+          if (
+            child.attachPlayerId === startPlayerId &&
+            child.attachZone === App.ZoneName.TABLE &&
+            child.attachCardId === resolvedCardId
+          ) {
+            otherTable.byId[childId] = {
+              ...child,
+              attachPlayerId: targetPlayerId,
+              attachCardId: effectiveNewId,
+            };
+          }
+        }
+      }
+    }
+
     pushEventMessage(
       game,
       action.payload.playerId,

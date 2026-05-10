@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { App, Data } from '@app/types';
-import { GameSelectors, useAppSelector } from '@app/store';
+import { GameSelectors, useAppSelector, type AttachedChild } from '@app/store';
 import { useSettings } from '@app/hooks';
 
 import { MAX_SUBPOS, ROW_COUNT, clampRow } from './gridMath';
@@ -15,7 +15,10 @@ export interface Battlefield {
   stackColumnsByRow: (Data.ServerInfo_Card[] | null)[][];
   rowOrder: number[];
   isInverted: boolean;
-  attachmentsByParent: ReadonlyMap<number, Data.ServerInfo_Card[]>;
+  // Attachments parented to this player's TABLE cards. Children may live in
+  // a different player's zone (cross-player attach) — `AttachedChild` carries
+  // the child's actual owner so handlers wire to the right player.
+  attachmentsByParent: ReadonlyMap<number, AttachedChild[]>;
 }
 
 export interface UseBattlefieldArgs {

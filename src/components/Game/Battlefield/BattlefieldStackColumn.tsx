@@ -1,4 +1,5 @@
 import { Data } from '@app/types';
+import type { AttachedChild } from '@app/store';
 
 import AttachmentStack from './AttachmentStack';
 import {
@@ -12,7 +13,7 @@ import {
 
 import './BattlefieldStackColumn.css';
 
-const EMPTY_ATTACHMENTS: Data.ServerInfo_Card[] = [];
+const EMPTY_ATTACHMENTS: AttachedChild[] = [];
 
 const round = (n: number): number => Math.round(n * 100) / 100;
 
@@ -29,7 +30,7 @@ const round = (n: number): number => Math.round(n * 100) / 100;
 // positions stay proportional at any zoom level.
 function computeStackFootprint(
   cards: Data.ServerInfo_Card[],
-  attachmentsByParent: ReadonlyMap<number, Data.ServerInfo_Card[]>,
+  attachmentsByParent: ReadonlyMap<number, AttachedChild[]>,
 ): { widthPx: number; heightPx: number } {
   let maxRight = CARD_WIDTH_PX;
   let maxBottom = CARD_HEIGHT_PX;
@@ -46,14 +47,17 @@ function computeStackFootprint(
   return { widthPx: round(maxRight), heightPx: round(maxBottom) };
 }
 
-function slotWidthFor(card: Data.ServerInfo_Card, attachmentsByParent: ReadonlyMap<number, Data.ServerInfo_Card[]>): number {
+function slotWidthFor(
+  card: Data.ServerInfo_Card,
+  attachmentsByParent: ReadonlyMap<number, AttachedChild[]>,
+): number {
   const attachCount = attachmentsByParent.get(card.id)?.length ?? 0;
   return CARD_WIDTH_PX * (1 + attachCount * ATTACH_OFFSET_FRACTION);
 }
 
 export interface BattlefieldStackColumnProps {
   cards: Data.ServerInfo_Card[]; // 1..MAX_SUBPOS cards, sorted by sub-position
-  attachmentsByParent: ReadonlyMap<number, Data.ServerInfo_Card[]>;
+  attachmentsByParent: ReadonlyMap<number, AttachedChild[]>;
   draggable: boolean;
   ownerPlayerId: number;
   arrowSourceKey: string | null;

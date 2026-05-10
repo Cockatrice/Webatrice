@@ -813,6 +813,153 @@ describe('2C: CARD_MOVED', () => {
     expect(c11.y).toBe(0);
     expect(result.games[1].players[1].zones['table'].cardCount).toBe(2);
   });
+
+  describe('cross-player TABLE→TABLE move with attachments', () => {
+    // Servatrice's unattach-children loop only fires when the zone *names*
+    // differ (server_abstract_player.cpp:376), so a cross-player table→table
+    // move (e.g. taking control of an opponent's permanent) leaves no
+    // unattach events on the wire. The desktop survives this via Qt
+    // pointer-linkage that reparents children's QGraphicsItems into the new
+    // zone (card_zone.cpp:19 onCardAdded). Our wire-data-driven model has to
+    // rewrite the children's `(attachPlayerId, attachCardId)` pointers
+    // explicitly in the cardMoved reducer.
+    function stateWithParentAndChildren() {
+      const parent = makeCard({ id: 10, name: 'Creature', x: 0, y: 0 });
+      const auraA = makeCard({
+        id: 11, name: 'AuraA', x: 1, y: 0,
+        attachPlayerId: 1, attachZone: 'table', attachCardId: 10,
+      });
+      const auraB = makeCard({
+        id: 12, name: 'AuraB', x: 2, y: 0,
+        attachPlayerId: 1, attachZone: 'table', attachCardId: 10,
+      });
+      return makeState({
+        games: {
+          1: makeGameEntry({
+            localPlayerId: 1,
+            players: {
+              1: makePlayerEntry({
+                zones: {
+                  table: makeZoneEntry({
+                    name: 'table',
+                    cards: [parent, auraA, auraB],
+                    cardCount: 3,
+                  }),
+                },
+              }),
+              2: makePlayerEntry({
+                zones: {
+                  table: makeZoneEntry({ name: 'table', cards: [], cardCount: 0 }),
+                },
+              }),
+            },
+          }),
+        },
+      });
+    }
+
+    it('rewrites children attach pointers to (newOwner, newId) when parent moves cross-player', () => {
+      const state = stateWithParentAndChildren();
+      // Servatrice reassigns the parent's id on cross-player move
+      // (server_abstract_player.cpp:447-450). The wire carries cardId=old,
+      // newCardId=new.
+      const result = gamesReducer(state, Actions.cardMoved({
+        gameId: 1,
+        playerId: 1,
+        data: {
+          cardId: 10, cardName: '', startPlayerId: 1, startZone: 'table',
+          position: -1, targetPlayerId: 2, targetZone: 'table',
+          x: 0, y: 0, newCardId: 99, faceDown: false, newCardProviderId: '',
+        },
+      }));
+
+      // Parent now lives in player 2's table at id 99.
+      const p2Table = cardsIn(result, 1, 2, 'table');
+      expect(p2Table.find((c) => c.id === 99)?.name).toBe('Creature');
+
+      // Auras still live in player 1's table (Servatrice never moves them).
+      const p1Table = cardsIn(result, 1, 1, 'table').sort((a, b) => a.id - b.id);
+      const auraA = p1Table.find((c) => c.id === 11)!;
+      const auraB = p1Table.find((c) => c.id === 12)!;
+      // Their parent pointers now follow the parent into player 2's zone.
+      expect(auraA.attachPlayerId).toBe(2);
+      expect(auraA.attachCardId).toBe(99);
+      expect(auraA.attachZone).toBe('table');
+      expect(auraB.attachPlayerId).toBe(2);
+      expect(auraB.attachCardId).toBe(99);
+      expect(auraB.attachZone).toBe('table');
+    });
+
+    it('intra-table same-player move leaves children pointers as-is (no-op rewrite)', () => {
+      const state = stateWithParentAndChildren();
+      const result = gamesReducer(state, Actions.cardMoved({
+        gameId: 1,
+        playerId: 1,
+        data: {
+          cardId: 10, cardName: '', startPlayerId: 1, startZone: 'table',
+          position: -1, targetPlayerId: 1, targetZone: 'table',
+          x: 5, y: 1, newCardId: -1, faceDown: false, newCardProviderId: '',
+        },
+      }));
+
+      const p1Table = cardsIn(result, 1, 1, 'table');
+      const auraA = p1Table.find((c) => c.id === 11)!;
+      const auraB = p1Table.find((c) => c.id === 12)!;
+      expect(auraA.attachPlayerId).toBe(1);
+      expect(auraA.attachCardId).toBe(10);
+      expect(auraB.attachPlayerId).toBe(1);
+      expect(auraB.attachCardId).toBe(10);
+    });
+
+    it('table → hand leaves children pointers untouched (Servatrice will send pre-move unattach events)', () => {
+      // Cross-zone-NAME moves trigger Servatrice's unattach loop
+      // (server_abstract_player.cpp:376-387). The cardAttached reducer clears
+      // the children's pointers when those events arrive. The cardMoved
+      // reducer must NOT preempt that path — otherwise we'd silently rewrite
+      // pointers that the unattach event will then clear, churning state.
+      const state = makeState({
+        games: {
+          1: makeGameEntry({
+            localPlayerId: 1,
+            players: {
+              1: makePlayerEntry({
+                zones: {
+                  table: makeZoneEntry({
+                    name: 'table',
+                    cards: [
+                      makeCard({ id: 10, name: 'Creature', x: 0, y: 0 }),
+                      makeCard({
+                        id: 11, name: 'Aura', x: 1, y: 0,
+                        attachPlayerId: 1, attachZone: 'table', attachCardId: 10,
+                      }),
+                    ],
+                    cardCount: 2,
+                  }),
+                  hand: makeZoneEntry({ name: 'hand', cards: [], cardCount: 0 }),
+                },
+              }),
+            },
+          }),
+        },
+      });
+
+      const result = gamesReducer(state, Actions.cardMoved({
+        gameId: 1,
+        playerId: 1,
+        data: {
+          cardId: 10, cardName: '', startPlayerId: 1, startZone: 'table',
+          position: -1, targetPlayerId: 1, targetZone: 'hand',
+          x: 0, y: 0, newCardId: -1, faceDown: false, newCardProviderId: '',
+        },
+      }));
+
+      const aura = cardsIn(result, 1, 1, 'table').find((c) => c.id === 11)!;
+      // Pointers stay as-is — Servatrice's pre-move unattach event is what
+      // clears them, and that arrives as a separate cardAttached dispatch.
+      expect(aura.attachPlayerId).toBe(1);
+      expect(aura.attachCardId).toBe(10);
+    });
+  });
 });
 
 
@@ -901,6 +1048,76 @@ describe('2D: Card mutations', () => {
     expect(card.attachPlayerId).toBe(-1);
     expect(card.attachZone).toBe('');
     expect(card.attachCardId).toBe(-1);
+  });
+
+  it('full unattach event sequence (CARD_ATTACHED no-target → CARD_MOVED) leaves the card free at the new slot', () => {
+    // Servatrice's `unattachCard` enqueues two events in a fixed order:
+    //   1. Event_AttachCard with no target (clears parent pointer).
+    //   2. Event_MoveCard to a free slot via `moveCard(zone, -1, y)`.
+    // The webclient's reducers must compose: the attach event clears the
+    // parent fields to -1/''/-1, the subsequent move keeps them cleared and
+    // updates x/y. Pinning the order here so a later "clear attach fields
+    // in cardMoved" change can't silently re-detach a still-attached card.
+    const { state } = stateWithCardInZone('table');
+    const attached = gamesReducer(state, Actions.cardAttached({
+      gameId: 1,
+      playerId: 1,
+      data: { startZone: 'table', cardId: 5, targetPlayerId: 2, targetZone: 'table', targetCardId: 99 },
+    }));
+
+    const detached = gamesReducer(attached, Actions.cardAttached({
+      gameId: 1,
+      playerId: 1,
+      data: { startZone: 'table', cardId: 5, targetPlayerId: 0, targetZone: '', targetCardId: 0 },
+    }));
+
+    const moved = gamesReducer(detached, Actions.cardMoved({
+      gameId: 1,
+      playerId: 1,
+      data: {
+        cardId: 5, cardName: '', startPlayerId: 1, startZone: 'table', position: -1,
+        targetPlayerId: 1, targetZone: 'table', x: 4, y: 1,
+        newCardId: -1, faceDown: false, newCardProviderId: '',
+      },
+    }));
+
+    const final = cardsIn(moved, 1, 1, 'table')[0];
+    expect(final.attachPlayerId).toBe(-1);
+    expect(final.attachZone).toBe('');
+    expect(final.attachCardId).toBe(-1);
+    expect(final.x).toBe(4);
+    expect(final.y).toBe(1);
+  });
+
+  it('CARD_MOVED on an attached card preserves attach fields (Servatrice never moves a still-attached card client-bound)', () => {
+    // Pin the inverse direction: the cardMoved reducer must NOT clear attach
+    // fields on its own. The protocol always emits an explicit
+    // Event_AttachCard before any move that detaches; if cardMoved cleared
+    // attach fields unconditionally, an unrelated server-initiated reposition
+    // of a still-attached card (e.g. desktop's `setCoords(-1, y)` on the
+    // parent's stack column shuffle) would silently detach it.
+    const { state } = stateWithCardInZone('table');
+    const attached = gamesReducer(state, Actions.cardAttached({
+      gameId: 1,
+      playerId: 1,
+      data: { startZone: 'table', cardId: 5, targetPlayerId: 1, targetZone: 'table', targetCardId: 99 },
+    }));
+
+    const moved = gamesReducer(attached, Actions.cardMoved({
+      gameId: 1,
+      playerId: 1,
+      data: {
+        cardId: 5, cardName: '', startPlayerId: 1, startZone: 'table', position: -1,
+        targetPlayerId: 1, targetZone: 'table', x: 7, y: 0,
+        newCardId: -1, faceDown: false, newCardProviderId: '',
+      },
+    }));
+
+    const card = cardsIn(moved, 1, 1, 'table')[0];
+    expect(card.attachPlayerId).toBe(1);
+    expect(card.attachZone).toBe('table');
+    expect(card.attachCardId).toBe(99);
+    expect(card.x).toBe(7);
   });
 
   it('TOKEN_CREATED → builds full CardInfo, appends to zone, increments cardCount', () => {

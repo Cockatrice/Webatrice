@@ -40,6 +40,29 @@ function stateWithBattlefield(cards: ReturnType<typeof makeCard>[]) {
   return makeStoreState({ games: { games: { 1: game } } });
 }
 
+function stateWithTwoBattlefields(
+  player1Cards: ReturnType<typeof makeCard>[],
+  player2Cards: ReturnType<typeof makeCard>[],
+) {
+  const buildPlayer = (cards: ReturnType<typeof makeCard>[]) =>
+    makePlayerEntry({
+      zones: {
+        [App.ZoneName.TABLE]: makeZoneEntry({
+          name: App.ZoneName.TABLE,
+          type: 1,
+          withCoords: true,
+          cardCount: cards.length,
+          cards,
+        }),
+      },
+    });
+  const game = makeGameEntry({
+    localPlayerId: 1,
+    players: { 1: buildPlayer(player1Cards), 2: buildPlayer(player2Cards) },
+  });
+  return makeStoreState({ games: { games: { 1: game } } });
+}
+
 describe('Battlefield', () => {
   beforeEach(() => {
     vi.mocked(useSettings).mockReturnValue(makeSettingsHook());
@@ -304,6 +327,90 @@ describe('Battlefield', () => {
       const slots = screen.getAllByTestId('card-slot');
       expect(slots).toHaveLength(2);
       expect(slots.map((s) => s.getAttribute('data-card-id'))).toEqual(['1', '2']);
+    });
+
+    it('renders a cross-player attachment under the parent\'s battlefield', () => {
+      // Servatrice keeps the aura in its original owner's zone (player 1)
+      // but parent-points it at player 2's creature. Cockatrice paints the
+      // aura under the parent's zone via attachedTo->getZone()->reorganize.
+      // The webclient must do the same — when rendering player 2's
+      // battlefield, the aura should appear nested under their creature even
+      // though it lives in player 1's TABLE zone.
+      const ownersAura = makeCard({
+        id: 11, name: 'Cross-player aura', x: 3, y: 0,
+        attachPlayerId: 2, attachZone: App.ZoneName.TABLE, attachCardId: 21,
+      });
+      const enemyCreature = makeCard({ id: 21, name: 'Enemy creature', x: 0, y: 0 });
+
+      const { container } = renderWithProviders(
+        <Battlefield gameId={1} playerId={2} mirrored />,
+        { preloadedState: stateWithTwoBattlefields([ownersAura], [enemyCreature]) },
+      );
+
+      // The aura must render as a child inside player 2's AttachmentStack…
+      const children = container.querySelectorAll('.attachment-stack__child');
+      expect(children).toHaveLength(1);
+      expect(children[0].querySelector('img')?.alt).toBe('Cross-player aura');
+      // …with its CardSlot tagged with the actual owner (player 1), so
+      // click/drag handlers downstream act on the correct player's card.
+      const childSlot = children[0].querySelector('[data-testid="card-slot"]') as HTMLElement;
+      expect(childSlot.getAttribute('data-card-owner')).toBe('1');
+      // The parent's slot stays tagged with player 2.
+      const parentSlot = container.querySelector(
+        '.attachment-stack__parent [data-testid="card-slot"]',
+      ) as HTMLElement;
+      expect(parentSlot.getAttribute('data-card-owner')).toBe('2');
+    });
+
+    it('keeps auras under the parent when the parent moves cross-player (table→table)', () => {
+      // Servatrice doesn't emit unattach events for auras when their parent
+      // moves between players' tables (server_abstract_player.cpp:376 only
+      // unattaches on cross-zone-NAME moves, not cross-player). It also
+      // reassigns the parent's id on cross-player move (line 449). Cockatrice
+      // desktop survives via Qt pointer-linkage; we survive by rewriting
+      // each child's (attachPlayerId, attachCardId) in the cardMoved
+      // reducer. Pin the end-to-end behavior here.
+      const parent = makeCard({ id: 10, name: 'Creature', x: 0, y: 0 });
+      const auraA = makeCard({
+        id: 11, name: 'AuraA', x: 1, y: 0,
+        attachPlayerId: 1, attachZone: App.ZoneName.TABLE, attachCardId: 10,
+      });
+      const auraB = makeCard({
+        id: 12, name: 'AuraB', x: 2, y: 0,
+        attachPlayerId: 1, attachZone: App.ZoneName.TABLE, attachCardId: 10,
+      });
+      const { store, container } = renderWithProviders(
+        <Battlefield gameId={1} playerId={2} mirrored />,
+        { preloadedState: stateWithTwoBattlefields([parent, auraA, auraB], []) },
+      );
+
+      // Before the move, player 2's battlefield is empty.
+      expect(container.querySelectorAll('.attachment-stack__parent')).toHaveLength(0);
+
+      act(() => {
+        store.dispatch(
+          Actions.cardMoved({
+            gameId: 1,
+            playerId: 1,
+            data: create(Data.Event_MoveCardSchema, {
+              cardId: 10, cardName: '', startPlayerId: 1, startZone: App.ZoneName.TABLE,
+              position: -1, targetPlayerId: 2, targetZone: App.ZoneName.TABLE,
+              x: 0, y: 0, newCardId: 99, faceDown: false, newCardProviderId: '',
+            }),
+          }),
+        );
+      });
+
+      // After the move, the parent renders on player 2's battlefield with
+      // both auras nested inside its AttachmentStack.
+      const parentSlot = container.querySelector(
+        '.attachment-stack__parent img',
+      ) as HTMLImageElement;
+      expect(parentSlot?.alt).toBe('Creature');
+      const childImgs = Array.from(
+        container.querySelectorAll('.attachment-stack__child img'),
+      ) as HTMLImageElement[];
+      expect(childImgs.map((i) => i.alt).sort()).toEqual(['AuraA', 'AuraB']);
     });
 
     it('re-renders when a card becomes attached via cardAttached dispatch', () => {

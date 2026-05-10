@@ -9,6 +9,8 @@ export {
   Selectors as GameSelectors,
   Dispatch as GameDispatch } from './game';
 
+export type { AttachedChild } from './game';
+
 export * from './game/game.interfaces';
 
 // Server
