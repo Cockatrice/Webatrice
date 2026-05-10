@@ -35,8 +35,15 @@ const PHASE_LABELS: ReadonlyArray<{
 ];
 
 function PhaseBar({ gameId }: PhaseBarProps) {
-  const { activePhase, canAdvance, handlePhaseClick, handlePass, handleUntapAll, handleDrawOne } =
-    usePhaseBar(gameId);
+  const {
+    activePhase,
+    canPassTurn,
+    canAdvancePhase,
+    handlePhaseClick,
+    handlePass,
+    handleUntapAll,
+    handleDrawOne,
+  } = usePhaseBar(gameId);
 
   const onDoubleClickFor = (kind: 'untapAll' | 'drawCard' | undefined) => {
     if (kind === 'untapAll') {
@@ -60,7 +67,7 @@ function PhaseBar({ gameId }: PhaseBarProps) {
                 type="button"
                 className={cx('phase-bar__btn', { 'phase-bar__btn--active': isActive })}
                 data-phase={phase}
-                disabled={!canAdvance}
+                disabled={!canAdvancePhase}
                 onClick={() => handlePhaseClick(phase)}
                 onDoubleClick={onDoubleClickFor(builtInOnDoubleClick)}
               >
@@ -76,7 +83,7 @@ function PhaseBar({ gameId }: PhaseBarProps) {
           <button
             type="button"
             className="phase-bar__btn phase-bar__btn--pass"
-            disabled={!canAdvance}
+            disabled={!canPassTurn}
             onClick={handlePass}
           >
             PASS TURN

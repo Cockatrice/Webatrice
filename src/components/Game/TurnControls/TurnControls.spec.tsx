@@ -128,14 +128,38 @@ describe('TurnControls', () => {
     expect(webClient.request.game.setActivePhase).toHaveBeenCalledWith(1, { phase: 1 });
   });
 
-  it('disables Pass/Reverse/NextPhase when local player is not active and is not a judge', () => {
+  it('keeps Pass/Reverse Turn enabled for a non-active participant; disables Next Phase (matches Cockatrice server)', () => {
+    // Cockatrice's server_player.cpp::cmdNextTurn / cmdReverseTurn have no
+    // active-player check — any non-conceded participant may pass turn.
+    // cmdSetActivePhase IS gated, so Next Phase stays disabled.
     renderWithProviders(<TurnControls {...DEFAULT_TURN_PROPS} />, {
       preloadedState: stateWith({ localPlayerId: 1, activePlayerId: 2 }),
     });
 
+    expect(screen.getByRole('button', { name: /pass turn/i })).not.toBeDisabled();
+    expect(screen.getByRole('button', { name: /reverse turn/i })).not.toBeDisabled();
+    expect(screen.getByRole('button', { name: /next phase/i })).toBeDisabled();
+  });
+
+  it('dispatches nextTurn from a non-active participant (desktop parity)', () => {
+    const webClient = createMockWebClient();
+    renderWithProviders(<TurnControls {...DEFAULT_TURN_PROPS} />, {
+      preloadedState: stateWith({ localPlayerId: 1, activePlayerId: 2 }),
+      webClient,
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /pass turn/i }));
+
+    expect(webClient.request.game.nextTurn).toHaveBeenCalledWith(1);
+  });
+
+  it('disables Pass/Reverse Turn when the local player has conceded', () => {
+    renderWithProviders(<TurnControls {...DEFAULT_TURN_PROPS} />, {
+      preloadedState: stateWith({ conceded: true }),
+    });
+
     expect(screen.getByRole('button', { name: /pass turn/i })).toBeDisabled();
     expect(screen.getByRole('button', { name: /reverse turn/i })).toBeDisabled();
-    expect(screen.getByRole('button', { name: /next phase/i })).toBeDisabled();
   });
 
   it('enables Pass/Reverse/NextPhase for a judge even when not the active player (desktop parity)', () => {
@@ -144,6 +168,7 @@ describe('TurnControls', () => {
     });
 
     expect(screen.getByRole('button', { name: /pass turn/i })).not.toBeDisabled();
+    expect(screen.getByRole('button', { name: /reverse turn/i })).not.toBeDisabled();
     expect(screen.getByRole('button', { name: /next phase/i })).not.toBeDisabled();
   });
 
@@ -311,13 +336,12 @@ describe('TurnControls', () => {
       expect(screen.getByRole('button', { name: /unconcede/i })).toBeDisabled();
     });
 
-    it('disables Reverse Turn for pure spectators (they are never the active player)', () => {
+    it('disables Pass/Reverse Turn for pure spectators (canPassTurn requires isJudge || isParticipant)', () => {
       renderWithProviders(<TurnControls {...DEFAULT_TURN_PROPS} />, {
-        // Spectator is typically not the active player; canAdvance gates on
-        // (isJudge || activePlayerId === localPlayerId) so Reverse is off.
         preloadedState: stateWith({ spectator: true, localPlayerId: 1, activePlayerId: 2 }),
       });
 
+      expect(screen.getByRole('button', { name: /pass turn/i })).toBeDisabled();
       expect(screen.getByRole('button', { name: /reverse turn/i })).toBeDisabled();
     });
   });

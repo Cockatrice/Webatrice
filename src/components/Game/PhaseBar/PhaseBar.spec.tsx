@@ -99,7 +99,9 @@ describe('PhaseBar', () => {
     buttons.forEach((b) => expect(b).toBeDisabled());
   });
 
-  it('disables every button when the local player is not the active player (non-judge)', () => {
+  it('disables phase buttons but keeps PASS TURN enabled for a non-active participant (matches Cockatrice server)', () => {
+    // server_player.cpp::cmdNextTurn has no active-player check, so any
+    // non-conceded participant may pass the turn from the PhaseBar.
     renderWithProviders(<PhaseBar gameId={1} />, {
       preloadedState: stateWith({
         localPlayerId: 1,
@@ -108,7 +110,25 @@ describe('PhaseBar', () => {
     });
 
     const buttons = screen.getByTestId('phase-bar').querySelectorAll('button');
-    buttons.forEach((b) => expect(b).toBeDisabled());
+    expect(buttons).toHaveLength(12);
+    // Phase buttons (0..10) are disabled because cmdSetActivePhase IS gated.
+    for (let i = 0; i < 11; i++) {
+      expect(buttons[i]).toBeDisabled();
+    }
+    // PASS TURN (index 11) stays enabled.
+    expect(buttons[11]).not.toBeDisabled();
+  });
+
+  it('dispatches nextTurn when PASS is clicked by a non-active participant', () => {
+    const webClient = createMockWebClient();
+    renderWithProviders(<PhaseBar gameId={1} />, {
+      preloadedState: stateWith({ localPlayerId: 1, activePlayerId: 2 }),
+      webClient,
+    });
+
+    fireEvent.click(screen.getByText('PASS TURN'));
+
+    expect(webClient.request.game.nextTurn).toHaveBeenCalledWith(1);
   });
 
   it('enables buttons for a judge regardless of active player (matches desktop)', () => {

@@ -19,7 +19,8 @@ export interface TurnControls {
   isConceded: boolean;
   invertVerticalCoordinate: boolean;
   settingsReady: boolean;
-  canAdvance: boolean;
+  canPassTurn: boolean;
+  canAdvancePhase: boolean;
   canLeave: boolean;
   canConcede: boolean;
   canUnconcede: boolean;
@@ -90,12 +91,17 @@ export function useTurnControls({
   );
 
   // Players (judge or not) act as participants; pure spectators don't.
-  // Matches desktop: aConcede/aNextTurn are disabled when isSpectator() without
-  // judge privileges (see tab_game.cpp concede enablement + player_menu.cpp
-  // getLocalOrJudge gates).
+  // Concede gating matches desktop (tab_game.cpp / player_menu.cpp).
   const isParticipant = gameId != null && game != null && !isSpectator;
   const isConceded = localPlayer?.properties.conceded ?? false;
-  const canAdvance =
+  // Cockatrice's server (cmdNextTurn / cmdReverseTurn in server_player.cpp)
+  // does NOT check the active player — any non-conceded participant or judge
+  // may pass / reverse the turn. Phase changes (cmdSetActivePhase) DO check
+  // the active player, so we keep two flags.
+  const canPassTurn =
+    gameId != null && game != null && isStarted && !isConceded &&
+    (isJudge || isParticipant);
+  const canAdvancePhase =
     gameId != null && game != null && isStarted &&
     (isJudge || game.activePlayerId === game.localPlayerId);
   const canLeave = gameId != null && game != null;
@@ -109,21 +115,21 @@ export function useTurnControls({
   const canRemoveArrows = hasLiveGame && localArrowIds.length > 0;
 
   const handlePassTurn = () => {
-    if (!canAdvance || !hasLiveGame) {
+    if (!canPassTurn || !hasLiveGame) {
       return;
     }
     webClient.request.game.nextTurn(gameId);
   };
 
   const handleReverseTurn = () => {
-    if (!canAdvance || !hasLiveGame) {
+    if (!canPassTurn || !hasLiveGame) {
       return;
     }
     webClient.request.game.reverseTurn(gameId);
   };
 
   const handleNextPhase = () => {
-    if (!canAdvance || !hasLiveGame) {
+    if (!canAdvancePhase || !hasLiveGame) {
       return;
     }
     // Desktop wraps at PHASE_COUNT → 0 (the Phase enum is 0–10). When no phase
@@ -181,7 +187,8 @@ export function useTurnControls({
     isConceded,
     invertVerticalCoordinate,
     settingsReady: settingsStatus === LoadingState.READY,
-    canAdvance,
+    canPassTurn,
+    canAdvancePhase,
     canLeave,
     canConcede,
     canUnconcede,

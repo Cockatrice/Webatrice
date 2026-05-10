@@ -29,7 +29,8 @@ function TurnControls({
     isConceded,
     invertVerticalCoordinate,
     settingsReady,
-    canAdvance,
+    canPassTurn,
+    canAdvancePhase,
     canLeave,
     canConcede,
     canUnconcede,
@@ -56,7 +57,7 @@ function TurnControls({
         type="button"
         className="turn-controls__btn"
         onClick={handlePassTurn}
-        disabled={!canAdvance}
+        disabled={!canPassTurn}
       >
         Pass Turn
       </button>
@@ -64,7 +65,7 @@ function TurnControls({
         type="button"
         className="turn-controls__btn"
         onClick={handleReverseTurn}
-        disabled={!canAdvance}
+        disabled={!canPassTurn}
       >
         Reverse Turn
       </button>
@@ -72,7 +73,7 @@ function TurnControls({
         type="button"
         className="turn-controls__btn"
         onClick={handleNextPhase}
-        disabled={!canAdvance}
+        disabled={!canAdvancePhase}
       >
         Next Phase
       </button>

@@ -4,7 +4,8 @@ import { App, Data } from '@app/types';
 
 export interface PhaseBar {
   activePhase: App.Phase | undefined;
-  canAdvance: boolean;
+  canPassTurn: boolean;
+  canAdvancePhase: boolean;
   handlePhaseClick: (phase: App.Phase) => void;
   handlePass: () => void;
   handleUntapAll: () => void;
@@ -13,7 +14,7 @@ export interface PhaseBar {
 
 export function usePhaseBar(gameId: number | undefined): PhaseBar {
   const webClient = useWebClient();
-  const { game, isJudge, isStarted } = useCurrentGame(gameId);
+  const { game, localPlayer, isSpectator, isJudge, isStarted } = useCurrentGame(gameId);
   const activePhase = useAppSelector((state) =>
     gameId != null ? GameSelectors.getActivePhase(state, gameId) : undefined,
   );
@@ -24,22 +25,29 @@ export function usePhaseBar(gameId: number | undefined): PhaseBar {
       : undefined,
   );
 
-  // Desktop: only the active player (or a judge) can advance the phase.
-  const canAdvance =
+  const isParticipant = gameId != null && game != null && !isSpectator;
+  const isConceded = localPlayer?.properties.conceded ?? false;
+  // Cockatrice's server allows any non-conceded participant or judge to pass
+  // the turn (server_player.cpp cmdNextTurn has no active-player check). Only
+  // setActivePhase is gated on the active player.
+  const canPassTurn =
+    gameId != null && game != null && isStarted && !isConceded &&
+    (isJudge || isParticipant);
+  const canAdvancePhase =
     gameId != null &&
     game != null &&
     isStarted &&
     (isJudge || game.activePlayerId === game.localPlayerId);
 
   const handlePhaseClick = (phase: App.Phase) => {
-    if (!canAdvance || gameId == null) {
+    if (!canAdvancePhase || gameId == null) {
       return;
     }
     webClient.request.game.setActivePhase(gameId, { phase });
   };
 
   const handlePass = () => {
-    if (!canAdvance || gameId == null) {
+    if (!canPassTurn || gameId == null) {
       return;
     }
     webClient.request.game.nextTurn(gameId);
@@ -48,9 +56,10 @@ export function usePhaseBar(gameId: number | undefined): PhaseBar {
   // Desktop's untap-step double-click fires "Untap All" on the local player's
   // table zone (cockatrice/src/game/player/player_actions.cpp actUntapAll).
   // We replicate by sending one setCardAttr per tapped card; there is no
-  // batch variant on the wire.
+  // batch variant on the wire. Gated to the active player (or judge) since
+  // it's a start-of-your-turn action.
   const handleUntapAll = () => {
-    if (!canAdvance || gameId == null || !tableCards) {
+    if (!canAdvancePhase || gameId == null || !tableCards) {
       return;
     }
     for (const card of tableCards) {
@@ -66,11 +75,19 @@ export function usePhaseBar(gameId: number | undefined): PhaseBar {
   };
 
   const handleDrawOne = () => {
-    if (!canAdvance || gameId == null) {
+    if (!canAdvancePhase || gameId == null) {
       return;
     }
     webClient.request.game.drawCards(gameId, { number: 1 });
   };
 
-  return { activePhase, canAdvance, handlePhaseClick, handlePass, handleUntapAll, handleDrawOne };
+  return {
+    activePhase,
+    canPassTurn,
+    canAdvancePhase,
+    handlePhaseClick,
+    handlePass,
+    handleUntapAll,
+    handleDrawOne,
+  };
 }
