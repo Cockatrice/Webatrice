@@ -18,6 +18,7 @@ export default defineConfig({
       '@app/hooks': srcPath('hooks/index.ts'),
       '@app/images': srcPath('images/index.ts'),
       '@app/services': srcPath('services/index.ts'),
+      '@app/features/shortcuts': srcPath('features/shortcuts/index.ts'),
       '@app/store': srcPath('store/index.ts'),
       '@app/types': srcPath('types/index.ts'),
       '@app/utils': srcPath('utils/index.ts'),

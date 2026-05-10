@@ -1,4 +1,4 @@
-import { useCurrentGame, useWebClient } from '@app/hooks';
+import { useCurrentGame, useGameAffordances, useWebClient } from '@app/hooks';
 import { GameSelectors, useAppSelector } from '@app/store';
 import { App, Data } from '@app/types';
 
@@ -14,7 +14,8 @@ export interface PhaseBar {
 
 export function usePhaseBar(gameId: number | undefined): PhaseBar {
   const webClient = useWebClient();
-  const { game, localPlayer, isSpectator, isJudge, isStarted } = useCurrentGame(gameId);
+  const { game } = useCurrentGame(gameId);
+  const { canPassTurn, canAdvancePhase } = useGameAffordances(gameId);
   const activePhase = useAppSelector((state) =>
     gameId != null ? GameSelectors.getActivePhase(state, gameId) : undefined,
   );
@@ -24,20 +25,6 @@ export function usePhaseBar(gameId: number | undefined): PhaseBar {
       ? GameSelectors.getCards(state, gameId, localPlayerId, App.ZoneName.TABLE)
       : undefined,
   );
-
-  const isParticipant = gameId != null && game != null && !isSpectator;
-  const isConceded = localPlayer?.properties.conceded ?? false;
-  // Cockatrice's server allows any non-conceded participant or judge to pass
-  // the turn (server_player.cpp cmdNextTurn has no active-player check). Only
-  // setActivePhase is gated on the active player.
-  const canPassTurn =
-    gameId != null && game != null && isStarted && !isConceded &&
-    (isJudge || isParticipant);
-  const canAdvancePhase =
-    gameId != null &&
-    game != null &&
-    isStarted &&
-    (isJudge || game.activePlayerId === game.localPlayerId);
 
   const handlePhaseClick = (phase: App.Phase) => {
     if (!canAdvancePhase || gameId == null) {

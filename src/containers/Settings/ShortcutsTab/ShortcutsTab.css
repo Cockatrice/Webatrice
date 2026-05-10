@@ -1,0 +1,67 @@
+.ShortcutsTab__header {
+  margin-bottom: 16px;
+}
+
+.ShortcutsTab__search {
+  margin-bottom: 16px;
+}
+
+.ShortcutsTab__noResults {
+  padding: 16px;
+  text-align: center;
+  color: rgba(0, 0, 0, 0.54);
+}
+
+.ShortcutsRow {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.ShortcutsRow:last-child {
+  border-bottom: none;
+}
+
+.ShortcutsRow__name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ShortcutsRow__chips {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.ShortcutsRow__noBinding {
+  font-style: italic;
+  color: rgba(0, 0, 0, 0.45);
+  font-size: 0.875rem;
+}
+
+.ShortcutsRow__actions {
+  display: flex;
+  gap: 4px;
+}
+
+.SequenceEdit__chips {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  min-height: 40px;
+  padding: 8px;
+  margin: 12px 0;
+  border: 1px dashed rgba(0, 0, 0, 0.23);
+  border-radius: 4px;
+}
+
+.SequenceEdit__placeholder {
+  color: rgba(0, 0, 0, 0.45);
+  font-style: italic;
+  align-self: center;
+}

@@ -100,7 +100,13 @@ const LogResults = ({ logs }: LogResultsProps) => {
   return (
     <div>
       <AppBar position="static">
-        <Tabs value={value} onChange={handleChange} aria-label={t('Logs.title', { defaultValue: 'Log Results' })}>
+        <Tabs
+          value={value}
+          onChange={handleChange}
+          textColor="inherit"
+          indicatorColor="secondary"
+          aria-label={t('Logs.title', { defaultValue: 'Log Results' })}
+        >
           <Tab label={`${t('Logs.tab.rooms')}${roomCount > 0 ? ` [${roomCount}]` : ''}`} {...a11yProps(0)} />
           <Tab label={`${t('Logs.tab.games')}${gameCount > 0 ? ` [${gameCount}]` : ''}`} {...a11yProps(1)} />
           <Tab label={`${t('Logs.tab.chats')}${chatCount > 0 ? ` [${chatCount}]` : ''}`} {...a11yProps(2)} />

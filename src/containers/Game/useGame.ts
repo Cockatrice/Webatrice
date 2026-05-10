@@ -11,6 +11,7 @@ import { useGameDialogs, type GameDialogs } from './useGameDialogs';
 import { useGameDnd, type GameDnd } from './useGameDnd';
 import { useGameLifecycleNavigation } from './useGameLifecycleNavigation';
 import { useGamePlayerSlots, type GamePlayerSlots } from './useGamePlayerSlots';
+import { useGameShortcuts } from './useGameShortcuts';
 
 export interface Game extends CurrentGame {
   boardRef: RefObject<HTMLDivElement>;
@@ -75,6 +76,8 @@ export function useGame(): Game {
     startPendingAttach: arrows.startPendingAttach,
   });
   const dnd = useGameDnd({ gameId, onDragStart: arrows.cancelPendingOnDragStart });
+
+  useGameShortcuts({ gameId, onRequestConcede: dialogs.openConcede });
 
   // Explicit localPlayer null-check closes a window during reconnect where
   // `game` is present but `players[localPlayerId]` is not yet populated

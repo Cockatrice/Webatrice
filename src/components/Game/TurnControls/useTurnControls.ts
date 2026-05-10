@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 
-import { LoadingState, useCurrentGame, useLeaveGame, useSettings, useWebClient } from '@app/hooks';
+import { LoadingState, useCurrentGame, useGameAffordances, useLeaveGame, useSettings, useWebClient } from '@app/hooks';
 import { GameSelectors, useAppSelector } from '@app/store';
 
 /**
@@ -54,15 +54,21 @@ export function useTurnControls({
 }: UseTurnControlsArgs): TurnControls {
   const webClient = useWebClient();
   const leaveGame = useLeaveGame();
-  const { game, localPlayer, isSpectator, isJudge, isHost, isStarted } = useCurrentGame(gameId);
+  const { game, isHost } = useCurrentGame(gameId);
+  // Per-turn affordances (canPassTurn, canAdvancePhase, canConcede, canRoll, …)
+  // come from the shared hook so this hook, usePhaseBar, and useGameShortcuts
+  // can't drift from each other on gating semantics.
+  const {
+    hasLiveGame,
+    isConceded,
+    canPassTurn,
+    canAdvancePhase,
+    canConcede,
+    canUnconcede,
+    canRoll,
+  } = useGameAffordances(gameId);
   const { status: settingsStatus, value: settings, update: updateSettings } = useSettings();
   const invertVerticalCoordinate = settings?.invertVerticalCoordinate ?? false;
-
-  // Post-kick: the reducer has deleted the game from state but the dialog
-  // may still be mounted for a frame while `useGameLifecycle` navigates to
-  // /server. Every handler double-checks `game` so a trailing click can't
-  // fire a command against a game the server no longer has.
-  const hasLiveGame = gameId != null && game != null;
 
   const [kickAnchor, setKickAnchor] = useState<HTMLElement | null>(null);
 
@@ -90,27 +96,7 @@ export function useTurnControls({
     [localArrows],
   );
 
-  // Players (judge or not) act as participants; pure spectators don't.
-  // Concede gating matches desktop (tab_game.cpp / player_menu.cpp).
-  const isParticipant = gameId != null && game != null && !isSpectator;
-  const isConceded = localPlayer?.properties.conceded ?? false;
-  // Cockatrice's server (cmdNextTurn / cmdReverseTurn in server_player.cpp)
-  // does NOT check the active player — any non-conceded participant or judge
-  // may pass / reverse the turn. Phase changes (cmdSetActivePhase) DO check
-  // the active player, so we keep two flags.
-  const canPassTurn =
-    gameId != null && game != null && isStarted && !isConceded &&
-    (isJudge || isParticipant);
-  const canAdvancePhase =
-    gameId != null && game != null && isStarted &&
-    (isJudge || game.activePlayerId === game.localPlayerId);
-  const canLeave = gameId != null && game != null;
-  const canConcede = isParticipant && !isConceded;
-  const canUnconcede = isParticipant && isConceded;
-  // Rolling dice is a player action; judges may also roll. Pure spectators
-  // cannot (desktop exposes it through the player menu, which spectators
-  // don't receive).
-  const canRoll = gameId != null && (isParticipant || isJudge);
+  const canLeave = hasLiveGame;
   const canKick = gameId != null && isHost && opponents.length > 0;
   const canRemoveArrows = hasLiveGame && localArrowIds.length > 0;
 

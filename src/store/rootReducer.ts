@@ -4,10 +4,12 @@ import { gamesReducer } from './game';
 import { roomsReducer } from './rooms';
 import { serverReducer } from './server';
 import { actionReducer } from './actions';
+import { shortcutsReducer } from './shortcuts';
 
 export default combineReducers({
   games: gamesReducer,
   rooms: roomsReducer,
   server: serverReducer,
-  action: actionReducer
+  action: actionReducer,
+  shortcuts: shortcutsReducer
 });

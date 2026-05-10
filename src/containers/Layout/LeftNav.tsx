@@ -107,6 +107,11 @@ const LeftNav = () => {
                     <ArrowDropDownIcon className="LeftNav-nav__link-btn__icon" fontSize="small" />
                   </NavLink>
                 </div>
+                <div className="LeftNav-nav__link">
+                  <NavLink className="LeftNav-nav__link-btn" to={App.RouteEnum.SETTINGS}>
+                    Settings
+                  </NavLink>
+                </div>
               </nav>
               <div className="LeftNav-nav__actions">
                 <div className="LeftNav-nav__action">

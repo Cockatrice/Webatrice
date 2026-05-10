@@ -38,3 +38,10 @@ export {
 export type { GameFilterContext } from './rooms/gameFilters';
 
 export * from './rooms/rooms.interfaces';
+
+// Shortcuts
+export {
+  Selectors as ShortcutsSelectors,
+  Dispatch as ShortcutsDispatch } from './shortcuts';
+
+export type { ShortcutsState } from './shortcuts';

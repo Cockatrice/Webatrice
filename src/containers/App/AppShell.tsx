@@ -9,6 +9,7 @@ import FeatureDetection from './FeatureDetection';
 import './AppShell.css';
 
 import { ToastProvider } from '@app/components';
+import { ShortcutProvider } from '@app/features/shortcuts';
 
 function AppShell() {
   useEffect(() => {
@@ -25,8 +26,10 @@ function AppShell() {
         <ToastProvider>
           <div className="AppShell">
             <Router>
-              <FeatureDetection />
-              <Routes />
+              <ShortcutProvider>
+                <FeatureDetection />
+                <Routes />
+              </ShortcutProvider>
             </Router>
           </div>
         </ToastProvider>

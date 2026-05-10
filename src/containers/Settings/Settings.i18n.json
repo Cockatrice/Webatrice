@@ -1,0 +1,50 @@
+{
+  "Settings": {
+    "title": "Settings",
+    "navLabel": "Settings",
+    "tab": {
+      "shortcuts": "Shortcuts"
+    },
+    "shortcuts": {
+      "title": "Keyboard Shortcuts",
+      "description": "Customize keyboard shortcuts. Click a row to record a new key combination. Multiple combinations per action are supported.",
+      "search": "Search shortcuts",
+      "noResults": "No shortcuts match your search.",
+      "edit": "Edit shortcut",
+      "resetAction": "Reset to default",
+      "resetAll": "Reset all to defaults",
+      "conflictWarning": "Conflicts with: {actions}",
+      "recording": "Press a key combination…",
+      "recordingHint": "Press Esc to cancel. Add additional combinations to support multiple bindings for one action.",
+      "save": "Save",
+      "cancel": "Cancel",
+      "removeBinding": "Remove",
+      "noBinding": "No binding",
+      "group": {
+        "global": "Global",
+        "game": "Game",
+        "gamePhases": "Game Phases",
+        "deckEditor": "Deck Editor",
+        "room": "Room"
+      },
+      "action": {
+        "app.openSettings": "Open settings",
+        "app.toggleFullscreen": "Toggle fullscreen",
+        "chat.focus": "Focus chat",
+        "game.untapAll": "Untap all",
+        "game.drawCard": "Draw card",
+        "game.endTurn": "End turn",
+        "game.concede": "Concede",
+        "game.shuffleLibrary": "Shuffle library",
+        "game.nextPhase": "Next phase",
+        "game.prevPhase": "Previous phase",
+        "deck.new": "New deck",
+        "deck.save": "Save deck",
+        "deck.load": "Load deck",
+        "deck.addCard": "Add card",
+        "deck.removeCard": "Remove card",
+        "room.sendMessage": "Send message"
+      }
+    }
+  }
+}

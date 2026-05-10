@@ -9,4 +9,5 @@ export * from './languages';
 export * from './routes';
 export * from './server';
 export * from './settings';
+export * from './shortcuts';
 export * from './sort';

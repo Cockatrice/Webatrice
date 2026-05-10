@@ -10,6 +10,7 @@ export enum RouteEnum {
   ACCOUNT = '/account',
   ADMINISTRATION = '/administration',
   REPLAYS = '/replays',
+  SETTINGS = '/settings',
   INITIALIZE = '/initialize',
   UNSUPPORTED = '/unsupported',
 }

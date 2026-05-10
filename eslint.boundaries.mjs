@@ -5,6 +5,7 @@ const elements = [
   { type: 'components', pattern: ['src/components/**'] },
   { type: 'containers', pattern: ['src/containers/**'] },
   { type: 'dialogs', pattern: ['src/dialogs/**'] },
+  { type: 'features', pattern: ['src/features/**'] },
   { type: 'forms', pattern: ['src/forms/**'] },
   { type: 'hooks', pattern: ['src/hooks/**'] },
   { type: 'images', pattern: ['src/images/**'] },
@@ -31,12 +32,21 @@ const rules = [
     from: { type: 'components' },
     allow: types('api', 'dialogs', 'forms', 'hooks', 'images', 'services', 'store', 'types', 'utils')
   },
+  // Containers are the only layer permitted to pull from features (vertical slices).
   {
     from: { type: 'containers' },
-    allow: types('api', 'components', 'dialogs', 'forms', 'hooks', 'images', 'services', 'store', 'types', 'utils')
+    allow: types('api', 'components', 'dialogs', 'features', 'forms', 'hooks', 'images', 'services', 'store', 'types', 'utils')
   },
   { from: { type: 'dialogs' }, allow: types('components', 'forms', 'hooks', 'services', 'store', 'types', 'utils') },
   { from: { type: 'forms' }, allow: types('components', 'hooks', 'services', 'store', 'types', 'utils') },
+
+  // Features are vertical slices: they pull from root-level shared assets but nothing
+  // pulls from them except containers (above). Features may import other features only
+  // implicitly via the containers that compose them.
+  {
+    from: { type: 'features' },
+    allow: types('api', 'components', 'dialogs', 'forms', 'hooks', 'images', 'services', 'store', 'types', 'utils')
+  },
 ];
 
 export const boundariesConfig = [

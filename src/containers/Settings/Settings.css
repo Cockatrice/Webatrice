@@ -1,0 +1,12 @@
+.settings {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 5px;
+}
+
+.settings__panel {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+}

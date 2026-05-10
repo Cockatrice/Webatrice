@@ -10,6 +10,7 @@ import {
   Server,
   Login,
   Logs,
+  Settings,
   Initialize,
   Unsupported
 } from '..';
@@ -26,6 +27,7 @@ const AppShellRoutes = () => (
       <Route path={App.RouteEnum.PLAYER} element={<Player />} />
       {<Route path={App.RouteEnum.ROOM} element={<Room />} />}
       <Route path={App.RouteEnum.SERVER} element={<Server />} />
+      <Route path={App.RouteEnum.SETTINGS} element={<Settings />} />
       <Route path={App.RouteEnum.LOGIN} element={<Login />} />
       <Route path={App.RouteEnum.UNSUPPORTED} element={<Unsupported />} />
     </Routes>
