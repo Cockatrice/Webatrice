@@ -1,9 +1,3 @@
-// Helpers for inspecting outbound commands. WebSocketService calls
-// `this.socket.send(bytes)` with the encoded CommandContainer; the mock
-// WebSocket records those calls on its `send` vi.fn. These helpers decode
-// the bytes back into a CommandContainer so tests can assert on what was
-// sent and extract the `cmdId` needed to build a correlated response.
-
 import { fromBinary, getExtension, hasExtension } from '@bufbuild/protobuf';
 import type { GenExtension } from '@bufbuild/protobuf/codegenv2';
 
@@ -11,14 +5,12 @@ import { Data } from '@app/types';
 
 import { getMockWebSocket } from './setup';
 
-/** The command scopes a CommandContainer can carry in practice. */
 type SessionCmd = Data.SessionCommand;
 type RoomCmd = Data.RoomCommand;
 type GameCmd = Data.GameCommand;
 type AdminCmd = Data.AdminCommand;
 type ModeratorCmd = Data.ModeratorCommand;
 
-/** Decode every CommandContainer sent through the mock socket so far. */
 export function captureAllOutbound(): Data.CommandContainer[] {
   const mock = getMockWebSocket();
   return mock.send.mock.calls.map(([bytes]: [Uint8Array]) =>
@@ -26,7 +18,6 @@ export function captureAllOutbound(): Data.CommandContainer[] {
   );
 }
 
-/** Decode the most recent CommandContainer. Throws if none has been sent. */
 export function captureLastOutbound(): Data.CommandContainer {
   const all = captureAllOutbound();
   if (all.length === 0) {
@@ -35,17 +26,10 @@ export function captureLastOutbound(): Data.CommandContainer {
   return all[all.length - 1];
 }
 
-/** Numeric cmdId of the most recently sent command (the BigInt cast back to number). */
 export function lastCmdId(): number {
   return Number(captureLastOutbound().cmdId);
 }
 
-/**
- * Find the most recently sent CommandContainer whose session-scope command
- * carries the given extension, and return both the container and the
- * unwrapped extension value. Handy for "the login() call fired — grab its
- * cmdId and the Command_Login payload it sent".
- */
 export function findLastSessionCommand<V>(
   ext: GenExtension<SessionCmd, V>
 ): { container: Data.CommandContainer; value: V; cmdId: number } {
@@ -67,7 +51,6 @@ export function findLastSessionCommand<V>(
   );
 }
 
-/** Room-scoped equivalent of {@link findLastSessionCommand}. */
 export function findLastRoomCommand<V>(
   ext: GenExtension<RoomCmd, V>
 ): { container: Data.CommandContainer; value: V; cmdId: number; roomId: number } {
@@ -90,7 +73,6 @@ export function findLastRoomCommand<V>(
   );
 }
 
-/** Game-scoped equivalent of {@link findLastSessionCommand}. */
 export function findLastGameCommand<V>(
   ext: GenExtension<GameCmd, V>
 ): { container: Data.CommandContainer; value: V; cmdId: number; gameId: number } {
@@ -113,7 +95,6 @@ export function findLastGameCommand<V>(
   );
 }
 
-/** Admin-scoped equivalent of {@link findLastSessionCommand}. */
 export function findLastAdminCommand<V>(
   ext: GenExtension<AdminCmd, V>
 ): { container: Data.CommandContainer; value: V; cmdId: number } {
@@ -135,7 +116,6 @@ export function findLastAdminCommand<V>(
   );
 }
 
-/** Moderator-scoped equivalent of {@link findLastSessionCommand}. */
 export function findLastModeratorCommand<V>(
   ext: GenExtension<ModeratorCmd, V>
 ): { container: Data.CommandContainer; value: V; cmdId: number } {

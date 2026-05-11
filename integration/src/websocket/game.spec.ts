@@ -1,6 +1,3 @@
-// Game scenarios — game join, state initialization, card operations,
-// player counters, game chat, game close, and outbound game commands.
-
 import { create } from '@bufbuild/protobuf';
 import { describe, expect, it } from 'vitest';
 

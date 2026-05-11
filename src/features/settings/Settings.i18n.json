@@ -1,0 +1,9 @@
+{
+  "Settings": {
+    "title": "Settings",
+    "navLabel": "Settings",
+    "tab": {
+      "shortcuts": "Shortcuts"
+    }
+  }
+}

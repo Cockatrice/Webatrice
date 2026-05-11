@@ -3,9 +3,6 @@ import { Data, Enriched } from '@app/types';
 
 export const MAX_GAME_MESSAGES = 1000;
 
-// Mirrors Event_Leave.LeaveReason values (1=OTHER, 2=USER_KICKED,
-// 3=USER_LEFT, 4=USER_DISCONNECTED); kept in sync with desktop
-// `GameEventHandler::getLeaveReason` in game_event_handler.cpp.
 const LEAVE_REASON_MESSAGES: Record<number, string> = {
   1: 'reason unknown',
   2: 'kicked by game host or moderator',
@@ -18,12 +15,10 @@ export function formatLeaveMessage(playerName: string, reason: number): string {
   return `${playerName} has left the game (${reasonText}).`;
 }
 
-/** Timestamp source for event-log entries. Isolated so tests can mock it. */
 export function eventTimestamp(): number {
   return Date.now();
 }
 
-/** Push a formatted event-log message onto the game's message list, truncating to MAX_GAME_MESSAGES. */
 export function pushEventMessage(
   game: Enriched.GameEntry,
   playerId: number,
@@ -43,7 +38,6 @@ export function pushEventMessage(
   });
 }
 
-/** Converts the proto ServerInfo_Player[] array into the keyed PlayerEntry map. */
 export function normalizePlayers(playerList: Data.ServerInfo_Player[]): { [playerId: number]: Enriched.PlayerEntry } {
   const players: { [playerId: number]: Enriched.PlayerEntry } = {};
   for (const player of playerList) {

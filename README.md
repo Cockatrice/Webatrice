@@ -6,7 +6,7 @@ The Cockatrice web client — a React/TypeScript SPA that connects to a Servatri
 
 ![Application Architecture](architecture/simple.png?raw=true "Application Architecture")
 
-For the full set of diagrams (detailed layer map + command/response/event sequence) and the `npm run diagram` scripts that regenerate them, see [architecture/](architecture/). For prose — WebSocket layering, Redux store shape, test conventions — see [.github/instructions/webclient.instructions.md](.github/instructions/webclient.instructions.md).
+For the full set of diagrams (detailed layer map + command/response/event sequence) and the `npm run diagram` scripts that regenerate them, see [architecture/](architecture/). For prose — WebSocket layering, Redux store shape, test conventions — see [.github/instructions/root.instructions.md](.github/instructions/root.instructions.md).
 
 ## Stack
 
@@ -63,5 +63,5 @@ Produced by `prebuild.js` on every `npm start` / `npm run build`. Don't edit the
 
 ## Further reading
 
-- [.github/instructions/webclient.instructions.md](.github/instructions/webclient.instructions.md) — architecture deep dive, conventions, and domain-knowledge invariants for working in this directory (the canonical AI-tool instruction surface for this package)
+- [.github/instructions/root.instructions.md](.github/instructions/root.instructions.md) — architecture deep dive, conventions, and domain-knowledge invariants for working in this directory (the canonical AI-tool instruction surface for this package)
 - [Vite docs](https://vite.dev/guide/) · [React docs](https://react.dev/) · [Vitest docs](https://vitest.dev/)

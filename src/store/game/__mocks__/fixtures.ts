@@ -52,11 +52,6 @@ export function makeArrow(overrides: MessageInitShape<typeof Data.ServerInfo_Arr
 }
 
 type ZoneEntryOverrides = Partial<Enriched.ZoneEntry> & {
-  /**
-   * Convenience for tests: pass an ordered card array and the fixture
-   * materializes it into `{ order, byId }`. If provided, takes precedence
-   * over an explicit `order`/`byId` in the same overrides object.
-   */
   cards?: Data.ServerInfo_Card[];
 };
 

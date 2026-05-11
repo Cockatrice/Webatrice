@@ -1,7 +1,3 @@
-// Moderator command pipeline smoke tests — validates that sendModeratorCommand
-// encodes, correlates, and persists correctly end-to-end. One test per
-// distinct response pattern (simple vs. extension-payload).
-
 import { create } from '@bufbuild/protobuf';
 import { describe, expect, it } from 'vitest';
 

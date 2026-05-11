@@ -1,6 +1,3 @@
-// Admin command pipeline smoke test — validates that sendAdminCommand
-// encodes, correlates, and persists correctly end-to-end.
-
 import { create } from '@bufbuild/protobuf';
 import { describe, expect, it } from 'vitest';
 

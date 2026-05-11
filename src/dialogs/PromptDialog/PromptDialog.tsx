@@ -31,7 +31,6 @@ export interface PromptDialogProps {
   label: string;
   initialValue?: string;
   submitLabel?: string;
-  /** Persistent helper text shown when no validation error is active. */
   helperText?: string;
   validate?: (value: string) => string | null;
   onSubmit: (value: string) => void;

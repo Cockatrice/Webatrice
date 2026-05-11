@@ -1,0 +1,607 @@
+import { create, isFieldSet } from '@bufbuild/protobuf';
+import { App, Data, Enriched } from '@app/types';
+import { listenerMiddleware } from '../listenerMiddleware';
+import { GamesState } from './game.interfaces';
+import { Actions } from './game.actions';
+import { buildEmptyCard, formatLeaveMessage, normalizePlayers } from './game.reducer.helpers';
+import {
+  EVENT_PLAYER_ID_SYSTEM,
+  diffPlayerProperties,
+  formatActivePhaseSet,
+  formatActivePlayerSet,
+  formatArrowCreated,
+  formatCardAttached,
+  formatCardAttrChanged,
+  formatCardCounterChanged,
+  formatCardDestroyed,
+  formatCardFlipped,
+  formatCardMoved,
+  formatCardsDrawn,
+  formatCounterSet,
+  formatGameStart,
+  formatPlayerJoined,
+  formatPropertyDiff,
+  formatTokenCreated,
+  formatTurnReversed,
+} from './messageLog';
+
+listenerMiddleware.startListening({
+  actionCreator: Actions.cardMoved,
+  effect: (action, api) => {
+    const { gameId, playerId, data } = action.payload;
+    const {
+      cardId, cardName, startPlayerId, startZone, position,
+      targetPlayerId, targetZone, x, y, newCardId, faceDown, newCardProviderId,
+    } = data;
+
+    const effectiveTargetZone = targetZone || startZone;
+
+    const state = api.getState() as { games: GamesState };
+    const game = state.games.games[gameId];
+    const sourceZone = game?.players[startPlayerId]?.zones[startZone];
+    const targetZoneEntry = game?.players[targetPlayerId]?.zones[effectiveTargetZone];
+    if (!game || !sourceZone || !targetZoneEntry) {
+      return;
+    }
+
+    let resolvedCardId = -1;
+    if (cardId >= 0) {
+      resolvedCardId = cardId;
+    } else if (position >= 0 && position < sourceZone.order.length) {
+      resolvedCardId = sourceZone.order[position];
+    }
+
+    if (resolvedCardId < 0 && newCardId < 0) {
+      return;
+    }
+
+    const removedCard: Data.ServerInfo_Card | undefined =
+      resolvedCardId >= 0 ? sourceZone.byId[resolvedCardId] : undefined;
+    const effectiveNewId =
+      newCardId >= 0 ? newCardId : (removedCard?.id ?? resolvedCardId);
+
+    const isLeavingBattlefield =
+      startZone === App.ZoneName.TABLE && effectiveTargetZone !== App.ZoneName.TABLE;
+
+    const movedCard: Data.ServerInfo_Card = removedCard
+      ? {
+        ...removedCard,
+        id: effectiveNewId,
+        name: cardName || removedCard.name,
+        x, y, faceDown,
+        providerId: newCardProviderId || removedCard.providerId,
+        counterList: isLeavingBattlefield ? [] : [...removedCard.counterList],
+      }
+      : buildEmptyCard(effectiveNewId, cardName, x, y, faceDown, newCardProviderId ?? '');
+
+    api.dispatch(Actions.cardMovedBetweenZones({
+      gameId,
+      fromPlayerId: startPlayerId,
+      fromZone: startZone,
+      fromCardId: resolvedCardId,
+      toPlayerId: targetPlayerId,
+      toZone: effectiveTargetZone,
+      card: movedCard,
+    }));
+
+    if (
+      resolvedCardId >= 0 &&
+      startZone === App.ZoneName.TABLE &&
+      effectiveTargetZone === App.ZoneName.TABLE
+    ) {
+      api.dispatch(Actions.cardAttachmentReparented({
+        gameId,
+        fromPlayerId: startPlayerId,
+        fromCardId: resolvedCardId,
+        toPlayerId: targetPlayerId,
+        toCardId: effectiveNewId,
+      }));
+    }
+
+    const message = formatCardMoved(
+      game, playerId,
+      { ...data, targetZone: effectiveTargetZone },
+      { resolvedCardName: removedCard?.name ?? '' },
+    );
+    if (message) {
+      api.dispatch(Actions.gameMessageAppended({ gameId, playerId, message }));
+    }
+  },
+});
+
+listenerMiddleware.startListening({
+  actionCreator: Actions.gameStateChanged,
+  effect: (action, api) => {
+    const { gameId, data } = action.payload;
+    const state = api.getState() as { games: GamesState };
+    const game = state.games.games[gameId];
+    if (!game) {
+      return;
+    }
+    const wasStarted = game.started;
+
+    if (data.playerList?.length > 0) {
+      // Cockatrice's Server_Game::sendGameStateToPlayers (server_game.cpp:280)
+      // always emits playerList with withUserInfo=false, so the wire payload's
+      // properties.userInfo is undefined for every player on resync (game
+      // start, post-concede/unconcede, etc.). Carry the previously-known
+      // userInfo forward per playerId so names don't flip to "(unknown)" mid-
+      // game. Individual Event_PlayerJoined still carries full userInfo.
+      const previous = game.players;
+      const next = normalizePlayers(data.playerList);
+      for (const idStr of Object.keys(next)) {
+        const id = Number(idStr);
+        const prevUserInfo = previous[id]?.properties.userInfo;
+        if (prevUserInfo && !next[id].properties.userInfo) {
+          next[id].properties.userInfo = prevUserInfo;
+        }
+      }
+      api.dispatch(Actions.gamePlayersReplaced({ gameId, players: next }));
+    }
+
+    // proto3 default-zero rules: each scalar field reads as 0/false even
+    // when the server didn't intend to update it. `isFieldSet` distinguishes
+    // "explicitly set" from "left at default" by inspecting the bufbuild
+    // tracking bits; only fields the server actually populated propagate
+    // into the primitive payload.
+    let nextStarted = wasStarted;
+    const update: {
+      gameId: number;
+      gameStarted?: boolean;
+      activePlayerId?: number;
+      activePhase?: number;
+      secondsElapsed?: number;
+    } = { gameId };
+    let hasUpdate = false;
+    if (isFieldSet(data, Data.Event_GameStateChangedSchema.field.gameStarted)) {
+      update.gameStarted = data.gameStarted;
+      nextStarted = data.gameStarted;
+      hasUpdate = true;
+    }
+    if (isFieldSet(data, Data.Event_GameStateChangedSchema.field.activePlayerId)) {
+      update.activePlayerId = data.activePlayerId;
+      hasUpdate = true;
+    }
+    if (isFieldSet(data, Data.Event_GameStateChangedSchema.field.activePhase)) {
+      update.activePhase = data.activePhase;
+      hasUpdate = true;
+    }
+    if (isFieldSet(data, Data.Event_GameStateChangedSchema.field.secondsElapsed)) {
+      update.secondsElapsed = data.secondsElapsed;
+      hasUpdate = true;
+    }
+    if (hasUpdate) {
+      api.dispatch(Actions.gameInfoUpdated(update));
+    }
+
+    // System log on the wasStarted→started edge. The transition is computed
+    // from pre-mutation state, so it must be observed in the listener
+    // before the scalar update primitive applies.
+    if (!wasStarted && nextStarted) {
+      api.dispatch(Actions.gameMessageAppended({
+        gameId,
+        playerId: EVENT_PLAYER_ID_SYSTEM,
+        message: formatGameStart(),
+      }));
+    }
+  },
+});
+
+listenerMiddleware.startListening({
+  actionCreator: Actions.cardAttrChanged,
+  effect: (action, api) => {
+    const { gameId, playerId, data } = action.payload;
+    const { zoneName, cardId, attribute, attrValue } = data;
+    const state = api.getState() as { games: GamesState };
+    const game = state.games.games[gameId];
+    const card = game?.players[playerId]?.zones[zoneName]?.byId[cardId];
+    if (!game || !card) {
+      return;
+    }
+    const cardName = card.name;
+
+    let fields: Partial<Data.ServerInfo_Card> | undefined;
+    switch (attribute as Data.CardAttribute) {
+      case Data.CardAttribute.AttrTapped:
+        fields = { tapped: attrValue === '1' }; break;
+      case Data.CardAttribute.AttrAttacking:
+        fields = { attacking: attrValue === '1' }; break;
+      case Data.CardAttribute.AttrFaceDown:
+        fields = { faceDown: attrValue === '1' }; break;
+      case Data.CardAttribute.AttrColor:
+        fields = { color: attrValue }; break;
+      case Data.CardAttribute.AttrPT:
+        fields = { pt: attrValue }; break;
+      case Data.CardAttribute.AttrAnnotation:
+        fields = { annotation: attrValue }; break;
+      case Data.CardAttribute.AttrDoesntUntap:
+        fields = { doesntUntap: attrValue === '1' }; break;
+    }
+    if (fields) {
+      api.dispatch(Actions.cardFieldsUpdated({ gameId, playerId, zoneName, cardId, fields }));
+    }
+
+    const message = formatCardAttrChanged(game, playerId, data, cardName);
+    if (message) {
+      api.dispatch(Actions.gameMessageAppended({ gameId, playerId, message }));
+    }
+  },
+});
+
+listenerMiddleware.startListening({
+  actionCreator: Actions.cardCounterChanged,
+  effect: (action, api) => {
+    const { gameId, playerId, data } = action.payload;
+    const { zoneName, cardId, counterId, counterValue } = data;
+    const state = api.getState() as { games: GamesState };
+    const game = state.games.games[gameId];
+    const card = game?.players[playerId]?.zones[zoneName]?.byId[cardId];
+    if (!game || !card) {
+      return;
+    }
+    const cardName = card.name;
+    const previousValue = card.counterList.find(c => c.id === counterId)?.value ?? 0;
+
+    let nextCounterList: Data.ServerInfo_CardCounter[];
+    if (counterValue <= 0) {
+      nextCounterList = card.counterList.filter(c => c.id !== counterId);
+    } else {
+      const idx = card.counterList.findIndex(c => c.id === counterId);
+      if (idx >= 0) {
+        nextCounterList = card.counterList.map((c, i) =>
+          i === idx ? { ...c, value: counterValue } : c,
+        );
+      } else {
+        nextCounterList = [
+          ...card.counterList,
+          create(Data.ServerInfo_CardCounterSchema, { id: counterId, value: counterValue }),
+        ];
+      }
+    }
+    api.dispatch(Actions.cardFieldsUpdated({
+      gameId, playerId, zoneName, cardId, fields: { counterList: nextCounterList },
+    }));
+
+    const message = formatCardCounterChanged(game, playerId, data, cardName, previousValue);
+    if (message) {
+      api.dispatch(Actions.gameMessageAppended({ gameId, playerId, message }));
+    }
+  },
+});
+
+listenerMiddleware.startListening({
+  actionCreator: Actions.cardAttached,
+  effect: (action, api) => {
+    const { gameId, playerId, data } = action.payload;
+    const { startZone, cardId, targetPlayerId, targetZone, targetCardId } = data;
+    const state = api.getState() as { games: GamesState };
+    const game = state.games.games[gameId];
+    const card = game?.players[playerId]?.zones[startZone]?.byId[cardId];
+    if (!game || !card) {
+      return;
+    }
+    const sourceCardName = card.name;
+
+    // Cockatrice/Servatrice gap-fill: desktop's `actUnattach` sends
+    // Event_AttachCard with target_* fields unset. proto3 surfaces unset
+    // numerics as 0 and strings as '', not -1 — so we cannot distinguish
+    // "explicit attach to player 0 / card 0" from "unset" by looking at the
+    // numerics alone. Detect the unattach intent via empty `targetZone` (a
+    // real attach always specifies a zone) and write -1 / '' / -1
+    // explicitly so downstream consumers (`isAttachedChild` in
+    // useBattlefield) recognize the card as detached and re-render it in
+    // its own lane. The protobuf-safe `byId[cardId] = { ...card, ...fields }`
+    // reassignment is owned by the `cardFieldsUpdated` primitive (see the
+    // comment on that primitive for the Immer-doesn't-draft-protobuf
+    // rationale).
+    const isUnattach = !targetZone;
+    const fields: Partial<Data.ServerInfo_Card> = isUnattach
+      ? { attachPlayerId: -1, attachZone: '', attachCardId: -1 }
+      : { attachPlayerId: targetPlayerId, attachZone: targetZone, attachCardId: targetCardId };
+    api.dispatch(Actions.cardFieldsUpdated({
+      gameId, playerId, zoneName: startZone, cardId, fields,
+    }));
+
+    const message = formatCardAttached(game, playerId, data, sourceCardName);
+    if (message) {
+      api.dispatch(Actions.gameMessageAppended({ gameId, playerId, message }));
+    }
+  },
+});
+
+listenerMiddleware.startListening({
+  actionCreator: Actions.cardsDrawn,
+  effect: (action, api) => {
+    const { gameId, playerId, data } = action.payload;
+    const { number: drawCount, cards } = data;
+    const state = api.getState() as { games: GamesState };
+    const game = state.games.games[gameId];
+    const player = game?.players[playerId];
+    const handZone = player?.zones[Enriched.ZoneName.HAND];
+    if (!game || !player || !handZone) {
+      return;
+    }
+
+    if (player.zones[Enriched.ZoneName.DECK]) {
+      api.dispatch(Actions.zoneCardCountAdjusted({
+        gameId, playerId, zoneName: Enriched.ZoneName.DECK, delta: -drawCount,
+      }));
+    }
+
+    for (const card of cards) {
+      api.dispatch(Actions.cardInsertedIntoZone({
+        gameId, playerId, zoneName: Enriched.ZoneName.HAND, card,
+      }));
+    }
+
+    // Cockatrice/Servatrice gap-fill: when `drawCount > cards.length` the
+    // server has emitted an authoritative count change without revealing
+    // the corresponding card objects (opponent draws — own draws emit
+    // `cards.length === drawCount`). Each `cardInsertedIntoZone` above
+    // raised hand.cardCount by 1 for the visible cards; raise the count
+    // for the remaining hidden slots so the sum equals +drawCount, matching
+    // the pre-refactor `handZone.cardCount += drawCount` semantics.
+    if (drawCount > cards.length) {
+      api.dispatch(Actions.zoneCardCountAdjusted({
+        gameId, playerId, zoneName: Enriched.ZoneName.HAND,
+        delta: drawCount - cards.length,
+      }));
+    }
+
+    api.dispatch(Actions.gameMessageAppended({
+      gameId, playerId, message: formatCardsDrawn(game, playerId, drawCount),
+    }));
+  },
+});
+
+listenerMiddleware.startListening({
+  actionCreator: Actions.playerPropertiesChanged,
+  effect: (action, api) => {
+    const { gameId, playerId, properties } = action.payload;
+    const state = api.getState() as { games: GamesState };
+    const game = state.games.games[gameId];
+    const player = game?.players[playerId];
+    if (!game || !player) {
+      return;
+    }
+
+    const previous = { ...player.properties };
+    api.dispatch(Actions.playerPropertiesUpdated({ gameId, playerId, properties }));
+
+    const nextState = api.getState() as { games: GamesState };
+    const nextGame = nextState.games.games[gameId];
+    const nextPlayer = nextGame?.players[playerId];
+    if (!nextGame || !nextPlayer) {
+      return;
+    }
+    const diff = diffPlayerProperties(previous, nextPlayer.properties);
+    for (const message of formatPropertyDiff(nextGame, playerId, diff)) {
+      api.dispatch(Actions.gameMessageAppended({ gameId, playerId, message }));
+    }
+  },
+});
+
+listenerMiddleware.startListening({
+  actionCreator: Actions.cardDestroyed,
+  effect: (action, api) => {
+    const { gameId, playerId, data } = action.payload;
+    const { zoneName, cardId } = data;
+    const state = api.getState() as { games: GamesState };
+    const game = state.games.games[gameId];
+    const zone = game?.players[playerId]?.zones[zoneName];
+    if (!game || !zone) {
+      return;
+    }
+    // Capture the destroyed card's name from pre-mutation state for the log.
+    // The primitive below splices it out of byId, so post-state would lose it.
+    const destroyedName = zone.byId[cardId]?.name;
+    api.dispatch(Actions.cardRemovedFromZone({ gameId, playerId, zoneName, cardId }));
+
+    const message = formatCardDestroyed(game, playerId, destroyedName);
+    if (message) {
+      api.dispatch(Actions.gameMessageAppended({ gameId, playerId, message }));
+    }
+  },
+});
+
+listenerMiddleware.startListening({
+  actionCreator: Actions.tokenCreated,
+  effect: (action, api) => {
+    const { gameId, playerId, data } = action.payload;
+    const {
+      zoneName, cardId, cardName, color, pt, annotation,
+      destroyOnZoneChange, x, y, cardProviderId, faceDown,
+    } = data;
+    const state = api.getState() as { games: GamesState };
+    const game = state.games.games[gameId];
+    const zone = game?.players[playerId]?.zones[zoneName];
+    if (!game || !zone) {
+      return;
+    }
+    // Construct the token via the protobuf-es schema constructor so any
+    // fields the wire payload omitted (tapped / attacking / doesntUntap /
+    // counterList / attach*) start at the protocol's documented defaults
+    // rather than proto3's zero/empty surfacing. The attach* fields are
+    // written as -1 / '' / -1 so downstream `isAttachedChild` recognises
+    // the token as detached the moment it lands on the table.
+    const newCard = create(Data.ServerInfo_CardSchema, {
+      id: cardId, name: cardName, x, y, faceDown,
+      tapped: false, attacking: false, color, pt, annotation, destroyOnZoneChange,
+      doesntUntap: false, counterList: [],
+      attachPlayerId: -1, attachZone: '', attachCardId: -1, providerId: cardProviderId,
+    });
+    api.dispatch(Actions.cardInsertedIntoZone({ gameId, playerId, zoneName, card: newCard }));
+
+    const message = formatTokenCreated(game, playerId, data);
+    if (message) {
+      api.dispatch(Actions.gameMessageAppended({ gameId, playerId, message }));
+    }
+  },
+});
+
+listenerMiddleware.startListening({
+  actionCreator: Actions.cardFlipped,
+  effect: (action, api) => {
+    const { gameId, playerId, data } = action.payload;
+    const { zoneName, cardId } = data;
+    const preState = api.getOriginalState() as { games: GamesState };
+    const preGame = preState.games.games[gameId];
+    const preCard = preGame?.players[playerId]?.zones[zoneName]?.byId[cardId];
+    if (!preGame || !preCard) {
+      return;
+    }
+    const previousName = preCard.name;
+    const message = formatCardFlipped(preGame, playerId, data, previousName);
+    if (message) {
+      api.dispatch(Actions.gameMessageAppended({ gameId, playerId, message }));
+    }
+  },
+});
+
+listenerMiddleware.startListening({
+  actionCreator: Actions.counterSet,
+  effect: (action, api) => {
+    const { gameId, playerId, data } = action.payload;
+    const preState = api.getOriginalState() as { games: GamesState };
+    const preGame = preState.games.games[gameId];
+    const preCounter = preGame?.players[playerId]?.counters[data.counterId];
+    if (!preGame || !preCounter) {
+      return;
+    }
+    const previousValue = preCounter.count;
+    const message = formatCounterSet(preGame, playerId, data, preCounter.name, previousValue);
+    if (message) {
+      api.dispatch(Actions.gameMessageAppended({ gameId, playerId, message }));
+    }
+  },
+});
+
+listenerMiddleware.startListening({
+  actionCreator: Actions.arrowCreated,
+  effect: (action, api) => {
+    const { gameId, playerId, data } = action.payload;
+    if (!data.arrowInfo) {
+      return;
+    }
+    const preState = api.getOriginalState() as { games: GamesState };
+    const preGame = preState.games.games[gameId];
+    const prePlayer = preGame?.players[playerId];
+    if (!preGame || !prePlayer) {
+      return;
+    }
+    const message = formatArrowCreated(preGame, playerId, data.arrowInfo);
+    if (message) {
+      api.dispatch(Actions.gameMessageAppended({ gameId, playerId, message }));
+    }
+  },
+});
+
+listenerMiddleware.startListening({
+  actionCreator: Actions.activePlayerSet,
+  effect: (action, api) => {
+    const { gameId, activePlayerId } = action.payload;
+    const preState = api.getOriginalState() as { games: GamesState };
+    const preGame = preState.games.games[gameId];
+    if (!preGame) {
+      return;
+    }
+    if (preGame.activePlayerId === activePlayerId) {
+      return;
+    }
+    const postState = api.getState() as { games: GamesState };
+    const postGame = postState.games.games[gameId];
+    if (!postGame) {
+      return;
+    }
+    const message = formatActivePlayerSet(postGame, activePlayerId);
+    if (message) {
+      api.dispatch(Actions.gameMessageAppended({ gameId, playerId: activePlayerId, message }));
+    }
+  },
+});
+
+listenerMiddleware.startListening({
+  actionCreator: Actions.activePhaseSet,
+  effect: (action, api) => {
+    const { gameId, phase } = action.payload;
+    const preState = api.getOriginalState() as { games: GamesState };
+    const preGame = preState.games.games[gameId];
+    if (!preGame) {
+      return;
+    }
+    // Suppress the log on initial-phase replay (game not yet started) and
+    // when the phase didn't actually change — matching the pre-refactor
+    // reducer's `previous !== payload.phase && game.started` guard.
+    if (preGame.activePhase === phase || !preGame.started) {
+      return;
+    }
+    const message = formatActivePhaseSet(phase);
+    if (message) {
+      api.dispatch(Actions.gameMessageAppended({
+        gameId, playerId: EVENT_PLAYER_ID_SYSTEM, message,
+      }));
+    }
+  },
+});
+
+listenerMiddleware.startListening({
+  actionCreator: Actions.turnReversed,
+  effect: (action, api) => {
+    const { gameId, reversed } = action.payload;
+    const preState = api.getOriginalState() as { games: GamesState };
+    const preGame = preState.games.games[gameId];
+    if (!preGame) {
+      return;
+    }
+    const message = formatTurnReversed(preGame, preGame.activePlayerId, reversed);
+    if (message) {
+      api.dispatch(Actions.gameMessageAppended({
+        gameId, playerId: preGame.activePlayerId, message,
+      }));
+    }
+  },
+});
+
+listenerMiddleware.startListening({
+  actionCreator: Actions.playerJoined,
+  effect: (action, api) => {
+    const { gameId, playerProperties } = action.payload;
+    const preState = api.getOriginalState() as { games: GamesState };
+    const preGame = preState.games.games[gameId];
+    if (!preGame) {
+      return;
+    }
+    const postState = api.getState() as { games: GamesState };
+    const postGame = postState.games.games[gameId];
+    if (!postGame) {
+      return;
+    }
+    const message = formatPlayerJoined(postGame, playerProperties.playerId);
+    if (message) {
+      api.dispatch(Actions.gameMessageAppended({
+        gameId, playerId: playerProperties.playerId, message,
+      }));
+    }
+  },
+});
+
+listenerMiddleware.startListening({
+  actionCreator: Actions.playerLeft,
+  effect: (action, api) => {
+    const { gameId, playerId, reason } = action.payload;
+    // CRITICAL: read pre-mutation state. The reducer deletes the player, so
+    // post-state has no `player.properties.userInfo.name` to recover. The
+    // `formatLeaveMessage` fallback to 'Unknown player' must be applied here
+    // (matches pre-refactor reducer behavior).
+    const preState = api.getOriginalState() as { games: GamesState };
+    const preGame = preState.games.games[gameId];
+    if (!preGame) {
+      return;
+    }
+    const playerName = preGame.players[playerId]?.properties.userInfo?.name ?? 'Unknown player';
+    const message = formatLeaveMessage(playerName, reason);
+    api.dispatch(Actions.gameMessageAppended({ gameId, playerId, message }));
+  },
+});
+
+export {};

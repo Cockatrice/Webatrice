@@ -1,0 +1,11 @@
+.battlefield-stack-column {
+  position: relative;
+  height: 100%;
+  flex: 0 0 auto;
+}
+
+.battlefield-stack-column__slot {
+  position: absolute;
+  display: flex;
+  align-items: center;
+}

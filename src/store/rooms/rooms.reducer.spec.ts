@@ -1,11 +1,29 @@
 import { create } from '@bufbuild/protobuf';
+import { configureStore, PayloadAction } from '@reduxjs/toolkit';
 import { App, Data } from '@app/types';
 import { roomsReducer } from './rooms.reducer';
 import { Actions } from './rooms.actions';
 import { Actions as GameActions } from '../game/game.actions';
+import { listenerMiddleware } from '../listenerMiddleware';
 import { MAX_ROOM_MESSAGES } from './rooms.types';
+import { RoomsState } from './rooms.interfaces';
 import { DEFAULT_GAME_FILTERS } from './gameFilters';
 import { makeGame, makeMessage, makeRoom, makeRoomsState, makeUser } from './__mocks__/rooms-fixtures';
+import './rooms.listeners';
+
+function dispatchThroughStore<P>(
+  state: RoomsState,
+  action: PayloadAction<P>,
+): RoomsState {
+  const store = configureStore({
+    preloadedState: { rooms: state },
+    reducer: { rooms: roomsReducer },
+    middleware: (getDefault) => getDefault({ serializableCheck: false, immutableCheck: false })
+      .prepend(listenerMiddleware.middleware),
+  });
+  store.dispatch(action);
+  return store.getState().rooms;
+}
 
 
 describe('Initialisation', () => {
@@ -35,7 +53,7 @@ describe('UPDATE_ROOMS', () => {
     const state = makeRoomsState({ rooms: {} });
     // UPDATE_ROOMS carries raw ServerInfo_Room protos via the action
     const room = makeRoom({ roomId: 1 }).info;
-    const result = roomsReducer(state, Actions.updateRooms({ rooms: [room] }));
+    const result = dispatchThroughStore(state, Actions.updateRooms({ rooms: [room] }));
     expect(result.rooms[1]).toBeDefined();
     expect(result.rooms[1].info).toBe(room);
     expect(result.rooms[1].games).toEqual({});
@@ -45,7 +63,7 @@ describe('UPDATE_ROOMS', () => {
   it('sets numeric order from array index', () => {
     const state = makeRoomsState({ rooms: {} });
     const rooms = [makeRoom({ roomId: 1 }).info, makeRoom({ roomId: 2 }).info];
-    const result = roomsReducer(state, Actions.updateRooms({ rooms }));
+    const result = dispatchThroughStore(state, Actions.updateRooms({ rooms }));
     expect(result.rooms[1].order).toBe(0);
     expect(result.rooms[2].order).toBe(1);
   });
@@ -62,7 +80,7 @@ describe('UPDATE_ROOMS', () => {
     const state = makeRoomsState({ rooms: { 1: existingRoom } });
 
     const update = makeRoom({ roomId: 1, name: 'New Name' }).info;
-    const result = roomsReducer(state, Actions.updateRooms({ rooms: [update] }));
+    const result = dispatchThroughStore(state, Actions.updateRooms({ rooms: [update] }));
 
     expect(result.rooms[1].info.name).toBe('New Name');
     expect(result.rooms[1].games[42]).toBe(existingGame);
@@ -72,7 +90,7 @@ describe('UPDATE_ROOMS', () => {
   it('creates new room entry for unknown roomId', () => {
     const state = makeRoomsState({ rooms: {} });
     const room = makeRoom({ roomId: 99, name: 'New Room' }).info;
-    const result = roomsReducer(state, Actions.updateRooms({ rooms: [room] }));
+    const result = dispatchThroughStore(state, Actions.updateRooms({ rooms: [room] }));
     expect(result.rooms[99]).toBeDefined();
     expect(result.rooms[99].info.name).toBe('New Room');
   });
@@ -97,7 +115,7 @@ describe('UPDATE_ROOMS', () => {
       playerCount: 42,
       gameCount: 3,
     });
-    const result = roomsReducer(state, Actions.updateRooms({ rooms: [partial] }));
+    const result = dispatchThroughStore(state, Actions.updateRooms({ rooms: [partial] }));
 
     expect(result.rooms[1].info.name).toBe('Main Hall');
     expect(result.rooms[1].info.description).toBe('General play');
@@ -190,9 +208,9 @@ describe('UPDATE_GAMES', () => {
   it('removes closed games from the keyed games map', () => {
     const room = makeRoom({ roomId: 1, games: { 1: makeGame({ gameId: 1 }) } });
     const state = makeRoomsState({ rooms: { 1: room } });
-    const result = roomsReducer(state, Actions.updateGames({
+    const result = dispatchThroughStore(state, Actions.updateGames({
       roomId: 1,
-      games: [{ gameId: 1, closed: true }],
+      games: [{ gameId: 1, closed: true } as Data.ServerInfo_Game],
     }));
     expect(result.rooms[1].games[1]).toBeUndefined();
   });
@@ -201,9 +219,9 @@ describe('UPDATE_GAMES', () => {
     const game = makeGame({ gameId: 1, description: 'old' });
     const room = makeRoom({ roomId: 1, games: { 1: game } });
     const state = makeRoomsState({ rooms: { 1: room } });
-    const result = roomsReducer(state, Actions.updateGames({
+    const result = dispatchThroughStore(state, Actions.updateGames({
       roomId: 1,
-      games: [{ gameId: 1, description: 'new' }],
+      games: [{ gameId: 1, description: 'new' } as Data.ServerInfo_Game],
     }));
     expect(result.rooms[1].games[1].info.description).toBe('new');
   });
@@ -212,7 +230,7 @@ describe('UPDATE_GAMES', () => {
     const room = makeRoom({ roomId: 1 });
     const state = makeRoomsState({ rooms: { 1: room } });
     const newGame = makeGame({ gameId: 99, description: 'extra' }).info;
-    const result = roomsReducer(state, Actions.updateGames({ roomId: 1, games: [newGame] }));
+    const result = dispatchThroughStore(state, Actions.updateGames({ roomId: 1, games: [newGame] }));
     expect(Object.keys(result.rooms[1].games)).toHaveLength(1);
     expect(result.rooms[1].games[99]).toBeDefined();
     expect(result.rooms[1].games[99].info.gameId).toBe(99);
@@ -223,9 +241,9 @@ describe('UPDATE_GAMES', () => {
     const game2 = makeGame({ gameId: 2, description: 'old' });
     const room = makeRoom({ roomId: 1, games: { 1: game1, 2: game2 } });
     const state = makeRoomsState({ rooms: { 1: room } });
-    const result = roomsReducer(state, Actions.updateGames({
+    const result = dispatchThroughStore(state, Actions.updateGames({
       roomId: 1,
-      games: [{ gameId: 2, description: 'new' }],
+      games: [{ gameId: 2, description: 'new' } as Data.ServerInfo_Game],
     }));
     expect(result.rooms[1].games[1].info.description).toBe('untouched');
     expect(result.rooms[1].games[2].info.description).toBe('new');
@@ -233,7 +251,7 @@ describe('UPDATE_GAMES', () => {
 
   it('returns state identity when roomId is unknown', () => {
     const state = makeRoomsState({ rooms: {} });
-    const result = roomsReducer(state, Actions.updateGames({ roomId: 999, games: [] }));
+    const result = dispatchThroughStore(state, Actions.updateGames({ roomId: 999, games: [] }));
     expect(result).toEqual(state);
   });
 });
@@ -361,7 +379,7 @@ describe('UPDATE_GAMES \u2014 selection lifecycle', () => {
   it('clears selectedGameIds[roomId] when the selected game is closed', () => {
     const room = makeRoom({ roomId: 1, games: { 5: makeGame({ gameId: 5 }) } });
     const state = makeRoomsState({ rooms: { 1: room }, selectedGameIds: { 1: 5 } });
-    const result = roomsReducer(state, Actions.updateGames({
+    const result = dispatchThroughStore(state, Actions.updateGames({
       roomId: 1,
       games: [{ gameId: 5, closed: true } as any],
     }));
@@ -371,7 +389,7 @@ describe('UPDATE_GAMES \u2014 selection lifecycle', () => {
   it('preserves selection when an unrelated game is closed', () => {
     const room = makeRoom({ roomId: 1, games: { 5: makeGame({ gameId: 5 }), 6: makeGame({ gameId: 6 }) } });
     const state = makeRoomsState({ rooms: { 1: room }, selectedGameIds: { 1: 5 } });
-    const result = roomsReducer(state, Actions.updateGames({
+    const result = dispatchThroughStore(state, Actions.updateGames({
       roomId: 1,
       games: [{ gameId: 6, closed: true } as any],
     }));

@@ -16,7 +16,6 @@ export interface ShortcutRegistration {
   actionId: string;
   handler: ShortcutHandler;
   scope: ShortcutScope;
-  /** Call event.preventDefault() before invoking the handler. Default true. */
   preventDefault?: boolean;
 }
 

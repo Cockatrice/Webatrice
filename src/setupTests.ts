@@ -1,4 +1,4 @@
-// @critical Must match the production boot order in src/index.tsx. See .github/instructions/webclient.instructions.md#initialization-order.
+// @critical Must match the production boot order in src/index.tsx. See .github/instructions/root.instructions.md#initialization-order.
 import './polyfills';
 
 import '@testing-library/jest-dom/vitest';

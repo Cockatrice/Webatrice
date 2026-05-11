@@ -1,5 +1,6 @@
-import { DefaultHosts, HostDTO } from '@app/services';
+import { HostDTO } from '@app/services';
 import { App } from '@app/types';
+import { DefaultHosts } from '@app/utils';
 
 import { createSharedStore, Loadable, useSharedStore } from './useSharedStore';
 

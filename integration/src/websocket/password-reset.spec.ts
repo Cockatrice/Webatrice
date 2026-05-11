@@ -1,6 +1,3 @@
-// Password-reset scenarios — the 3-step forgot-password flow. Each step
-// is a separate connect → handshake → command → disconnect cycle.
-
 import { create } from '@bufbuild/protobuf';
 import { describe, expect, it } from 'vitest';
 

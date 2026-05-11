@@ -2,6 +2,7 @@ export type { CreateGameParams, JoinGameParams } from '@app/generated';
 
 export * from './cards';
 export * from './colors';
+export * from './forms';
 export * from './game';
 export * from './regex-patterns';
 export * from './countries';

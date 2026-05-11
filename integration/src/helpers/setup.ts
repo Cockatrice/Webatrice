@@ -1,17 +1,6 @@
-// Integration test setup — installs a mock WebSocket constructor, wires up
-// fake timers for KeepAliveService control, and resets the webClient + Redux
-// singletons between tests so real event handlers and reducers can run
-// against a clean slate each time.
-//
-// Only `globalThis.WebSocket` is mocked. Everything downstream of it
-// (ProtobufService, event registries, persistence, store, reducers) runs as
-// real code, which is the whole point of the integration suite.
-
 import '@testing-library/jest-dom/vitest';
 import '../../../src/polyfills';
-// fake-indexeddb polyfills globalThis.indexedDB. MUST be imported before any
-// module that opens a Dexie database (Dexie opens on first table access).
-// Harmless for the websocket suite, which doesn't touch Dexie.
+// @critical fake-indexeddb must precede any module that opens a Dexie database.
 import 'fake-indexeddb/auto';
 
 import { create } from '@bufbuild/protobuf';
@@ -128,8 +117,6 @@ function resetAll(): void {
   (WebClient as unknown as { _instance: WebClient | null })._instance = null;
 }
 
-// ── Shared connect helpers ──────────────────────────────────────────────────
-
 const DEFAULT_LOGIN_OPTIONS: WebsocketTypes.WebSocketConnectOptions = {
   reason: WebsocketTypes.WebSocketConnectReason.LOGIN,
   host: 'localhost',
@@ -195,8 +182,6 @@ export function connectAndLogin(userName: string = 'alice'): void {
     }),
   })));
 }
-
-// ── Lifecycle hooks ─────────────────────────────────────────────────────────
 
 installMockWebSocket();
 

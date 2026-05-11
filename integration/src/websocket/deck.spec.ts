@@ -1,6 +1,3 @@
-// Deck and replay command round-trips — validates the session command pipeline
-// for deck CRUD and replay operations end-to-end.
-
 import { create } from '@bufbuild/protobuf';
 import { describe, expect, it } from 'vitest';
 

@@ -11,7 +11,7 @@ import type {
 } from '@app/generated';
 
 // @critical `info` is the wire snapshot; repeated collections on it go stale. Read normalized siblings.
-// See .github/instructions/webclient.instructions.md#data-structure-invariants.
+// See .github/instructions/store.instructions.md#data-structure-invariants.
 
 export interface GametypeMap { [index: number]: string }
 
@@ -33,7 +33,7 @@ export type Message = Event_RoomSay & {
 };
 
 // @critical `info` = wire snapshot at join time; top-level twins hold live values updated by game events.
-// See .github/instructions/webclient.instructions.md#data-structure-invariants.
+// See .github/instructions/store.instructions.md#data-structure-invariants.
 export interface GameEntry {
   info: ServerInfo_Game;
 
@@ -76,10 +76,9 @@ export type ZoneNameValue = typeof ZoneName[keyof typeof ZoneName];
 
 export interface ZoneEntry {
   name: ZoneNameValue;
-  /** ZoneType enum value (0=Private, 1=Public, 2=Hidden). */
   type: number;
   withCoords: boolean;
-  /** Authoritative count; for hidden zones this may exceed `order.length`. */
+  // Hidden zones: cardCount may exceed order.length.
   cardCount: number;
   order: number[];
   byId: { [cardId: number]: ServerInfo_Card };
@@ -91,7 +90,6 @@ export interface GameMessage {
   playerId: number;
   message: string;
   timeReceived: number;
-  /** Defaults to 'chat'. Event messages are rendered without a leading speaker label. */
   kind?: 'chat' | 'event';
 }
 

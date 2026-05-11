@@ -13,7 +13,7 @@ export interface Loadable<T> {
 }
 
 // @critical Two surfaces: subscribe (reactive) vs whenReady (one-shot).
-// See .github/instructions/webclient.instructions.md#shared-store-pattern.
+// See .github/instructions/root.instructions.md#shared-store-pattern.
 export interface SharedStore<T> {
   subscribe: (cb: () => void) => () => void;
   getSnapshot: () => Loadable<T>;

@@ -1,16 +1,3 @@
-/**
- * Joins truthy class names into a space-separated string.
- * Matches the widely-used `clsx`/`classnames` contract but stays a tiny
- * in-tree helper so we don't pull another dependency.
- *
- * Accepts strings, arrays of strings, and objects mapping class names to
- * booleans. Falsy values are dropped.
- *
- * @example
- *   cx('card-slot', tapped && 'card-slot--tapped', {
- *     'card-slot--face-down': card.faceDown,
- *   });
- */
 export type CxArg =
   | string
   | number

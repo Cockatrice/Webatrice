@@ -1,6 +1,3 @@
-// Authentication scenarios — login success/failure, register, activate,
-// and the hashed-password (salt) login path.
-
 import { create } from '@bufbuild/protobuf';
 import { describe, expect, it, vi } from 'vitest';
 

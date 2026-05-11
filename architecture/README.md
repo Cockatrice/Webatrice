@@ -2,7 +2,7 @@
 
 Three views of the same architecture at different zoom levels. The `.mmd` files are the source of truth — edit them and re-render when the architecture changes. The `.png` files are committed so the README and GitHub file view render everywhere, including offline.
 
-For the prose counterpart and conventions, see [../.github/instructions/webclient.instructions.md](../.github/instructions/webclient.instructions.md) (the canonical AI-tool instruction surface for this package).
+For the prose counterpart and conventions, see [../.github/instructions/root.instructions.md](../.github/instructions/root.instructions.md) (the canonical AI-tool instruction surface for this package).
 
 ## When to look at which
 

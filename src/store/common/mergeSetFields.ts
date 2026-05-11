@@ -1,13 +1,6 @@
 import { isFieldSet } from '@bufbuild/protobuf';
 import type { DescMessage, MessageShape } from '@bufbuild/protobuf';
 
-/**
- * Merges fields from `source` onto `target` in-place, copying only the fields
- * that are set on `source`. Use for reducers that receive partial proto
- * messages (e.g. desktop-server events where only changed fields are set on
- * the wire) — a naive assignment overwrites the target with protobuf defaults
- * for unset fields, wiping existing state.
- */
 export function mergeSetFields<Desc extends DescMessage>(
   schema: Desc,
   target: MessageShape<Desc>,

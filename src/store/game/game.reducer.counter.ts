@@ -1,8 +1,6 @@
 import { CaseReducer, PayloadAction } from '@reduxjs/toolkit';
 import { Data } from '@app/types';
 import { GamesState } from './game.interfaces';
-import { pushEventMessage } from './game.reducer.helpers';
-import { formatCounterSet } from './messageLog';
 
 export const counterReducers = {
   counterCreated: ((state, action) => {
@@ -20,13 +18,7 @@ export const counterReducers = {
     if (!game || !counter) {
       return;
     }
-    const previousValue = counter.count;
     counter.count = data.value;
-    pushEventMessage(
-      game,
-      playerId,
-      formatCounterSet(game, playerId, data, counter.name, previousValue),
-    );
   }) as CaseReducer<GamesState, PayloadAction<{ gameId: number; playerId: number; data: Data.Event_SetCounter }>>,
 
   counterDeleted: ((state, action) => {

@@ -34,11 +34,6 @@ export interface AlertDialogProps {
   onDismiss: () => void;
 }
 
-/**
- * Single-button modal alert. Mirrors desktop's QMessageBox::critical pattern
- * (see cockatrice/src/interface/widgets/server/game_selector.cpp:234-260 for
- * the join-game error dialogs this was originally built for).
- */
 function AlertDialog({
   isOpen,
   title,

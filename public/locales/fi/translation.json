@@ -288,11 +288,11 @@
     "add": "Lisää isäntä",
     "toast": "Host successfully {mode, select, created {created} deleted {deleted} other {edited}}."
   },
-  "InitializeContainer": {
+  "Initialize": {
     "title": "TIESITKÖ",
     "subtitle": "<1>Cockatricea pyörittävät vapaaehtoiset</1><1>jotka rakastavat korttipelejä!</1>"
   },
-  "LoginContainer": {
+  "Login": {
     "header": {
       "title": "Kirjaudu sisään",
       "subtitle": "Järjestelmäriippumaton virtuaalinen pöytä moninpelikorttipelejä varten."
@@ -312,7 +312,7 @@
       "accountActivationSuccess": "Tilin Aktivointi Onnistui"
     }
   },
-  "UnsupportedContainer": {
+  "Unsupported": {
     "title": "Selainta ei tueta",
     "subtitle1": "Päivitä selain ja/tai tarksita käyttöoikeudet.",
     "subtitle2": "Huomautus: Yksityinen selaaminen saa jotkin selaimet poistamaan tietyt käyttöoikeudet tai ominaisuudet käytöstä."
