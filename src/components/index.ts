@@ -6,7 +6,6 @@ export { default as CardDetails } from './CardDetails/CardDetails';
 export { default as CountryDropdown } from './CountryDropdown/CountryDropdown';
 export { default as InputField } from './InputField/InputField';
 export { default as InputAction } from './InputAction/InputAction';
-export { default as KnownHosts } from './KnownHosts/KnownHosts';
 export { default as LanguageDropdown } from './LanguageDropdown/LanguageDropdown';
 export { default as Message } from './Message/Message';
 export { default as VirtualList } from './VirtualList/VirtualList';
@@ -22,6 +21,3 @@ export { default as ModGuard } from './Guard/ModGuard';
 
 // Toast
 export { default as Toast, useToast, ToastProvider } from './Toast';
-
-// Game board
-export * from './Game';

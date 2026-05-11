@@ -85,6 +85,9 @@ vi.mock('@app/services', () => ({
       stored = stored.filter((h) => h.id !== numericId);
     });
   },
+}));
+
+vi.mock('@app/utils', () => ({
   DefaultHosts: [
     { name: 'A', host: 'a.x', port: '1', editable: false },
     { name: 'B', host: 'b.x', port: '2', editable: false },

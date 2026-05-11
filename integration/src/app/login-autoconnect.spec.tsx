@@ -25,10 +25,10 @@ const flushStoresAndEffects = async (): Promise<void> => {
   });
 };
 
-import { autoLoginGate } from '../../../src/hooks/useAutoLogin';
 import { settingsStore } from '../../../src/hooks/useSettings';
 import { knownHostsStore } from '../../../src/hooks/useKnownHosts';
-import Login from '../../../src/containers/Login/Login';
+import { Login } from '@app/features/login';
+import { autoLoginGate } from '../../../src/features/login/useAutoLogin';
 import { HostDTO, SettingDTO } from '@app/services';
 import { App } from '@app/types';
 import { ServerSelectors, ServerDispatch } from '@app/store';

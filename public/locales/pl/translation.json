@@ -288,11 +288,11 @@
     "add": "Dodaj nowego hosta",
     "toast": "Host successfully {mode, select, created {created} deleted {deleted} other {edited}}."
   },
-  "InitializeContainer": {
+  "Initialize": {
     "title": "WIEDZIAŁEŚ",
     "subtitle": "<1>Cockatrice jest prowadzony przez ochotników</1><1>którzy uwielbiają karcianki!</1>"
   },
-  "LoginContainer": {
+  "Login": {
     "header": {
       "title": "Login",
       "subtitle": "Wieloplatformowy wirtualny stół do wieloosobowych gier karcianych."
@@ -312,7 +312,7 @@
       "accountActivationSuccess": "Konto Pomyślnie Aktywowane"
     }
   },
-  "UnsupportedContainer": {
+  "Unsupported": {
     "title": "Nieobsługiwana Przeglądarka",
     "subtitle1": "Proszę zaktualizuj swoją przeglądarkę i/lub sprawdź jej uprawnienia.",
     "subtitle2": "Przeglądanie prywatne może wyłączyć niektóre uprawnienia lub funkcje."

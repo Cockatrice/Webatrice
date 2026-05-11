@@ -3,13 +3,13 @@ import boundaries from 'eslint-plugin-boundaries';
 const elements = [
   { type: 'api', pattern: ['src/api/**'] },
   { type: 'components', pattern: ['src/components/**'] },
-  { type: 'containers', pattern: ['src/containers/**'] },
   { type: 'dialogs', pattern: ['src/dialogs/**'] },
   { type: 'features', pattern: ['src/features/**'] },
-  { type: 'forms', pattern: ['src/forms/**'] },
+  { type: 'feature-widgets', pattern: ['src/feature-widgets/**'] },
   { type: 'hooks', pattern: ['src/hooks/**'] },
   { type: 'images', pattern: ['src/images/**'] },
   { type: 'services', pattern: ['src/services/**'] },
+  { type: 'feature-core', pattern: ['src/feature-core/**'] },
   { type: 'store', pattern: ['src/store/**'] },
   { type: 'types', pattern: ['src/types/**'] },
   { type: 'utils', pattern: ['src/utils/**'] },
@@ -19,33 +19,45 @@ const types = (...types) => types.map((type) => ({ to: { type } }));
 
 const rules = [
   { from: { type: 'types' }, allow: [] },
+  { from: { type: 'images' }, allow: types('types') },
   { from: { type: 'utils' }, allow: types('types') },
 
   { from: { type: 'store' }, allow: types('types', 'utils') },
   { from: { type: 'api' }, allow: types('store', 'types', 'utils') },
 
-  { from: { type: 'images' }, allow: types('types') },
   { from: { type: 'services' }, allow: types('api', 'store', 'types', 'utils') },
   { from: { type: 'hooks' }, allow: types('api', 'services', 'store', 'types', 'utils') },
+  { from: { type: 'dialogs' }, allow: types('hooks', 'services', 'store', 'types', 'utils') },
 
   {
     from: { type: 'components' },
-    allow: types('api', 'dialogs', 'forms', 'hooks', 'images', 'services', 'store', 'types', 'utils')
+    allow: types('api', 'dialogs', 'hooks', 'images', 'services', 'store', 'types', 'utils')
   },
-  // Containers are the only layer permitted to pull from features (vertical slices).
+
+  // Feature-widgets are multi-file capabilities composed by ≥2 features. They pull
+  // from root-level shared assets but explicitly NOT from features or other
+  // feature-widgets (enforces one-way + no-cross-widget-imports).
   {
-    from: { type: 'containers' },
-    allow: types('api', 'components', 'dialogs', 'features', 'forms', 'hooks', 'images', 'services', 'store', 'types', 'utils')
+    from: { type: 'feature-widgets' },
+    allow: types('api', 'components', 'dialogs', 'hooks', 'images', 'services', 'store', 'types', 'utils')
   },
-  { from: { type: 'dialogs' }, allow: types('components', 'forms', 'hooks', 'services', 'store', 'types', 'utils') },
-  { from: { type: 'forms' }, allow: types('components', 'hooks', 'services', 'store', 'types', 'utils') },
+
+  // Feature-core is the app's foundational chrome layer (Layout + LeftNav). It composes
+  // feature-widgets for top-level affordances (e.g. card-import dialog accessible
+  // from any page). Consumed by features (below) for wrapping their route content.
+  {
+    from: { type: 'feature-core' },
+    allow: types('api', 'components', 'dialogs', 'feature-widgets', 'hooks', 'images', 'services', 'store', 'types', 'utils')
+  },
 
   // Features are vertical slices: they pull from root-level shared assets but nothing
-  // pulls from them except containers (above). Features may import other features only
-  // implicitly via the containers that compose them.
+  // pulls from them except the root AppShell. Features may import other features only
+  // implicitly via the containers that compose them. Features may also compose
+  // feature-widgets (one-way: features → feature-widgets, never the reverse). Features
+  // also pull from `feature-core` for the page chrome (Layout, etc.).
   {
     from: { type: 'features' },
-    allow: types('api', 'components', 'dialogs', 'forms', 'hooks', 'images', 'services', 'store', 'types', 'utils')
+    allow: types('api', 'components', 'dialogs', 'feature-widgets', 'hooks', 'images', 'services', 'feature-core', 'store', 'types', 'utils')
   },
 ];
 

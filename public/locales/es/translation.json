@@ -288,11 +288,11 @@
     "add": "Añadir nueva dirección IP",
     "toast": "Dirección IP correcta {modo, seleccionar, creado {creado} eliminado {eliminado} otro {editado}}."
   },
-  "InitializeContainer": {
+  "Initialize": {
     "title": "¿LO SABÍAS?",
     "subtitle": "<1>¡Cockatrice está buscando voluntarios</1><1> que amen los juegos de cartas!"
   },
-  "LoginContainer": {
+  "Login": {
     "header": {
       "title": "Conectar",
       "subtitle": "Un tablero de mesa multiplataforma para juegos de cartas multijugador."
@@ -312,7 +312,7 @@
       "accountActivationSuccess": "Cuenta activada con éxito"
     }
   },
-  "UnsupportedContainer": {
+  "Unsupported": {
     "title": "Navegador sin apoyo",
     "subtitle1": "Por favor actualiza tu navegador y/o comprueba tus permisos.",
     "subtitle2": "Nota: Los navegadores privados pueden causar que los navegadores deshabiliten ciertos permisos o funciones."

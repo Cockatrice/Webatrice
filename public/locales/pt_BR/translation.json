@@ -288,11 +288,11 @@
     "add": "Adicionar novo servidor",
     "toast": "Servidor {mode, select, created {criado} deleted {deletado} other {editado}} com sucesso."
   },
-  "InitializeContainer": {
+  "Initialize": {
     "title": "VOCÊ SABIA?",
     "subtitle": "<1>O Cockatrice é administrado por voluntários</1><1>que adoram jogos de cartas!</1>"
   },
-  "LoginContainer": {
+  "Login": {
     "header": {
       "title": "Login",
       "subtitle": "Uma mesa virtual multiplataforma para jogos multijogador de carta."
@@ -312,7 +312,7 @@
       "accountActivationSuccess": "Conta ativada com sucesso"
     }
   },
-  "UnsupportedContainer": {
+  "Unsupported": {
     "title": "Navegador não suportado",
     "subtitle1": "Por favor atualize seu navegador de internet e/ou check as permissões",
     "subtitle2": "Observação: a navegação privada faz com que alguns navegadores desativem determinadas permissões ou recursos."

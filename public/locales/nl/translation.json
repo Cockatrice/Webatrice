@@ -288,11 +288,11 @@
     "add": "Voeg nieuwe host toe",
     "toast": "Host {mode, select created {toegevoegd} deleted {verwijderd} other {aangepast}}."
   },
-  "InitializeContainer": {
+  "Initialize": {
     "title": "WIST JE DAT",
     "subtitle": "<1>Cockatrice word gerund door vrijwilligers</1><1>die van kaartspellen houden!</1>"
   },
-  "LoginContainer": {
+  "Login": {
     "header": {
       "title": "Login",
       "subtitle": "Een cross-platform virtual tabletop voor multiplayer kaartspellen."
@@ -312,7 +312,7 @@
       "accountActivationSuccess": "Account Succesvol Geactiveerd"
     }
   },
-  "UnsupportedContainer": {
+  "Unsupported": {
     "title": "Niet-ondersteunde Browser",
     "subtitle1": "Update je browser en/of check je instellingen.",
     "subtitle2": "Let op: Private browsing zorgt er voor dat sommige browsers bepaalde toestemmingen of functies uitschakelen."

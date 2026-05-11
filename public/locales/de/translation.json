@@ -288,11 +288,11 @@
     "add": "Neuen Host hinzufügen",
     "toast": "Host erfolgreich {mode, select, created {erstellt} deleted {gelöscht} other {bearbeitet}}."
   },
-  "InitializeContainer": {
+  "Initialize": {
     "title": "WUSSTEN SIE SCHON",
     "subtitle": "<1>Cockatrice wird von Freiwilligen geleitet </1><1>die Kartenspiele lieben!</1>"
   },
-  "LoginContainer": {
+  "Login": {
     "header": {
       "title": "Login",
       "subtitle": "Ein plattformübergreifender, virtueller Tabletop für Multiplayer-Kartenspiele."
@@ -312,7 +312,7 @@
       "accountActivationSuccess": "Account erfolgreich aktiviert"
     }
   },
-  "UnsupportedContainer": {
+  "Unsupported": {
     "title": "Browser wird nicht unterstützt",
     "subtitle1": "Bitte updaten Sie Ihren Browser und/oder überprüfen Sie Ihre Berechtigungen.",
     "subtitle2": "Hinweis: Beim privaten Surfen werden bei einigen Browsern bestimmte Berechtigungen oder Funktionen deaktiviert."

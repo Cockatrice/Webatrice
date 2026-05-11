@@ -38,11 +38,11 @@ Outbound commands in `commands/<scope>/`, inbound handlers in `events/<scope>/`,
 
 **Layering invariant (enforced, zero violations today — keep it that way):**
 
-1. Containers and components call `useWebClient()` to get the `WebClient`, then `client.request.<scope>.<method>(…)`. Never import from `@app/websocket` in UI code (`@app/websocket/types` is fine — type-only); never call `new WebClient(...)` outside `WebClientProvider`.
+1. UI layers (features, feature-widgets, feature-core, components) call `useWebClient()` to get the `WebClient`, then `client.request.<scope>.<method>(…)`. Never import from `@app/websocket` in UI code (`@app/websocket/types` is fine — type-only); never call `new WebClient(...)` outside `WebClientProvider`.
 2. `src/api/request/*RequestImpl` methods translate UI intent into `src/websocket/commands/*` calls. `src/api/response/*ResponseImpl` methods are invoked by command callbacks and event handlers and dispatch to the store.
 3. Only `*.dispatch.ts` helpers inside `src/store/` and the `*ResponseImpl` classes may touch the Redux store.
 
-If you find yourself wanting to skip a layer (dispatching from an event handler, calling `@app/websocket` from a container, reaching into `@app/generated` from a component/store), stop. `eslint.boundaries.mjs` enforces this via the element types `api` / `components` / `containers` / `hooks` / `services` / `store` / `types` / `websocket` / `websocket-types`; `websocket-types` is deliberately a narrower surface than `websocket` so UI/store can reach protocol types without pulling in transport internals.
+If you find yourself wanting to skip a layer (dispatching from an event handler, calling `@app/websocket` from a feature, reaching into `@app/generated` from a component/store), stop. `eslint.boundaries.mjs` enforces this via the element types `api` / `components` / `dialogs` / `features` / `feature-widgets` / `feature-core` / `hooks` / `images` / `services` / `store` / `types` / `utils`. UI access to websocket types still goes through the `@app/websocket/types` alias, which is deliberately a narrower surface than `@app/websocket` so UI/store can reach protocol types without pulling in transport internals.
 
 ### ProtobufService: request/response correlation
 
@@ -84,7 +84,7 @@ Dexie (IndexedDB) holds cards, sets, tokens, known hosts, and settings; separate
 
 ### UI
 
-Route-level containers in `containers/` (one subdir per route plus `AppShell` root and shared `Layout`); routing in `containers/App/AppShellRoutes.tsx`. Two hooks are load-bearing: **`useWebClient`** (context accessor — the only way UI code is allowed to reach the server; see the Layering invariant) and **`useAutoLogin`** (owns the once-per-session gate; see [#startup--session-invariants](#startup--session-invariants)). `WebClientProvider` ([webclient/src/hooks/useWebClient.tsx](../../webclient/src/hooks/useWebClient.tsx)) owns the singleton; `WebClientContext` is exported so integration tests can inject a pre-built `WebClient`. UI kit: MUI v9 + `@emotion`; i18n via `react-i18next` + ICU (Transifex).
+Route-level UI lives in `src/features/<slice>/` (one feature per route — account, decks, game, login, logs, player, rooms, server, settings, shell). Multi-feature capabilities live in `src/feature-widgets/<tenant>/` (known-hosts, shortcuts, card-import) — composed by ≥2 features. Page chrome (Layout, LeftNav) lives in `src/feature-core/`, imported by every routable feature. Root orchestration sits at `src/AppShell.tsx` with route registration in `src/AppShellRoutes.tsx`. Two hooks are load-bearing: **`useWebClient`** (context accessor — the only way UI code is allowed to reach the server; see the Layering invariant) and **`useAutoLogin`** (owns the once-per-session gate; see [#startup--session-invariants](#startup--session-invariants)). `WebClientProvider` ([webclient/src/hooks/useWebClient.tsx](../../webclient/src/hooks/useWebClient.tsx)) owns the singleton; `WebClientContext` is exported so integration tests can inject a pre-built `WebClient`. UI kit: MUI v9 + `@emotion`; i18n via `react-i18next` + ICU (Transifex).
 
 ## Build pipeline and generated files
 
@@ -138,7 +138,7 @@ The polyfill must execute before any module creates the store, or the first devt
 
 Product requirement: **auto-login runs at most once per JS session, and logout within the same session does NOT re-trigger it.** Only a full page refresh does. This matches the Cockatrice desktop client.
 
-The gate lives at module scope in [webclient/src/hooks/useAutoLogin.ts](../../webclient/src/hooks/useAutoLogin.ts) as `autoLoginGate.hasChecked`. It flips to `true` after the startup check completes, regardless of whether the check actually fired a login — so a check that determined "don't auto-connect" (preference off, no saved password, etc.) still latches the gate. The gate is exported as a mutable object so integration tests can reset it without `vi.resetModules()`.
+The gate lives at module scope in [webclient/src/features/login/useAutoLogin.ts](../../webclient/src/features/login/useAutoLogin.ts) as `autoLoginGate.hasChecked`. It flips to `true` after the startup check completes, regardless of whether the check actually fired a login — so a check that determined "don't auto-connect" (preference off, no saved password, etc.) still latches the gate. The gate is exported as a mutable object so integration tests can reset it without `vi.resetModules()`.
 
 `useAutoLogin` consults settings via `getSettings()` (one-shot), not by subscribing to `settingsStore`. Editing the persisted auto-connect preference is a preference write, not a login signal.
 

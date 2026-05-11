@@ -288,11 +288,11 @@
     "add": "mi o ken e ilo lawa sin",
     "toast": "Host successfully {mode, select, created {created} deleted {deleted} other {edited}}."
   },
-  "InitializeContainer": {
+  "Initialize": {
     "title": "sina sona ala sona e ni:",
     "subtitle": "<1>jan li pali e ilo Cockatrice lon wile taso!</1> <1>musi lipu li pona tawa ona!</1>"
   },
-  "LoginContainer": {
+  "Login": {
     "header": {
       "title": "mi o kama e sina lon kulupu",
       "subtitle": "ilo Cockatrice li ken e musi lipu ale. nasin mute ilo li ken lon ona."
@@ -312,7 +312,7 @@
       "accountActivationSuccess": "Account Activated Successfully"
     }
   },
-  "UnsupportedContainer": {
+  "Unsupported": {
     "title": "Unsupported Browser",
     "subtitle1": "Please update your browser and/or check your permissions.",
     "subtitle2": "Note: Private browsing causes some browsers to disable certain permissions or features."

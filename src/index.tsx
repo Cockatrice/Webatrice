@@ -7,7 +7,7 @@ import { StyledEngineProvider } from '@mui/material';
 import { ThemeProvider } from '@mui/material/styles';
 
 import { WebClientProvider } from '@app/hooks';
-import { AppShell } from '@app/containers';
+import AppShell from './AppShell';
 import { materialTheme } from './material-theme';
 
 import './i18n';

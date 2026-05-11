@@ -288,11 +288,11 @@
     "add": "Aggiungi nuovo Host",
     "toast": "Host {mode, select, created {creato} deleted {eliminato} other {modificato}} con successo."
   },
-  "InitializeContainer": {
+  "Initialize": {
     "title": "LO SAPEVI",
     "subtitle": "<1>Cockatrice è gestita da volontari</1><1>che amano i giochi di carte!</1>"
   },
-  "LoginContainer": {
+  "Login": {
     "header": {
       "title": "Accesso",
       "subtitle": "Un portale digitale multi-piattaforma per giochi di carte multigiocatore"
@@ -312,7 +312,7 @@
       "accountActivationSuccess": "Account attivato con successo"
     }
   },
-  "UnsupportedContainer": {
+  "Unsupported": {
     "title": "Browser non supportato",
     "subtitle1": "Aggiornare il browser e/o controllare i permessi.",
     "subtitle2": "Nota: la navigazione Privata può far si che il browser disabiliti certi permessi o funzionalità."

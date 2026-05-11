@@ -13,7 +13,7 @@ import { Command_GameSay_ext } from '@app/generated';
 import { GameDispatch, ServerDispatch, store } from '@app/store';
 import { WebsocketTypes } from '@app/websocket/types';
 
-import Game from '../../../src/containers/Game/Game';
+import { Game } from '@app/features/game';
 import { renderAppScreen } from './helpers';
 import { findLastGameCommand } from '../helpers/command-capture';
 import { connectRaw } from '../helpers/setup';
