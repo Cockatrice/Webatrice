@@ -1,7 +1,3 @@
-// Connection-lifecycle scenarios. Exercises the full transport handshake
-// from webClient.connect() through onopen, ServerIdentification, and
-// disconnect — with only the browser WebSocket constructor mocked.
-
 import { create } from '@bufbuild/protobuf';
 import { describe, expect, it } from 'vitest';
 

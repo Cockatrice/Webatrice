@@ -5,17 +5,13 @@ export type TestConnectionStatus = 'testing' | 'success' | 'failed' | null;
 
 export interface ServerState {
   initialized: boolean;
-  /** Lifecycle of the most recent test connection — drives Login button + hashed-password UI gates. */
   testConnectionStatus: TestConnectionStatus;
-  /** Buddies keyed by username for O(1) lookup. Use `getSortedBuddyList` for display. */
   buddyList: { [userName: string]: Data.ServerInfo_User };
-  /** Ignored users keyed by username for O(1) lookup. Use `getSortedIgnoreList` for display. */
   ignoreList: { [userName: string]: Data.ServerInfo_User };
   info: ServerStateInfo;
   status: ServerStateStatus;
   logs: ServerStateLogs;
   user: Data.ServerInfo_User | null;
-  /** Connected users keyed by username for O(1) lookup. Use `getSortedUsers` for display. */
   users: { [userName: string]: Data.ServerInfo_User };
   sortUsersBy: ServerStateSortUsersBy;
   messages: {
@@ -36,7 +32,6 @@ export interface ServerState {
   warnListOptions: Data.Response_WarnList[];
   warnUser: string;
   adminNotes: { [userName: string]: string };
-  /** Replays keyed by gameId for O(1) lookup/update. */
   replays: { [gameId: number]: Data.ServerInfo_ReplayMatch };
   backendDecks: Data.Response_DeckList | null;
   downloadedDeck: { deckId: number; deck: string } | null;

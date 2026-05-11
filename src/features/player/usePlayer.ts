@@ -6,11 +6,8 @@ import { ServerSelectors, useAppSelector } from '@app/store';
 import type { Data } from '@app/types';
 
 export interface PlayerViewModel {
-  /** Resolved username from the route; null when the `:name` param is missing. */
   name: string | null;
-  /** Profile record from server.userInfo[name]; undefined until the server response lands. */
   userInfo: Data.ServerInfo_User | undefined;
-  /** The logged-in user, for self-profile and mod-permission checks. */
   currentUser: Data.ServerInfo_User | null;
   isSelf: boolean;
   isABuddy: boolean;
@@ -26,11 +23,6 @@ export interface PlayerViewModel {
   onBanFromServer: (minutes: number, reason: string, visibleReason?: string) => void;
 }
 
-/**
- * Drives the Player container: resolves the `:name` route param, dispatches
- * `getUserInfo` on mount so the server populates `server.userInfo[name]`, and
- * exposes the buddy/ignore/mod-action callbacks desktop surfaces in UserInfoBox.
- */
 export function usePlayer(): PlayerViewModel {
   const webClient = useWebClient();
   const params = useParams<{ name?: string }>();

@@ -1,7 +1,3 @@
-/* Permanent vertical strip between the PlayerInfoPanel and the
-   Battlefield. Mirrors desktop's territorial framing — rust/brown
-   background distinguishes it from the battlefield lanes and the
-   blue-tinted info rail. */
 .stack-column {
   width: 76px;
   height: 100%;
@@ -19,8 +15,6 @@
 }
 
 .stack-column--mirrored {
-  /* Mirror the card stacking order so the top-of-stack (last-cast) card
-     sits closest to the battlefield for the opponent half. */
   flex-direction: column-reverse;
 }
 

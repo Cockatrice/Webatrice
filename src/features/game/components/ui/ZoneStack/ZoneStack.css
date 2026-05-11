@@ -17,8 +17,6 @@
   box-shadow: 0 0 0 2px var(--color-highlight-yellow), 0 0 12px var(--color-highlight-yellow-soft);
 }
 
-/* Portrait thumb (Deck-style). Scales down if its row is shorter than
-   108px; never grows above the natural card thumbnail size. */
 .zone-stack__thumb {
   position: relative;
   aspect-ratio: 78 / 108;
@@ -35,8 +33,6 @@
   min-height: 0;
 }
 
-/* Landscape thumb (Graveyard/Exile). Matches desktop where used-up zones
-   show their top card rotated 90° so they read as a horizontal bar. */
 .zone-stack--rotated .zone-stack__thumb {
   aspect-ratio: 108 / 78;
   max-width: 108px;
@@ -52,10 +48,6 @@
   display: block;
 }
 
-/* Rotate the top-card image inside a landscape thumb. The 90° rotation
-   leaves gaps on a square-ish crop; scale by the thumb aspect ratio so
-   the rotated image re-fills horizontally. overflow:hidden on the thumb
-   clips the vertical overspill. */
 .zone-stack--rotated .zone-stack__image {
   transform: rotate(90deg) scale(calc(108 / 78));
   transform-origin: center;

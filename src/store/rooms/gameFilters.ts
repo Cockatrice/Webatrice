@@ -54,10 +54,6 @@ export interface GameFilterContext {
   nowSeconds: number;
 }
 
-/**
- * Mirrors GamesProxyModel::filterAcceptsRow
- * (cockatrice/src/interface/widgets/server/games_model.cpp).
- */
 export function gameMatchesFilters(
   game: Enriched.Game,
   filters: GameFilters,

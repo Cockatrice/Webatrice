@@ -37,11 +37,8 @@ export interface SideboardPlanMove {
 export interface SideboardDialogProps {
   isOpen: boolean;
   playerName: string;
-  /** Snapshot of the player's deck zone at open time (identified by card.name). */
   deckCards: ReadonlyArray<{ id: number; name: string }>;
-  /** Snapshot of the player's sideboard zone at open time. */
   sideboardCards: ReadonlyArray<{ id: number; name: string }>;
-  /** Current persisted lock state from ServerInfo_PlayerProperties.sideboardLocked. */
   isLocked: boolean;
   onSubmit: (moveList: SideboardPlanMove[]) => void;
   onCancel: () => void;
@@ -50,9 +47,6 @@ export interface SideboardDialogProps {
 
 type Card = { id: number; name: string };
 
-// Applies a draft move sequence to the initial lists to derive the
-// currently-displayed deck and sideboard. Mirrors desktop's
-// DeckView::applyPlan logic (identify-by-name, one copy per entry).
 function applyMoves(
   initialDeck: ReadonlyArray<Card>,
   initialSideboard: ReadonlyArray<Card>,

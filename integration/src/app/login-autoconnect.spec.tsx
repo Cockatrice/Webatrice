@@ -1,26 +1,10 @@
-// Full-stack autoconnect integration. Only outbound surfaces are mocked
-// (WebSocket via the shared setup, IndexedDB via fake-indexeddb in setup).
-// Everything in between — Dexie, DTOs, useSettings/useKnownHosts, useAutoLogin,
-// the Login container, WebClient, Redux — runs as shipped code.
-//
-// We assert auto-login via `connectionAttemptMade` on the real server slice,
-// not via the WebSocket mock's call count: KnownHosts fires a testConnection
-// on mount for the UX indicator, which also constructs sockets, so raw
-// socket counts are noisy. Only the login path dispatches CONNECTION_ATTEMPTED.
-
 import { act, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-// Store loads notify React subscribers synchronously when the Dexie
-// promise resolves. Awaiting whenReady() directly would let those
-// notifications fire outside an act() scope, which trips React's
-// "update was not wrapped in act" warning. Wrapping here captures
-// both the store resolution and any resulting component re-renders.
 const flushStoresAndEffects = async (): Promise<void> => {
   await act(async () => {
     await settingsStore.whenReady();
     await knownHostsStore.whenReady();
-    // Let dependent effects (host-sync, settings-sync) commit.
     await new Promise((resolve) => setTimeout(resolve, 0));
   });
 };
@@ -37,9 +21,6 @@ import { WebsocketTypes } from '@app/websocket/types';
 import { resetDexie } from '../services/dexie/resetDexie';
 import { renderAppScreen, store } from './helpers';
 
-// Mimics the production "user logged out / connection dropped" transition:
-// dispatching updateStatus(DISCONNECTED) is what the real reducer uses to
-// clear connectionAttemptMade (clearStore intentionally preserves status).
 const simulateLogout = () => {
   ServerDispatch.updateStatus(WebsocketTypes.StatusEnum.DISCONNECTED, null);
 };

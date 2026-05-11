@@ -11,13 +11,6 @@
   transition: transform 120ms ease-out;
 }
 
-/* Battlefield cards scale to fill the lane height; width follows via aspect-
- * ratio. No pixel cap, so tall viewports grow cards rather than leaving empty
- * vertical space; short lanes shrink them proportionally. Crowded rows do not
- * compress cards — .battlefield__row has overflow-x: auto, so packed rows
- * scroll horizontally (desktop parity).
- *
- * HandZone's .card-slot keeps the default height-driven rules above. */
 .battlefield .card-slot {
   aspect-ratio: 146 / 204;
   height: 100%;
@@ -35,16 +28,6 @@
   display: block;
 }
 
-/*
- * Card-back art: layered radial + diamond SVG pattern.
- * Best-effort stand-in until an MTG-style asset ships under src/images/
- * (tracked in gameboard-deferrables.md M1).
- *
- * Layers (painted bottom-up via background: comma stack):
- *   1. Outer radial gradient — deep purple core fading to black edges
- *   2. SVG diamond-lattice pattern — embossed geometry
- *   3. Inner vignette — subtle darkening at the border
- */
 .card-slot__back {
   width: 100%;
   height: 100%;
@@ -118,9 +101,6 @@
   pointer-events: none;
 }
 
-/* Top overlay container: stacks the card name and owner pills vertically so
- * the owner sits flush below the name regardless of how many lines the name
- * wraps to. Without this, fixed-position pills overlapped on long names. */
 .card-slot__top {
   position: absolute;
   top: 4px;
@@ -142,8 +122,6 @@
   border-radius: 3px;
   word-wrap: break-word;
   overflow-wrap: anywhere;
-  /* Cap to two lines: long names ellipsize on the second line rather than
-   * pushing the owner pill off the card or eating the art. */
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -163,10 +141,6 @@
   text-overflow: ellipsis;
 }
 
-/* Counter grid: 2-column layout starting beneath the name+owner block.
- * id 0 → top-left, id 1 → top-right, id 2 → row 2 left, id 3 → row 2 right,
- * etc. Mirrors Cockatrice's corner-anchored counter positioning while
- * leaving room for the new name/owner pills. */
 .card-slot__counters {
   position: absolute;
   left: 2px;

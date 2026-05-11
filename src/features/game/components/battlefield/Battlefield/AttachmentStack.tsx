@@ -14,10 +14,6 @@ import './AttachmentStack.css';
 
 export interface AttachmentStackProps {
   parent: Data.ServerInfo_Card;
-  // The parent's owner — drives the parent's CardSlot wiring. Children carry
-  // their own ownerPlayerId in `AttachedChild` so a cross-player attachment
-  // (your aura on opponent's creature) keeps click/drag tied to the actual
-  // owning player.
   ownerPlayerId: number;
   attachments: AttachedChild[];
   draggable: boolean;
@@ -43,19 +39,10 @@ function AttachmentStack({
 }: AttachmentStackProps) {
   const parentKey = makeCardKey(ownerPlayerId, App.ZoneName.TABLE, parent.id);
 
-  // Stack footprint in units of one card width: 1 + N × FRACTION. Each card
-  // shares width = 1 / stackFactor of the stack. Layout matches desktop's
-  // table_zone.cpp:153-185: parent shifts right by N×OFFSET; attached card j
-  // sits at parent_x − j×OFFSET. So the parent ends up rightmost (highest z),
-  // first-attached child sits just left of parent (next-highest z), and the
-  // most-recently-attached child is leftmost and underneath.
   const N = attachments.length;
   const stackFactor = 1 + N * ATTACH_OFFSET_FRACTION;
   const cardWidthPct = round(100 / stackFactor);
 
-  // Parent Y offset only when N > 0, mirroring desktop's
-  // `if (numberAttachedCards) actualY += 15`. Without this guard, every
-  // standalone card would render shifted down.
   const parentLeftPct = N > 0 ? round((N * ATTACH_OFFSET_FRACTION * 100) / stackFactor) : 0;
   const parentTopPct =
     N > 0 ? round((ATTACH_PARENT_OFFSET_Y_PX * 100) / CARD_HEIGHT_PX) : 0;
@@ -69,10 +56,6 @@ function AttachmentStack({
           left: `${parentLeftPct}%`,
           top: `${parentTopPct}%`,
           width: `${cardWidthPct}%`,
-          // Parent is always on top of its own attachments. When N=0 the
-          // z-index doesn't matter (no siblings inside the stack), but we
-          // still set it so the parent layers cleanly above any neighbor
-          // stack column visualizations during drag.
           zIndex: N + 1,
         }}
       >
@@ -90,13 +73,7 @@ function AttachmentStack({
       </div>
       {attachments.map((entry, i) => {
         const { card: child, ownerPlayerId: childOwnerId } = entry;
-        // Each child wires to its own owner — for a cross-player attach the
-        // child still lives in the original owner's zone (Servatrice never
-        // moves it), so click/drag/arrow lookups need that owner id.
         const childKey = makeCardKey(childOwnerId, App.ZoneName.TABLE, child.id);
-        // Child i sits (N - 1 - i) slots from the left → first-attached
-        // (i=0) ends up just left of parent with the highest child z, matching
-        // desktop's "j=1 = closest to parent = highest screen X = highest z".
         const leftPct = round(((N - 1 - i) * ATTACH_OFFSET_FRACTION * 100) / stackFactor);
         return (
           <div

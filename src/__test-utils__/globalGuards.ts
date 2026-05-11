@@ -1,10 +1,5 @@
-/**
- * Temporarily override fields on `window.location` and return a restore fn.
- *
- * @critical `Object.defineProperty(window, 'location', ...)` isn't a vi.spyOn
- * target, so `vi.restoreAllMocks()` will NOT undo it. Always invoke the
- * returned restore callback.
- */
+// @critical `Object.defineProperty(window, 'location', ...)` is not a vi.spyOn target — restoreAllMocks won't undo it.
+// Always invoke the returned restore fn.
 export function withMockLocation(overrides: Partial<Location>): () => void {
   const originalDescriptor = Object.getOwnPropertyDescriptor(window, 'location');
 

@@ -46,11 +46,9 @@ export const MAX_ANNOTATION_LEN = 255;
 export interface UseCreateTokenDialogArgs {
   isOpen: boolean;
   onSubmit: (args: CreateTokenSubmit) => void;
-  /** Optional deck-scoped token names; mirrors desktop DlgCreateToken predefinedTokens. */
   predefinedTokenNames?: string[];
 }
 
-/** Maps a MTGJSON-shaped color list ("W", "U", ...) to the dialog's single-letter color value. */
 function colorFromToken(token: TokenDTO): string {
   const raw = token.prop?.value?.colors?.value ?? '';
   if (!raw) {
@@ -70,7 +68,6 @@ function colorFromToken(token: TokenDTO): string {
   return '';
 }
 
-/** Best-effort providerId from the token's first set entry; matches desktop TokenInfo.providerId. */
 function providerIdFromToken(token: TokenDTO): string | undefined {
   return token.set?.[0]?.value ?? undefined;
 }

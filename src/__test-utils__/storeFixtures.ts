@@ -2,9 +2,6 @@ import { App, Data } from '@app/types';
 import { WebsocketTypes } from '@app/websocket/types';
 import type { RootState } from '../store/store';
 
-/**
- * Create a minimal ServerInfo_User object for testing.
- */
 function makeUser(overrides: Partial<Data.ServerInfo_User> = {}): Data.ServerInfo_User {
   return {
     name: 'testUser',
@@ -20,10 +17,6 @@ function makeUser(overrides: Partial<Data.ServerInfo_User> = {}): Data.ServerInf
   } as Data.ServerInfo_User;
 }
 
-/**
- * A disconnected (default) store state. This is the state before any
- * connection to a server has been made.
- */
 export const disconnectedState: Partial<RootState> = {
   server: {
     initialized: false,
@@ -73,9 +66,6 @@ export const disconnectedState: Partial<RootState> = {
   action: { type: null, payload: null, meta: null, error: false, count: 0 },
 };
 
-/**
- * A connected (logged-in) store state with a basic user and server info.
- */
 export const connectedState: Partial<RootState> = {
   ...disconnectedState,
   server: {
@@ -98,9 +88,6 @@ export const connectedState: Partial<RootState> = {
   },
 };
 
-/**
- * Connected state with rooms and a joined room containing games and users.
- */
 export const connectedWithRoomsState: Partial<RootState> = {
   ...connectedState,
   server: {
@@ -128,26 +115,8 @@ export const connectedWithRoomsState: Partial<RootState> = {
 
 export { makeUser };
 
-/**
- * Deep-partial of a root state. Let specs pass partial slice shapes
- * (typically just `games: { games: { ... } }`) without the ~60 fields of
- * server/rooms that the test doesn't care about.
- */
 type DeepPartial<T> = T extends object ? { [K in keyof T]?: DeepPartial<T[K]> } : T;
 
-/**
- * Wraps a partial root-state literal with a safe single `as`-cast so specs
- * don't need to sprinkle `as any` on every `preloadedState` argument. The
- * runtime value is the exact same literal; the only thing this helper buys
- * is deleting the `as any` cast from call sites.
- *
- * @example
- *   renderWithProviders(<MyComponent />, {
- *     preloadedState: makeStoreState({
- *       games: { games: { 1: makeGameEntry({ ... }) } },
- *     }),
- *   });
- */
 export function makeStoreState(partial: DeepPartial<RootState>): Partial<RootState> {
   return partial as Partial<RootState>;
 }

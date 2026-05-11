@@ -56,10 +56,6 @@ export function useKnownHostsComponent({
     edit: null,
   });
 
-  // UI status lives in redux (see ServerSelectors.getTestConnectionStatus) so
-  // the LoginForm can gate its submit button + hashing-capability UI on the
-  // same signal. Tracks-the-host-pending lives in a ref — redux doesn't know
-  // the Host.id, and we need it to persist `supportsHashedPassword` on success.
   const testConnectionStatus = useAppSelector(ServerSelectors.getTestConnectionStatus) as
     | TestConnection
     | null;
@@ -83,10 +79,7 @@ export function useKnownHostsComponent({
     testConnection(selectedHost);
   }, [selectedHost]);
 
-  // Resume the test when status was wiped without the selected host changing —
-  // this happens after `serverSlice.actions.disconnected()` resets it to null.
-  // testConnectionStarted immediately bumps it to 'testing', so this won't
-  // loop through success/failed transitions.
+  // Recover from serverSlice.actions.disconnected() wiping status to null mid-flight.
   useEffect(() => {
     if (selectedHost && testConnectionStatus === null) {
       testConnection(selectedHost);

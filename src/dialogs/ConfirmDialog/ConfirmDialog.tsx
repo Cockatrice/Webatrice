@@ -29,17 +29,11 @@ export interface ConfirmDialogProps {
   message: string;
   confirmLabel?: string;
   cancelLabel?: string;
-  /** Marks the confirm button as destructive (red). */
   destructive?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
 }
 
-/**
- * Generic confirm-before-action dialog. Mirrors desktop's QMessageBox
- * question pattern used for destructive actions (concede, kick, etc.
- * see cockatrice/src/interface/widgets/tabs/tab_game.cpp:487-496).
- */
 function ConfirmDialog({
   isOpen,
   title,

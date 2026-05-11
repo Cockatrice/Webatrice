@@ -1,7 +1,3 @@
-// Real round-trip tests for HostDTO through Dexie into fake-indexeddb.
-// Exercises the full static method surface (add, get, getAll, bulkAdd,
-// delete) plus instance save().
-
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { HostDTO } from '@app/services';

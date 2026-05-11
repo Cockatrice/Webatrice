@@ -7,10 +7,6 @@ export interface GameAccess {
   isLocalPlayer: boolean;
 }
 
-/**
- * Per-action gate: returns whether the current user may issue commands
- * affecting `targetPlayerId` (or the game as a whole when omitted).
- */
 export function useGameAccess(gameId: number | undefined, targetPlayerId?: number): GameAccess {
   const game = useAppSelector((state) =>
     gameId != null ? GameSelectors.getGame(state, gameId) : undefined,

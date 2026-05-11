@@ -1,7 +1,3 @@
-// Real round-trip tests for SettingDTO through Dexie into fake-indexeddb.
-// Nothing is mocked past the IndexedDB boundary — the DTO class, the Dexie
-// schema, and the table's put/where/first pipeline all run as shipped code.
-
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { SettingDTO } from '@app/services';

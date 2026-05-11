@@ -12,9 +12,6 @@ export interface CardSlotProps {
   card: Data.ServerInfo_Card;
   draggable?: boolean;
   isArrowSource?: boolean;
-  /** The player that owns this card (matches desktop's `getOwner()`). Kept
-   *  as `ownerPlayerId`, not `sourcePlayerId`, because it reflects the card
-   *  in the game state rather than any drag origin. */
   ownerPlayerId?: number;
   zone?: string;
   onClick?: (card: Data.ServerInfo_Card) => void;

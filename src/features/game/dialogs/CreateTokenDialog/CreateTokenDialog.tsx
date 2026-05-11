@@ -55,13 +55,9 @@ export interface CreateTokenDialogProps {
   isOpen: boolean;
   onSubmit: (args: CreateTokenSubmit) => void;
   onCancel: () => void;
-  /** Optional deck-scoped predefined token names; enables the "Deck" radio in the chooser. */
   predefinedTokenNames?: string[];
 }
 
-// Matches desktop DlgCreateToken color dropdown values. Desktop orders
-// White → Blue → Black → Red → Green → Multicolor → Colorless and defaults
-// to White; we mirror both.
 const COLOR_OPTIONS: ReadonlyArray<{ value: string; label: string }> = [
   { value: 'w', label: 'White' },
   { value: 'u', label: 'Blue' },

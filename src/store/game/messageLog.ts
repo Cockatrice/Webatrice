@@ -1,15 +1,7 @@
 import type { Enriched } from '@app/types';
 import { App, Data } from '@app/types';
 
-// Mirrors desktop cockatrice/src/game/log/message_log_widget.cpp — each
-// format* function here corresponds to a log* slot on MessageLogWidget.
-// Functions take a GameEntry (for player-name lookup) plus event data and
-// return a formatted English string, or null when desktop does not log that
-// case (e.g. same-zone table reorders).
-
-// -1 matches the proto2 default for GameEvent.player_id — the on-wire "no
-// actor" sentinel. Must NOT be 0, which is a valid player id (the server
-// assigns ids starting at 0, see server_game.cpp nextPlayerId).
+// @critical proto2 wire default for GameEvent.player_id — must be -1, not 0. 0 is a valid player id.
 export const EVENT_PLAYER_ID_SYSTEM = -1;
 
 function nameOf(game: Enriched.GameEntry, playerId: number): string {
@@ -57,7 +49,6 @@ function cardDescriptor(cardName: string | undefined): string {
   return cardName;
 }
 
-/** Desktop skips the log for same-zone moves that are pure reorders (table/hand/exile). */
 function isSameZoneReorder(startZone: string, targetZone: string, sameOwner: boolean): boolean {
   if (!sameOwner && (startZone === App.ZoneName.TABLE && targetZone === App.ZoneName.TABLE)) {
     return false;
@@ -70,7 +61,6 @@ function isSameZoneReorder(startZone: string, targetZone: string, sameOwner: boo
 }
 
 export interface CardMovedContext {
-  /** Resolved card name from the source zone snapshot (empty for hidden moves). */
   resolvedCardName: string;
 }
 
@@ -88,22 +78,18 @@ export function formatCardMoved(
   const actor = nameOf(game, actingPlayerId);
   const card = cardDescriptor(data.cardName || ctx.resolvedCardName);
 
-  // Cross-owner control change
   if (!sameOwner && data.startPlayerId === actingPlayerId) {
     return `${actor} gives ${nameOf(game, data.targetPlayerId)} control over ${card}.`;
   }
 
-  // Play from hand to table
   if (data.startZone === App.ZoneName.HAND && data.targetZone === App.ZoneName.TABLE) {
     return `${actor} plays ${card}.`;
   }
 
-  // Draw-like: anywhere to hand
   if (data.targetZone === App.ZoneName.HAND && data.startZone !== App.ZoneName.HAND) {
     return `${actor} puts ${card} into ${sameOwner ? 'their hand' : `${nameOf(game, data.targetPlayerId)}'s hand`}.`;
   }
 
-  // Generic: to target zone
   const target = sameOwner
     ? zoneLabel(data.targetZone)
     : `${nameOf(game, data.targetPlayerId)}'s ${zoneLabel(data.targetZone).replace('their ', '')}`;
@@ -139,7 +125,6 @@ export function formatCardAttached(
 ): string {
   const actor = nameOf(game, playerId);
   const source = cardDescriptor(sourceCardName);
-  // Unattach: proto2 unset target fields surface as -1 / '' in the webclient reducer path.
   if (data.targetCardId < 0 || !data.targetZone) {
     return `${actor} unattaches ${source}.`;
   }
@@ -269,8 +254,6 @@ export function formatZonePropertiesChanged(
 ): string | null {
   const actor = nameOf(game, playerId);
   const zone = zoneLabel(data.zoneName);
-  // Only one of the toggles changes per event in practice; report whichever is set.
-  // The caller decides whether to emit anything by comparing against the previous zone state.
   if (data.alwaysRevealTopCard) {
     return `${actor} is now revealing the top card of ${zone}.`;
   }
@@ -328,7 +311,6 @@ export function formatArrowCreated(
   const sourceCard = cardDescriptor(
     game.players[arrow.startPlayerId]?.zones[arrow.startZone]?.byId[arrow.startCardId]?.name,
   );
-  // Player target: targetCardId < 0 or targetZone unset.
   const playerTarget = arrow.targetCardId < 0 || !arrow.targetZone;
   if (playerTarget) {
     return `${actor} points from ${sourceCard} to ${nameOf(game, arrow.targetPlayerId)}.`;

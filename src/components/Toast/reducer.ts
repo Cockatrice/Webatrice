@@ -10,8 +10,6 @@ export const ACTIONS = {
 export interface ToastEntry {
   isOpen: boolean;
   children: ReactNode;
-  // Refcount of active registrants for this key. Incremented on ADD, decremented on REMOVE.
-  // Prevents two mounted callers sharing a key from stomping each other's registration.
   refs: number;
 }
 

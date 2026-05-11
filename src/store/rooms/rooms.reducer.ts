@@ -49,11 +49,8 @@ export const roomsSlice = createSlice({
     updateRooms: (state, action: PayloadAction<{ rooms: Data.ServerInfo_Room[] }>) => {
       const { rooms } = action.payload;
 
-      // @critical Partial merge — preserve normalized games/users maps AND
-      // any fields the incoming ServerInfo_Room didn't set. The desktop server
-      // broadcasts Event_ListRooms with only room_id/player_count/game_count
-      // set on user join/leave (server_room.cpp addClient/removeClient); a
-      // wholesale replacement would wipe name/description/permissions.
+      // @critical Partial merge — UPDATE_ROOMS sets only changed fields.
+      // See .github/instructions/store.instructions.md#reducer-author-hazards.
       rooms.forEach((rawRoom, order) => {
         const { roomId } = rawRoom;
         const existing = state.rooms[roomId];
@@ -232,9 +229,6 @@ export const roomsSlice = createSlice({
     },
   },
   extraReducers: (builder) => {
-    // When a game is removed from the games slice (self-leave, host closed,
-    // or local kick), strip the gameId from joinedGameIds and clear it from
-    // selectedGameIds. The action payloads don't carry a roomId, so iterate.
     const onGameRemoved = (
       state: RoomsState,
       action: { payload: { gameId: number } },

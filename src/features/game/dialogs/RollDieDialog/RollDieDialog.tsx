@@ -25,7 +25,6 @@ const StyledDialog = styled(Dialog)(({ theme }) => ({
   },
 }));
 
-/** Shared defaults; re-exported for Game.tsx's persisted "last die" state. */
 export const DEFAULT_DIE_SIDES = 6;
 export const DEFAULT_DIE_COUNT = 1;
 

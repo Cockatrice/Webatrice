@@ -11,14 +11,10 @@ export interface PhaseBarProps {
   gameId: number | undefined;
 }
 
-// Abbreviated phase badges plus full tooltip titles. Desktop uses full
-// words in the horizontal toolbar; we shorten for the vertical strip but
-// keep the full text available on hover per the tooltip deferrable.
 const PHASE_LABELS: ReadonlyArray<{
   phase: App.Phase;
   label: string;
   title: string;
-  /** Desktop phase buttons wire "Untap All" to phase 0 double-click and "Draw a Card" to phase 2 double-click. */
   builtInOnDoubleClick?: 'untapAll' | 'drawCard';
 }> = [
   { phase: App.Phase.Untap, label: 'UNTAP', title: 'Untap step (double-click: untap all)', builtInOnDoubleClick: 'untapAll' },
@@ -61,7 +57,6 @@ function PhaseBar({ gameId }: PhaseBarProps) {
         const isActive = phase === activePhase;
         return (
           <Tooltip key={phase} title={title} placement="right" enterDelay={500}>
-            {/* span wrapper: MUI Tooltip can't attach listeners to a disabled button. */}
             <span className="phase-bar__btn-wrap">
               <button
                 type="button"

@@ -25,9 +25,6 @@
   grid-template-rows: minmax(0, 1fr) minmax(0, 1fr) 176px;
 }
 
-/* Rotate 90°: view-only transform on the whole board. Mirrors desktop's
-   Player::actRotateLocal which applies a QGraphicsView transform with no
-   server call. */
 .game__board-inner--rotated {
   transform: rotate(90deg);
   transform-origin: center center;
@@ -43,9 +40,6 @@
   font-style: italic;
 }
 
-/* A11y: keyboard-focus ring on the board's interactive surfaces. Scoped
-   to specific classes (not `.game *`) so MUI's own focus styles inside
-   portaled menus/dialogs aren't overwritten. */
 .card-slot:focus-visible,
 .zone-stack:focus-visible,
 .battlefield__row:focus-visible,

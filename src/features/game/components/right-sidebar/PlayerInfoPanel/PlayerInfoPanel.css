@@ -41,8 +41,6 @@
   text-overflow: ellipsis;
 }
 
-/* Life lives in the header slot where ping used to be. Rendered through
-   the shared counter-circle markup so its UL wrapper is cosmetic-only. */
 .player-info-panel__life-slot {
   list-style: none;
   margin: 0;
@@ -68,8 +66,6 @@
   color: #dfffe3;
 }
 
-/* Two columns: counters (narrow, left-aligned) and zones (Deck/Graveyard/
-   Exile rendered as 3 vertically-stacked thumbnails). */
 .player-info-panel__body {
   flex: 1 1 auto;
   min-height: 0;
@@ -78,9 +74,6 @@
   gap: 6px;
 }
 
-/* Counter column runs full panel height; rows of equal share keep the
-   first counter flush to the top (no drift between opponent and local
-   panels) and let circles scale to fit — or shrink when there are many. */
 .player-info-panel__counters {
   list-style: none;
   padding: 2px 0;
@@ -111,8 +104,6 @@
   user-select: none;
 }
 
-/* The Life pill sits in the fixed-height header slot, outside the grid,
-   so it keeps a constant size regardless of counter count. */
 .player-info-panel__counter--life {
   width: 32px;
   height: 32px;
@@ -144,11 +135,6 @@
   font-size: 13px;
 }
 
-/* Zones column: 4 rows (Deck, Hand, Graveyard, Exile), each row gets an
-   equal share of the remaining body height. minmax(0, 1fr) + min-height on
-   the column lets each ZoneStack thumb shrink when the rail is short
-   instead of overflowing the panel. All four zones render as landscape
-   thumbs, matching desktop's info panel. */
 .player-info-panel__zones {
   min-height: 0;
   min-width: 0;

@@ -1,11 +1,4 @@
-/**
- * Types here mirror the Cockatrice XML4 schema (`carddatabase_v4/cards.xsd`).
- * Webatrice consumes Oracle's XML output directly, so every leaf preserves the
- * `<element attr="...">value</element>` shape produced by the XML parser:
- * `{ value: <text>, ...attributes }`. The wrapper isn't a DB artifact — it's
- * the bridge between XML and IndexedDB and avoids re-shaping ~30k records.
- */
-
+// @critical Mirrors carddatabase_v4/cards.xsd; every leaf is `{ value, ...attrs }`. Dexie indexes depend on this shape.
 export interface XmlNode<V = string> {
   value: V;
   [attribute: string]: unknown;

@@ -15,7 +15,6 @@ import './Player.css';
 
 const AVATAR_DATA_URI_PREFIX = 'data:image/png;base64,';
 
-/** Builds a data URI from a raw avatar payload, or returns null when no avatar is set. */
 function avatarSrc(bmp: Uint8Array | undefined): string | null {
   if (!bmp || bmp.byteLength === 0) {
     return null;
@@ -27,7 +26,6 @@ function avatarSrc(bmp: Uint8Array | undefined): string | null {
   return AVATAR_DATA_URI_PREFIX + btoa(binary);
 }
 
-/** Matches desktop UserInfoBox level hierarchy: admin > moderator > registered > unregistered, plus Judge marker. */
 function userLevelLabel(userLevel: number, t: (k: string) => string): string {
   const Flag = Data.ServerInfo_User_UserLevelFlag;
   const parts: string[] = [];
@@ -46,7 +44,6 @@ function userLevelLabel(userLevel: number, t: (k: string) => string): string {
   return parts.join(' | ');
 }
 
-/** Formats account age like desktop's getAgeString: "Unknown" | "N days" | "Y years, D days". */
 function formatAccountAge(
   accountageSecs: bigint | undefined,
   userLevel: number,

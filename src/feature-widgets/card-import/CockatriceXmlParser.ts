@@ -1,15 +1,3 @@
-/**
- * Reads Cockatrice XML4 (`carddatabase_v4/cards.xsd`) into the DTO shapes
- * defined in `src/types/cards.ts`. The parser is purely structural — every
- * MTG-specific transform (split-card merging, CIPT detection, format-rules,
- * relation derivation, etc.) is expected to already be present in the input
- * because it's Oracle's output, not raw MTGJSON.
- *
- * Also tolerates the legacy `<cockatrice_tokens>` root used by the public
- * Magic-Token tokens.xml feed, which carries the same `<card>` shape but no
- * surrounding `<cards>` element.
- */
-
 import { App } from '@app/types';
 
 export interface ParsedCockatriceXml {
@@ -89,12 +77,7 @@ class CockatriceXmlParser {
     return result;
   }
 
-  /**
-   * Generic recursive XML→object converter. Each leaf becomes
-   * `{ value: <text>, ...attributes }`. Duplicate sibling tags collapse into
-   * an array. tokens.xml already depends on its output shape (e.g.
-   * `name.value` indexing), so the shape is load-bearing — preserve it.
-   */
+  // @critical Output shape (leaf = `{ value, ...attrs }`, siblings collapse to arrays) is load-bearing — Dexie indexes `name.value`.
   parseElement(dom: Element): Record<string, unknown> {
     return Array.from(dom.children).reduce<Record<string, unknown>>((attributes, child) => {
       const value = child.children.length ? this.parseElement(child) : child.innerHTML;

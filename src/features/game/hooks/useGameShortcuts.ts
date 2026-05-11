@@ -13,15 +13,6 @@ interface UseGameShortcutsArgs {
   onRequestConcede: () => void;
 }
 
-/**
- * Wires the game-scoped keybindings (catalog: src/features/shortcuts/defaults.ts) to
- * the same webClient calls used by the click-driven UI. Gating comes from
- * useGameAffordances so a shortcut can't dispatch when the click handler couldn't
- * (e.g. spectator presses untap).
- *
- * Concede goes through the existing confirm dialog (via `onRequestConcede`) instead
- * of conceding directly — losing a game on a single keystroke would be a rough UX.
- */
 export function useGameShortcuts({ gameId, onRequestConcede }: UseGameShortcutsArgs): void {
   const webClient = useWebClient();
   const { game } = useCurrentGame(gameId);

@@ -19,17 +19,14 @@ export const Selectors = {
   getDescription: ({ server }: State) => server.status.description,
   getState: ({ server }: State) => server.status.state,
   getConnectionAttemptMade: ({ server }: State) => server.status.connectionAttemptMade,
-  /** Lifecycle status of the latest test connection. `null` until the first test fires. */
   getTestConnectionStatus: ({ server }: State) => server.testConnectionStatus,
   getUser: ({ server }: State) => server.user,
 
-  /** True when the server status has reached LOGGED_IN. */
   getIsConnected: createSelector(
     [({ server }: State) => server.status.state],
     (state): boolean => state === WebsocketTypes.StatusEnum.LOGGED_IN
   ),
 
-  /** True when the currently logged-in user has the IsModerator level flag. */
   getIsUserModerator: createSelector(
     [({ server }: State) => server.user],
     (user): boolean => {
@@ -41,7 +38,6 @@ export const Selectors = {
     }
   ),
 
-  /** True when the currently logged-in user has the IsJudge level flag. */
   getIsUserJudge: createSelector(
     [({ server }: State) => server.user],
     (user): boolean => {
@@ -53,7 +49,6 @@ export const Selectors = {
     }
   ),
 
-  /** True when the currently logged-in user has the IsRegistered level flag. */
   getIsUserRegistered: createSelector(
     [({ server }: State) => server.user],
     (user): boolean => {
@@ -64,7 +59,6 @@ export const Selectors = {
       return (user.userLevel & mask) === mask;
     }
   ),
-  /** Fetched user profile info, keyed by username. Populated by Command_GetUserInfo responses. */
   getUserInfoByName: ({ server }: State, userName: string): Data.ServerInfo_User | undefined =>
     server.userInfo[userName],
   getLogs: ({ server }: State) => server.logs,
@@ -74,18 +68,11 @@ export const Selectors = {
   getRegistrationError: ({ server }: State) => server.registrationError,
   getSortUsersBy: ({ server }: State) => server.sortUsersBy,
 
-  /** Raw keyed maps — use the sorted-view selectors below for display. */
   getUsers: ({ server }: State) => server.users,
   getBuddyList: ({ server }: State) => server.buddyList,
   getIgnoreList: ({ server }: State) => server.ignoreList,
   getReplays: ({ server }: State) => server.replays,
 
-  /**
-   * Sorted array views of the keyed maps. Memoized via `createSelector` so
-   * the array reference is stable until the underlying map or sort config
-   * actually changes — consumers using these in `useAppSelector` won't
-   * re-render unnecessarily.
-   */
   getSortedUsers: createSelector(
     [(state: State) => state.server.users, (state: State) => state.server.sortUsersBy],
     (users, sortBy): Data.ServerInfo_User[] => {
@@ -116,7 +103,6 @@ export const Selectors = {
     }
   ),
 
-  /** Replay list as an array, ordered by gameId ascending for stable display. */
   getReplaysList: createSelector(
     [(state: State) => state.server.replays],
     (replays): Data.ServerInfo_ReplayMatch[] => {

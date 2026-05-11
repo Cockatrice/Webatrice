@@ -27,14 +27,6 @@ const StyledDialog = styled(Dialog)(({ theme }) => ({
 export interface DeckSelectDialogProps {
   isOpen: boolean;
   gameId: number | undefined;
-  /**
-   * Unlike ZoneViewDialog (which takes a required `handleClose`), the
-   * deck-select dialog is auto-gated by the game's pre-ready lobby state:
-   * it opens when `!game.started && !spectator && !judge && !readyStart`
-   * and closes when any of those flip. Tests pass a no-op; production
-   * callers typically omit this prop, letting MUI render a non-dismissable
-   * modal (no backdrop-click or ESC close).
-   */
   handleClose?: () => void;
 }
 

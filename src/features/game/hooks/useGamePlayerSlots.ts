@@ -8,13 +8,11 @@ export interface PlayerSlotEntry {
 }
 
 export interface GamePlayerSlots {
-  /** All non-spectator players in the current game, sorted by playerId. */
   players: PlayerSlotEntry[];
   slotAPlayerId: number | undefined;
   slotBPlayerId: number | undefined;
   setSlotAPlayerId: (id: number) => void;
   setSlotBPlayerId: (id: number) => void;
-  /** Convenience list for the reveal-cards dialog (same as `players`). */
   revealPlayers: PlayerSlotEntry[];
 }
 
@@ -48,8 +46,6 @@ export function useGamePlayerSlots(
     const slotAValid = slotAPlayerId != null && players.some((p) => p.playerId === slotAPlayerId);
     let resolvedA = slotAPlayerId;
     if (!slotAValid) {
-      // Active player: default slot A to themselves (if seated, i.e. not a spectator).
-      // Spectator: default to the first seated player.
       if (!isSpectator && localPlayerId != null && players.some((p) => p.playerId === localPlayerId)) {
         resolvedA = localPlayerId;
       } else {
@@ -60,8 +56,6 @@ export function useGamePlayerSlots(
 
     const slotBValid = slotBPlayerId != null && players.some((p) => p.playerId === slotBPlayerId);
     if (!slotBValid) {
-      // Slot B defaults to the first seated player who is NOT in slot A.
-      // Falls back to slot A's id if there is only one seated player.
       const other = players.find((p) => p.playerId !== resolvedA) ?? players[0];
       setSlotBPlayerId(other.playerId);
     }

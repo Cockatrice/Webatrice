@@ -1,14 +1,3 @@
-/**
- * Reads user-supplied Oracle output (cards.xml / tokens.xml / spoiler.xml)
- * from the OS via `File` objects (drag-drop or `<input type="file">`), routes
- * them through `cockatriceXmlParser`, and persists the result.
- *
- * No state is persisted across imports: by deliberate design the user
- * re-picks files each time. This keeps the UI identical across browsers (no
- * silent re-reads via FileSystemHandle on Chromium) and matches an infrequent
- * (typically per-MTG-set-release, monthly) workflow.
- */
-
 import { App } from '@app/types';
 
 import { CardDTO, SetDTO, TokenDTO, FormatDTO, InfoDTO } from '@app/services';
@@ -57,8 +46,6 @@ class LocalOracleImportService {
 
       result.acceptedFiles.push(file.name);
 
-      // Last-info-wins: typically only cards.xml carries <info>; if multiple
-      // files do, the latest read provides the provenance row.
       if (parsed.info) {
         result.info = parsed.info;
       }

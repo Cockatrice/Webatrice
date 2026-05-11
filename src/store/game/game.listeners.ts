@@ -14,9 +14,6 @@ listenerMiddleware.startListening({
       targetPlayerId, targetZone, x, y, newCardId, faceDown, newCardProviderId,
     } = data;
 
-    // Server omits target_zone when it equals start_zone (proto3 strips the
-    // default empty string). Desktop's GameEventHandler applies the same
-    // fallback; without it, intra-zone moves silently bail at the zone lookup.
     const effectiveTargetZone = targetZone || startZone;
 
     const state = api.getState() as { games: GamesState };
@@ -34,8 +31,6 @@ listenerMiddleware.startListening({
       resolvedCardId = sourceZone.order[position];
     }
 
-    // Malformed event: no resolvable source AND no replacement id — bail
-    // out to avoid creating phantom cards with id -1.
     if (resolvedCardId < 0 && newCardId < 0) {
       return;
     }
@@ -45,11 +40,6 @@ listenerMiddleware.startListening({
     const effectiveNewId =
       newCardId >= 0 ? newCardId : (removedCard?.id ?? resolvedCardId);
 
-    // Counters represent battlefield-only state in MTG; leaving the table
-    // discards them. Mirrors Cockatrice's CardItem::resetState() which
-    // clears `counters` on any zone transition out of play. Done client-side
-    // because Servatrice does not always emit a zeroing cardCounterChanged
-    // event on zone exit; this guard makes the divergence safe either way.
     const isLeavingBattlefield =
       startZone === App.ZoneName.TABLE && effectiveTargetZone !== App.ZoneName.TABLE;
 
@@ -88,8 +78,6 @@ listenerMiddleware.startListening({
       }));
     }
 
-    // Pass the defaulted targetZone through so isSameZoneReorder in the
-    // formatter correctly suppresses the log line for intra-zone reorders.
     const message = formatCardMoved(
       game, playerId,
       { ...data, targetZone: effectiveTargetZone },

@@ -40,11 +40,6 @@ function formatElapsed(totalSeconds: number): string {
   return `${hh}:${mm}:${ss}`;
 }
 
-/**
- * Read-only summary of the current game: id, description, elapsed time,
- * and a role-tagged player list. Mirrors desktop's Game Info popup on the
- * Player menu.
- */
 function GameInfoDialog({ isOpen, gameId, onClose }: GameInfoDialogProps) {
   const game = useAppSelector((state) =>
     gameId != null ? GameSelectors.getGame(state, gameId) : undefined,

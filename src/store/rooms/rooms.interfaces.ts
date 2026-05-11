@@ -52,12 +52,6 @@ export interface RoomsStateGameFilters {
   [roomId: number]: GameFilters;
 }
 
-/**
- * Mirrors desktop GamesProxyModel filter parameters
- * (cockatrice/src/interface/widgets/server/games_model.cpp).
- * `gameTypeFilter` is the set of allowed game-type ids; empty = no restriction.
- * `creatorNameFilters` is a list of comma-separated substrings; empty = no restriction.
- */
 export interface GameFilters {
   hideBuddiesOnlyGames: boolean;
   hideIgnoredUserGames: boolean;

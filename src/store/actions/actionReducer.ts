@@ -1,8 +1,3 @@
-/**
- * @author Luke Brandon Farrell
- * @description Application reducer.
- */
-
 import { UnknownAction } from '@reduxjs/toolkit'
 
 interface InitialState {
@@ -13,9 +8,6 @@ interface InitialState {
   count: number
 }
 
-/**
- * Initial data.
- */
 const initialState: InitialState = {
   type: null,
   payload: null,
@@ -24,13 +16,6 @@ const initialState: InitialState = {
   count: 0,
 }
 
-/**
- * Stores the most recent action so `useReduxEffect` can react to dispatches.
- *
- * Payloads are deep-cloned to prevent shared object references between this
- * slice and the slice that owns the action. Without the clone, Immer mutations
- * in the target slice are detected as mutations of the stale payload stored here.
- */
 export const actionReducer = (
   state = initialState,
   action: UnknownAction,

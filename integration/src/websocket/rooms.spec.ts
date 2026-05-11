@@ -1,6 +1,3 @@
-// Room scenarios — Event_ListRooms handling, auto-join, Response_JoinRoom,
-// room chat (inbound + outbound), game list updates, and leaveRoom.
-
 import { create } from '@bufbuild/protobuf';
 import { describe, expect, it } from 'vitest';
 
@@ -37,7 +34,6 @@ function makeRoom(overrides: Partial<{
   });
 }
 
-/** Deliver Event_ListRooms then join a single auto-join room, returning the roomId. */
 function setupJoinedRoom(roomId = 1): void {
   deliverMessage(buildSessionEventMessage(
     Data.Event_ListRooms_ext,

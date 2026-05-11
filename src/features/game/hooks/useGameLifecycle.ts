@@ -7,14 +7,6 @@ export interface GameLifecycleHandlers {
   onGameLeft: () => void;
 }
 
-/**
- * Watches for `kicked` / `gameClosed` / `gameLeft` events targeting `gameId`
- * and invokes the matching handler. Consumers own toast + navigation because
- * hooks cannot import from `components/`. Mirrors desktop Cockatrice's
- * TabGame tear-down: game_event_handler.cpp eventKicked / eventGameClosed
- * emit signals that close the tab; self-leave is the local equivalent fired
- * by GameResponseImpl when Event_Leave's playerId matches the local player.
- */
 export function useGameLifecycle(
   gameId: number | undefined,
   handlers: GameLifecycleHandlers,

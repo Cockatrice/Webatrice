@@ -30,9 +30,7 @@ const StyledDialog = styled(Dialog)(({ theme }) => ({
 }));
 
 export interface RevealCardsSubmit {
-  /** -1 means "all players" (desktop default). */
   targetPlayerId: number;
-  /** -1 means "all cards in the zone" (desktop uses -1 for full-hand/full-grave reveals). */
   topCards: number;
 }
 
@@ -40,7 +38,6 @@ export interface RevealCardsDialogProps {
   isOpen: boolean;
   title: string;
   zoneLabel: string;
-  /** If true, show the "How many?" input; pair with `defaultCount` for the initial value. */
   showCountInput?: boolean;
   defaultCount?: number;
   players: ReadonlyArray<{ playerId: number; name: string }>;

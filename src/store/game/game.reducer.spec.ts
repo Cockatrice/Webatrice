@@ -17,16 +17,10 @@ import {
   makeZoneEntry,
 } from './__mocks__/fixtures';
 
-/** Materialize a zone's ordered card array via its normalized {order, byId} shape. */
 function cardsIn(state: GamesState, gameId: number, playerId: number, zoneName: string): Data.ServerInfo_Card[] {
   const zone = state.games[gameId]?.players[playerId]?.zones[zoneName];
   return zone ? zone.order.map(id => zone.byId[id]) : [];
 }
-
-// cardMoved is now interpreted by a listener middleware that decomposes it
-// into primitive dispatches. To exercise the full pipeline in tests, route
-// the action through a configured store rather than calling the reducer
-// directly.
 function dispatchCardMoved(
   state: GamesState,
   action: PayloadAction<{ gameId: number; playerId: number; data: Data.Event_MoveCard }>

@@ -1,8 +1,3 @@
-// Exercises the full Game container under the real Redux store + real
-// reducers + real React chain. We dispatch game lifecycle events via
-// GameDispatch (the same path real event handlers take) and assert the
-// Game container's UI tracks state transitions.
-
 import { act, fireEvent, waitFor, screen, within } from '@testing-library/react';
 import { create } from '@bufbuild/protobuf';
 import { useLocation } from 'react-router-dom';
@@ -18,13 +13,6 @@ import { renderAppScreen } from './helpers';
 import { findLastGameCommand } from '../helpers/command-capture';
 import { connectRaw } from '../helpers/setup';
 
-// Surfaces the current MemoryRouter pathname so navigate() side-effects
-// (e.g. useGameLifecycle → /server on kick) can be asserted. Depends on
-// `renderAppScreen` → `renderWithProviders` wrapping its tree in a
-// `MemoryRouter`; if that harness ever moves the probe outside a Router,
-// `useLocation()` will throw "useLocation() may be used only in the
-// context of a <Router> component." — fix by adding an inline
-// `<MemoryRouter>` around the probe OR by teaching the harness about it.
 function LocationProbe() {
   const location = useLocation();
   return <span data-testid="app-location">{location.pathname}</span>;

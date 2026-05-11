@@ -57,8 +57,6 @@ export function ShortcutProvider({ children }: ShortcutProviderProps) {
 
   const registry = useRef<Map<string, App.ShortcutRegistration[]>>(new Map());
 
-  // Mirror state into refs so the keydown handler always sees the latest values without
-  // having to re-attach the listener on every render.
   const recordingRef = useRef(recordingActionId);
   recordingRef.current = recordingActionId;
   const overridesRef = useRef(overrides);
@@ -95,7 +93,6 @@ export function ShortcutProvider({ children }: ShortcutProviderProps) {
       overridesRef.current[actionId] ?? getDefaultFor(actionId)?.sequences ?? [];
 
     const tryFire = (regs: App.ShortcutRegistration[], event: KeyboardEvent): boolean => {
-      // Iterate from most-recently-registered so the topmost component wins.
       for (let i = regs.length - 1; i >= 0; i--) {
         const reg = regs[i];
         if (isTextInputTarget(event.target) && !firesInTextInputsFor(reg.actionId)) {
@@ -115,7 +112,6 @@ export function ShortcutProvider({ children }: ShortcutProviderProps) {
     };
 
     const handler = (event: KeyboardEvent) => {
-      // Recording mode swallows every non-modifier keystroke and routes it to the slice.
       if (recordingRef.current) {
         if (event.code === 'Escape') {
           ShortcutsDispatch.cancelRecording();
@@ -129,7 +125,6 @@ export function ShortcutProvider({ children }: ShortcutProviderProps) {
 
       const activeRoute = computeRouteScope(pathnameRef.current);
 
-      // Resolution: current route scope (if any) → GLOBAL.
       const candidates: App.ShortcutRegistration[] = [];
       for (const list of registry.current.values()) {
         for (const reg of list) {

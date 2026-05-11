@@ -1,6 +1,3 @@
-// Server-level session events — server message banner, shutdown schedule,
-// user notifications, and connection-closed reason code mapping.
-
 import { create } from '@bufbuild/protobuf';
 import { describe, expect, it } from 'vitest';
 

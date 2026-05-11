@@ -36,11 +36,6 @@ export const Selectors = {
     (rooms, joined) => Object.values(rooms).filter(room => joined[room.info.roomId])
   ),
 
-  /**
-   * Returns games in the given room that the local client has joined.
-   * Reads from the room's normalized `games` map — fixes the pre-existing
-   * bug where this selector read from a never-populated top-level `games` field.
-   */
   getJoinedGames: createSelector(
     [
       (state: State, roomId: number) => state.rooms.rooms[roomId]?.games,
@@ -56,17 +51,10 @@ export const Selectors = {
 
   getRoomMessages: (state: State, roomId: number) => state.rooms.messages[roomId],
 
-  /** Raw keyed games map for a room. For a sorted array, use `getSortedRoomGames`. */
   getRoomGames: (state: State, roomId: number) => state.rooms.rooms[roomId]?.games ?? EMPTY_GAMES_MAP,
 
-  /** Raw keyed users map for a room. For a sorted array, use `getSortedRoomUsers`. */
   getRoomUsers: (state: State, roomId: number) => state.rooms.rooms[roomId]?.users ?? EMPTY_USERS_MAP,
 
-  /**
-   * Sorted array view of a room's games for display. Memoized by the input
-   * references — recomputes only when the games map, gametypeMap, or sort
-   * config actually change.
-   */
   getSortedRoomGames: createSelector(
     [
       (state: State, roomId: number) => state.rooms.rooms[roomId]?.games,
@@ -80,7 +68,6 @@ export const Selectors = {
     }
   ),
 
-  /** Sorted array view of a room's users for display. */
   getSortedRoomUsers: createSelector(
     [
       (state: State, roomId: number) => state.rooms.rooms[roomId]?.users,
@@ -97,7 +84,6 @@ export const Selectors = {
   getSelectedGameId: (state: State, roomId: number): number | undefined =>
     state.rooms.selectedGameIds?.[roomId],
 
-  /** Returns the room's filter state, or DEFAULT_GAME_FILTERS if unset. */
   getGameFilters: (state: State, roomId: number): GameFilters =>
     state.rooms.gameFilters?.[roomId] ?? DEFAULT_GAME_FILTERS,
 
@@ -112,10 +98,6 @@ export const Selectors = {
   getJoinGamePending: ({ rooms }: State) => rooms.joinGamePending,
   getJoinGameError: ({ rooms }: State) => rooms.joinGameError,
 
-  /**
-   * Sorted + filter-applied view of a room's games for display. Filters
-   * mirror desktop GamesProxyModel; buddy/ignore checks read from server.
-   */
   getFilteredRoomGames: createSelector(
     [
       (state: State, roomId: number) => state.rooms.rooms[roomId]?.games,
@@ -146,7 +128,6 @@ export const Selectors = {
     }
   ),
 
-  /** Visible (post-filter) and total counts for the games-shown title. */
   getRoomGameCounts: createSelector(
     [
       (state: State, roomId: number) => state.rooms.rooms[roomId]?.games,

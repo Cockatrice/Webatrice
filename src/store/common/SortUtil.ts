@@ -57,14 +57,12 @@ export default class SortUtil {
     }
   }
 
-  /** Non-mutating variant: returns a new sorted array. Intended for use inside selectors. */
   static sortedByField<T extends object>(arr: readonly T[], sortBy: App.SortBy): T[] {
     const copy = [...arr];
     SortUtil.sortByField(copy, sortBy);
     return copy;
   }
 
-  /** Non-mutating variant: returns a new sorted user array. Intended for use inside selectors. */
   static sortedUsersByField(users: readonly Data.ServerInfo_User[], sortBy: App.SortBy): Data.ServerInfo_User[] {
     const copy = [...users];
     SortUtil.sortUsersByField(copy, sortBy);

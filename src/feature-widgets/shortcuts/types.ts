@@ -1,6 +1,3 @@
-// Feature-internal narrow type: the closed catalog of action ids the shortcut feature
-// knows about. Re-exported via the feature barrel for consumers (containers, the slice
-// imports the looser `string` shape from @app/types instead).
 export type ActionId =
   | 'app.openSettings'
   | 'app.toggleFullscreen'

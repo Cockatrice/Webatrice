@@ -21,13 +21,7 @@ import './FilterGamesDialog.css';
 
 export interface FilterGamesDialogProps {
   isOpen: boolean;
-  /**
-   * MUST be a stable reference across renders while the dialog is open.
-   * The open-reset effect depends on `initialFilters` identity; an unstable
-   * reference (e.g. `{ ...defaults }` freshly constructed every parent render)
-   * will reset the draft form on every re-render. Pass a memoized value or a
-   * module-level constant.
-   */
+  // MUST be a stable reference: an unstable reference resets the draft form on every parent render.
   initialFilters: GameFilters;
   gametypeMap: Enriched.GametypeMap;
   onCancel: () => void;

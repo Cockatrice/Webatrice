@@ -6,10 +6,6 @@ import { GameSelectors, useAppSelector } from '@app/store';
 import { useCurrentGame } from '../../../hooks/useCurrentGame';
 import { useGameAffordances } from '../../../hooks/useGameAffordances';
 
-/**
- * MTG turn phase count (0..10). Mirrors desktop's wrap-around behavior in
- * `GameView::actNextPhase` — see `types/game.ts` for the Phase enum.
- */
 const PHASE_COUNT = 11;
 
 export interface TurnControlsOpponent {
