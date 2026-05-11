@@ -5,15 +5,12 @@ import rootReducer from './rootReducer';
 import { listenerMiddleware } from './listenerMiddleware';
 import './server/server.listeners';
 import './game/game.listeners';
+import './rooms/rooms.listeners';
 
-// Protobuf-es v2 messages are plain objects with $typeName/$unknown siblings;
-// bytes fields are Uint8Array and int64/uint64 are BigInt. All four pass through.
 export function isSerializable(value: unknown): boolean {
   return isPlain(value) || isMessage(value) || value instanceof Uint8Array || typeof value === 'bigint';
 }
 
-// Shared config between production store and renderWithProviders test harness.
-// Exporting ensures the test store tolerates the same proto actions as prod.
 export const storeMiddlewareOptions = {
   immutableCheck: { warnAfter: 128 },
   serializableCheck: { isSerializable, warnAfter: 128 },

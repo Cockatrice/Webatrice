@@ -1,12 +1,13 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { App, Data, Enriched } from '@app/types';
 
-import { mergeSetFields, normalizeGameObject, normalizeGametypeMap, normalizeRoomInfo, normalizeUserMessage } from '../common';
+import { normalizeRoomInfo, normalizeUserMessage } from '../common';
 import { Actions as GameActions } from '../game/game.actions';
 import { Actions as ServerActions } from '../server/server.actions';
 
 import { GameFilters, RoomsState } from './rooms.interfaces';
 import { DEFAULT_GAME_FILTERS } from './gameFilters';
+import { primitiveReducers } from './rooms.reducer.primitives';
 
 function removeGameFromRooms(state: RoomsState, gameId: number): void {
   for (const roomId of Object.keys(state.joinedGameIds)) {
@@ -46,32 +47,9 @@ export const roomsSlice = createSlice({
   reducers: {
     clearStore: () => initialState,
 
-    updateRooms: (state, action: PayloadAction<{ rooms: Data.ServerInfo_Room[] }>) => {
-      const { rooms } = action.payload;
+    updateRooms: (_state, _action: PayloadAction<{ rooms: Data.ServerInfo_Room[] }>) => {},
 
-      // @critical Partial merge — UPDATE_ROOMS sets only changed fields.
-      // See .github/instructions/store.instructions.md#reducer-author-hazards.
-      rooms.forEach((rawRoom, order) => {
-        const { roomId } = rawRoom;
-        const existing = state.rooms[roomId];
-
-        if (existing) {
-          mergeSetFields(Data.ServerInfo_RoomSchema, existing.info, rawRoom);
-          if (rawRoom.gametypeList.length > 0) {
-            existing.gametypeMap = normalizeGametypeMap(rawRoom.gametypeList);
-          }
-          existing.order = order;
-        } else {
-          state.rooms[roomId] = {
-            info: rawRoom,
-            gametypeMap: normalizeGametypeMap(rawRoom.gametypeList),
-            order,
-            games: {},
-            users: {},
-          };
-        }
-      });
-    },
+    ...primitiveReducers,
 
     joinRoom: (state, action: PayloadAction<{ roomInfo: Data.ServerInfo_Room }>) => {
       const { roomInfo: rawRoomInfo } = action.payload;
@@ -112,38 +90,7 @@ export const roomsSlice = createSlice({
       state.messages[roomId].push(normalizeUserMessage(message));
     },
 
-    updateGames: (state, action: PayloadAction<{ roomId: number; games: Data.ServerInfo_Game[] }>) => {
-      const { roomId, games } = action.payload;
-      const room = state.rooms[roomId];
-
-      if (!room || !games?.length) {
-        return;
-      }
-
-      const gametypeMap = room.gametypeMap ?? {};
-
-      for (const rawGame of games) {
-        if (rawGame.closed) {
-          delete room.games[rawGame.gameId];
-          if (state.selectedGameIds[roomId] === rawGame.gameId) {
-            state.selectedGameIds[roomId] = undefined;
-          }
-          continue;
-        }
-        const existing = room.games[rawGame.gameId];
-        if (existing) {
-          const merged: Data.ServerInfo_Game = { ...existing.info, ...rawGame };
-          room.games[rawGame.gameId] = {
-            info: merged,
-            gameType: merged.gameTypes?.length
-              ? (gametypeMap[merged.gameTypes[0]] ?? '')
-              : existing.gameType,
-          };
-        } else {
-          room.games[rawGame.gameId] = normalizeGameObject(rawGame, gametypeMap);
-        }
-      }
-    },
+    updateGames: (_state, _action: PayloadAction<{ roomId: number; games: Data.ServerInfo_Game[] }>) => {},
 
     userJoined: (state, action: PayloadAction<{ roomId: number; user: Data.ServerInfo_User }>) => {
       const { roomId, user } = action.payload;

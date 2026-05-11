@@ -21,9 +21,10 @@ function cardsIn(state: GamesState, gameId: number, playerId: number, zoneName: 
   const zone = state.games[gameId]?.players[playerId]?.zones[zoneName];
   return zone ? zone.order.map(id => zone.byId[id]) : [];
 }
-function dispatchCardMoved(
+
+function dispatchThroughStore<P>(
   state: GamesState,
-  action: PayloadAction<{ gameId: number; playerId: number; data: Data.Event_MoveCard }>
+  action: PayloadAction<P>
 ): GamesState {
   const store = configureStore({
     preloadedState: { games: state },
@@ -33,6 +34,13 @@ function dispatchCardMoved(
   });
   store.dispatch(action);
   return store.getState().games;
+}
+
+function dispatchCardMoved(
+  state: GamesState,
+  action: PayloadAction<{ gameId: number; playerId: number; data: Data.Event_MoveCard }>
+): GamesState {
+  return dispatchThroughStore(state, action);
 }
 
 
@@ -118,7 +126,7 @@ describe('2B: Game state & player management', () => {
       }),
     ];
 
-    const result = gamesReducer(state, Actions.gameStateChanged({
+    const result = dispatchThroughStore(state, Actions.gameStateChanged({
       gameId: 1,
       data: { playerList },
     }));
@@ -156,7 +164,7 @@ describe('2B: Game state & player management', () => {
       }),
     ];
 
-    const result = gamesReducer(state, Actions.gameStateChanged({
+    const result = dispatchThroughStore(state, Actions.gameStateChanged({
       gameId: 1,
       data: { playerList },
     }));
@@ -166,7 +174,7 @@ describe('2B: Game state & player management', () => {
 
   it('GAME_STATE_CHANGED with scalar fields → updates started, activePlayerId, activePhase, secondsElapsed', () => {
     const state = makeState();
-    const result = gamesReducer(state, Actions.gameStateChanged({
+    const result = dispatchThroughStore(state, Actions.gameStateChanged({
       gameId: 1,
       data: create(Data.Event_GameStateChangedSchema, {
         gameStarted: true,
@@ -185,7 +193,7 @@ describe('2B: Game state & player management', () => {
   it('PLAYER_JOINED → adds new empty PlayerEntry keyed by playerId', () => {
     const state = makeState();
     const props = makePlayerProperties({ playerId: 5 });
-    const result = gamesReducer(state, Actions.playerJoined({ gameId: 1, playerProperties: props }));
+    const result = dispatchThroughStore(state, Actions.playerJoined({ gameId: 1, playerProperties: props }));
     const newPlayer = result.games[1].players[5];
     expect(newPlayer).toBeDefined();
     expect(newPlayer.properties).toBe(props);
@@ -196,7 +204,7 @@ describe('2B: Game state & player management', () => {
 
   it('PLAYER_LEFT → removes player from game.players', () => {
     const state = makeState();
-    const result = gamesReducer(
+    const result = dispatchThroughStore(
       state,
       Actions.playerLeft({ gameId: 1, playerId: 1, reason: 3, timeReceived: 1000 }),
     );
@@ -211,7 +219,7 @@ describe('2B: Game state & player management', () => {
     });
     const before = state.games[1].messages.length;
 
-    const result = gamesReducer(
+    const result = dispatchThroughStore(
       state,
       Actions.playerLeft({ gameId: 1, playerId: 1, reason: 2, timeReceived: 1234 }),
     );
@@ -220,7 +228,9 @@ describe('2B: Game state & player management', () => {
     expect(msgs.length).toBe(before + 1);
     const added = msgs[msgs.length - 1];
     expect(added.playerId).toBe(1);
-    expect(added.timeReceived).toBe(1234);
+    // The listener stamps via `eventTimestamp()` (matching every other
+    // event-log entry); the payload's `timeReceived` is informational only.
+    expect(added.timeReceived).toEqual(expect.any(Number));
     expect(added.message).toBe('Alice has left the game (kicked by game host or moderator).');
   });
 
@@ -231,7 +241,7 @@ describe('2B: Game state & player management', () => {
     [4, 'player disconnected from server'],
   ])('PLAYER_LEFT reason=%i → log text includes "%s"', (reason, fragment) => {
     const state = makeState();
-    const result = gamesReducer(
+    const result = dispatchThroughStore(
       state,
       Actions.playerLeft({ gameId: 1, playerId: 1, reason, timeReceived: 0 }),
     );
@@ -242,7 +252,7 @@ describe('2B: Game state & player management', () => {
   it('PLAYER_PROPERTIES_CHANGED → merges set fields onto existing player properties', () => {
     const state = makeState();
     const newProps = makePlayerProperties({ playerId: 1, conceded: true });
-    const result = gamesReducer(state, Actions.playerPropertiesChanged({
+    const result = dispatchThroughStore(state, Actions.playerPropertiesChanged({
       gameId: 1,
       playerId: 1,
       properties: newProps,
@@ -270,7 +280,7 @@ describe('2B: Game state & player management', () => {
       },
     });
     const pingOnly = create(Data.ServerInfo_PlayerPropertiesSchema, { pingSeconds: 42 });
-    const result = gamesReducer(state, Actions.playerPropertiesChanged({
+    const result = dispatchThroughStore(state, Actions.playerPropertiesChanged({
       gameId: 1,
       playerId: 1,
       properties: pingOnly,
@@ -294,7 +304,7 @@ describe('2B: Game state & player management', () => {
       },
     });
     const readyOnly = create(Data.ServerInfo_PlayerPropertiesSchema, { readyStart: true });
-    const result = gamesReducer(state, Actions.playerPropertiesChanged({
+    const result = dispatchThroughStore(state, Actions.playerPropertiesChanged({
       gameId: 1,
       playerId: 1,
       properties: readyOnly,
@@ -1001,7 +1011,7 @@ describe('2D: Card mutations', () => {
 
   it('CARD_FLIPPED → updates faceDown, name, and providerId', () => {
     const { state } = stateWithCardInZone('hand');
-    const result = gamesReducer(state, Actions.cardFlipped({
+    const result = dispatchThroughStore(state, Actions.cardFlipped({
       gameId: 1,
       playerId: 1,
       data: { zoneName: 'hand', cardId: 5, cardName: 'Revealed', faceDown: true, cardProviderId: 'new-prov' },
@@ -1015,7 +1025,7 @@ describe('2D: Card mutations', () => {
 
   it('CARD_DESTROYED → removes card from zone and decrements cardCount', () => {
     const { state } = stateWithCardInZone('hand');
-    const result = gamesReducer(state, Actions.cardDestroyed({
+    const result = dispatchThroughStore(state, Actions.cardDestroyed({
       gameId: 1,
       playerId: 1,
       data: { zoneName: 'hand', cardId: 5 },
@@ -1027,7 +1037,7 @@ describe('2D: Card mutations', () => {
 
   it('CARD_ATTACHED → sets attachPlayerId, attachZone, attachCardId on matched card', () => {
     const { state } = stateWithCardInZone('table');
-    const result = gamesReducer(state, Actions.cardAttached({
+    const result = dispatchThroughStore(state, Actions.cardAttached({
       gameId: 1,
       playerId: 1,
       data: { startZone: 'table', cardId: 5, targetPlayerId: 2, targetZone: 'table', targetCardId: 99 },
@@ -1046,7 +1056,7 @@ describe('2D: Card mutations', () => {
     // the card as detached and it reappears in its lane.
     const { state } = stateWithCardInZone('table');
     // First attach the card so it has positive target ids to clear.
-    const attached = gamesReducer(state, Actions.cardAttached({
+    const attached = dispatchThroughStore(state, Actions.cardAttached({
       gameId: 1,
       playerId: 1,
       data: { startZone: 'table', cardId: 5, targetPlayerId: 2, targetZone: 'table', targetCardId: 99 },
@@ -1054,7 +1064,7 @@ describe('2D: Card mutations', () => {
     expect(cardsIn(attached, 1, 1, 'table')[0].attachCardId).toBe(99);
 
     // Now unattach (proto3-style unset target fields).
-    const unattached = gamesReducer(attached, Actions.cardAttached({
+    const unattached = dispatchThroughStore(attached, Actions.cardAttached({
       gameId: 1,
       playerId: 1,
       data: { startZone: 'table', cardId: 5, targetPlayerId: 0, targetZone: '', targetCardId: 0 },
@@ -1074,13 +1084,13 @@ describe('2D: Card mutations', () => {
     // updates x/y. Pinning the order here so a later "clear attach fields
     // in cardMoved" change can't silently re-detach a still-attached card.
     const { state } = stateWithCardInZone('table');
-    const attached = gamesReducer(state, Actions.cardAttached({
+    const attached = dispatchThroughStore(state, Actions.cardAttached({
       gameId: 1,
       playerId: 1,
       data: { startZone: 'table', cardId: 5, targetPlayerId: 2, targetZone: 'table', targetCardId: 99 },
     }));
 
-    const detached = gamesReducer(attached, Actions.cardAttached({
+    const detached = dispatchThroughStore(attached, Actions.cardAttached({
       gameId: 1,
       playerId: 1,
       data: { startZone: 'table', cardId: 5, targetPlayerId: 0, targetZone: '', targetCardId: 0 },
@@ -1112,7 +1122,7 @@ describe('2D: Card mutations', () => {
     // of a still-attached card (e.g. desktop's `setCoords(-1, y)` on the
     // parent's stack column shuffle) would silently detach it.
     const { state } = stateWithCardInZone('table');
-    const attached = gamesReducer(state, Actions.cardAttached({
+    const attached = dispatchThroughStore(state, Actions.cardAttached({
       gameId: 1,
       playerId: 1,
       data: { startZone: 'table', cardId: 5, targetPlayerId: 1, targetZone: 'table', targetCardId: 99 },
@@ -1150,7 +1160,7 @@ describe('2D: Card mutations', () => {
       },
     });
 
-    const result = gamesReducer(state, Actions.tokenCreated({
+    const result = dispatchThroughStore(state, Actions.tokenCreated({
       gameId: 1,
       playerId: 1,
       data: {
@@ -1176,14 +1186,6 @@ describe('2D: Card mutations', () => {
     expect(tableCards[0].destroyOnZoneChange).toBe(true);
   });
 
-  // Regression: cards are protobuf-es messages and Immer doesn't draft them.
-  // Reducers that mutated `card.someField` in place left the surrounding
-  // zone reference unchanged, which made the WeakMap-keyed selectors in
-  // game.selectors.ts hand back stale arrays — the UI froze until another
-  // action dirtied the zone. Each affected reducer now assigns a fresh
-  // object to `zone.byId[cardId]` so Immer's structural sharing fires.
-  // These tests pin the contract: the zone reference MUST change after the
-  // reducer runs.
   describe('zone reference invariant on per-card mutations', () => {
     function stateWithTableCards(cards: ReturnType<typeof makeCard>[]) {
       return makeState({
@@ -1204,7 +1206,7 @@ describe('2D: Card mutations', () => {
     it('cardAttached produces a new zone reference', () => {
       const state = stateWithTableCards([makeCard({ id: 1 }), makeCard({ id: 2 })]);
       const before = state.games[1].players[1].zones['table'];
-      const result = gamesReducer(state, Actions.cardAttached({
+      const result = dispatchThroughStore(state, Actions.cardAttached({
         gameId: 1, playerId: 1,
         data: { startZone: 'table', cardId: 1, targetPlayerId: 1, targetZone: 'table', targetCardId: 2 },
       }));
@@ -1214,7 +1216,7 @@ describe('2D: Card mutations', () => {
     it('cardFlipped produces a new zone reference', () => {
       const state = stateWithTableCards([makeCard({ id: 1, faceDown: false })]);
       const before = state.games[1].players[1].zones['table'];
-      const result = gamesReducer(state, Actions.cardFlipped({
+      const result = dispatchThroughStore(state, Actions.cardFlipped({
         gameId: 1, playerId: 1,
         data: { zoneName: 'table', cardId: 1, cardName: '', faceDown: true, cardProviderId: '' },
       }));
@@ -1224,7 +1226,7 @@ describe('2D: Card mutations', () => {
     it('cardAttrChanged produces a new zone reference', () => {
       const state = stateWithTableCards([makeCard({ id: 1, tapped: false })]);
       const before = state.games[1].players[1].zones['table'];
-      const result = gamesReducer(state, Actions.cardAttrChanged({
+      const result = dispatchThroughStore(state, Actions.cardAttrChanged({
         gameId: 1, playerId: 1,
         data: { zoneName: 'table', cardId: 1, attribute: Data.CardAttribute.AttrTapped, attrValue: '1' },
       }));
@@ -1234,7 +1236,7 @@ describe('2D: Card mutations', () => {
     it('cardCounterChanged produces a new zone reference', () => {
       const state = stateWithTableCards([makeCard({ id: 1 })]);
       const before = state.games[1].players[1].zones['table'];
-      const result = gamesReducer(state, Actions.cardCounterChanged({
+      const result = dispatchThroughStore(state, Actions.cardCounterChanged({
         gameId: 1, playerId: 1,
         data: { zoneName: 'table', cardId: 1, counterId: 0, counterValue: 1 },
       }));
@@ -1272,7 +1274,7 @@ describe('2E: CARD_ATTR_CHANGED', () => {
   }
 
   function dispatchAttr(state: ReturnType<typeof makeState>, attribute: Data.CardAttribute, attrValue: string) {
-    return gamesReducer(state, Actions.cardAttrChanged({
+    return dispatchThroughStore(state, Actions.cardAttrChanged({
       gameId: 1,
       playerId: 1,
       data: { zoneName: 'table', cardId: 3, attribute, attrValue },
@@ -1336,7 +1338,7 @@ describe('2F: CARD_COUNTER_CHANGED', () => {
 
   it('adds new counter to counterList when counterId not present and counterValue > 0', () => {
     const state = stateWithCard([]);
-    const result = gamesReducer(state, Actions.cardCounterChanged({
+    const result = dispatchThroughStore(state, Actions.cardCounterChanged({
       gameId: 1,
       playerId: 1,
       data: { zoneName: 'table', cardId: 4, counterId: 1, counterValue: 3 },
@@ -1346,7 +1348,7 @@ describe('2F: CARD_COUNTER_CHANGED', () => {
 
   it('updates existing counter value when counterId matches', () => {
     const state = stateWithCard([{ id: 1, value: 3 }]);
-    const result = gamesReducer(state, Actions.cardCounterChanged({
+    const result = dispatchThroughStore(state, Actions.cardCounterChanged({
       gameId: 1,
       playerId: 1,
       data: { zoneName: 'table', cardId: 4, counterId: 1, counterValue: 7 },
@@ -1356,7 +1358,7 @@ describe('2F: CARD_COUNTER_CHANGED', () => {
 
   it('removes counter from counterList when counterValue ≤ 0', () => {
     const state = stateWithCard([{ id: 1, value: 3 }]);
-    const result = gamesReducer(state, Actions.cardCounterChanged({
+    const result = dispatchThroughStore(state, Actions.cardCounterChanged({
       gameId: 1,
       playerId: 1,
       data: { zoneName: 'table', cardId: 4, counterId: 1, counterValue: 0 },
@@ -1370,7 +1372,7 @@ describe('2G: Arrows', () => {
   it('ARROW_CREATED → inserts arrowInfo into player.arrows keyed by id', () => {
     const state = makeState();
     const arrow = makeArrow({ id: 9 });
-    const result = gamesReducer(state, Actions.arrowCreated({
+    const result = dispatchThroughStore(state, Actions.arrowCreated({
       gameId: 1,
       playerId: 1,
       data: { arrowInfo: arrow },
@@ -1433,7 +1435,7 @@ describe('2H: Player counters', () => {
         }),
       },
     });
-    const result = gamesReducer(state, Actions.counterSet({
+    const result = dispatchThroughStore(state, Actions.counterSet({
       gameId: 1,
       playerId: 1,
       data: { counterId: 5, value: 14 },
@@ -1480,7 +1482,7 @@ describe('2I: Zone operations', () => {
       },
     });
 
-    const result = gamesReducer(state, Actions.cardsDrawn({
+    const result = dispatchThroughStore(state, Actions.cardsDrawn({
       gameId: 1,
       playerId: 1,
       data: { number: 2, cards: [drawnCard] },
@@ -1507,7 +1509,7 @@ describe('2I: Zone operations', () => {
       },
     });
 
-    const result = gamesReducer(state, Actions.cardsDrawn({
+    const result = dispatchThroughStore(state, Actions.cardsDrawn({
       gameId: 1,
       playerId: 1,
       data: { number: 1, cards: [drawnCard] },
@@ -1618,19 +1620,19 @@ describe('2I: Zone operations', () => {
 describe('2J: Turn, phase, and chat', () => {
   it('ACTIVE_PLAYER_SET → sets game.activePlayerId', () => {
     const state = makeState();
-    const result = gamesReducer(state, Actions.activePlayerSet({ gameId: 1, activePlayerId: 3 }));
+    const result = dispatchThroughStore(state, Actions.activePlayerSet({ gameId: 1, activePlayerId: 3 }));
     expect(result.games[1].activePlayerId).toBe(3);
   });
 
   it('ACTIVE_PHASE_SET → sets game.activePhase', () => {
     const state = makeState();
-    const result = gamesReducer(state, Actions.activePhaseSet({ gameId: 1, phase: 5 }));
+    const result = dispatchThroughStore(state, Actions.activePhaseSet({ gameId: 1, phase: 5 }));
     expect(result.games[1].activePhase).toBe(5);
   });
 
   it('TURN_REVERSED → sets game.reversed', () => {
     const state = makeState();
-    const result = gamesReducer(state, Actions.turnReversed({ gameId: 1, reversed: true }));
+    const result = dispatchThroughStore(state, Actions.turnReversed({ gameId: 1, reversed: true }));
     expect(result.games[1].reversed).toBe(true);
   });
 
@@ -1652,9 +1654,6 @@ describe('2J: Turn, phase, and chat', () => {
 
 
 describe('2K: Log-only actions', () => {
-  // These actions don't mutate game state, but they do append an event-log
-  // message — mirrors desktop's MessageLogWidget::logShuffle / logDumpZone /
-  // logRollDie which fire purely as chat-log entries.
   it('ZONE_SHUFFLED → appends an event-log message', () => {
     const state = makeState();
     const result = gamesReducer(state, Actions.zoneShuffled({ gameId: 1, playerId: 1, data: {} }));
@@ -1701,9 +1700,6 @@ describe('2K: Log-only actions', () => {
     expect(result).toBe(state);
   });
 });
-
-// Each test dispatches an action with a non-existent gameId (999) or playerId/zone
-// to exercise the `if (!game) return state` / `if (!player) return state` guards.
 
 describe('2L: Null-guard / missing entity early-returns', () => {
   const UNKNOWN_GAME = 999;
