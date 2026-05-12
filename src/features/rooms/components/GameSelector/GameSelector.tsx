@@ -6,9 +6,10 @@ import Typography from '@mui/material/Typography';
 import {
   GameSelectors,
   GameTypes,
-  RoomsDispatch,
+  RoomsActions,
   RoomsSelectors,
   ServerSelectors,
+  useAppDispatch,
   useAppSelector,
   type GameFilters,
 } from '@app/store';
@@ -37,6 +38,7 @@ const GameSelector = ({ room }: GameSelectorProps) => {
   const roomId = room.info.roomId;
   const webClient = useWebClient();
   const navigate = useNavigate();
+  const dispatch = useAppDispatch();
 
   const selectedGameId = useAppSelector((state) => RoomsSelectors.getSelectedGameId(state, roomId));
   const selectedGame = useAppSelector((state) =>
@@ -124,7 +126,7 @@ const GameSelector = ({ room }: GameSelectorProps) => {
   };
 
   const handleFilterSubmit = (next: GameFilters) => {
-    RoomsDispatch.setGameFilters(roomId, next);
+    dispatch(RoomsActions.setGameFilters({ roomId, filters: next }));
     setFilterOpen(false);
   };
 
@@ -151,7 +153,7 @@ const GameSelector = ({ room }: GameSelectorProps) => {
         canSpectate={canSpectate}
         isJudgeUser={isJudgeUser}
         onFilter={() => setFilterOpen(true)}
-        onClearFilter={() => RoomsDispatch.clearGameFilters(roomId)}
+        onClearFilter={() => dispatch(RoomsActions.clearGameFilters({ roomId }))}
         onCreate={() => setCreateOpen(true)}
         onJoin={() => beginJoin(false, false)}
         onSpectate={() => beginJoin(true, false)}
@@ -184,7 +186,7 @@ const GameSelector = ({ room }: GameSelectorProps) => {
         isOpen={joinError !== null}
         title="Error"
         message={joinError?.message ?? ''}
-        onDismiss={() => RoomsDispatch.clearJoinGameError()}
+        onDismiss={() => dispatch(RoomsActions.clearJoinGameError())}
       />
     </Paper>
   );

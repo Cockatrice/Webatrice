@@ -18,6 +18,15 @@ vi.mock('@app/hooks', async (importOriginal) => {
   };
 });
 
+// Stub the KnownHosts widget so its useKnownHostsComponent effect does not
+// dispatch `testConnectionStarted` against the test store, which would clobber
+// any preloaded `testConnectionStatus: 'success'` state and disable the form.
+// Form values' `selectedHost` is initialized via useKnownHosts() (mocked above);
+// the Field's runtime onChange is not exercised by these tests.
+vi.mock('@app/feature-widgets/known-hosts', () => ({
+  KnownHosts: () => null,
+}));
+
 import LoginForm from './LoginForm';
 import { LoadingState } from '@app/hooks';
 

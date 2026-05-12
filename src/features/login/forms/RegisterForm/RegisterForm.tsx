@@ -10,7 +10,7 @@ import Typography from '@mui/material/Typography';
 import { CountryDropdown, InputField } from '@app/components';
 import { KnownHosts } from '@app/feature-widgets/known-hosts';
 import type { HostDTO } from '@app/services';
-import { ServerDispatch } from '@app/store';
+import { ServerActions, useAppDispatch } from '@app/store';
 import { App } from '@app/types';
 
 import { useRegisterForm } from './useRegisterForm';
@@ -47,6 +47,7 @@ const EmailTouchOnRequire = ({ emailRequired }: { emailRequired: boolean }) => {
 
 const RegisterForm = ({ onSubmit }: RegisterFormProps) => {
   const { t } = useTranslation();
+  const dispatch = useAppDispatch();
   const {
     emailRequired,
     emailError,
@@ -60,7 +61,7 @@ const RegisterForm = ({ onSubmit }: RegisterFormProps) => {
   } = useRegisterForm();
 
   const handleOnSubmit = (values: RegisterFormValues) => {
-    ServerDispatch.clearRegistrationErrors();
+    dispatch(ServerActions.clearRegistrationErrors());
 
     onSubmit({
       ...values,

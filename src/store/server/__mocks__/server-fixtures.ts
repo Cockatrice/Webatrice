@@ -1,5 +1,5 @@
 import { App, Data, Enriched } from '@app/types';
-import { WebsocketTypes } from '@app/websocket/types';
+import { WebsocketTypes } from 'sockatrice/types';
 import type { MessageInitShape } from '@bufbuild/protobuf';
 
 import { create } from '@bufbuild/protobuf';

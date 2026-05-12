@@ -1,5 +1,4 @@
-import { gamesSlice } from './game.reducer';
+// Spec-isolation shim. See game.reducer.ts for rationale.
+import { games } from 'datatrice';
 
-export const Actions = gamesSlice.actions;
-
-export type GameAction = ReturnType<typeof Actions[keyof typeof Actions]>;
+export const Actions = games.Actions;

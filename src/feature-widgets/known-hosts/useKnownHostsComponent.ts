@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useToast } from '@app/components';
 import { LoadingState, useKnownHosts, useReduxEffect, useWebClient } from '@app/hooks';
 import { HostDTO } from '@app/services';
-import { ServerDispatch, ServerSelectors, ServerTypes, useAppSelector } from '@app/store';
+import { ServerActions, ServerSelectors, ServerTypes, useAppDispatch, useAppSelector } from '@app/store';
 import { App } from '@app/types';
 import { getHostPort } from '@app/utils';
 
@@ -44,6 +44,7 @@ export function useKnownHostsComponent({
   const webClient = useWebClient();
   const knownHosts = useKnownHosts();
   const { t } = useTranslation();
+  const dispatch = useAppDispatch();
 
   const [toastMode, setToastMode] = useState<ToastMode>('created');
   const knownHostToast = useToast({
@@ -67,7 +68,7 @@ export function useKnownHostsComponent({
 
   const testConnection = (host: HostDTO) => {
     pendingTestRef.current = host;
-    ServerDispatch.testConnectionStarted();
+    dispatch(ServerActions.testConnectionStarted());
     webClient.request.authentication.testConnection({ ...getHostPort(host) });
   };
 

@@ -1,5 +1,4 @@
-import type { Enriched } from '@app/types';
+// Spec-isolation shim. See game.reducer.ts for rationale.
+import type { games } from 'datatrice';
 
-export interface GamesState {
-  games: { [gameId: number]: Enriched.GameEntry };
-}
+export type GamesState = games.GamesState;

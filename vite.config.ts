@@ -62,6 +62,9 @@ export default defineConfig({
       'sockatrice',
       'sockatrice/types',
       'sockatrice/generated',
+      'datatrice',
+      'datatrice/react',
+      'datatrice/types',
     ],
   },
   publicDir: 'public',
@@ -77,11 +80,10 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'jsdom',
-    server: {
-      deps: {
-        inline: ['sockatrice'],
-      },
-    },
+    // Both sockatrice and datatrice now ship self-contained tsup builds
+    // (explicit `.js` extensions on every internal import), so vitest's
+    // node-side resolver handles them directly — no `deps.inline`
+    // workaround needed.
     setupFiles: ['./src/setupTests.ts'],
     include: ['src/**/*.spec.{ts,tsx}'],
     exclude: ['node_modules', 'build', 'integration', 'coverage'],

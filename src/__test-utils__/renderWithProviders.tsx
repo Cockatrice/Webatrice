@@ -1,6 +1,6 @@
 import { ReactElement } from 'react';
 import { render, RenderOptions } from '@testing-library/react';
-import { configureStore, EnhancedStore } from '@reduxjs/toolkit';
+import type { EnhancedStore } from '@reduxjs/toolkit';
 import { Provider } from 'react-redux';
 import { MemoryRouter } from 'react-router-dom';
 import { I18nextProvider } from 'react-i18next';
@@ -8,6 +8,7 @@ import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import { DndContext } from '@dnd-kit/core';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
+import { createStore } from 'datatrice';
 
 const testTheme = createTheme({
   transitions: {
@@ -29,14 +30,8 @@ const testTheme = createTheme({
 
 import { WebClientContext } from '../hooks/useWebClient';
 import type { WebClient } from '@app/websocket';
-import rootReducer from '../store/rootReducer';
+import { rootReducer, type RootState } from '../store';
 import { ToastProvider } from '../components/Toast/ToastContext';
-import { listenerMiddleware } from '../store/listenerMiddleware';
-import { storeMiddlewareOptions } from '../store/store';
-import '../store/server/server.listeners';
-import '../store/game/game.listeners';
-import '../store/rooms/rooms.listeners';
-import type { RootState } from '../store/store';
 import { createMockWebClient } from './mockWebClient';
 
 let defaultWebClient: WebClient | undefined;
@@ -56,11 +51,12 @@ testI18n.use(initReactI18next).init({
 });
 
 function createTestStore(preloadedState?: Partial<RootState>) {
-  return configureStore({
+  // Datatrice's createStore registers the three server-data slice listeners
+  // exactly once across the process, so the same store/middleware wiring
+  // that ships in production also drives the test harness.
+  return createStore<RootState>({
     reducer: rootReducer,
-    preloadedState: preloadedState as Parameters<typeof configureStore>[0]['preloadedState'],
-    middleware: (getDefaultMiddleware) => getDefaultMiddleware(storeMiddlewareOptions)
-      .concat(listenerMiddleware.middleware),
+    preloadedState,
   });
 }
 

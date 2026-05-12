@@ -38,6 +38,13 @@ vi.mock('../../hooks/useWebClient', async (importOriginal) => {
   };
 });
 
+// Stub the KnownHosts widget so its useKnownHostsComponent effect does not
+// dispatch `testConnectionStarted` against the test store, which would clobber
+// any preloaded `testConnectionStatus: 'success'` state and disable the form.
+vi.mock('@app/feature-widgets/known-hosts', () => ({
+  KnownHosts: () => null,
+}));
+
 beforeAll(() => {
   const client = createMockWebClient();
   (client.request.authentication as any).testConnection = vi.fn();

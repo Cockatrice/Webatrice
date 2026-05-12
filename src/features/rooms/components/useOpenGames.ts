@@ -1,4 +1,4 @@
-import { SortUtil, RoomsDispatch, RoomsSelectors, useAppSelector } from '@app/store';
+import { SortUtil, RoomsActions, RoomsSelectors, useAppDispatch, useAppSelector } from '@app/store';
 import { App, Enriched } from '@app/types';
 
 export interface OpenGames {
@@ -16,21 +16,22 @@ export interface UseOpenGamesArgs {
 }
 
 export function useOpenGames({ roomId, onActivateGame }: UseOpenGamesArgs): OpenGames {
+  const dispatch = useAppDispatch();
   const sortBy = useAppSelector((state) => RoomsSelectors.getSortGamesBy(state));
   const games = useAppSelector((state) => RoomsSelectors.getFilteredRoomGames(state, roomId));
   const selectedGameId = useAppSelector((state) => RoomsSelectors.getSelectedGameId(state, roomId));
 
   const handleSort = (sortByField: string) => {
     const { field, order } = SortUtil.toggleSortBy(sortByField as App.GameSortField, sortBy);
-    RoomsDispatch.sortGames(roomId, field, order);
+    dispatch(RoomsActions.sortGames({ roomId, field, order }));
   };
 
   const handleSelect = (gameId: number) => {
-    RoomsDispatch.selectGame(roomId, gameId);
+    dispatch(RoomsActions.selectGame({ roomId, gameId }));
   };
 
   const handleActivate = (gameId: number) => {
-    RoomsDispatch.selectGame(roomId, gameId);
+    dispatch(RoomsActions.selectGame({ roomId, gameId }));
     onActivateGame?.(gameId);
   };
 

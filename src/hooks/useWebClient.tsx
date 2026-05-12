@@ -1,17 +1,14 @@
 import { createContext, useContext, useState, ReactNode } from 'react';
 import { WebClient } from '@app/websocket';
-import {
-  CLIENT_CONFIG,
-  CLIENT_OPTIONS,
-  createWebClientResponse,
-} from '@app/api';
+import { CLIENT_CONFIG, CLIENT_OPTIONS } from '@app/api';
+import { attachResponseHandlers, store } from '@app/store';
 
 export const WebClientContext = createContext<WebClient | null>(null);
 WebClientContext.displayName = 'WebClientContext';
 
 export function WebClientProvider({ children }: { children: ReactNode }) {
   const [client] = useState(() => new WebClient(
-    createWebClientResponse(),
+    attachResponseHandlers(store),
     CLIENT_CONFIG,
     CLIENT_OPTIONS,
   ));

@@ -4,23 +4,32 @@ import { renderHook } from '@testing-library/react';
 import { WebClientContext } from './useWebClient';
 import { createMockWebClient } from '../__test-utils__/mockWebClient';
 
+const mockDispatch = vi.hoisted(() => vi.fn());
+
 vi.mock('@app/store', () => ({
-  GameDispatch: {
-    gameLeft: vi.fn(),
+  useAppDispatch: () => mockDispatch,
+  GameActions: {
+    gameLeft: ({ gameId }: { gameId: number }) => ({
+      type: 'games/gameLeft',
+      payload: { gameId },
+    }),
   },
 }));
 
-import { GameDispatch } from '@app/store';
 import { useLeaveGame } from './useLeaveGame';
 
 describe('useLeaveGame', () => {
+  beforeEach(() => {
+    mockDispatch.mockReset();
+  });
+
   it('sends Command_LeaveGame and optimistically dispatches gameLeft, in that order', () => {
     const webClient = createMockWebClient();
     const order: string[] = [];
     vi.mocked(webClient.request.game.leaveGame).mockImplementation(() => {
       order.push('request');
     });
-    vi.mocked(GameDispatch.gameLeft).mockImplementation(() => {
+    mockDispatch.mockImplementation(() => {
       order.push('dispatch');
     });
 
@@ -34,8 +43,11 @@ describe('useLeaveGame', () => {
 
     expect(webClient.request.game.leaveGame).toHaveBeenCalledTimes(1);
     expect(webClient.request.game.leaveGame).toHaveBeenCalledWith(42);
-    expect(GameDispatch.gameLeft).toHaveBeenCalledTimes(1);
-    expect(GameDispatch.gameLeft).toHaveBeenCalledWith(42);
+    expect(mockDispatch).toHaveBeenCalledTimes(1);
+    expect(mockDispatch).toHaveBeenCalledWith({
+      type: 'games/gameLeft',
+      payload: { gameId: 42 },
+    });
     expect(order).toEqual(['request', 'dispatch']);
   });
 
@@ -51,8 +63,14 @@ describe('useLeaveGame', () => {
     result.current(99);
 
     expect(webClient.request.game.leaveGame).toHaveBeenNthCalledWith(1, 7);
-    expect(GameDispatch.gameLeft).toHaveBeenNthCalledWith(1, 7);
+    expect(mockDispatch).toHaveBeenNthCalledWith(1, {
+      type: 'games/gameLeft',
+      payload: { gameId: 7 },
+    });
     expect(webClient.request.game.leaveGame).toHaveBeenNthCalledWith(2, 99);
-    expect(GameDispatch.gameLeft).toHaveBeenNthCalledWith(2, 99);
+    expect(mockDispatch).toHaveBeenNthCalledWith(2, {
+      type: 'games/gameLeft',
+      payload: { gameId: 99 },
+    });
   });
 });

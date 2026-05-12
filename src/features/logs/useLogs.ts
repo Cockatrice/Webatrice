@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useToast } from '@app/components';
 import { useWebClient } from '@app/hooks';
-import { ServerDispatch, ServerSelectors, ServerStateLogs, useAppSelector } from '@app/store';
+import { ServerActions, ServerSelectors, ServerStateLogs, useAppDispatch, useAppSelector } from '@app/store';
 import { Data } from '@app/types';
 
 const MAXIMUM_RESULTS = 1000;
@@ -15,6 +15,7 @@ export interface Logs {
 
 export function useLogs(): Logs {
   const { t } = useTranslation();
+  const dispatch = useAppDispatch();
   const logs = useAppSelector((state) => ServerSelectors.getLogs(state));
   const webClient = useWebClient();
   const { openToast } = useToast({
@@ -24,9 +25,9 @@ export function useLogs(): Logs {
 
   useEffect(() => {
     return () => {
-      ServerDispatch.clearLogs();
+      dispatch(ServerActions.clearLogs());
     };
-  }, []);
+  }, [dispatch]);
 
   const trimFields = (fields: Data.ViewLogHistoryParams): Data.ViewLogHistoryParams => {
     const result: Data.ViewLogHistoryParams = { ...fields };
