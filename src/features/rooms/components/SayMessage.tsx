@@ -1,22 +1,48 @@
-import { Form } from 'react-final-form';
+import { useForm, Controller } from 'react-hook-form';
+import Button from '@mui/material/Button';
+import Box from '@mui/material/Box';
 
-import { InputAction } from '@app/components';
+import { InputField } from '@app/components';
+
+interface SayMessageValues {
+  message: string;
+}
 
 interface SayMessageProps {
   onSubmit: (args: { message: string }) => void;
 }
 
-const SayMessage = ({ onSubmit }: SayMessageProps) => (
-  <Form onSubmit={onSubmit}>
-    {({ handleSubmit, form }) => (
-      <form onSubmit={e => {
-        handleSubmit(e);
-        form.restart();
-      }}>
-        <InputAction action="Send" label="Chat" name="message" />
-      </form>
-    )}
-  </Form>
-);
+const SayMessage = ({ onSubmit }: SayMessageProps) => {
+  const { control, handleSubmit, reset } = useForm<SayMessageValues>({
+    defaultValues: { message: '' },
+  });
+
+  return (
+    <form
+      onSubmit={handleSubmit((values) => {
+        onSubmit(values);
+        reset();
+      })}
+    >
+      <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', p: '5px', gap: '5px' }}>
+        <Box sx={{ flex: 1 }}>
+          <Controller
+            name="message"
+            control={control}
+            render={({ field, fieldState }) => (
+              <InputField
+                {...field}
+                label="Chat"
+                error={fieldState.error?.message}
+                touched={fieldState.isTouched}
+              />
+            )}
+          />
+        </Box>
+        <Button color="primary" variant="contained" type="submit">Send</Button>
+      </Box>
+    </form>
+  );
+};
 
 export default SayMessage;

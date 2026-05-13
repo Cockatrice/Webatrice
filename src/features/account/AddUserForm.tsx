@@ -1,6 +1,8 @@
-import { Form } from 'react-final-form';
+import { useForm, Controller } from 'react-hook-form';
+import Button from '@mui/material/Button';
+import Box from '@mui/material/Box';
 
-import { InputAction } from '@app/components';
+import { InputField } from '@app/components';
 
 interface AddUserFormValues {
   userName: string;
@@ -11,14 +13,37 @@ interface AddUserFormProps {
   onSubmit: (values: AddUserFormValues) => void;
 }
 
-const AddUserForm = ({ label, onSubmit }: AddUserFormProps) => (
-  <Form<AddUserFormValues> onSubmit={(values) => onSubmit(values)}>
-    {({ handleSubmit }) => (
-      <form onSubmit={handleSubmit}>
-        <InputAction action="Add" label={label} name="userName" />
-      </form>
-    )}
-  </Form>
-);
+const AddUserForm = ({ label, onSubmit }: AddUserFormProps) => {
+  const { control, handleSubmit, reset } = useForm<AddUserFormValues>({
+    defaultValues: { userName: '' },
+  });
+
+  return (
+    <form
+      onSubmit={handleSubmit((values) => {
+        onSubmit(values);
+        reset();
+      })}
+    >
+      <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', p: '5px', gap: '5px' }}>
+        <Box sx={{ flex: 1 }}>
+          <Controller
+            name="userName"
+            control={control}
+            render={({ field, fieldState }) => (
+              <InputField
+                {...field}
+                label={label}
+                error={fieldState.error?.message}
+                touched={fieldState.isTouched}
+              />
+            )}
+          />
+        </Box>
+        <Button color="primary" variant="contained" type="submit">Add</Button>
+      </Box>
+    </form>
+  );
+};
 
 export default AddUserForm;
