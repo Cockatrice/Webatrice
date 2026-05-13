@@ -49,7 +49,7 @@ function serverIdentification(
 }
 
 describe('connection lifecycle', () => {
-  it('flips status through CONNECTING â†’ CONNECTED on socket open', () => {
+  it('flips status through CONNECTING → CONNECTED on socket open', () => {
     connectWithOptions(loginOptions());
 
     expect(store.getState().server.status.connectionAttemptMade).toBe(true);

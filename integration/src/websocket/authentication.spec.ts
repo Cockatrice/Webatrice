@@ -22,7 +22,7 @@ function makeUser(name: string): ServerInfo_User {
 
 describe('authentication', () => {
   describe('login', () => {
-    it('drives LOGIN â†’ LOGGED_IN and populates user info + buddy/ignore lists', () => {
+    it('drives LOGIN → LOGGED_IN and populates user info + buddy/ignore lists', () => {
       connectAndHandshake({ userName: 'alice' });
 
       const { cmdId, value } = findLastSessionCommand(Command_Login_ext);

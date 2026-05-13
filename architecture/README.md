@@ -1,6 +1,6 @@
 # Webatrice architecture diagrams
 
-Three views of the same architecture at different zoom levels. The `.mmd` files are the source of truth â€” edit them and re-render when the architecture changes. The `.png` files are committed so the README and GitHub file view render everywhere, including offline.
+Three views of the same architecture at different zoom levels. The `.mmd` files are the source of truth — edit them and re-render when the architecture changes. The `.png` files are committed so the README and GitHub file view render everywhere, including offline.
 
 For the prose counterpart and conventions, see [../.github/instructions/root.instructions.md](../.github/instructions/root.instructions.md) (the canonical AI-tool instruction surface for this package).
 
@@ -12,42 +12,42 @@ For the prose counterpart and conventions, see [../.github/instructions/root.ins
 | **[detailed](detailed.mmd)** | You're making a structural change and want to see every module, which layer it belongs to, and how data moves between them. |
 | **[flow](flow.mmd)** | You're debugging a specific round-trip and need to see the runtime order. Shows the `cmdId`-correlated response path vs. the extension-dispatched event path, plus the "no timeout, no retry" caveat. |
 
-## Simple â€” high-level flow
+## Simple — high-level flow
 
 ![Simple architecture](simple.png)
 
-Application on the left, Servatrice on the right, two-lane racetrack in between. The top lane is outbound (`client.request.*` â†’ `Commands`), the bottom lane is inbound (`Events Â· Responses` â†’ `client.response.*`), and both lanes ride the same WebSocket. Redux hangs off Application as its in-memory store; IndexedDB sits under Servatrice as the browser-side persistent store reached from hooks via Dexie. Both are stores, both sit outside the racetrack.
+Application on the left, Servatrice on the right, two-lane racetrack in between. The top lane is outbound (`client.request.*` → `Commands`), the bottom lane is inbound (`Events · Responses` → `client.response.*`), and both lanes ride the same WebSocket. Redux hangs off Application as its in-memory store; IndexedDB sits under Servatrice as the browser-side persistent store reached from hooks via Dexie. Both are stores, both sit outside the racetrack.
 
 **Color = role:**
 
-- Blue â€” application code (UI, hooks, API seams, WebClient)
-- Purple â€” transport (WebSocket layer, services)
-- Amber â€” state / data stores (Redux, protocol types)
-- Gray â€” external systems (Servatrice, IndexedDB)
+- Blue — application code (UI, hooks, API seams, WebClient)
+- Purple — transport (WebSocket layer, services)
+- Amber — state / data stores (Redux, protocol types)
+- Gray — external systems (Servatrice, IndexedDB)
 
-## Detailed â€” layers & dependencies
+## Detailed — layers & dependencies
 
 ![Detailed architecture](detailed.png)
 
-Every meaningful module in the webclient, arranged as a three-lane racetrack: outbound (UI â†’ `useWebClient()` â†’ Sockatrice command/response) on top, transport (`WebClientProvider` â†’ `WebClient` â†’ `services/`) in the middle, inbound (Sockatrice events â†’ Datatrice `*ResponseImpl` â†’ Redux store) on the bottom. Application bookend on the left holds UI, hooks, Redux store (composed of Datatrice's three server-data slices plus Webatrice's local `action`/`shortcuts` slices), and the Dexie persistence pair; Servatrice sits on the right. Same four-role palette as the simple diagram.
+Every meaningful module in the webclient, arranged as a three-lane racetrack: outbound (UI → `useWebClient()` → Sockatrice command/response) on top, transport (`WebClientProvider` → `WebClient` → `services/`) in the middle, inbound (Sockatrice events → Datatrice `*ResponseImpl` → Redux store) on the bottom. Application bookend on the left holds UI, hooks, Redux store (composed of Datatrice's three server-data slices plus Webatrice's local `action`/`shortcuts` slices), and the Dexie persistence pair; Servatrice sits on the right. Same four-role palette as the simple diagram.
 
 Load-bearing invariants (enforced on `webclient-websocket-layer`; keep it that way):
 
-- **UI never imports the `WebClient` value from `sockatrice`** â€” always go through `useWebClient()`. Type-only `import type { ... } from "sockatrice"` is fine. Enforced by `@typescript-eslint/no-restricted-imports` in `eslint.config.mjs`.
+- **UI never imports the `WebClient` value from `sockatrice`** — always go through `useWebClient()`. Type-only `import type { ... } from "sockatrice"` is fine. Enforced by `@typescript-eslint/no-restricted-imports` in `eslint.config.mjs`.
 - **Types live in one of three places, none of them wrapped in a namespace**: proto wire types from `sockatrice/generated`, store-domain shapes (`Room`, `GameEntry`, `PlayerEntry`, etc.) from `datatrice`, and Webatrice-only app types (routes, settings, cards, colors, shortcuts) flat from `@app/types`.
-- **Only Datatrice's internal `*ResponseImpl` classes call `store.dispatch`** â€” the API response layer (now owned by Datatrice) is the single inbound seam into Redux.
+- **Only Datatrice's internal `*ResponseImpl` classes call `store.dispatch`** — the API response layer (now owned by Datatrice) is the single inbound seam into Redux.
 
-## Flow â€” command â†’ response â†’ event round-trip
+## Flow — command → response → event round-trip
 
 ![Sequence: join room](flow.png)
 
-Scenario: user joins a room. The sequence shows the outbound command path (steps 1â€“6), the correlated response path matched by `cmdId` in `ProtobufService`'s pending map (steps 7â€“10), and an unsolicited server event dispatched by proto-extension match against the event registry in `processRoomEvent` / `processSessionEvent` / `processGameEvent` (steps 11â€“15).
+Scenario: user joins a room. The sequence shows the outbound command path (steps 1–6), the correlated response path matched by `cmdId` in `ProtobufService`'s pending map (steps 7–10), and an unsolicited server event dispatched by proto-extension match against the event registry in `processRoomEvent` / `processSessionEvent` / `processGameEvent` (steps 11–15).
 
 Read the footnote: `ProtobufService` has no timeout and no retry, and `resetCommands()` on reconnect silently drops in-flight callbacks. Code that needs reconnection resilience has to handle it at a higher layer.
 
 ## Rendering
 
-npm scripts are defined in [../package.json](../package.json) â€” no separate build step, no added runtime dependency (everything runs via `npx`).
+npm scripts are defined in [../package.json](../package.json) — no separate build step, no added runtime dependency (everything runs via `npx`).
 
 ```bash
 # from the repo root:
@@ -67,4 +67,4 @@ npx -y -p @mermaid-js/mermaid-cli -p puppeteer mmdc \
 
 `-s 2` renders at 2Ã— scale so the PNG stays crisp on high-DPI displays; `-b white` gives the diagrams a light-mode background that looks right in both GitHub's light and dark themes.
 
-If `mmdc` fails locally (it spawns headless Chromium â€” some sandboxed environments block that), paste the `.mmd` contents into [mermaid.live](https://mermaid.live) and export to PNG. The `.mmd` sources remain canonical either way.
+If `mmdc` fails locally (it spawns headless Chromium — some sandboxed environments block that), paste the `.mmd` contents into [mermaid.live](https://mermaid.live) and export to PNG. The `.mmd` sources remain canonical either way.

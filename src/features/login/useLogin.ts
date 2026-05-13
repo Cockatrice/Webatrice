@@ -157,12 +157,7 @@ export function useLogin(): Login {
     if (selectedHost.id == null) {
       return;
     }
-    // Only honour the Remember checkbox when we actually received a hash to
-    // store. A server that advertises SupportsPasswordHash but returns an empty
-    // salt falls through to a plain-password login (no hash produced); writing
-    // `remember: true` with a null hash would leave the checkbox visibly
-    // checked on next load while the stored-password flow silently couldn't
-    // activate. Resetting to the unchecked state makes the failure visible.
+    // @critical empty-salt servers advertise hash support but return no hash — only persist when one arrived
     const persistCredentials = remember && Boolean(hashedPassword);
     knownHosts.update(selectedHost.id, {
       remember: persistCredentials,

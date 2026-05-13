@@ -20,11 +20,7 @@ vi.mock('datatrice/react', async (importOriginal) => {
   return { ...actual, useWebClient: () => hoisted.mockWebClient };
 });
 
-// Stub the KnownHosts widget so its useKnownHostsComponent effect does not
-// dispatch `testConnectionStarted` against the test store, which would clobber
-// any preloaded `testConnectionStatus: 'success'` state and disable the form.
-// Form values' `selectedHost` is initialized via useKnownHosts() (mocked below);
-// the Field's runtime onChange is not exercised by these tests.
+// @critical Stub KnownHosts; its effect would clobber preloaded testConnectionStatus
 vi.mock('@app/feature-widgets/known-hosts', () => ({
   KnownHosts: () => null,
   useKnownHosts: hoisted.mockUseKnownHosts,
@@ -111,8 +107,6 @@ describe('LoginForm — regression: settings.autoConnect is not clobbered by hos
 });
 
 describe('LoginForm — hashed-password gating', () => {
-  // The gate requires BOTH a successful test-connection AND host.supportsHashedPassword=true;
-  // preload testConnectionStatus='success' so the host flag is the only lever under test.
   const testedState = {
     ...disconnectedState,
     server: { ...(disconnectedState.server as any), testConnectionStatus: 'success' as const },

@@ -28,9 +28,6 @@ const RequestPasswordResetForm = ({ onSubmit, skipTokenRequest }: RequestPasswor
   const { t } = useTranslation();
   const { errorMessage, setErrorMessage, isMFA, setIsMFA } = useRequestPasswordResetForm();
 
-  // Schema branches on `isMFA` — when the server demands MFA the email
-  // field becomes required. Rebuild the resolver when the flag flips so
-  // validation matches the rendered field requirements.
   const schema = useMemo(() => buildRequestPasswordResetFormSchema(t, isMFA), [t, isMFA]);
 
   const { control, handleSubmit, setValue, watch, getValues } = useForm<RequestPasswordResetFormValues>({
@@ -44,9 +41,6 @@ const RequestPasswordResetForm = ({ onSubmit, skipTokenRequest }: RequestPasswor
 
   const selectedHost = watch('selectedHost');
 
-  // Mirror the host's saved userName into the form whenever the user picks a
-  // new host; reset isMFA so the email field disappears until the server
-  // requests it again.
   useEffect(() => {
     if (!selectedHost) {
       return;

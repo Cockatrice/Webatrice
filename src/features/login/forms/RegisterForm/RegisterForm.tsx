@@ -63,9 +63,6 @@ const RegisterForm = ({ onSubmit }: RegisterFormProps) => {
     resolver: zodResolver(schema),
   });
 
-  // Mirror server-driven errors onto the form once the field has been seen.
-  // useReduxEffect populates the *Error state in useRegisterForm; pushing them
-  // into formState via setError gives Controller's fieldState.error a value.
   useEffect(() => {
     if (emailError) {
       setError('email', { type: 'server', message: emailError });
@@ -82,19 +79,12 @@ const RegisterForm = ({ onSubmit }: RegisterFormProps) => {
     }
   }, [passwordError, setError]);
 
-  // When the server demands MFA mid-flow, force-touch + re-validate email so
-  // the "required" error surfaces immediately. Replaces RFF's
-  // `form.mutators.setFieldTouched('email', true)` pattern.
   useEffect(() => {
     if (emailRequired) {
       setValue('email', getValues('email') ?? '', { shouldTouch: true, shouldValidate: true });
     }
   }, [emailRequired, setValue, getValues]);
 
-  // Watch + useEffect replaces react-final-form-listeners <OnChange>: each
-  // listener mirrors the old "clear server error when user starts editing"
-  // behavior. Hook deps include the watched value only — the underlying
-  // callbacks read state via closures, matching the prior semantics.
   const formUserName = watch('userName');
   const formPassword = watch('password');
   const formEmail = watch('email');

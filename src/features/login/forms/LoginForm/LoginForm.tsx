@@ -21,10 +21,7 @@ import './LoginForm.css';
 
 export type { LoginFormValues };
 
-// Remember Password and Auto Connect both require server-side password hashing
-// to be useful (no hash to save = nothing to resume with). Test-connection
-// captures capability from ServerIdentification before the user ever logs in,
-// so we can afford a strict "hidden until a completed test proves supported" gate.
+// @critical Remember/Auto Connect gate hides options until test-connection proves hashing support
 const hostSupportsHashedPassword = (
   host: HostDTO | undefined,
   testConnectionStatus: TestConnectionStatus,
@@ -64,10 +61,6 @@ const LoginFormBody = ({
     passwordFieldBlur,
   } = useLoginFormBody({ setValue, getValues });
 
-  // Watched values drive the side-effect listeners. Each useEffect fires on
-  // mount (matching RFF's react-final-form-listeners OnChange semantics —
-  // initial undefined → defined transition triggers the handler) and on
-  // every subsequent change.
   const formHost = watch('selectedHost');
   const formUserName = watch('userName');
   const formRemember = watch('remember');
@@ -91,9 +84,7 @@ const LoginFormBody = ({
 
   const testConnectionStatus = useAppSelector(server.Selectors.getTestConnectionStatus);
   const showHashingGatedOptions = hostSupportsHashedPassword(selectedHost, testConnectionStatus);
-  // Login is only meaningful once we know the host is reachable + speaks the
-  // Cockatrice protocol. Keep the button disabled until test-connection resolves
-  // to 'success'; re-disable on any subsequent re-test.
+  // @critical login requires a successful test-connection — re-disables on every re-test
   const loginDisabled = disableSubmitButton || testConnectionStatus !== 'success';
 
   const submit = handleSubmit((values) => {

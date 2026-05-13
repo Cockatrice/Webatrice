@@ -26,8 +26,6 @@ interface LogSearchFormProps {
   onSubmit: (values: LogSearchFormValues) => void;
 }
 
-// Defaults are explicit so each Controller receives a defined value.
-// RHF treats `undefined` as uncontrolled, which warns on text inputs.
 const DEFAULT_VALUES: LogSearchFormValues = {
   userName: '',
   ipAddress: '',

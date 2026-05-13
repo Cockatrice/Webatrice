@@ -19,9 +19,6 @@ export enum TestConnection {
 }
 
 export interface KnownHostsComponent {
-  // Dexie's mapToClass(HostDTO) means stored records are HostDTO instances
-  // (Host extended with `.save()`), not plain Host. Widen the surface so the
-  // template can pass these into HostDTO-typed callbacks without a cast.
   hosts: HostDTO[];
   selectedHost: HostDTO | undefined;
   testConnectionStatus: TestConnection | null;
@@ -30,9 +27,6 @@ export interface KnownHostsComponent {
   openAddKnownHostDialog: () => void;
   openEditKnownHostDialog: (host: HostDTO) => void;
   closeKnownHostDialog: () => void;
-  // KnownHostDialog calls onRemove with the full HostDTO. The runtime branch
-  // here only needs the id (Dexie key); guard against missing id since the
-  // class field is declared optional.
   handleDialogRemove: (host: HostDTO) => Promise<void>;
   handleDialogSubmit: (args: {
     id?: number;

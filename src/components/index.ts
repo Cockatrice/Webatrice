@@ -1,4 +1,3 @@
-// Common components
 export { default as Card } from './Card/Card';
 export { default as CardDetails } from './CardDetails/CardDetails';
 export { default as CountryDropdown } from './CountryDropdown/CountryDropdown';
@@ -12,9 +11,7 @@ export { default as CheckboxField } from './CheckboxField/CheckboxField';
 export { default as SelectField } from './SelectField/SelectField';
 export { default as ScrollToBottomOnChanges } from './ScrollToBottomOnChanges/ScrollToBottomOnChanges';
 
-// Guards
 export { default as AuthGuard } from './Guard/AuthGuard';
 export { default as ModGuard } from './Guard/ModGuard';
 
-// Toast
 export { default as Toast, useToast, ToastProvider } from './Toast';

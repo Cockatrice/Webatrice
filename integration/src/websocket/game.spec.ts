@@ -230,10 +230,10 @@ describe('game', () => {
     expect(store.getState().games.games[42].players[1].counters[1].count).toBe(17);
   });
 
-  it('full lifecycle: create â†’ join â†’ deck select â†’ draw â†’ chat â†’ discard â†’ concede â†’ leave', () => {
+  it('full lifecycle: create → join → deck select → draw → chat → discard → concede → leave', () => {
     connectAndHandshake();
 
-    // â”€â”€ Setup: join a room so we can create a game in it â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Setup: join a room so we can create a game in it ──────────────────
     deliverMessage(buildSessionEventMessage(
       Event_ListRooms_ext,
       create(Event_ListRoomsSchema, {
@@ -250,7 +250,7 @@ describe('game', () => {
       }),
     })));
 
-    // â”€â”€ 1. Create game â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── 1. Create game ───────────────────────────────────────────────────
     RoomCommands.createGame(1, { description: 'Ranked Match', maxPlayers: 2 });
     const createCmd = findLastRoomCommand(Command_CreateGame_ext);
     deliverMessage(buildResponseMessage(buildResponse({
@@ -258,7 +258,7 @@ describe('game', () => {
       responseCode: Response_ResponseCode.RespOk,
     })));
 
-    // â”€â”€ 2. Join game â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── 2. Join game ─────────────────────────────────────────────────────
     RoomCommands.joinGame(1, { gameId: 99 });
     const joinCmd = findLastRoomCommand(Command_JoinGame_ext);
     deliverMessage(buildResponseMessage(buildResponse({
@@ -281,7 +281,7 @@ describe('game', () => {
     ));
     expect(store.getState().games.games[99]).toBeDefined();
 
-    // â”€â”€ 3. Select deck â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── 3. Select deck ───────────────────────────────────────────────────
     GameCommands.deckSelect(99, { deck: '4 Lightning Bolt\n20 Mountain\n4 Goblin Guide' });
     const deckCmd = findLastGameCommand(Command_DeckSelect_ext);
     expect(deckCmd.value.deck).toContain('Lightning Bolt');
@@ -333,7 +333,7 @@ describe('game', () => {
     expect(gameAfterDeck.players[1].zones.deck.order).toHaveLength(3);
     expect(gameAfterDeck.players[1].zones.hand.order).toHaveLength(0);
 
-    // â”€â”€ 4. Draw cards â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── 4. Draw cards ────────────────────────────────────────────────────
     deliverMessage(buildGameEventMessage({
       gameId: 99,
       playerId: 1,
@@ -353,7 +353,7 @@ describe('game', () => {
     expect(afterDraw.zones.hand.order).toContain(2);
     expect(afterDraw.zones.deck.cardCount).toBe(1);
 
-    // â”€â”€ 5. Send game message â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── 5. Send game message ─────────────────────────────────────────────
     GameCommands.gameSay(99, { message: 'good luck!' });
     const sayCmd = findLastGameCommand(Command_GameSay_ext);
     expect(sayCmd.value.message).toBe('good luck!');
@@ -374,7 +374,7 @@ describe('game', () => {
     expect(chatMessages).toHaveLength(1);
     expect(chatMessages[0].message).toBe('good luck!');
 
-    // â”€â”€ 6. Discard (move card from hand to graveyard) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── 6. Discard (move card from hand to graveyard) ────────────────────
     deliverMessage(buildGameEventMessage({
       gameId: 99,
       playerId: 1,
@@ -396,7 +396,7 @@ describe('game', () => {
     expect(afterDiscard.zones.grave.order).toContain(1);
     expect(afterDiscard.zones.grave.byId[1]?.name).toBe('Lightning Bolt');
 
-    // â”€â”€ 7. Concede â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── 7. Concede ───────────────────────────────────────────────────────
     GameCommands.concede(99);
     expect(() => findLastGameCommand(Command_Concede_ext)).not.toThrow();
 
@@ -415,7 +415,7 @@ describe('game', () => {
     }));
     expect(store.getState().games.games[99].players[1].properties.conceded).toBe(true);
 
-    // â”€â”€ 8. Leave game â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── 8. Leave game ────────────────────────────────────────────────────
     GameCommands.leaveGame(99);
     expect(() => findLastGameCommand(Command_LeaveGame_ext)).not.toThrow();
 

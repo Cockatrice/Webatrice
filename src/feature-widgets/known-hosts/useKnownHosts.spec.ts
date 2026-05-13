@@ -121,9 +121,7 @@ describe('useKnownHosts', () => {
     }
     expect(result.current.value.hosts).toHaveLength(2);
     expect(result.current.value.selectedHost.name).toBe('A');
-    // normalize no longer auto-persists `lastSelected = true`; it's set on
-    // explicit `select()` / `remove()` paths instead. Seed-time selection
-    // is in-memory only until the user picks.
+    // @critical normalize() seed-selection is in-memory only — persisted on select()/remove()
   });
 
   test('select(id) flips lastSelected atomically — exactly one row true', async () => {

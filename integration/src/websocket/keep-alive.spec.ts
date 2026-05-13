@@ -1,4 +1,4 @@
-// KeepAliveService timing scenarios â€” ping loop, pong correlation, timeout.
+// KeepAliveService timing scenarios — ping loop, pong correlation, timeout.
 
 import { describe, expect, it } from 'vitest';
 

@@ -4,7 +4,7 @@ import { ZoneEntry, ZoneName } from 'datatrice';
 import { CardDTO } from '../../../services/dexie/DexieDTOs/CardDTO';
 import { MAX_SUBPOS, applyInvertY, clampRow } from '../components/battlefield/Battlefield/gridMath';
 
-// Mirrors desktop's player_actions.cpp:47-93 (PlayerActions::playCard) â€” the
+// Mirrors desktop's player_actions.cpp:47-93 (PlayerActions::playCard) — the
 // destination zone is chosen from CardInfo's `tableRow`. tableRow=3 routes to
 // the stack (instant/sorcery); 0/1/2 route to the battlefield with a
 // per-row default that the user can later drag-correct.

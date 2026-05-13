@@ -134,7 +134,7 @@ describe('Game board integration', () => {
     expect(screen.getByTestId('right-panel')).toBeInTheDocument();
   });
 
-  it('transitions from empty â†’ active board when gameJoined + gameStateChanged fire', async () => {
+  it('transitions from empty → active board when gameJoined + gameStateChanged fire', async () => {
     renderAppScreen(<Game />);
 
     expect(screen.getByTestId('game-empty')).toBeInTheDocument();

@@ -70,7 +70,7 @@ beforeEach(async () => {
   autoLoginGate.hasChecked = false;
 });
 
-describe('autoconnect â€” cold start', () => {
+describe('autoconnect — cold start', () => {
   it('auto-logs in when Dexie has autoConnect=true + host with stored credentials', async () => {
     await seedAutoConnect();
 
@@ -109,7 +109,7 @@ describe('autoconnect â€” cold start', () => {
   });
 });
 
-describe('autoconnect â€” logout cycle (same session)', () => {
+describe('autoconnect — logout cycle (same session)', () => {
   it('does not auto-reconnect after first auto-login + logout within the same JS session', async () => {
     await seedAutoConnect();
 
@@ -120,29 +120,24 @@ describe('autoconnect â€” logout cycle (same session)', () => {
 
     // Simulate "logged out and returned to /login": unmount, clear the
     // store's connectionAttemptMade flag (the app-level equivalent of
-    // DISCONNECTED â†’ status.connectionAttemptMade reset), remount.
+    // DISCONNECTED → status.connectionAttemptMade reset), remount.
     first.unmount();
     simulateLogout();
 
     renderAppScreen(<Login />);
     await flushStoresAndEffects();
 
-    // The session gate must have kept useAutoLogin silent; the flag stays
-    // false.
     expect(attempted()).toBe(false);
   });
 
   it('does not auto-connect when the user enabled autoConnect mid-session and then logged out', async () => {
-    // First mount with autoConnect=false â€” gate latches without firing.
     const first = renderAppScreen(<Login />);
     await flushStoresAndEffects();
     expect(attempted()).toBe(false);
     first.unmount();
 
-    // Mid-session: user ticked the checkbox â†’ Dexie flipped to autoConnect=true.
     await seedAutoConnect();
 
-    // Remount (post-logout). The gate MUST keep useAutoLogin silent.
     renderAppScreen(<Login />);
     await flushStoresAndEffects();
 
@@ -150,7 +145,7 @@ describe('autoconnect â€” logout cycle (same session)', () => {
   });
 });
 
-describe('autoconnect â€” refresh', () => {
+describe('autoconnect — refresh', () => {
   it('auto-connects again after resetting the session gate (page-refresh equivalent)', async () => {
     await seedAutoConnect();
 

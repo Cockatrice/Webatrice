@@ -39,11 +39,6 @@ vi.mock('datatrice/react', async (importOriginal) => {
   };
 });
 
-// The KnownHosts widget is stubbed in the @app/feature-widgets/known-hosts
-// mock above (KnownHosts: () => null) so its useKnownHostsComponent effect
-// does not dispatch `testConnectionStarted` against the test store, which
-// would clobber any preloaded `testConnectionStatus: 'success'` state.
-
 beforeAll(() => {
   const client = createMockWebClient();
   (client.request.authentication as any).testConnection = vi.fn();
@@ -178,8 +173,7 @@ describe('Login — logout cycle (same JS session)', () => {
     await flushEffects();
     first.unmount();
 
-    // Submit button stays disabled until testConnectionStatus resolves to 'success';
-    // preload it so the click actually dispatches.
+    // @critical preload testConnectionStatus='success' — submit stays disabled otherwise
     const { getByRole, queryByText } = renderWithProviders(<Login />, {
       preloadedState: {
         ...disconnectedState,
@@ -211,11 +205,6 @@ describe('Login — refresh cycle', () => {
   });
 });
 
-// End-to-end regression: the symptom reported on this branch was "save-password
-// checkbox shows, login succeeds, but HostDTO.hashedPassword stays empty in
-// Dexie". These tests wire the full chain — auto-login fires onSubmitLogin
-// (capturing the form in rememberLoginRef), then a store.dispatch of
-// LOGIN_SUCCESSFUL drives the useReduxEffect that calls knownHosts.update.
 describe('Login — LOGIN_SUCCESSFUL → knownHosts persistence', () => {
   const armWithUpdate = () => {
     const update = vi.fn().mockResolvedValue(undefined);
@@ -285,17 +274,14 @@ describe('Login — LOGIN_SUCCESSFUL → knownHosts persistence', () => {
       expect(hoisted.mockWebClient.request.authentication.login).toHaveBeenCalledTimes(1);
     });
 
-    // Empty-salt fallback path: login went through as plain password, so the
-    // response layer has no hash to carry forward.
+    // Empty-salt fallback: response layer has no hash; guard in useLogin.updateHost
+    // clears remember+credentials so a stale "checked" checkbox can't sit against a null hash.
     store.dispatch({
       type: 'server/loginSuccessful',
       payload: { options: { hashedPassword: undefined } },
     });
     await flushEffects();
 
-    // Guard in useLogin.updateHost clears remember+credentials so next load
-    // reflects that save-password wasn't honoured — no stale "checked" checkbox
-    // sitting against a null hash.
     expect(update).toHaveBeenCalledWith(hostId, {
       remember: false,
       userName: null,

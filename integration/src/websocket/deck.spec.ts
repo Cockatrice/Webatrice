@@ -82,7 +82,7 @@ describe('deck operations', () => {
       value: create(Response_DeckUploadSchema, { newFile }),
     })));
     // No state assertion: backendDecks is keyed by full tree, not single
-    // upload â€” the integration verifies the dispatcher is reached, not the
+    // upload — the integration verifies the dispatcher is reached, not the
     // tree-merge logic which lives in the reducer.
   });
 
