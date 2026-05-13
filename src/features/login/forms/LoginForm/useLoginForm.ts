@@ -1,8 +1,10 @@
 import { useState } from 'react';
-import { useFormState } from 'react-final-form';
+import type { UseFormGetValues, UseFormSetValue } from 'react-hook-form';
 
 import { LoadingState, useKnownHosts, useSettings } from '@app/hooks';
 import { HostDTO } from '@app/services';
+
+import type { LoginFormValues } from './loginFormSchema';
 
 export interface LoginFormBody {
   selectedHost: HostDTO | undefined;
@@ -15,16 +17,14 @@ export interface LoginFormBody {
   passwordFieldBlur: () => void;
 }
 
-// `FormApi` import from react-final-form is broken at the type level on this
-// branch (baseline TS error). Only `form.change` is used here.
-interface MinimalFormApi {
-  change: (name: string, value: unknown) => void;
+interface UseLoginFormBodyArgs {
+  setValue: UseFormSetValue<LoginFormValues>;
+  getValues: UseFormGetValues<LoginFormValues>;
 }
 
-export function useLoginFormBody(form: MinimalFormApi): LoginFormBody {
+export function useLoginFormBody({ setValue, getValues }: UseLoginFormBodyArgs): LoginFormBody {
   const settings = useSettings();
   const hosts = useKnownHosts();
-  const { values } = useFormState();
 
   const selectedHost = hosts.status === LoadingState.READY ? hosts.value?.selectedHost : undefined;
 
@@ -48,14 +48,14 @@ export function useLoginFormBody(form: MinimalFormApi): LoginFormBody {
       return;
     }
     const nakedServer = host.supportsHashedPassword === false;
-    form.change('userName', host.userName ?? '');
-    form.change('password', '');
-    form.change('remember', !nakedServer && Boolean(host.remember));
+    setValue('userName', host.userName ?? '');
+    setValue('password', '');
+    setValue('remember', !nakedServer && Boolean(host.remember));
     setStoredHashInvalidated(false);
     togglePasswordLabel(!nakedServer && Boolean(host.remember && host.hashedPassword));
 
     if (nakedServer) {
-      form.change('autoConnect', false);
+      setValue('autoConnect', false);
       if (settings.status === LoadingState.READY && settings.value?.autoConnect) {
         void settings.update({ autoConnect: false });
       }
@@ -63,23 +63,25 @@ export function useLoginFormBody(form: MinimalFormApi): LoginFormBody {
   };
 
   const onUserNameChange = (userName: string | undefined) => {
+    const { remember, password } = getValues();
     const fieldChanged = selectedHost?.userName?.toLowerCase() !== userName?.toLowerCase();
-    if (canUseStoredPassword(values.remember, values.password) && fieldChanged) {
+    if (canUseStoredPassword(remember, password) && fieldChanged) {
       setStoredHashInvalidated(true);
     }
   };
 
   const onRememberChange = (checked: boolean) => {
     // @critical Writes form-only, never to persisted setting — "remember" toggle isn't a preference edit.
-    if (!checked && values.autoConnect) {
-      form.change('autoConnect', false);
+    const { autoConnect, password } = getValues();
+    if (!checked && autoConnect) {
+      setValue('autoConnect', false);
     }
 
-    togglePasswordLabel(canUseStoredPassword(checked, values.password));
+    togglePasswordLabel(canUseStoredPassword(checked, password));
   };
 
-  // @critical Only persist-path for autoConnect; wired to native onChange, not <OnChange>,
-  // to avoid leaking form.change() writes into Dexie.
+  // @critical Only persist-path for autoConnect; called from native onChange,
+  // not from a watcher, to avoid leaking setValue() writes into Dexie.
   const onUserToggleAutoConnect = (checked: boolean, fieldOnChange: (v: boolean) => void) => {
     fieldOnChange(checked);
 
@@ -87,13 +89,16 @@ export function useLoginFormBody(form: MinimalFormApi): LoginFormBody {
       void settings.update({ autoConnect: checked });
     }
 
-    if (checked && !values.remember) {
-      form.change('remember', true);
+    const { remember } = getValues();
+    if (checked && !remember) {
+      setValue('remember', true);
     }
   };
 
-  const passwordFieldBlur = () =>
-    togglePasswordLabel(canUseStoredPassword(values.remember, values.password));
+  const passwordFieldBlur = () => {
+    const { remember, password } = getValues();
+    togglePasswordLabel(canUseStoredPassword(remember, password));
+  };
 
   return {
     selectedHost,

@@ -1,7 +1,6 @@
-import React from 'react';
-import { Form, Field } from 'react-final-form';
-import type { FormApi } from 'final-form';
-import { OnChange } from 'react-final-form-listeners';
+import { useEffect, useRef } from 'react';
+import { useForm, Controller, type UseFormReturn } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { useTranslation } from 'react-i18next';
 
 import Button from '@mui/material/Button';
@@ -9,16 +8,18 @@ import Checkbox from '@mui/material/Checkbox';
 import CircularProgress from '@mui/material/CircularProgress';
 import FormControlLabel from '@mui/material/FormControlLabel';
 
-import { adaptRffField, CheckboxField, InputField } from '@app/components';
+import { CheckboxField, InputField } from '@app/components';
 import { KnownHosts } from '@app/feature-widgets/known-hosts';
 import { LoadingState, useKnownHosts, useSettings } from '@app/hooks';
 import { HostDTO } from '@app/services';
 import { server, type TestConnectionStatus } from 'datatrice';
 import { useAppSelector } from '@app/store';
-import { FormErrors } from '@app/types';
 import { useLoginFormBody } from './useLoginForm';
+import { buildLoginFormSchema, type LoginFormValues } from './loginFormSchema';
 
 import './LoginForm.css';
+
+export type { LoginFormValues };
 
 // Remember Password and Auto Connect both require server-side password hashing
 // to be useful (no hash to save = nothing to resume with). Test-connection
@@ -30,14 +31,6 @@ const hostSupportsHashedPassword = (
 ): boolean =>
   testConnectionStatus === 'success' && host?.supportsHashedPassword === true;
 
-export interface LoginFormValues {
-  userName: string;
-  password: string;
-  remember: boolean;
-  autoConnect: boolean;
-  selectedHost: HostDTO;
-}
-
 interface LoginFormProps {
   onSubmit: (values: LoginFormValues) => void;
   disableSubmitButton: boolean;
@@ -45,19 +38,20 @@ interface LoginFormProps {
 }
 
 interface LoginFormBodyProps extends LoginFormProps {
-  form: FormApi;
-  handleSubmit: (event?: React.SyntheticEvent) => void;
+  form: UseFormReturn<LoginFormValues>;
 }
 
 const LoginFormBody = ({
   form,
-  handleSubmit,
   disableSubmitButton,
   onResetPassword,
+  onSubmit,
 }: LoginFormBodyProps) => {
   const { t } = useTranslation();
   const PASSWORD_LABEL = t('Common.label.password');
   const STORED_PASSWORD_LABEL = t('LoginForm.label.savedPassword');
+
+  const { control, handleSubmit, setValue, getValues, watch } = form;
 
   const {
     selectedHost,
@@ -68,7 +62,32 @@ const LoginFormBody = ({
     onRememberChange,
     onUserToggleAutoConnect,
     passwordFieldBlur,
-  } = useLoginFormBody(form);
+  } = useLoginFormBody({ setValue, getValues });
+
+  // Watched values drive the side-effect listeners. Each useEffect fires on
+  // mount (matching RFF's react-final-form-listeners OnChange semantics —
+  // initial undefined → defined transition triggers the handler) and on
+  // every subsequent change.
+  const formHost = watch('selectedHost');
+  const formUserName = watch('userName');
+  const formRemember = watch('remember');
+
+  const lastHostRef = useRef<HostDTO | undefined>(undefined);
+  useEffect(() => {
+    if (formHost === lastHostRef.current) {
+      return;
+    }
+    lastHostRef.current = formHost;
+    onSelectedHostChange(formHost);
+  }, [formHost]);
+
+  useEffect(() => {
+    onUserNameChange(formUserName);
+  }, [formUserName]);
+
+  useEffect(() => {
+    onRememberChange(formRemember);
+  }, [formRemember]);
 
   const testConnectionStatus = useAppSelector(server.Selectors.getTestConnectionStatus);
   const showHashingGatedOptions = hostSupportsHashedPassword(selectedHost, testConnectionStatus);
@@ -77,43 +96,57 @@ const LoginFormBody = ({
   // to 'success'; re-disable on any subsequent re-test.
   const loginDisabled = disableSubmitButton || testConnectionStatus !== 'success';
 
+  const submit = handleSubmit((values) => {
+    onSubmit({ ...values, userName: values.userName?.trim() });
+  });
+
   return (
-    <form className="loginForm" onSubmit={handleSubmit}>
+    <form className="loginForm" onSubmit={submit}>
       <div className="loginForm-items">
         <div className="loginForm-item">
-          <Field name="userName">
-            {(p) => (
+          <Controller
+            name="userName"
+            control={control}
+            render={({ field, fieldState }) => (
               <InputField
-                {...adaptRffField(p)}
+                {...field}
                 label={t('Common.label.username')}
                 autoComplete="username"
+                error={fieldState.error?.message}
+                touched={fieldState.isTouched}
               />
             )}
-          </Field>
-          <OnChange name="userName">{onUserNameChange}</OnChange>
+          />
         </div>
         <div className="loginForm-item">
-          <Field name="password">
-            {(p) => (
+          <Controller
+            name="password"
+            control={control}
+            render={({ field, fieldState }) => (
               <InputField
-                {...adaptRffField(p)}
+                {...field}
                 onFocus={() => setUseStoredPasswordLabel(false)}
-                onBlur={passwordFieldBlur}
+                onBlur={() => {
+                  field.onBlur(); passwordFieldBlur();
+                }}
                 label={useStoredPasswordLabel ? STORED_PASSWORD_LABEL : PASSWORD_LABEL}
                 type="password"
                 autoComplete="new-password"
+                error={fieldState.error?.message}
+                touched={fieldState.isTouched}
               />
             )}
-          </Field>
+          />
         </div>
         <div className="loginForm-actions">
           {showHashingGatedOptions && (
-            <>
-              <Field name="remember" type="checkbox">
-                {(p) => <CheckboxField {...adaptRffField(p)} label={t('LoginForm.label.savePassword')} />}
-              </Field>
-              <OnChange name="remember">{onRememberChange}</OnChange>
-            </>
+            <Controller
+              name="remember"
+              control={control}
+              render={({ field }) => (
+                <CheckboxField {...field} label={t('LoginForm.label.savePassword')} />
+              )}
+            />
           )}
 
           <Button color="primary" onClick={onResetPassword}>
@@ -121,27 +154,39 @@ const LoginFormBody = ({
           </Button>
         </div>
         <div className="loginForm-item">
-          <Field name="selectedHost">{(p) => <KnownHosts {...adaptRffField(p)} />}</Field>
-          <OnChange name="selectedHost">{onSelectedHostChange}</OnChange>
+          <Controller
+            name="selectedHost"
+            control={control}
+            render={({ field, fieldState }) => (
+              <KnownHosts
+                value={field.value}
+                onChange={field.onChange}
+                error={fieldState.error?.message}
+                touched={fieldState.isTouched}
+              />
+            )}
+          />
         </div>
         {showHashingGatedOptions && (
           <div className="loginForm-actions">
-            <Field name="autoConnect" type="checkbox">
-              {({ input }) => (
+            <Controller
+              name="autoConnect"
+              control={control}
+              render={({ field }) => (
                 <FormControlLabel
                   className="checkbox-field"
                   label={t('LoginForm.label.autoConnect')}
                   control={
                     <Checkbox
                       className="checkbox-field__box"
-                      checked={!!input.value}
-                      onChange={(_e, checked) => onUserToggleAutoConnect(checked, input.onChange)}
+                      checked={!!field.value}
+                      onChange={(_e, checked) => onUserToggleAutoConnect(checked, field.onChange)}
                       color="primary"
                     />
                   }
                 />
               )}
-            </Field>
+            />
           </div>
         )}
       </div>
@@ -163,22 +208,16 @@ const LoginForm = (props: LoginFormProps) => {
   const knownHosts = useKnownHosts();
   const settings = useSettings();
 
-  const validate = (values: Partial<LoginFormValues>): FormErrors<LoginFormValues> => {
-    const errors: FormErrors<LoginFormValues> = {};
-
-    if (!values.userName) {
-      errors.userName = t('Common.validation.required');
-    }
-    if (!values.selectedHost) {
-      errors.selectedHost = t('Common.validation.required');
-    }
-
-    return errors;
-  };
-
-  const handleOnSubmit = ({ userName, ...values }: LoginFormValues) => {
-    props.onSubmit({ ...values, userName: userName?.trim() });
-  };
+  const form = useForm<LoginFormValues>({
+    defaultValues: {
+      userName: knownHosts.value?.selectedHost?.userName ?? '',
+      password: '',
+      remember: Boolean(knownHosts.value?.selectedHost?.remember),
+      autoConnect: Boolean(settings.value?.autoConnect),
+      selectedHost: knownHosts.value?.selectedHost as HostDTO,
+    },
+    resolver: zodResolver(buildLoginFormSchema(t)),
+  });
 
   if (knownHosts.status !== LoadingState.READY || settings.status !== LoadingState.READY) {
     return (
@@ -188,27 +227,7 @@ const LoginForm = (props: LoginFormProps) => {
     );
   }
 
-  const selectedHost = knownHosts.value?.selectedHost;
-  const initialValues: Partial<LoginFormValues> = {
-    selectedHost,
-    userName: selectedHost?.userName ?? '',
-    remember: Boolean(selectedHost?.remember),
-    autoConnect: Boolean(settings.value?.autoConnect),
-    password: '',
-  };
-
-  return (
-    <Form
-      onSubmit={handleOnSubmit}
-      validate={validate}
-      initialValues={initialValues}
-      keepDirtyOnReinitialize
-    >
-      {({ handleSubmit, form }) => (
-        <LoginFormBody {...props} form={form} handleSubmit={handleSubmit} />
-      )}
-    </Form>
-  );
+  return <LoginFormBody {...props} form={form} />;
 };
 
 export default LoginForm;
