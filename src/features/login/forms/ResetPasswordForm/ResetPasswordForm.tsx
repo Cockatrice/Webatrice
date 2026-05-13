@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
 
-import { InputField } from '@app/components';
+import { adaptRffField, InputField } from '@app/components';
 import { KnownHosts } from '@app/feature-widgets/known-hosts';
 import { HostDTO } from '@app/services';
 import { FormErrors } from '@app/types';
@@ -71,37 +71,46 @@ const ResetPasswordForm = ({ onSubmit, userName }: ResetPasswordFormProps) => {
         <form className='ResetPasswordForm' onSubmit={handleSubmit}>
           <div className='ResetPasswordForm-items'>
             <div className='ResetPasswordForm-item'>
-              <Field
-                label={t('Common.label.username')}
-                name='userName'
-                component={InputField}
-                autoComplete='username'
-                InputProps={{ readOnly: Boolean(userName) }}
-              />
+              <Field name='userName'>
+                {(p) => (
+                  <InputField
+                    {...adaptRffField(p)}
+                    label={t('Common.label.username')}
+                    autoComplete='username'
+                    InputProps={{ readOnly: Boolean(userName) }}
+                  />
+                )}
+              </Field>
             </div>
             <div className='ResetPasswordForm-item'>
-              <Field label={t('Common.label.token')} name='token' component={InputField} />
+              <Field name='token'>{(p) => <InputField {...adaptRffField(p)} label={t('Common.label.token')} />}</Field>
             </div>
             <div className='ResetPasswordForm-item'>
-              <Field
-                label={t('Common.label.password')}
-                name='newPassword'
-                type='password'
-                component={InputField}
-                autoComplete='new-password'
-              />
+              <Field name='newPassword'>
+                {(p) => (
+                  <InputField
+                    {...adaptRffField(p)}
+                    label={t('Common.label.password')}
+                    type='password'
+                    autoComplete='new-password'
+                  />
+                )}
+              </Field>
             </div>
             <div className='ResetPasswordForm-item'>
-              <Field
-                label={t('Common.label.passwordAgain')}
-                name='passwordAgain'
-                type='password'
-                component={InputField}
-                autoComplete='new-password'
-              />
+              <Field name='passwordAgain'>
+                {(p) => (
+                  <InputField
+                    {...adaptRffField(p)}
+                    label={t('Common.label.passwordAgain')}
+                    type='password'
+                    autoComplete='new-password'
+                  />
+                )}
+              </Field>
             </div>
             <div className='ResetPasswordForm-item'>
-              <Field name='selectedHost' component={KnownHosts} disabled />
+              <Field name='selectedHost'>{(p) => <KnownHosts {...adaptRffField(p)} disabled />}</Field>
             </div>
 
             {errorMessage && (

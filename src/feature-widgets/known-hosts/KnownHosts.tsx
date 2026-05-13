@@ -12,8 +12,6 @@ import AddIcon from '@mui/icons-material/Add';
 import EditRoundedIcon from '@mui/icons-material/Edit';
 import ErrorOutlinedIcon from '@mui/icons-material/ErrorOutlined';
 
-import type { FieldRenderProps } from 'react-final-form';
-
 import { HostDTO } from '@app/services';
 import { getHostPort } from '@app/utils';
 
@@ -48,12 +46,15 @@ const Root = styled('div')(({ theme }) => ({
   },
 }));
 
-type KnownHostsProps = FieldRenderProps<HostDTO | undefined, HTMLElement> & {
+interface KnownHostsProps {
+  value: HostDTO | undefined;
+  onChange: (host: HostDTO | undefined) => void;
+  error?: string;
+  touched?: boolean;
   disabled?: boolean;
-};
+}
 
-const KnownHosts = ({ input, meta, disabled }: KnownHostsProps) => {
-  const { touched, error } = meta;
+const KnownHosts = ({ onChange, error, touched, disabled }: KnownHostsProps) => {
 
   const { t } = useTranslation();
   const {
@@ -67,7 +68,7 @@ const KnownHosts = ({ input, meta, disabled }: KnownHostsProps) => {
     closeKnownHostDialog,
     handleDialogRemove,
     handleDialogSubmit,
-  } = useKnownHostsComponent({ onChange: input.onChange });
+  } = useKnownHostsComponent({ onChange });
 
   const selectedId = selectedHost?.id ?? '';
 

@@ -1,7 +1,7 @@
+import type { ChangeEvent, FocusEvent } from 'react';
 import { styled } from '@mui/material/styles';
 import TextField, { TextFieldProps } from '@mui/material/TextField';
 import ErrorOutlinedIcon from '@mui/icons-material/ErrorOutlined';
-import type { FieldRenderProps } from 'react-final-form';
 
 import './InputField.css';
 
@@ -19,16 +19,24 @@ const Root = styled('div')(({ theme }) => ({
   },
 }));
 
-type InputFieldProps =
-  FieldRenderProps<string, HTMLInputElement> &
-  Omit<TextFieldProps, 'value' | 'onChange' | 'onBlur' | 'onFocus' | 'name'>;
+// Library-agnostic field wrapper. Form layers (react-final-form via the
+// `adaptRffField` helper, or react-hook-form via Controller) bind onto
+// this prop surface directly.
+export interface InputFieldProps extends Omit<TextFieldProps, 'value' | 'onChange' | 'onBlur' | 'onFocus' | 'name' | 'error'> {
+  value: string;
+  onChange: (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
+  onBlur?: (e: FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
+  onFocus?: (e: FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
+  name?: string;
+  error?: string;
+  touched?: boolean;
+}
 
-const InputField = ({ input, meta, ...args }: InputFieldProps) => {
-  const { touched, error } = meta;
-
+const InputField = ({ value, onChange, onBlur, onFocus, name, error, touched, ...args }: InputFieldProps) => {
+  const showError = touched && error;
   return (
     <Root className={`InputField ${classes.root}`}>
-      {touched && error && (
+      {showError && (
         <div className="InputField-validation">
           <div className="InputField-error">
             {error}
@@ -39,7 +47,11 @@ const InputField = ({ input, meta, ...args }: InputFieldProps) => {
 
       <TextField
         autoComplete="off"
-        {...input}
+        value={value}
+        onChange={onChange}
+        onBlur={onBlur}
+        onFocus={onFocus}
+        name={name}
         {...args}
         className="rounded"
         variant="outlined"

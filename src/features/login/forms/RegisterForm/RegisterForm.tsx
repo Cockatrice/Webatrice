@@ -7,7 +7,7 @@ import { useTranslation } from 'react-i18next';
 import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
 
-import { CountryDropdown, InputField } from '@app/components';
+import { adaptRffField, CountryDropdown, InputField } from '@app/components';
 import { KnownHosts } from '@app/feature-widgets/known-hosts';
 import type { HostDTO } from '@app/services';
 import { server } from 'datatrice';
@@ -123,51 +123,58 @@ const RegisterForm = ({ onSubmit }: RegisterFormProps) => {
           <form className="RegisterForm" onSubmit={handleSubmit}>
             <div className="RegisterForm-column">
               <div className="RegisterForm-item">
-                <Field label={t('Common.label.username')} name="userName" component={InputField} autoComplete="username" />
+                <Field name="userName">
+                  {(p) => <InputField {...adaptRffField(p)} label={t('Common.label.username')} autoComplete="username" />}
+                </Field>
                 <OnChange name="userName">{onUserNameChange}</OnChange>
               </div>
               <div className="RegisterForm-item">
-                <Field
-                  label={t('Common.label.password')}
-                  name="password"
-                  type="password"
-                  component={InputField}
-                  autoComplete='new-password'
-                />
+                <Field name="password">
+                  {(p) => (
+                    <InputField
+                      {...adaptRffField(p)}
+                      label={t('Common.label.password')}
+                      type="password"
+                      autoComplete='new-password'
+                    />
+                  )}
+                </Field>
                 <OnChange name="password">{onPasswordChange}</OnChange>
               </div>
               <div className="RegisterForm-item">
-                <Field
-                  label={t('Common.label.confirmPassword')}
-                  name="passwordConfirm"
-                  type="password"
-                  component={InputField}
-                  autoComplete='new-password'
-                />
+                <Field name="passwordConfirm">
+                  {(p) => (
+                    <InputField
+                      {...adaptRffField(p)}
+                      label={t('Common.label.confirmPassword')}
+                      type="password"
+                      autoComplete='new-password'
+                    />
+                  )}
+                </Field>
               </div>
               <div className="RegisterForm-item">
-                <Field name="selectedHost" component={KnownHosts} />
+                <Field name="selectedHost">{(p) => <KnownHosts {...adaptRffField(p)} />}</Field>
                 <OnChange name="selectedHost">{onHostChange}</OnChange>
               </div>
             </div>
             <div className="RegisterForm-column" >
               <div className="RegisterForm-item">
-                <Field label={t('Common.label.realName')} name="realName" component={InputField} />
+                <Field name="realName">{(p) => <InputField {...adaptRffField(p)} label={t('Common.label.realName')} />}</Field>
               </div>
               <div className="RegisterForm-item">
-                <Field label={t('Common.label.email')} name="email" type="email" component={InputField} />
+                <Field name="email">
+                  {(p) => <InputField {...adaptRffField(p)} label={t('Common.label.email')} type="email" />}
+                </Field>
                 <OnChange name="email">{onEmailChange}</OnChange>
               </div>
               <div className="RegisterForm-item">
-                <Field
-                  label={t('Common.label.confirmEmail')}
-                  name="emailConfirm"
-                  type="email"
-                  component={InputField}
-                />
+                <Field name="emailConfirm">
+                  {(p) => <InputField {...adaptRffField(p)} label={t('Common.label.confirmEmail')} type="email" />}
+                </Field>
               </div>
               <div className="RegisterForm-item">
-                <Field label={t('Common.label.country')} name="country" component={CountryDropdown} />
+                <Field name="country">{(p) => <CountryDropdown {...adaptRffField(p)} />}</Field>
               </div>
               <Button className="RegisterForm-submit tall" color="primary" variant="contained" type="submit">
                 {t('RegisterForm.label.register')}

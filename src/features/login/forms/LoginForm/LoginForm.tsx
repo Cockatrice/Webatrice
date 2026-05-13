@@ -9,7 +9,7 @@ import Checkbox from '@mui/material/Checkbox';
 import CircularProgress from '@mui/material/CircularProgress';
 import FormControlLabel from '@mui/material/FormControlLabel';
 
-import { CheckboxField, InputField } from '@app/components';
+import { adaptRffField, CheckboxField, InputField } from '@app/components';
 import { KnownHosts } from '@app/feature-widgets/known-hosts';
 import { LoadingState, useKnownHosts, useSettings } from '@app/hooks';
 import { HostDTO } from '@app/services';
@@ -81,33 +81,37 @@ const LoginFormBody = ({
     <form className="loginForm" onSubmit={handleSubmit}>
       <div className="loginForm-items">
         <div className="loginForm-item">
-          <Field
-            label={t('Common.label.username')}
-            name="userName"
-            component={InputField}
-            autoComplete="username"
-          />
+          <Field name="userName">
+            {(p) => (
+              <InputField
+                {...adaptRffField(p)}
+                label={t('Common.label.username')}
+                autoComplete="username"
+              />
+            )}
+          </Field>
           <OnChange name="userName">{onUserNameChange}</OnChange>
         </div>
         <div className="loginForm-item">
-          <Field
-            label={useStoredPasswordLabel ? STORED_PASSWORD_LABEL : PASSWORD_LABEL}
-            onFocus={() => setUseStoredPasswordLabel(false)}
-            onBlur={passwordFieldBlur}
-            name="password"
-            type="password"
-            component={InputField}
-            autoComplete="new-password"
-          />
+          <Field name="password">
+            {(p) => (
+              <InputField
+                {...adaptRffField(p)}
+                onFocus={() => setUseStoredPasswordLabel(false)}
+                onBlur={passwordFieldBlur}
+                label={useStoredPasswordLabel ? STORED_PASSWORD_LABEL : PASSWORD_LABEL}
+                type="password"
+                autoComplete="new-password"
+              />
+            )}
+          </Field>
         </div>
         <div className="loginForm-actions">
           {showHashingGatedOptions && (
             <>
-              <Field
-                label={t('LoginForm.label.savePassword')}
-                name="remember"
-                component={CheckboxField}
-              />
+              <Field name="remember" type="checkbox">
+                {(p) => <CheckboxField {...adaptRffField(p)} label={t('LoginForm.label.savePassword')} />}
+              </Field>
               <OnChange name="remember">{onRememberChange}</OnChange>
             </>
           )}
@@ -117,7 +121,7 @@ const LoginFormBody = ({
           </Button>
         </div>
         <div className="loginForm-item">
-          <Field name="selectedHost" component={KnownHosts} />
+          <Field name="selectedHost">{(p) => <KnownHosts {...adaptRffField(p)} />}</Field>
           <OnChange name="selectedHost">{onSelectedHostChange}</OnChange>
         </div>
         {showHashingGatedOptions && (

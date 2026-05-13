@@ -3,8 +3,11 @@ import InputField from './InputField';
 
 describe('InputField', () => {
   const defaultProps = {
-    input: { name: 'test', value: '', onChange: vi.fn(), onBlur: vi.fn(), onFocus: vi.fn() },
-    meta: { touched: false, error: null },
+    name: 'test',
+    value: '',
+    onChange: vi.fn(),
+    onBlur: vi.fn(),
+    onFocus: vi.fn(),
     label: 'Test Field',
   };
 
@@ -14,12 +17,12 @@ describe('InputField', () => {
   });
 
   it('shows error when touched and has error', () => {
-    render(<InputField {...defaultProps} meta={{ touched: true, error: 'Required' }} />);
+    render(<InputField {...defaultProps} touched error="Required" />);
     expect(screen.getByText('Required')).toBeInTheDocument();
   });
 
   it('does not show validation messages when not touched', () => {
-    render(<InputField {...defaultProps} meta={{ touched: false, error: 'Required' }} />);
+    render(<InputField {...defaultProps} touched={false} error="Required" />);
     expect(screen.queryByText('Required')).not.toBeInTheDocument();
   });
 });

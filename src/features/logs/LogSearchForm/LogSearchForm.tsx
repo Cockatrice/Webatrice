@@ -5,7 +5,7 @@ import Button from '@mui/material/Button';
 import Divider from '@mui/material/Divider';
 import Paper from '@mui/material/Paper';
 
-import { InputField, CheckboxField } from '@app/components';
+import { adaptRffField, CheckboxField, InputField } from '@app/components';
 
 import './LogSearchForm.css';
 
@@ -35,25 +35,31 @@ const LogSearchForm = ({ onSubmit }: LogSearchFormProps) => {
         <Paper className="log-search">
           <form className="log-search__form" onSubmit={handleSubmit}>
             <div className="log-search__form-item">
-              <Field label={t('LogSearchForm.label.userName')} name="userName" component={InputField} />
+              <Field name="userName">{(p) => <InputField {...adaptRffField(p)} label={t('LogSearchForm.label.userName')} />}</Field>
             </div>
             <div className="log-search__form-item">
-              <Field label={t('LogSearchForm.label.ipAddress')} name="ipAddress" component={InputField} />
+              <Field name="ipAddress">{(p) => <InputField {...adaptRffField(p)} label={t('LogSearchForm.label.ipAddress')} />}</Field>
             </div>
             <div className="log-search__form-item">
-              <Field label={t('LogSearchForm.label.gameName')} name="gameName" component={InputField} />
+              <Field name="gameName">{(p) => <InputField {...adaptRffField(p)} label={t('LogSearchForm.label.gameName')} />}</Field>
             </div>
             <div className="log-search__form-item">
-              <Field label={t('LogSearchForm.label.gameId')} name="gameId" component={InputField} />
+              <Field name="gameId">{(p) => <InputField {...adaptRffField(p)} label={t('LogSearchForm.label.gameId')} />}</Field>
             </div>
             <div className="log-search__form-item">
-              <Field label={t('LogSearchForm.label.message')} name="message" component={InputField} />
+              <Field name="message">{(p) => <InputField {...adaptRffField(p)} label={t('LogSearchForm.label.message')} />}</Field>
             </div>
             <Divider />
             <div className="log-search__form-item log-location">
-              <Field label={t('LogSearchForm.label.rooms')} name="logLocation.room" component={CheckboxField} />
-              <Field label={t('LogSearchForm.label.games')} name="logLocation.game" component={CheckboxField} />
-              <Field label={t('LogSearchForm.label.chats')} name="logLocation.chat" component={CheckboxField} />
+              <Field name="logLocation.room" type="checkbox">
+                {(p) => <CheckboxField {...adaptRffField(p)} label={t('LogSearchForm.label.rooms')} />}
+              </Field>
+              <Field name="logLocation.game" type="checkbox">
+                {(p) => <CheckboxField {...adaptRffField(p)} label={t('LogSearchForm.label.games')} />}
+              </Field>
+              <Field name="logLocation.chat" type="checkbox">
+                {(p) => <CheckboxField {...adaptRffField(p)} label={t('LogSearchForm.label.chats')} />}
+              </Field>
             </div>
             <Divider />
             <Button className="log-search__form-submit" color="primary" variant="contained" type="submit">

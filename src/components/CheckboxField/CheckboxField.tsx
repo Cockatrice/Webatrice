@@ -1,15 +1,17 @@
-import type { FocusEventHandler } from 'react';
+import type { ChangeEvent, FocusEventHandler } from 'react';
 import Checkbox, { CheckboxProps } from '@mui/material/Checkbox';
 import FormControlLabel from '@mui/material/FormControlLabel';
-import type { FieldRenderProps } from 'react-final-form';
 
-type CheckboxFieldProps = FieldRenderProps<boolean, HTMLInputElement> & {
+export interface CheckboxFieldProps extends Omit<CheckboxProps, 'checked' | 'onChange' | 'onBlur' | 'onFocus' | 'name' | 'value'> {
+  value: boolean | undefined;
+  onChange: (e: ChangeEvent<HTMLInputElement>) => void;
+  onBlur?: (e: unknown) => void;
+  onFocus?: (e: unknown) => void;
+  name?: string;
   label?: string;
-} & Omit<CheckboxProps, 'checked' | 'onChange' | 'onBlur' | 'onFocus' | 'name' | 'value'>;
+}
 
-const CheckboxField = ({ input, meta: _meta, label, ...args }: CheckboxFieldProps) => {
-  const { value, onChange, onBlur, onFocus, name } = input;
-
+const CheckboxField = ({ value, onChange, onBlur, onFocus, name, label, ...args }: CheckboxFieldProps) => {
   return (
     <FormControlLabel
       className="checkbox-field"
@@ -21,10 +23,10 @@ const CheckboxField = ({ input, meta: _meta, label, ...args }: CheckboxFieldProp
           name={name}
           checked={Boolean(value)}
           onChange={onChange}
-          // MUI Checkbox renders a <button>; final-form's onBlur/onFocus are
-          // typed for <input>. Same event shape at runtime — cast through.
-          onBlur={onBlur as unknown as FocusEventHandler<HTMLButtonElement>}
-          onFocus={onFocus as unknown as FocusEventHandler<HTMLButtonElement>}
+          // MUI Checkbox renders a <button>; final-form / RHF type onBlur/onFocus
+          // for <input>. Same event shape at runtime — cast through.
+          onBlur={onBlur as FocusEventHandler<HTMLButtonElement> | undefined}
+          onFocus={onFocus as FocusEventHandler<HTMLButtonElement> | undefined}
           color="primary"
         />
       }

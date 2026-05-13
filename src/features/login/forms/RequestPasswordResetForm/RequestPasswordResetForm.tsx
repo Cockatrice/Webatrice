@@ -7,7 +7,7 @@ import { useTranslation } from 'react-i18next';
 import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
 
-import { InputField } from '@app/components';
+import { adaptRffField, InputField } from '@app/components';
 import { KnownHosts } from '@app/feature-widgets/known-hosts';
 import { HostDTO } from '@app/services';
 import { FormErrors } from '@app/types';
@@ -104,16 +104,34 @@ const RequestPasswordResetFormBody = ({
     <form className="RequestPasswordResetForm" onSubmit={handleSubmit}>
       <div className="RequestPasswordResetForm-items">
         <div className="RequestPasswordResetForm-item">
-          <Field label={t('Common.label.username')} name="userName" component={InputField} autoComplete="username" disabled={isMFA} />
+          <Field name="userName">
+            {(p) => (
+              <InputField
+                {...adaptRffField(p)}
+                label={t('Common.label.username')}
+                autoComplete="username"
+                disabled={isMFA}
+              />
+            )}
+          </Field>
         </div>
         {isMFA ? (
           <div className="RequestPasswordResetForm-item">
-            <Field label={t('Common.label.email')} name="email" type="email" component={InputField} autoComplete="email" />
+            <Field name="email">
+              {(p) => (
+                <InputField
+                  {...adaptRffField(p)}
+                  label={t('Common.label.email')}
+                  type="email"
+                  autoComplete="email"
+                />
+              )}
+            </Field>
             <div>{t('RequestPasswordResetForm.mfaEnabled')}</div>
           </div>
         ) : null}
         <div className="RequestPasswordResetForm-item selectedHost">
-          <Field name='selectedHost' component={KnownHosts} disabled={isMFA} />
+          <Field name='selectedHost'>{(p) => <KnownHosts {...adaptRffField(p)} disabled={isMFA} />}</Field>
           <OnChange name="selectedHost">{onHostChange}</OnChange>
         </div>
 

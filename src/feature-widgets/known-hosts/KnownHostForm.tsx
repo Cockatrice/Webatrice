@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import Button from '@mui/material/Button';
 import AnchorLink from '@mui/material/Link';
 
-import { InputField } from '@app/components';
+import { adaptRffField, InputField } from '@app/components';
 import type { HostDTO } from '@app/services';
 import { FormErrors } from '@app/types';
 import './KnownHostForm.css';
@@ -78,13 +78,13 @@ const KnownHostForm = ({ host, onRemove, onSubmit }: KnownHostFormProps) => {
       {({ handleSubmit }) => (
         <form className="KnownHostForm" onSubmit={handleSubmit}>
           <div className="KnownHostForm-item">
-            <Field label={t('Common.label.hostName')} name="name" component={InputField} />
+            <Field name="name">{(p) => <InputField {...adaptRffField(p)} label={t('Common.label.hostName')} />}</Field>
           </div>
           <div className="KnownHostForm-item">
-            <Field label={t('Common.label.hostAddress')} name="host" component={InputField} />
+            <Field name="host">{(p) => <InputField {...adaptRffField(p)} label={t('Common.label.hostAddress')} />}</Field>
           </div>
           <div className="KnownHostForm-item">
-            <Field label={t('Common.label.port')} name="port" type="number" component={InputField} />
+            <Field name="port">{(p) => <InputField {...adaptRffField(p)} label={t('Common.label.port')} type="number" />}</Field>
           </div>
 
           <Button className="KnownHostForm-submit" color="primary" variant="contained" type="submit">

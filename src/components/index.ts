@@ -1,3 +1,5 @@
+export { adaptRffField } from './rffAdapter';
+
 // Common components
 export { default as Card } from './Card/Card';
 export { default as CardDetails } from './CardDetails/CardDetails';

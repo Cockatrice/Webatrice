@@ -1,4 +1,5 @@
-import { Select, MenuItem } from '@mui/material';
+import type { FocusEvent } from 'react';
+import { Select, MenuItem, SelectChangeEvent } from '@mui/material';
 import FormControl from '@mui/material/FormControl';
 import InputLabel from '@mui/material/InputLabel';
 import { useTranslation } from 'react-i18next';
@@ -6,15 +7,19 @@ import { useTranslation } from 'react-i18next';
 import { useLocaleSort } from '@app/hooks';
 import { Images } from '@app/images';
 import { countryCodes } from '@app/types';
-import type { FieldRenderProps } from 'react-final-form';
 
 import './CountryDropdown.css';
 
-type CountryDropdownProps = FieldRenderProps<string, HTMLElement>;
+interface CountryDropdownProps {
+  value: string | undefined;
+  onChange: (e: SelectChangeEvent<string>) => void;
+  onBlur?: (e: FocusEvent<HTMLElement>) => void;
+  name?: string;
+}
 
-const CountryDropdown = ({ input }: CountryDropdownProps) => {
+const CountryDropdown = ({ value, onChange, onBlur, name }: CountryDropdownProps) => {
   const { t } = useTranslation();
-  const currentValue = (input.value as string | undefined) ?? '';
+  const currentValue = value ?? '';
 
   const translateCountry = (country: string) => t(`Common.countries.${country}`);
   const sortedCountries = useLocaleSort(countryCodes, translateCountry);
@@ -28,8 +33,10 @@ const CountryDropdown = ({ input }: CountryDropdownProps) => {
         label="Country"
         margin="dense"
         fullWidth
-        {...input}
+        name={name}
         value={currentValue}
+        onChange={onChange}
+        onBlur={onBlur}
       >
         <MenuItem value="" key="none">
           <div className="CountryDropdown-item">

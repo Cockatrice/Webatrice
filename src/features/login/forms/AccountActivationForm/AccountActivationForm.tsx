@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
 
-import { InputField } from '@app/components';
+import { adaptRffField, InputField } from '@app/components';
 import { useReduxEffect } from '@app/hooks';
 import { server } from 'datatrice';
 import { FormErrors } from '@app/types';
@@ -49,7 +49,7 @@ const AccountActivationForm = ({ onSubmit }: AccountActivationFormProps) => {
         return (
           <form className="AccountActivationForm" onSubmit={handleSubmit}>
             <div className="AccountActivationForm-item">
-              <Field label={t('Common.label.token')} name="token" component={InputField} />
+              <Field name="token">{(p) => <InputField {...adaptRffField(p)} label={t('Common.label.token')} />}</Field>
             </div>
 
             {errorMessage && (

@@ -1,7 +1,7 @@
 import { Field } from 'react-final-form';
 import Button from '@mui/material/Button';
 
-import { InputField } from '..';
+import { adaptRffField, InputField } from '..';
 
 import './InputAction.css';
 
@@ -22,7 +22,7 @@ const InputAction = ({
 }: InputActionProps) => (
   <div className="input-action">
     <div className="input-action__item">
-      <Field label={label} name={name} component={InputField} validate={validate} />
+      <Field name={name} validate={validate}>{(p) => <InputField {...adaptRffField(p)} label={label} />}</Field>
     </div>
     <div className="input-action__submit">
       <Button color="primary" variant="contained" type="submit" disabled={disabled}>
