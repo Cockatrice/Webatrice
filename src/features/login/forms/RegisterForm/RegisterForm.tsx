@@ -1,49 +1,29 @@
-import { useEffect } from 'react';
-import { Form, Field, useForm } from 'react-final-form';
-import { OnChange } from 'react-final-form-listeners';
-import setFieldTouched from 'final-form-set-field-touched';
+import { useEffect, useMemo } from 'react';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { useTranslation } from 'react-i18next';
 
 import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
 
-import { adaptRffField, CountryDropdown, InputField } from '@app/components';
+import { CountryDropdown, InputField } from '@app/components';
 import { KnownHosts } from '@app/feature-widgets/known-hosts';
 import type { HostDTO } from '@app/services';
 import { server } from 'datatrice';
 import { useAppDispatch } from '@app/store';
-import { FormErrors } from '@app/types';
 import { useRegisterForm } from './useRegisterForm';
+import {
+  buildRegisterFormSchema,
+  type RegisterFormValues,
+} from './registerFormSchema';
 
 import './RegisterForm.css';
 
-export interface RegisterFormValues {
-  userName: string;
-  password: string;
-  passwordConfirm: string;
-  email?: string;
-  emailConfirm?: string;
-  realName?: string;
-  country?: string;
-  selectedHost: HostDTO;
-}
+export type { RegisterFormValues };
 
 interface RegisterFormProps {
   onSubmit: (values: RegisterFormValues) => void;
 }
-
-// Drives `setFieldTouched` from inside the react-final-form context so the
-// hook lives in a real component body instead of the <Form> render prop,
-// where react-final-form might short-circuit rendering and desync hook order.
-const EmailTouchOnRequire = ({ emailRequired }: { emailRequired: boolean }) => {
-  const form = useForm();
-  useEffect(() => {
-    if (emailRequired) {
-      form.mutators.setFieldTouched('email', true);
-    }
-  }, [emailRequired, form]);
-  return null;
-};
 
 const RegisterForm = ({ onSubmit }: RegisterFormProps) => {
   const { t } = useTranslation();
@@ -60,137 +40,228 @@ const RegisterForm = ({ onSubmit }: RegisterFormProps) => {
     onUserNameChange,
   } = useRegisterForm();
 
-  const handleOnSubmit = (values: RegisterFormValues) => {
-    dispatch(server.Actions.clearRegistrationErrors());
+  const schema = useMemo(() => buildRegisterFormSchema(t, emailRequired), [t, emailRequired]);
 
+  const {
+    control,
+    handleSubmit,
+    setValue,
+    setError,
+    getValues,
+    watch,
+  } = useForm<RegisterFormValues>({
+    defaultValues: {
+      userName: '',
+      password: '',
+      passwordConfirm: '',
+      email: '',
+      emailConfirm: '',
+      realName: '',
+      country: '',
+      selectedHost: undefined as unknown as HostDTO,
+    },
+    resolver: zodResolver(schema),
+  });
+
+  // Mirror server-driven errors onto the form once the field has been seen.
+  // useReduxEffect populates the *Error state in useRegisterForm; pushing them
+  // into formState via setError gives Controller's fieldState.error a value.
+  useEffect(() => {
+    if (emailError) {
+      setError('email', { type: 'server', message: emailError });
+    }
+  }, [emailError, setError]);
+  useEffect(() => {
+    if (userNameError) {
+      setError('userName', { type: 'server', message: userNameError });
+    }
+  }, [userNameError, setError]);
+  useEffect(() => {
+    if (passwordError) {
+      setError('password', { type: 'server', message: passwordError });
+    }
+  }, [passwordError, setError]);
+
+  // When the server demands MFA mid-flow, force-touch + re-validate email so
+  // the "required" error surfaces immediately. Replaces RFF's
+  // `form.mutators.setFieldTouched('email', true)` pattern.
+  useEffect(() => {
+    if (emailRequired) {
+      setValue('email', getValues('email') ?? '', { shouldTouch: true, shouldValidate: true });
+    }
+  }, [emailRequired, setValue, getValues]);
+
+  // Watch + useEffect replaces react-final-form-listeners <OnChange>: each
+  // listener mirrors the old "clear server error when user starts editing"
+  // behavior. Hook deps include the watched value only — the underlying
+  // callbacks read state via closures, matching the prior semantics.
+  const formUserName = watch('userName');
+  const formPassword = watch('password');
+  const formEmail = watch('email');
+  const formHost = watch('selectedHost');
+  useEffect(() => {
+    onUserNameChange();
+  }, [formUserName, onUserNameChange]);
+  useEffect(() => {
+    onPasswordChange();
+  }, [formPassword, onPasswordChange]);
+  useEffect(() => {
+    onEmailChange();
+  }, [formEmail, onEmailChange]);
+  useEffect(() => {
+    onHostChange();
+  }, [formHost, onHostChange]);
+
+  const submit = handleSubmit((values) => {
+    dispatch(server.Actions.clearRegistrationErrors());
     onSubmit({
       ...values,
       userName: values.userName?.trim(),
       email: values.email?.trim(),
       realName: values.realName?.trim(),
     });
-  };
-
-  const validate = (values: Partial<RegisterFormValues>): FormErrors<RegisterFormValues> => {
-    const errors: FormErrors<RegisterFormValues> = {};
-
-    if (!values.userName) {
-      errors.userName = t('Common.validation.required');
-    } else if (userNameError) {
-      errors.userName = userNameError;
-    }
-
-    if (!values.password) {
-      errors.password = t('Common.validation.required');
-    } else if (values.password.length < 8) {
-      errors.password = t('Common.validation.minChars', { count: 8 });
-    } else if (passwordError) {
-      errors.password = passwordError;
-    }
-
-    if (!values.passwordConfirm) {
-      errors.passwordConfirm = t('Common.validation.required');
-    } else if (values.password !== values.passwordConfirm) {
-      errors.passwordConfirm = t('Common.validation.passwordsMustMatch');
-    }
-
-    if (!values.selectedHost) {
-      errors.selectedHost = t('Common.validation.required');
-    }
-
-    if (emailRequired && !values.email) {
-      errors.email = t('Common.validation.required');
-    } else if (emailError) {
-      errors.email = emailError;
-    }
-
-    if (emailRequired) {
-      if (!values.emailConfirm) {
-        errors.emailConfirm = t('Common.validation.required');
-      } else if (values.email !== values.emailConfirm) {
-        errors.emailConfirm = t('Common.validation.emailsMustMatch');
-      }
-    }
-
-    return errors;
-  };
+  });
 
   return (
-    <Form onSubmit={handleOnSubmit} validate={validate} mutators={{ setFieldTouched }}>
-      {({ handleSubmit }) => (
-        <>
-          <EmailTouchOnRequire emailRequired={emailRequired} />
-          <form className="RegisterForm" onSubmit={handleSubmit}>
-            <div className="RegisterForm-column">
-              <div className="RegisterForm-item">
-                <Field name="userName">
-                  {(p) => <InputField {...adaptRffField(p)} label={t('Common.label.username')} autoComplete="username" />}
-                </Field>
-                <OnChange name="userName">{onUserNameChange}</OnChange>
-              </div>
-              <div className="RegisterForm-item">
-                <Field name="password">
-                  {(p) => (
-                    <InputField
-                      {...adaptRffField(p)}
-                      label={t('Common.label.password')}
-                      type="password"
-                      autoComplete='new-password'
-                    />
-                  )}
-                </Field>
-                <OnChange name="password">{onPasswordChange}</OnChange>
-              </div>
-              <div className="RegisterForm-item">
-                <Field name="passwordConfirm">
-                  {(p) => (
-                    <InputField
-                      {...adaptRffField(p)}
-                      label={t('Common.label.confirmPassword')}
-                      type="password"
-                      autoComplete='new-password'
-                    />
-                  )}
-                </Field>
-              </div>
-              <div className="RegisterForm-item">
-                <Field name="selectedHost">{(p) => <KnownHosts {...adaptRffField(p)} />}</Field>
-                <OnChange name="selectedHost">{onHostChange}</OnChange>
-              </div>
-            </div>
-            <div className="RegisterForm-column" >
-              <div className="RegisterForm-item">
-                <Field name="realName">{(p) => <InputField {...adaptRffField(p)} label={t('Common.label.realName')} />}</Field>
-              </div>
-              <div className="RegisterForm-item">
-                <Field name="email">
-                  {(p) => <InputField {...adaptRffField(p)} label={t('Common.label.email')} type="email" />}
-                </Field>
-                <OnChange name="email">{onEmailChange}</OnChange>
-              </div>
-              <div className="RegisterForm-item">
-                <Field name="emailConfirm">
-                  {(p) => <InputField {...adaptRffField(p)} label={t('Common.label.confirmEmail')} type="email" />}
-                </Field>
-              </div>
-              <div className="RegisterForm-item">
-                <Field name="country">{(p) => <CountryDropdown {...adaptRffField(p)} />}</Field>
-              </div>
-              <Button className="RegisterForm-submit tall" color="primary" variant="contained" type="submit">
-                {t('RegisterForm.label.register')}
-              </Button>
-            </div>
-          </form>
+    <>
+      <form className="RegisterForm" onSubmit={submit}>
+        <div className="RegisterForm-column">
+          <div className="RegisterForm-item">
+            <Controller
+              name="userName"
+              control={control}
+              render={({ field, fieldState }) => (
+                <InputField
+                  {...field}
+                  label={t('Common.label.username')}
+                  autoComplete="username"
+                  error={fieldState.error?.message}
+                  touched={fieldState.isTouched}
+                />
+              )}
+            />
+          </div>
+          <div className="RegisterForm-item">
+            <Controller
+              name="password"
+              control={control}
+              render={({ field, fieldState }) => (
+                <InputField
+                  {...field}
+                  label={t('Common.label.password')}
+                  type="password"
+                  autoComplete='new-password'
+                  error={fieldState.error?.message}
+                  touched={fieldState.isTouched}
+                />
+              )}
+            />
+          </div>
+          <div className="RegisterForm-item">
+            <Controller
+              name="passwordConfirm"
+              control={control}
+              render={({ field, fieldState }) => (
+                <InputField
+                  {...field}
+                  label={t('Common.label.confirmPassword')}
+                  type="password"
+                  autoComplete='new-password'
+                  error={fieldState.error?.message}
+                  touched={fieldState.isTouched}
+                />
+              )}
+            />
+          </div>
+          <div className="RegisterForm-item">
+            <Controller
+              name="selectedHost"
+              control={control}
+              render={({ field, fieldState }) => (
+                <KnownHosts
+                  value={field.value}
+                  onChange={field.onChange}
+                  error={fieldState.error?.message}
+                  touched={fieldState.isTouched}
+                />
+              )}
+            />
+          </div>
+        </div>
+        <div className="RegisterForm-column">
+          <div className="RegisterForm-item">
+            <Controller
+              name="realName"
+              control={control}
+              render={({ field, fieldState }) => (
+                <InputField
+                  {...field}
+                  value={field.value ?? ''}
+                  label={t('Common.label.realName')}
+                  error={fieldState.error?.message}
+                  touched={fieldState.isTouched}
+                />
+              )}
+            />
+          </div>
+          <div className="RegisterForm-item">
+            <Controller
+              name="email"
+              control={control}
+              render={({ field, fieldState }) => (
+                <InputField
+                  {...field}
+                  value={field.value ?? ''}
+                  label={t('Common.label.email')}
+                  type="email"
+                  error={fieldState.error?.message}
+                  touched={fieldState.isTouched}
+                />
+              )}
+            />
+          </div>
+          <div className="RegisterForm-item">
+            <Controller
+              name="emailConfirm"
+              control={control}
+              render={({ field, fieldState }) => (
+                <InputField
+                  {...field}
+                  value={field.value ?? ''}
+                  label={t('Common.label.confirmEmail')}
+                  type="email"
+                  error={fieldState.error?.message}
+                  touched={fieldState.isTouched}
+                />
+              )}
+            />
+          </div>
+          <div className="RegisterForm-item">
+            <Controller
+              name="country"
+              control={control}
+              render={({ field }) => (
+                <CountryDropdown
+                  value={field.value ?? ''}
+                  onChange={field.onChange}
+                  onBlur={field.onBlur}
+                  name={field.name}
+                />
+              )}
+            />
+          </div>
+          <Button className="RegisterForm-submit tall" color="primary" variant="contained" type="submit">
+            {t('RegisterForm.label.register')}
+          </Button>
+        </div>
+      </form>
 
-          {error && (
-            <div className="RegisterForm-item">
-              <Typography color="error">{error}</Typography>
-            </div>
-          )}
-        </>
+      {error && (
+        <div className="RegisterForm-item">
+          <Typography color="error">{error}</Typography>
+        </div>
       )}
-
-    </Form >
+    </>
   );
 };
 
