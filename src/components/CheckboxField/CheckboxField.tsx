@@ -23,7 +23,7 @@ const CheckboxField = ({ value, onChange, onBlur, onFocus, name, label, ...args 
           name={name}
           checked={Boolean(value)}
           onChange={onChange}
-          // MUI Checkbox renders a <button>; final-form / RHF type onBlur/onFocus
+          // MUI Checkbox renders a <button>; RHF Controller types onBlur/onFocus
           // for <input>. Same event shape at runtime — cast through.
           onBlur={onBlur as FocusEventHandler<HTMLButtonElement> | undefined}
           onFocus={onFocus as FocusEventHandler<HTMLButtonElement> | undefined}

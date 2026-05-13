@@ -19,9 +19,6 @@ const Root = styled('div')(({ theme }) => ({
   },
 }));
 
-// Library-agnostic field wrapper. Form layers (react-final-form via the
-// `adaptRffField` helper, or react-hook-form via Controller) bind onto
-// this prop surface directly.
 export interface InputFieldProps extends Omit<TextFieldProps, 'value' | 'onChange' | 'onBlur' | 'onFocus' | 'name' | 'error'> {
   value: string;
   onChange: (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
