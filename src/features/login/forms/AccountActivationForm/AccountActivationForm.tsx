@@ -1,19 +1,22 @@
 import { useState } from 'react';
-import { Form, Field } from 'react-final-form';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { useTranslation } from 'react-i18next';
 
 import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
 
-import { adaptRffField, InputField } from '@app/components';
+import { InputField } from '@app/components';
 import { useReduxEffect } from '@app/hooks';
 import { server } from 'datatrice';
-import { FormErrors } from '@app/types';
+
+import {
+  buildAccountActivationFormSchema,
+  type AccountActivationFormValues,
+} from './accountActivationFormSchema';
 import './AccountActivationForm.css';
 
-export interface AccountActivationFormValues {
-  token: string;
-}
+export type { AccountActivationFormValues };
 
 interface AccountActivationFormProps {
   onSubmit: (values: AccountActivationFormValues) => void;
@@ -27,44 +30,43 @@ const AccountActivationForm = ({ onSubmit }: AccountActivationFormProps) => {
     setErrorMessage(true);
   }, server.Types.ACCOUNT_ACTIVATION_FAILED, []);
 
-  const handleOnSubmit = ({ token, ...values }: AccountActivationFormValues) => {
+  const { control, handleSubmit } = useForm<AccountActivationFormValues>({
+    defaultValues: { token: '' },
+    resolver: zodResolver(buildAccountActivationFormSchema(t)),
+  });
+
+  const submit = handleSubmit((values) => {
     setErrorMessage(false);
-
-    onSubmit({ ...values, token: token?.trim() });
-  };
-
-  const validate = (values: Partial<AccountActivationFormValues>): FormErrors<AccountActivationFormValues> => {
-    const errors: FormErrors<AccountActivationFormValues> = {};
-
-    if (!values.token) {
-      errors.token = t('Common.validation.required');
-    }
-
-    return errors;
-  };
+    onSubmit(values);
+  });
 
   return (
-    <Form onSubmit={handleOnSubmit} validate={validate}>
-      {({ handleSubmit }) => {
-        return (
-          <form className="AccountActivationForm" onSubmit={handleSubmit}>
-            <div className="AccountActivationForm-item">
-              <Field name="token">{(p) => <InputField {...adaptRffField(p)} label={t('Common.label.token')} />}</Field>
-            </div>
+    <form className="AccountActivationForm" onSubmit={submit}>
+      <div className="AccountActivationForm-item">
+        <Controller
+          name="token"
+          control={control}
+          render={({ field, fieldState }) => (
+            <InputField
+              {...field}
+              label={t('Common.label.token')}
+              error={fieldState.error?.message}
+              touched={fieldState.isTouched}
+            />
+          )}
+        />
+      </div>
 
-            {errorMessage && (
-              <div className="AccountActivationForm-error">
-                <Typography color="error">{ t('AccountActivationForm.error.failed') }</Typography>
-              </div>
-            )}
+      {errorMessage && (
+        <div className="AccountActivationForm-error">
+          <Typography color="error">{t('AccountActivationForm.error.failed')}</Typography>
+        </div>
+      )}
 
-            <Button className="AccountActivationForm-submit rounded tall" color="primary" variant="contained" type="submit">
-              { t('AccountActivationForm.label.activate') }
-            </Button>
-          </form>
-        );
-      }}
-    </Form>
+      <Button className="AccountActivationForm-submit rounded tall" color="primary" variant="contained" type="submit">
+        {t('AccountActivationForm.label.activate')}
+      </Button>
+    </form>
   );
 };
 
