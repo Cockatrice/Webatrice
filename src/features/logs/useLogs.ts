@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useToast } from '@app/components';
-import { useWebClient } from '@app/hooks';
+import { useWebClient } from 'datatrice/react';
 import { server, type ServerStateLogs } from 'datatrice';
 import { useAppDispatch, useAppSelector } from '@app/store';
 import { ViewLogHistoryParams } from 'sockatrice/generated';

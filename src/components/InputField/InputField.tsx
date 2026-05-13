@@ -1,8 +1,7 @@
 import { styled } from '@mui/material/styles';
 import TextField, { TextFieldProps } from '@mui/material/TextField';
 import ErrorOutlinedIcon from '@mui/icons-material/ErrorOutlined';
-
-import type { FinalFormFieldProps } from '../fieldTypes';
+import type { FieldRenderProps } from 'react-final-form';
 
 import './InputField.css';
 
@@ -17,29 +16,24 @@ const Root = styled('div')(({ theme }) => ({
     '& .InputField-error': {
       color: theme.palette.error.main,
     },
-    '& .InputField-warning': {
-      color: theme.palette.warning.main,
-    },
   },
 }));
 
 type InputFieldProps =
-  FinalFormFieldProps<string, HTMLInputElement> &
+  FieldRenderProps<string, HTMLInputElement> &
   Omit<TextFieldProps, 'value' | 'onChange' | 'onBlur' | 'onFocus' | 'name'>;
 
 const InputField = ({ input, meta, ...args }: InputFieldProps) => {
-  const { touched, error, warning } = meta;
+  const { touched, error } = meta;
 
   return (
     <Root className={`InputField ${classes.root}`}>
-      {touched && (
+      {touched && error && (
         <div className="InputField-validation">
-          {(error &&
-            <div className="InputField-error">
-              {error}
-              <ErrorOutlinedIcon style={{ fontSize: 'small', fontWeight: 'bold' }} />
-            </div>
-          ) || (warning && <div className="InputField-warning">{warning}</div>)}
+          <div className="InputField-error">
+            {error}
+            <ErrorOutlinedIcon style={{ fontSize: 'small', fontWeight: 'bold' }} />
+          </div>
         </div>
       )}
 

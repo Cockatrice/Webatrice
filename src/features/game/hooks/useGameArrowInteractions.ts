@@ -1,6 +1,7 @@
 import { RefObject, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { useSettings, useWebClient } from '@app/hooks';
+import { useSettings } from '@app/hooks';
+import { useWebClient } from 'datatrice/react';
 import { CardAttribute, ServerInfo_Card } from 'sockatrice/generated';
 import { GameEntry, ZoneName } from 'datatrice';
 import { ArrowColor, ColorRGBA, rgbaToCss } from '@app/types';

@@ -1,4 +1,4 @@
-import { useWebClient } from '@app/hooks';
+import { useWebClient } from 'datatrice/react';
 
 export type HandSortKey = 'name' | 'maintype' | 'manacost';
 

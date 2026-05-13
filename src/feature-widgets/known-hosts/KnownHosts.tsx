@@ -12,7 +12,8 @@ import AddIcon from '@mui/icons-material/Add';
 import EditRoundedIcon from '@mui/icons-material/Edit';
 import ErrorOutlinedIcon from '@mui/icons-material/ErrorOutlined';
 
-import type { FinalFormFieldProps } from '@app/components';
+import type { FieldRenderProps } from 'react-final-form';
+
 import { HostDTO } from '@app/services';
 import { getHostPort } from '@app/utils';
 
@@ -33,10 +34,6 @@ const Root = styled('div')(({ theme }) => ({
       color: theme.palette.error.main,
     },
 
-    '& .KnownHosts-warning': {
-      color: theme.palette.warning.main,
-    },
-
     '& .KnownHosts-item': {
       [`& .${TestConnection.TESTING}`]: {
         color: theme.palette.warning.main,
@@ -51,12 +48,12 @@ const Root = styled('div')(({ theme }) => ({
   },
 }));
 
-type KnownHostsProps = FinalFormFieldProps<HostDTO | undefined, HTMLElement> & {
+type KnownHostsProps = FieldRenderProps<HostDTO | undefined, HTMLElement> & {
   disabled?: boolean;
 };
 
 const KnownHosts = ({ input, meta, disabled }: KnownHostsProps) => {
-  const { touched, error, warning } = meta;
+  const { touched, error } = meta;
 
   const { t } = useTranslation();
   const {
@@ -84,15 +81,12 @@ const KnownHosts = ({ input, meta, disabled }: KnownHostsProps) => {
   return (
     <Root className={`KnownHosts ${classes.root}`}>
       <FormControl className="KnownHosts-form" size="small" variant="outlined">
-        {touched && (
+        {touched && error && (
           <div className="KnownHosts-validation">
-            {(error && (
-              <div className="KnownHosts-error">
-                {error}
-                <ErrorOutlinedIcon style={{ fontSize: 'small', fontWeight: 'bold' }} />
-              </div>
-            )) ||
-              (warning && <div className="KnownHosts-warning">{warning}</div>)}
+            <div className="KnownHosts-error">
+              {error}
+              <ErrorOutlinedIcon style={{ fontSize: 'small', fontWeight: 'bold' }} />
+            </div>
           </div>
         )}
 

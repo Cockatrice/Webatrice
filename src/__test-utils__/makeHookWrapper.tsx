@@ -7,11 +7,10 @@ import { WebClientContext } from 'datatrice/react';
 
 import { createMockWebClient } from './mockWebClient';
 
-// Minimal Provider wrapper for hook-only tests. Use this instead of
-// `renderWithProviders` when you need `renderHook` â€” the full provider tree
-// auto-instantiates the singleton store via `@app/store`, which races with
-// any test-local store you preload. Deep-import the reducer(s) you need and
-// pass them here (see useCurrentGame.spec.tsx for the canonical pattern).
+// Minimal Provider wrapper for hook-only `renderHook` tests — skips
+// `<DatatriceProvider>` so the test can preload a narrow reducer slice
+// instead of the full augmented store. Deep-import the reducer you need
+// (see useCurrentGame.spec.tsx for the canonical pattern).
 
 export function makeReduxHookWrapper<S>(
   reducer: Reducer<S>,

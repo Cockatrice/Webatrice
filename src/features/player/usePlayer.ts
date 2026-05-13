@@ -1,7 +1,7 @@
 import { useEffect, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 
-import { useWebClient } from '@app/hooks';
+import { useWebClient } from 'datatrice/react';
 import { server } from 'datatrice';
 import { useAppSelector } from '@app/store';
 import { ServerInfo_User } from 'sockatrice/generated';

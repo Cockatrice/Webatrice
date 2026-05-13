@@ -6,11 +6,11 @@ import { useTranslation } from 'react-i18next';
 import { useLocaleSort } from '@app/hooks';
 import { Images } from '@app/images';
 import { countryCodes } from '@app/types';
-import type { FinalFormFieldProps } from '../fieldTypes';
+import type { FieldRenderProps } from 'react-final-form';
 
 import './CountryDropdown.css';
 
-type CountryDropdownProps = FinalFormFieldProps<string, HTMLElement>;
+type CountryDropdownProps = FieldRenderProps<string, HTMLElement>;
 
 const CountryDropdown = ({ input }: CountryDropdownProps) => {
   const { t } = useTranslation();

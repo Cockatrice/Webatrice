@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 
-import { useSettings, useWebClient } from '@app/hooks';
+import { useSettings } from '@app/hooks';
+import { useWebClient } from 'datatrice/react';
 import { CardAttribute, ServerInfo_Card } from 'sockatrice/generated';
 import { GameEntry, PlayerEntry, ZoneName } from 'datatrice';
 import { CardDTO } from '../../../services/dexie/DexieDTOs/CardDTO';

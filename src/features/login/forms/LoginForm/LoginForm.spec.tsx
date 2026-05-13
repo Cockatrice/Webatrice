@@ -12,10 +12,13 @@ vi.mock('@app/hooks', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@app/hooks')>();
   return {
     ...actual,
-    useWebClient: () => hoisted.mockWebClient,
     useSettings: hoisted.mockUseSettings,
     useKnownHosts: hoisted.mockUseKnownHosts,
   };
+});
+vi.mock('datatrice/react', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('datatrice/react')>();
+  return { ...actual, useWebClient: () => hoisted.mockWebClient };
 });
 
 // Stub the KnownHosts widget so its useKnownHostsComponent effect does not

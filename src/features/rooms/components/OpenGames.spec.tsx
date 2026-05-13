@@ -3,8 +3,8 @@ import type { Room } from 'datatrice';
 import { renderWithProviders, connectedWithRoomsState } from '../../../__test-utils__';
 import OpenGames from './OpenGames';
 
-vi.mock('@app/hooks', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@app/hooks')>();
+vi.mock('datatrice/react', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('datatrice/react')>();
   return { ...actual, useWebClient: vi.fn(() => ({})) };
 });
 

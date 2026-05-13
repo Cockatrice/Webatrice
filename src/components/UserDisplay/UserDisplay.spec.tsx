@@ -4,8 +4,8 @@ import UserDisplay from './UserDisplay';
 
 const mockWebClient = createMockWebClient();
 
-vi.mock('@app/hooks', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@app/hooks')>();
+vi.mock('datatrice/react', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('datatrice/react')>();
   return { ...actual, useWebClient: vi.fn(() => mockWebClient) };
 });
 

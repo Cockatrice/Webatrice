@@ -1,7 +1,6 @@
 import boundaries from 'eslint-plugin-boundaries';
 
 const elements = [
-  { type: 'api', pattern: ['src/api/**'] },
   { type: 'components', pattern: ['src/components/**'] },
   { type: 'dialogs', pattern: ['src/dialogs/**'] },
   { type: 'features', pattern: ['src/features/**'] },
@@ -23,15 +22,14 @@ const rules = [
   { from: { type: 'utils' }, allow: types('types') },
 
   { from: { type: 'store' }, allow: types('types', 'utils') },
-  { from: { type: 'api' }, allow: types('store', 'types', 'utils') },
 
-  { from: { type: 'services' }, allow: types('api', 'store', 'types', 'utils') },
-  { from: { type: 'hooks' }, allow: types('api', 'services', 'store', 'types', 'utils') },
+  { from: { type: 'services' }, allow: types('store', 'types', 'utils') },
+  { from: { type: 'hooks' }, allow: types('services', 'store', 'types', 'utils') },
   { from: { type: 'dialogs' }, allow: types('hooks', 'services', 'store', 'types', 'utils') },
 
   {
     from: { type: 'components' },
-    allow: types('api', 'dialogs', 'hooks', 'images', 'services', 'store', 'types', 'utils')
+    allow: types('dialogs', 'hooks', 'images', 'services', 'store', 'types', 'utils')
   },
 
   // Feature-widgets are multi-file capabilities composed by ≥2 features. They pull
@@ -39,7 +37,7 @@ const rules = [
   // feature-widgets (enforces one-way + no-cross-widget-imports).
   {
     from: { type: 'feature-widgets' },
-    allow: types('api', 'components', 'dialogs', 'hooks', 'images', 'services', 'store', 'types', 'utils')
+    allow: types('components', 'dialogs', 'hooks', 'images', 'services', 'store', 'types', 'utils')
   },
 
   // Feature-core is the app's foundational chrome layer (Layout + LeftNav). It composes
@@ -47,7 +45,7 @@ const rules = [
   // from any page). Consumed by features (below) for wrapping their route content.
   {
     from: { type: 'feature-core' },
-    allow: types('api', 'components', 'dialogs', 'feature-widgets', 'hooks', 'images', 'services', 'store', 'types', 'utils')
+    allow: types('components', 'dialogs', 'feature-widgets', 'hooks', 'images', 'services', 'store', 'types', 'utils')
   },
 
   // Features are vertical slices: they pull from root-level shared assets but nothing
@@ -57,7 +55,7 @@ const rules = [
   // also pull from `feature-core` for the page chrome (Layout, etc.).
   {
     from: { type: 'features' },
-    allow: types('api', 'components', 'dialogs', 'feature-widgets', 'hooks', 'images', 'services', 'feature-core', 'store', 'types', 'utils')
+    allow: types('components', 'dialogs', 'feature-widgets', 'hooks', 'images', 'services', 'feature-core', 'store', 'types', 'utils')
   },
 ];
 

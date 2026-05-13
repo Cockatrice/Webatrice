@@ -5,7 +5,8 @@ import Typography from '@mui/material/Typography';
 
 import { server, rooms, games, type GameFilters } from 'datatrice';
 import { useAppDispatch, useAppSelector } from '@app/store';
-import { useReduxEffect, useWebClient } from '@app/hooks';
+import { useReduxEffect } from '@app/hooks';
+import { useWebClient } from 'datatrice/react';
 import { CreateGameParams, Event_GameJoined, JoinGameParams } from 'sockatrice/generated';
 import { Room } from 'datatrice';
 import { RouteEnum } from '@app/types';

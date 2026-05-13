@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 
-import { LoadingState, useLeaveGame, useSettings, useWebClient } from '@app/hooks';
+import { LoadingState, useLeaveGame, useSettings } from '@app/hooks';
+import { useWebClient } from 'datatrice/react';
 import { games } from 'datatrice';
 import { useAppSelector } from '@app/store';
 

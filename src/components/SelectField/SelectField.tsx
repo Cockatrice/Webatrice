@@ -3,7 +3,7 @@ import InputLabel from '@mui/material/InputLabel';
 import MenuItem from '@mui/material/MenuItem';
 import Select from '@mui/material/Select';
 
-import type { FinalFormFieldProps } from '../fieldTypes';
+import type { FieldRenderProps } from 'react-final-form';
 
 import './SelectField.css';
 
@@ -12,7 +12,7 @@ export interface SelectFieldOption<V extends string | number = string | number> 
   label: string;
 }
 
-interface SelectFieldProps<V extends string | number = string | number> extends FinalFormFieldProps<V, HTMLElement> {
+interface SelectFieldProps<V extends string | number = string | number> extends FieldRenderProps<V, HTMLElement> {
   label: string;
   options: SelectFieldOption<V>[];
 }

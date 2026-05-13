@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, RefObject } from 'react';
-import { useWebClient } from '@app/hooks';
+import { useWebClient } from 'datatrice/react';
 import { games } from 'datatrice';
 import { useAppSelector } from '@app/store';
 import { GameMessage, PlayerEntry } from 'datatrice';

@@ -2,8 +2,8 @@ import { renderWithProviders, connectedState, makeUser } from '../../__test-util
 import { ServerInfo_User_UserLevelFlag } from 'sockatrice/generated';
 import ModGuard from './ModGuard';
 
-vi.mock('@app/hooks', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@app/hooks')>();
+vi.mock('datatrice/react', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('datatrice/react')>();
   return { ...actual, useWebClient: vi.fn(() => ({})) };
 });
 

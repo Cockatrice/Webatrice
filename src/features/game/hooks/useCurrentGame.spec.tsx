@@ -3,9 +3,8 @@ import { renderHook } from '@testing-library/react';
 import { configureStore } from '@reduxjs/toolkit';
 import { Provider } from 'react-redux';
 
-// Pulling the raw reducer + state type from `datatrice` (not `@app/store`)
-// keeps this spec from evaluating Webatrice's singleton store — see
-// useGameAccess.spec.tsx for the longer rationale.
+// Pulling the games reducer + state type from `datatrice` (not `@app/store`)
+// avoids importing the augmented RootState — see useGameAccess.spec.tsx.
 import { games, type GamesState } from 'datatrice';
 import { makeGameEntry, makePlayerEntry, makePlayerProperties } from '../../../__test-utils__/games-fixtures';
 import { useCurrentGame } from './useCurrentGame';

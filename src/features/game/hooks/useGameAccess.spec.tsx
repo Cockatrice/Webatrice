@@ -3,11 +3,9 @@ import { renderHook } from '@testing-library/react';
 import { configureStore } from '@reduxjs/toolkit';
 import { Provider } from 'react-redux';
 
-// Pulling the raw reducer + state type from `datatrice` (not `@app/store`)
-// keeps this spec from evaluating Webatrice's singleton store. Going
-// through `@app/store` eagerly evaluates `src/store/index.ts` →
-// `createDatatriceStore(rootReducer)`, instantiating the real singleton
-// store and racing the test-local store created in makeWrapper.
+// Pulling the games reducer + state type from `datatrice` (not `@app/store`)
+// avoids importing `RootState`, which would force-evaluate the augmented
+// store wiring chain — we only need the narrow `{ games }` slice here.
 import { games, type GamesState } from 'datatrice';
 import { makeGameEntry } from '../../../__test-utils__/games-fixtures';
 import { useGameAccess } from './useGameAccess';

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 
-import { useWebClient } from '@app/hooks';
+import { useWebClient } from 'datatrice/react';
 import { games } from 'datatrice';
 import { useAppSelector } from '@app/store';
 import { ServerInfo_Arrow } from 'sockatrice/generated';

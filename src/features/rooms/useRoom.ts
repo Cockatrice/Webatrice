@@ -1,7 +1,7 @@
 import { useCallback, useEffect } from 'react';
 import { useNavigate, useParams, generatePath } from 'react-router-dom';
 
-import { useWebClient } from '@app/hooks';
+import { useWebClient } from 'datatrice/react';
 import { rooms } from 'datatrice';
 import { useAppSelector } from '@app/store';
 import { ServerInfo_User } from 'sockatrice/generated';

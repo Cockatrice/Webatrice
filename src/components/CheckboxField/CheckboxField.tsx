@@ -1,10 +1,9 @@
 import type { FocusEventHandler } from 'react';
 import Checkbox, { CheckboxProps } from '@mui/material/Checkbox';
 import FormControlLabel from '@mui/material/FormControlLabel';
+import type { FieldRenderProps } from 'react-final-form';
 
-import type { FinalFormFieldProps } from '../fieldTypes';
-
-type CheckboxFieldProps = FinalFormFieldProps<boolean, HTMLInputElement> & {
+type CheckboxFieldProps = FieldRenderProps<boolean, HTMLInputElement> & {
   label?: string;
 } & Omit<CheckboxProps, 'checked' | 'onChange' | 'onBlur' | 'onFocus' | 'name' | 'value'>;
 

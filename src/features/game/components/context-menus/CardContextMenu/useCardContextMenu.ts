@@ -1,4 +1,4 @@
-import { useWebClient } from '@app/hooks';
+import { useWebClient } from 'datatrice/react';
 import { CardAttribute, ServerInfo_Card } from 'sockatrice/generated';
 import { ZoneName } from 'datatrice';
 interface MoveTarget {

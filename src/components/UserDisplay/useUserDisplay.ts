@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-import { useWebClient } from '@app/hooks';
+import { useWebClient } from 'datatrice/react';
 import { server } from 'datatrice';
 import { useAppSelector } from '@app/store';
 

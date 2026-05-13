@@ -8,7 +8,7 @@ import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 
-import { ShortcutScope } from '@app/hooks';
+import { ShortcutScope } from '@app/types';
 import { shortcuts, useAppSelector } from '@app/store';
 
 import { allActionIds, defaults } from '../defaults';

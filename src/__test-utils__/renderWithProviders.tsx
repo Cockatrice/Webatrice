@@ -1,7 +1,6 @@
 import { ReactElement } from 'react';
 import { render, RenderOptions } from '@testing-library/react';
-import { Provider, useStore } from 'react-redux';
-import type { EnhancedStore } from '@reduxjs/toolkit';
+import { combineReducers, type EnhancedStore } from '@reduxjs/toolkit';
 import { MemoryRouter } from 'react-router-dom';
 import { I18nextProvider } from 'react-i18next';
 import i18n from 'i18next';
@@ -10,6 +9,7 @@ import { DndContext } from '@dnd-kit/core';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 import type { WebsocketTypes } from 'sockatrice/types';
 import type { WebClient } from 'sockatrice';
+import { createStore } from 'datatrice';
 import { DatatriceProvider, WebClientProvider } from 'datatrice/react';
 
 const testTheme = createTheme({
@@ -30,7 +30,7 @@ const testTheme = createTheme({
   },
 });
 
-import { extensions, type RootState } from '../store';
+import { rootReducerMap, type RootState } from '../store';
 import { ToastProvider } from '../components/Toast/ToastContext';
 import { createMockWebClient } from './mockWebClient';
 
@@ -50,9 +50,8 @@ testI18n.use(initReactI18next).init({
   interpolation: { escapeValue: false },
 });
 
-// Test-only config; WebClient never actually opens a socket in tests because
-// the `client` override prop short-circuits internal construction. These
-// values exist purely to satisfy WebClientProvider's required prop typing.
+// Required by WebClientProvider's prop typing; the `client` override prop
+// short-circuits internal construction so the values are never read.
 const TEST_CLIENT_CONFIG: WebsocketTypes.ClientConfig = {
   clientid: 'webatrice-tests',
   clientver: '0',
@@ -63,25 +62,13 @@ const TEST_CLIENT_OPTIONS: WebsocketTypes.ClientOptions = {
   keepalive: 0,
 };
 
-// Captures DatatriceProvider's internal store via `useStore()` so callers
-// that need `result.store.dispatch(...)` keep working. DatatriceProvider
-// builds its store synchronously on first mount; this capture lands during
-// the same render tick, so the ref is populated by the time `render()`
-// returns. Don't use it before render — it'll be null.
-function StoreCapture({ storeRef }: { storeRef: { current: EnhancedStore<RootState> | null } }) {
-  storeRef.current = useStore() as EnhancedStore<RootState>;
-  return null;
-}
-
 interface ExtendedRenderOptions extends Omit<RenderOptions, 'wrapper'> {
   preloadedState?: Partial<RootState>;
   route?: string;
   webClient?: WebClient;
   // Pre-built store override — used by the integration harness, whose
-  // setup.ts owns a singleton store shared with a manually-constructed
-  // WebClient. When passed, skip <DatatriceProvider> (which would create
-  // its own internal store) and wrap with react-redux's <Provider> directly
-  // so the React tree reads from the same store the WebClient writes to.
+  // setup.ts owns a test store shared with a manually-constructed WebClient.
+  // When omitted, the helper builds a fresh store per render.
   store?: EnhancedStore<RootState>;
 }
 
@@ -95,38 +82,31 @@ export function renderWithProviders(
     ...renderOptions
   }: ExtendedRenderOptions = {},
 ) {
-  const storeRef: { current: EnhancedStore<RootState> | null } = { current: null };
+  const store = externalStore ?? createStore<RootState>({
+    reducer: combineReducers(rootReducerMap),
+    preloadedState,
+  });
 
   function Wrapper({ children }: { children: React.ReactNode }) {
-    const innerProviders = (
-      <WebClientProvider config={TEST_CLIENT_CONFIG} options={TEST_CLIENT_OPTIONS} client={webClient}>
-        <I18nextProvider i18n={testI18n}>
-          <ThemeProvider theme={testTheme}>
-            <ToastProvider>
-              <MemoryRouter initialEntries={[route]}>
-                <DndContext
-                  accessibility={{
-                    screenReaderInstructions: { draggable: '' },
-                  }}
-                >
-                  {children}
-                </DndContext>
-              </MemoryRouter>
-            </ToastProvider>
-          </ThemeProvider>
-        </I18nextProvider>
-      </WebClientProvider>
-    );
-
-    if (externalStore) {
-      storeRef.current = externalStore;
-      return <Provider store={externalStore}>{innerProviders}</Provider>;
-    }
-
     return (
-      <DatatriceProvider extensions={extensions} preloadedState={preloadedState}>
-        <StoreCapture storeRef={storeRef} />
-        {innerProviders}
+      <DatatriceProvider store={store}>
+        <WebClientProvider config={TEST_CLIENT_CONFIG} options={TEST_CLIENT_OPTIONS} client={webClient}>
+          <I18nextProvider i18n={testI18n}>
+            <ThemeProvider theme={testTheme}>
+              <ToastProvider>
+                <MemoryRouter initialEntries={[route]}>
+                  <DndContext
+                    accessibility={{
+                      screenReaderInstructions: { draggable: '' },
+                    }}
+                  >
+                    {children}
+                  </DndContext>
+                </MemoryRouter>
+              </ToastProvider>
+            </ThemeProvider>
+          </I18nextProvider>
+        </WebClientProvider>
       </DatatriceProvider>
     );
   }
@@ -135,6 +115,6 @@ export function renderWithProviders(
   return {
     ...result,
     webClient,
-    store: storeRef.current!,
+    store,
   };
 }

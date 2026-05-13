@@ -11,10 +11,8 @@ import { rootReducerMap } from '@app/store';
 import { attachResponseHandlers, createStore, games, rooms, server } from 'datatrice';
 
 // Integration tests run in vitest (node) with a mocked WebSocket; they don't
-// mount <DatatriceProvider>, so they can't get a store from React context.
-// This module owns the integration store directly. Specs import it from here
-// — NOT from `@app/store`, which no longer exports a singleton post-v0.5.0
-// migration.
+// mount <DatatriceProvider>, so the harness owns the store directly. Specs
+// import it from here, not from `@app/store`.
 export const store = createStore({ reducer: combineReducers(rootReducerMap) });
 import {
   PROTOCOL_VERSION,
@@ -131,7 +129,7 @@ function resetAll(): void {
     currentMockInstance = null;
   }
 
-  (WebClient as unknown as { _instance: WebClient | null })._instance = null;
+  WebClient.dispose();
 }
 
 const DEFAULT_LOGIN_OPTIONS: WebsocketTypes.WebSocketConnectOptions = {

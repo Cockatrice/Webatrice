@@ -53,8 +53,8 @@
     "react-virtualized-auto-sizer": "^2.0.3",
     "react-window": "^2.2.7",
     "rxjs": "^7.5.4",
-    "datatrice": "https://github.com/Cockatrice/Datatrice/releases/download/v0.6.0/datatrice-0.6.0.tgz",
-    "sockatrice": "https://github.com/Cockatrice/Sockatrice/releases/download/v2.3.1/sockatrice-2.3.1.tgz"
+    "datatrice": "https://github.com/Cockatrice/Datatrice/releases/download/v0.7.0/datatrice-0.7.0.tgz",
+    "sockatrice": "https://github.com/Cockatrice/Sockatrice/releases/download/v2.3.2/sockatrice-2.3.2.tgz"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

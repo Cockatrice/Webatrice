@@ -1,5 +1,6 @@
 import { useShortcut } from '@app/feature-widgets/shortcuts';
-import { ShortcutScope, useWebClient } from '@app/hooks';
+import { ShortcutScope } from '@app/types';
+import { useWebClient } from 'datatrice/react';
 import { games } from 'datatrice';
 import { useAppSelector } from '@app/store';
 import { CardAttribute } from 'sockatrice/generated';

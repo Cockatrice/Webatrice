@@ -1,4 +1,4 @@
-import { useWebClient } from '@app/hooks';
+import { useWebClient } from 'datatrice/react';
 import { games } from 'datatrice';
 import { useAppSelector } from '@app/store';
 import { ServerInfo_Counter } from 'sockatrice/generated';

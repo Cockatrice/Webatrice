@@ -76,15 +76,15 @@ const OpenGames = ({ room, onActivateGame }: OpenGamesProps) => {
           <TableRow>
             {headerCells.map(({ label, field }) => {
               const active = field === sortBy.field;
-              const order = sortBy.order.toLowerCase();
-              const sortDirection = active ? (order === 'asc' ? 'asc' : 'desc') : false;
+              const direction: 'asc' | 'desc' = sortBy.order.toLowerCase() === 'asc' ? 'asc' : 'desc';
+              const sortDirection = active ? direction : false;
 
               return (
                 <TableCell sortDirection={sortDirection} key={label}>
                   {!field ? label : (
                     <TableSortLabel
                       active={active}
-                      direction={order === 'asc' ? 'asc' : 'desc'}
+                      direction={direction}
                       onClick={() => handleSort(field)}
                     >
                       {label}

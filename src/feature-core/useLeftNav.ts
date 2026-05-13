@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
 import { useNavigate, generatePath } from 'react-router-dom';
 
-import { useLeaveGame, useWebClient } from '@app/hooks';
+import { useLeaveGame } from '@app/hooks';
+import { useWebClient } from 'datatrice/react';
 import { server, rooms, games } from 'datatrice';
 import { useAppSelector } from '@app/store';
 import { RouteEnum } from '@app/types';
