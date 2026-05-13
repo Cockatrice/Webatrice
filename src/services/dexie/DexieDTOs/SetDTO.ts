@@ -1,5 +1,5 @@
 import { IndexableType } from 'dexie';
-import { Set } from '@app/types';
+import { Set } from '../types/Set';
 import { dexieService } from '../DexieService';
 
 export class SetDTO extends Set {

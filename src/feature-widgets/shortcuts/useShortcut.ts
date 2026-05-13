@@ -1,7 +1,7 @@
 import { useContext, useEffect, useRef } from 'react';
 
-import { ShortcutHandler, ShortcutScope } from '@app/types';
 import { ShortcutContext } from './shortcutContext';
+import { ShortcutHandler, ShortcutScope } from './types';
 
 export interface UseShortcutOptions {
   scope: ShortcutScope;

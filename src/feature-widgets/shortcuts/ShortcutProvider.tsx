@@ -2,7 +2,7 @@ import { ReactNode, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 
 import { shortcuts, useAppDispatch, useAppSelector } from '@app/store';
-import { ShortcutRegistration, ShortcutScope } from '@app/types';
+import { ShortcutRegistration, ShortcutScope } from './types';
 import { firesInTextInputsFor, getDefaultFor } from './defaults';
 import {
   formatEvent,

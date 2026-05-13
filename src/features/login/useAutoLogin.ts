@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 
 import type { HostDTO } from '@app/services';
 
-import { getKnownHosts } from '../../hooks/useKnownHosts';
+import { getKnownHosts } from '@app/feature-widgets/known-hosts';
 import { getSettings } from '../../hooks/useSettings';
 
 export interface LoginFormValues {

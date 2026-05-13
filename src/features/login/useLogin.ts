@@ -2,7 +2,8 @@ import { useCallback, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useToast } from '@app/components';
-import { useFireOnce, useKnownHosts, useReduxEffect } from '@app/hooks';
+import { useFireOnce, useReduxEffect } from '@app/hooks';
+import { useKnownHosts } from '@app/feature-widgets/known-hosts';
 import { useWebClient } from 'datatrice/react';
 import { server } from 'datatrice';
 import { useAppSelector } from '@app/store';

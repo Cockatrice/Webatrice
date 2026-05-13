@@ -2,7 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useToast } from '@app/components';
-import { LoadingState, useKnownHosts, useReduxEffect } from '@app/hooks';
+import { LoadingState, useReduxEffect } from '@app/hooks';
+
+import { useKnownHosts } from './useKnownHosts';
 import { useWebClient } from 'datatrice/react';
 import { HostDTO } from '@app/services';
 import { server } from 'datatrice';

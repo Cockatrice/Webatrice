@@ -1,4 +1,4 @@
-import { AllowedCount, Card, Format, Info, Set, Token, XmlNode } from '@app/types';
+import { AllowedCount, Card, Format, Info, Set, Token, XmlNode } from '@app/services';
 export interface ParsedCockatriceXml {
   info?: Info;
   formats?: Format[];

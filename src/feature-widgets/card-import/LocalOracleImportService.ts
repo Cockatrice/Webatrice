@@ -1,5 +1,15 @@
-import { Card, Format, Info, Set, Token } from '@app/types';
-import { CardDTO, SetDTO, TokenDTO, FormatDTO, InfoDTO } from '@app/services';
+import {
+  Card,
+  CardDTO,
+  Format,
+  FormatDTO,
+  Info,
+  InfoDTO,
+  Set,
+  SetDTO,
+  Token,
+  TokenDTO,
+} from '@app/services';
 
 import { cockatriceXmlParser } from './CockatriceXmlParser';
 

@@ -1,7 +1,9 @@
 import { renderHook, waitFor } from '@testing-library/react';
 
 vi.mock('../../hooks/useSettings');
-vi.mock('../../hooks/useKnownHosts');
+vi.mock('../../feature-widgets/known-hosts/useKnownHosts');
+// Stub the KnownHosts UI so importing the widget barrel doesn't drag MUI in.
+vi.mock('../../feature-widgets/known-hosts/KnownHosts', () => ({ default: () => null }));
 
 type AnyRecord = Record<string, any>;
 
@@ -16,7 +18,7 @@ beforeEach(async () => {
   vi.resetModules();
   useAutoLoginModule = await import('./useAutoLogin');
   const settingsMockModule = await import('../../hooks/__mocks__/useSettings');
-  const hostsMockModule = await import('../../hooks/__mocks__/useKnownHosts');
+  const hostsMockModule = await import('../../feature-widgets/known-hosts/__mocks__/useKnownHosts');
   getSettingsMock = settingsMockModule.getSettings;
   getKnownHostsMock = hostsMockModule.getKnownHosts;
   makeSettings = settingsMockModule.makeSettings as any;

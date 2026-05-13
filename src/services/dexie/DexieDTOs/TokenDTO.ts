@@ -1,5 +1,5 @@
 import { IndexableType } from 'dexie';
-import { Token } from '@app/types';
+import { Token } from '../types/Token';
 import { dexieService } from '../DexieService';
 
 export class TokenDTO extends Token {

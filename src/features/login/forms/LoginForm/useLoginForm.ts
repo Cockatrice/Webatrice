@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import type { UseFormGetValues, UseFormSetValue } from 'react-hook-form';
 
-import { LoadingState, useKnownHosts, useSettings } from '@app/hooks';
+import { LoadingState, useSettings } from '@app/hooks';
+import { useKnownHosts } from '@app/feature-widgets/known-hosts';
 import { HostDTO } from '@app/services';
 
 import type { LoginFormValues } from './loginFormSchema';

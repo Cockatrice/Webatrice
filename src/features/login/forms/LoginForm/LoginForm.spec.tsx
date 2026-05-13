@@ -1,6 +1,6 @@
 import { renderWithProviders, createMockWebClient, disconnectedState } from '../../../../__test-utils__';
 import { makeSettingsHook, makeSettings } from '../../../../hooks/__mocks__/useSettings';
-import { makeKnownHostsHook, makeHost } from '../../../../hooks/__mocks__/useKnownHosts';
+import { makeKnownHostsHook, makeHost } from '../../../../feature-widgets/known-hosts/__mocks__/useKnownHosts';
 
 const hoisted = vi.hoisted(() => ({
   mockWebClient: undefined as any,
@@ -13,7 +13,6 @@ vi.mock('@app/hooks', async (importOriginal) => {
   return {
     ...actual,
     useSettings: hoisted.mockUseSettings,
-    useKnownHosts: hoisted.mockUseKnownHosts,
   };
 });
 vi.mock('datatrice/react', async (importOriginal) => {
@@ -24,10 +23,11 @@ vi.mock('datatrice/react', async (importOriginal) => {
 // Stub the KnownHosts widget so its useKnownHostsComponent effect does not
 // dispatch `testConnectionStarted` against the test store, which would clobber
 // any preloaded `testConnectionStatus: 'success'` state and disable the form.
-// Form values' `selectedHost` is initialized via useKnownHosts() (mocked above);
+// Form values' `selectedHost` is initialized via useKnownHosts() (mocked below);
 // the Field's runtime onChange is not exercised by these tests.
 vi.mock('@app/feature-widgets/known-hosts', () => ({
   KnownHosts: () => null,
+  useKnownHosts: hoisted.mockUseKnownHosts,
 }));
 
 import LoginForm from './LoginForm';

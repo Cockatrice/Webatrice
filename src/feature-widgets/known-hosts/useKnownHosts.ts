@@ -2,7 +2,7 @@ import { HostDTO } from '@app/services';
 import { Host } from '@app/types';
 import { DefaultHosts } from '@app/utils';
 
-import { createSharedStore, Loadable, useSharedStore } from './useSharedStore';
+import { createSharedStore, Loadable, useSharedStore } from '@app/hooks';
 
 export interface KnownHostsValue {
   hosts: HostDTO[];

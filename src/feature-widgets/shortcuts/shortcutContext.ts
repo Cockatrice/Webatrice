@@ -1,6 +1,6 @@
 import { createContext } from 'react';
 
-import { ShortcutRegistration } from '@app/types';
+import { ShortcutRegistration } from './types';
 export interface ShortcutContextValue {
   register: (registration: ShortcutRegistration) => () => void;
 }

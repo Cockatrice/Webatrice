@@ -10,7 +10,7 @@ const flushStoresAndEffects = async (): Promise<void> => {
 };
 
 import { settingsStore } from '../../../src/hooks/useSettings';
-import { knownHostsStore } from '../../../src/hooks/useKnownHosts';
+import { knownHostsStore } from '../../../src/feature-widgets/known-hosts/useKnownHosts';
 import { Login } from '@app/features/login';
 import { autoLoginGate } from '../../../src/features/login/useAutoLogin';
 import { HostDTO, SettingDTO } from '@app/services';

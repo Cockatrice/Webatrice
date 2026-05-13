@@ -1,4 +1,4 @@
-import { Info } from '@app/types';
+import { Info } from '../types/Info';
 import { dexieService } from '../DexieService';
 
 export class InfoDTO extends Info {

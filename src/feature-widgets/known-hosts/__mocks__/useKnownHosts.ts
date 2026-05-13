@@ -1,5 +1,5 @@
 import type { HostDTO } from '@app/services';
-import { LoadingState } from '../useSharedStore';
+import { LoadingState } from '@app/hooks';
 import type { KnownHostsHook, KnownHostsValue } from '../useKnownHosts';
 
 export const makeHost = (overrides: Partial<HostDTO> = {}): HostDTO =>

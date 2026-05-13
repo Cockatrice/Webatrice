@@ -97,7 +97,7 @@ vi.mock('@app/utils', () => ({
 vi.mock('@app/types', () => ({}));
 
 let useKnownHostsModule: typeof import('./useKnownHosts');
-let LoadingState: typeof import('./useSharedStore').LoadingState;
+let LoadingState: typeof import('@app/hooks').LoadingState;
 
 beforeEach(async () => {
   vi.resetModules();
@@ -105,7 +105,7 @@ beforeEach(async () => {
   nextId = 1;
   mockSave.mockClear();
   useKnownHostsModule = await import('./useKnownHosts');
-  ({ LoadingState } = await import('./useSharedStore'));
+  ({ LoadingState } = await import('@app/hooks'));
 });
 
 describe('useKnownHosts', () => {

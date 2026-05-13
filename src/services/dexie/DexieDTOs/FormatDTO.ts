@@ -1,5 +1,5 @@
 import { IndexableType } from 'dexie';
-import { Format } from '@app/types';
+import { Format } from '../types/Format';
 import { dexieService } from '../DexieService';
 
 export class FormatDTO extends Format {

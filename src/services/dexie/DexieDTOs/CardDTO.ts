@@ -1,5 +1,5 @@
 import { IndexableType } from 'dexie';
-import { Card } from '@app/types';
+import { Card } from '../types/Card';
 import { dexieService } from '../DexieService';
 
 export class CardDTO extends Card {

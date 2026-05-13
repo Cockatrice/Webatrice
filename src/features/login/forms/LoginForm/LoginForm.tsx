@@ -9,8 +9,8 @@ import CircularProgress from '@mui/material/CircularProgress';
 import FormControlLabel from '@mui/material/FormControlLabel';
 
 import { CheckboxField, InputField } from '@app/components';
-import { KnownHosts } from '@app/feature-widgets/known-hosts';
-import { LoadingState, useKnownHosts, useSettings } from '@app/hooks';
+import { KnownHosts, useKnownHosts } from '@app/feature-widgets/known-hosts';
+import { LoadingState, useSettings } from '@app/hooks';
 import { HostDTO } from '@app/services';
 import { server, type TestConnectionStatus } from 'datatrice';
 import { useAppSelector } from '@app/store';

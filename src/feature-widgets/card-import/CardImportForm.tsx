@@ -8,7 +8,7 @@ import StepLabel from '@mui/material/StepLabel';
 import CircularProgress from '@mui/material/CircularProgress';
 
 import { VirtualList } from '@app/components';
-import { Card, Format, Set, Token } from '@app/types';
+import { Card, Format, Set, Token } from '@app/services';
 import { useCardImportForm } from './useCardImportForm';
 
 import './CardImportForm.css';

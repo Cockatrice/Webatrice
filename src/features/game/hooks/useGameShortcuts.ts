@@ -1,5 +1,4 @@
-import { useShortcut } from '@app/feature-widgets/shortcuts';
-import { ShortcutScope } from '@app/types';
+import { ShortcutScope, useShortcut } from '@app/feature-widgets/shortcuts';
 import { useWebClient } from 'datatrice/react';
 import { games } from 'datatrice';
 import { useAppSelector } from '@app/store';

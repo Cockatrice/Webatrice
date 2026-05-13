@@ -1,5 +1,4 @@
-import { ShortcutScope } from '@app/types';
-import { ActionId, ShortcutDef } from './types';
+import { ActionId, ShortcutDef, ShortcutScope } from './types';
 
 export const defaults: Record<ActionId, ShortcutDef> = {
   'app.openSettings': { scope: ShortcutScope.GLOBAL, group: 'global', sequences: ['Ctrl+Comma'] },

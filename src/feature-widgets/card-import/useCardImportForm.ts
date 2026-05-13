@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 
 import { localOracleImportService, IngestResult } from './LocalOracleImportService';
-import { Card, Set } from '@app/types';
+import { Card, Set } from '@app/services';
 export interface CardImportForm {
   loading: boolean;
   activeStep: number;

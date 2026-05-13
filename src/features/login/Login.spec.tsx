@@ -8,7 +8,7 @@ const flushEffects = async (): Promise<void> => {
   });
 };
 import { makeSettings, makeSettingsHook } from '../../hooks/__mocks__/useSettings';
-import { makeHost, makeKnownHostsHook } from '../../hooks/__mocks__/useKnownHosts';
+import { makeHost, makeKnownHostsHook } from '../../feature-widgets/known-hosts/__mocks__/useKnownHosts';
 import { autoLoginGate } from './useAutoLogin';
 import { LoadingState } from '@app/hooks';
 import Login from './Login';
@@ -25,7 +25,8 @@ vi.mock('../../hooks/useSettings', () => ({
   useSettings: hoisted.useSettings,
   getSettings: hoisted.getSettings,
 }));
-vi.mock('../../hooks/useKnownHosts', () => ({
+vi.mock('@app/feature-widgets/known-hosts', () => ({
+  KnownHosts: () => null,
   useKnownHosts: hoisted.useKnownHosts,
   getKnownHosts: hoisted.getKnownHosts,
 }));
@@ -38,12 +39,10 @@ vi.mock('datatrice/react', async (importOriginal) => {
   };
 });
 
-// Stub the KnownHosts widget so its useKnownHostsComponent effect does not
-// dispatch `testConnectionStarted` against the test store, which would clobber
-// any preloaded `testConnectionStatus: 'success'` state and disable the form.
-vi.mock('@app/feature-widgets/known-hosts', () => ({
-  KnownHosts: () => null,
-}));
+// The KnownHosts widget is stubbed in the @app/feature-widgets/known-hosts
+// mock above (KnownHosts: () => null) so its useKnownHostsComponent effect
+// does not dispatch `testConnectionStarted` against the test store, which
+// would clobber any preloaded `testConnectionStatus: 'success'` state.
 
 beforeAll(() => {
   const client = createMockWebClient();
