@@ -3,9 +3,10 @@ import { useTranslation } from 'react-i18next';
 
 import { useToast } from '@app/components';
 import { useFireOnce, useKnownHosts, useReduxEffect, useWebClient } from '@app/hooks';
-import { ServerSelectors, ServerTypes, useAppSelector } from '@app/store';
+import { server } from 'datatrice';
+import { useAppSelector } from '@app/store';
 import { getHostPort } from '@app/utils';
-import { WebsocketTypes } from '@app/websocket/types';
+import { WebsocketTypes } from 'sockatrice/types';
 
 import type { LoginFormValues } from './forms/LoginForm/LoginForm';
 import type { RegisterFormValues } from './forms/RegisterForm/RegisterForm';
@@ -42,9 +43,9 @@ export interface Login {
 }
 
 export function useLogin(): Login {
-  const description = useAppSelector((s) => ServerSelectors.getDescription(s));
-  const isConnected = useAppSelector(ServerSelectors.getIsConnected);
-  const connectionAttemptMade = useAppSelector(ServerSelectors.getConnectionAttemptMade);
+  const description = useAppSelector((s) => server.Selectors.getDescription(s));
+  const isConnected = useAppSelector(server.Selectors.getIsConnected);
+  const connectionAttemptMade = useAppSelector(server.Selectors.getConnectionAttemptMade);
   const webClient = useWebClient();
   const { t } = useTranslation();
 
@@ -105,24 +106,24 @@ export function useLogin(): Login {
   useReduxEffect(() => {
     closeRequestPasswordResetDialog();
     openResetPasswordDialog();
-  }, ServerTypes.RESET_PASSWORD_REQUESTED, []);
+  }, server.Types.RESET_PASSWORD_REQUESTED, []);
 
   useReduxEffect(() => {
     passwordResetToast.openToast();
     closeResetPasswordDialog();
-  }, ServerTypes.RESET_PASSWORD_SUCCESS, []);
+  }, server.Types.RESET_PASSWORD_SUCCESS, []);
 
   useReduxEffect(() => {
     accountActivatedToast.openToast();
     closeActivateAccountDialog();
     setPendingActivationOptions(null);
-  }, ServerTypes.ACCOUNT_ACTIVATION_SUCCESS, []);
+  }, server.Types.ACCOUNT_ACTIVATION_SUCCESS, []);
 
   useReduxEffect<{ options: WebsocketTypes.PendingActivationContext }>(({ payload: { options } }) => {
     setPendingActivationOptions(options);
     closeRegistrationDialog();
     openActivateAccountDialog();
-  }, ServerTypes.ACCOUNT_AWAITING_ACTIVATION, []);
+  }, server.Types.ACCOUNT_AWAITING_ACTIVATION, []);
 
   const onSubmitLogin = useCallback((loginForm: LoginFormValues) => {
     rememberLoginRef.current = loginForm;
@@ -145,7 +146,7 @@ export function useLogin(): Login {
 
   useReduxEffect(() => {
     resetSubmitButton();
-  }, [ServerTypes.CONNECTION_FAILED, ServerTypes.LOGIN_FAILED], []);
+  }, [server.Types.CONNECTION_FAILED, server.Types.LOGIN_FAILED], []);
 
   const updateHost = (
     hashedPassword: string | undefined,
@@ -173,7 +174,7 @@ export function useLogin(): Login {
     if (loginForm && 'remember' in loginForm) {
       updateHost(options.hashedPassword, loginForm);
     }
-  }, ServerTypes.LOGIN_SUCCESSFUL, []);
+  }, server.Types.LOGIN_SUCCESSFUL, []);
 
   useAutoLogin(handleLogin, connectionAttemptMade);
 

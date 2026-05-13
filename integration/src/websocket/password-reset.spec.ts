@@ -1,9 +1,9 @@
 import { create } from '@bufbuild/protobuf';
 import { describe, expect, it } from 'vitest';
 
-import { Data } from '@app/types';
-import { store } from '@app/store';
-import { WebsocketTypes } from '@app/websocket/types';
+import { Command_ForgotPasswordChallenge_ext, Command_ForgotPasswordRequest_ext, Command_ForgotPasswordReset_ext, Response_ForgotPasswordRequestSchema, Response_ForgotPasswordRequest_ext, Response_ResponseCode } from 'sockatrice/generated';
+import { store } from '../helpers/setup';
+import { WebsocketTypes } from 'sockatrice/types';
 
 import { connectAndHandshake } from '../helpers/setup';
 import {
@@ -22,14 +22,14 @@ describe('password reset', () => {
       userName: 'alice',
     });
 
-    const req = findLastSessionCommand(Data.Command_ForgotPasswordRequest_ext);
+    const req = findLastSessionCommand(Command_ForgotPasswordRequest_ext);
     expect(req.value.userName).toBe('alice');
 
     deliverMessage(buildResponseMessage(buildResponse({
       cmdId: req.cmdId,
-      responseCode: Data.Response_ResponseCode.RespOk,
-      ext: Data.Response_ForgotPasswordRequest_ext,
-      value: create(Data.Response_ForgotPasswordRequestSchema, {
+      responseCode: Response_ResponseCode.RespOk,
+      ext: Response_ForgotPasswordRequest_ext,
+      value: create(Response_ForgotPasswordRequestSchema, {
         challengeEmail: 'a@example.com',
       }),
     })));
@@ -46,13 +46,13 @@ describe('password reset', () => {
       email: 'alice@example.com',
     });
 
-    const challenge = findLastSessionCommand(Data.Command_ForgotPasswordChallenge_ext);
+    const challenge = findLastSessionCommand(Command_ForgotPasswordChallenge_ext);
     expect(challenge.value.userName).toBe('alice');
     expect(challenge.value.email).toBe('alice@example.com');
 
     deliverMessage(buildResponseMessage(buildResponse({
       cmdId: challenge.cmdId,
-      responseCode: Data.Response_ResponseCode.RespOk,
+      responseCode: Response_ResponseCode.RespOk,
     })));
 
     expect(store.getState().server.status.state).toBe(WebsocketTypes.StatusEnum.DISCONNECTED);
@@ -68,14 +68,14 @@ describe('password reset', () => {
       newPassword: 'new-secret',
     });
 
-    const reset = findLastSessionCommand(Data.Command_ForgotPasswordReset_ext);
+    const reset = findLastSessionCommand(Command_ForgotPasswordReset_ext);
     expect(reset.value.userName).toBe('alice');
     expect(reset.value.token).toBe('reset-token-123');
     expect(reset.value.newPassword).toBe('new-secret');
 
     deliverMessage(buildResponseMessage(buildResponse({
       cmdId: reset.cmdId,
-      responseCode: Data.Response_ResponseCode.RespOk,
+      responseCode: Response_ResponseCode.RespOk,
     })));
 
     expect(store.getState().server.status.state).toBe(WebsocketTypes.StatusEnum.DISCONNECTED);

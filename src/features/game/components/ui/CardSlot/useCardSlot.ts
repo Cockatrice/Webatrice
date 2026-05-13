@@ -5,8 +5,7 @@ import {
   type DraggableSyntheticListeners,
 } from '@dnd-kit/core';
 
-import type { Data } from '@app/types';
-
+import { ServerInfo_Card } from 'sockatrice/generated';
 import { useScryfallCard } from '../../../hooks/useScryfallCard';
 import { makeCardKey, useRegisterCardRef } from '../../../utils/CardRegistry/CardRegistryContext';
 
@@ -19,7 +18,7 @@ export interface CardSlot {
 }
 
 export interface UseCardSlotArgs {
-  card: Data.ServerInfo_Card;
+  card: ServerInfo_Card;
   draggable: boolean;
   ownerPlayerId: number | undefined;
   zone: string | undefined;

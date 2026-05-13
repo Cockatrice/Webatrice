@@ -2,8 +2,7 @@ import { useEffect } from 'react';
 import IconButton from '@mui/material/IconButton';
 import CloseIcon from '@mui/icons-material/Close';
 
-import type { Data } from '@app/types';
-
+import { ServerInfo_Card } from 'sockatrice/generated';
 import { useScryfallCard } from '../../hooks/useScryfallCard';
 
 import { useZoneViewDialog } from './useZoneViewDialog';
@@ -19,7 +18,7 @@ export interface ZoneViewDialogProps {
   initialPosition?: { x: number; y: number };
 }
 
-function ZoneThumbnail({ card }: { card: Data.ServerInfo_Card }) {
+function ZoneThumbnail({ card }: { card: ServerInfo_Card }) {
   const { smallUrl } = useScryfallCard(card);
   return (
     <div className="zone-view-dialog__card" data-testid={`zone-view-card-${card.id}`}>

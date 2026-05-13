@@ -4,8 +4,9 @@ import { useTranslation } from 'react-i18next';
 import { useToast } from '@app/components';
 import { LoadingState, useKnownHosts, useReduxEffect, useWebClient } from '@app/hooks';
 import { HostDTO } from '@app/services';
-import { ServerActions, ServerSelectors, ServerTypes, useAppDispatch, useAppSelector } from '@app/store';
-import { App } from '@app/types';
+import { server } from 'datatrice';
+import { useAppDispatch, useAppSelector } from '@app/store';
+import { Host } from '@app/types';
 import { getHostPort } from '@app/utils';
 
 export enum TestConnection {
@@ -15,15 +16,21 @@ export enum TestConnection {
 }
 
 export interface KnownHostsComponent {
-  hosts: App.Host[];
-  selectedHost: App.Host | undefined;
+  // Dexie's mapToClass(HostDTO) means stored records are HostDTO instances
+  // (Host extended with `.save()`), not plain Host. Widen the surface so the
+  // template can pass these into HostDTO-typed callbacks without a cast.
+  hosts: HostDTO[];
+  selectedHost: HostDTO | undefined;
   testConnectionStatus: TestConnection | null;
   dialogState: { open: boolean; edit: HostDTO | null };
   onPick: (id: number) => Promise<void>;
   openAddKnownHostDialog: () => void;
   openEditKnownHostDialog: (host: HostDTO) => void;
   closeKnownHostDialog: () => void;
-  handleDialogRemove: (args: { id: number }) => Promise<void>;
+  // KnownHostDialog calls onRemove with the full HostDTO. The runtime branch
+  // here only needs the id (Dexie key); guard against missing id since the
+  // class field is declared optional.
+  handleDialogRemove: (host: HostDTO) => Promise<void>;
   handleDialogSubmit: (args: {
     id?: number;
     name: string;
@@ -57,7 +64,7 @@ export function useKnownHostsComponent({
     edit: null,
   });
 
-  const testConnectionStatus = useAppSelector(ServerSelectors.getTestConnectionStatus) as
+  const testConnectionStatus = useAppSelector(server.Selectors.getTestConnectionStatus) as
     | TestConnection
     | null;
   const pendingTestRef = useRef<HostDTO | null>(null);
@@ -68,7 +75,7 @@ export function useKnownHostsComponent({
 
   const testConnection = (host: HostDTO) => {
     pendingTestRef.current = host;
-    dispatch(ServerActions.testConnectionStarted());
+    dispatch(server.Actions.testConnectionStarted());
     webClient.request.authentication.testConnection({ ...getHostPort(host) });
   };
 
@@ -97,11 +104,11 @@ export function useKnownHostsComponent({
     if (host.id != null && host.supportsHashedPassword !== supportsHashedPassword) {
       void knownHosts.update(host.id, { supportsHashedPassword });
     }
-  }, ServerTypes.TEST_CONNECTION_SUCCESSFUL, []);
+  }, server.Types.TEST_CONNECTION_SUCCESSFUL, []);
 
   useReduxEffect(() => {
     pendingTestRef.current = null;
-  }, ServerTypes.TEST_CONNECTION_FAILED, []);
+  }, server.Types.TEST_CONNECTION_FAILED, []);
 
   const fireToast = (mode: ToastMode) => {
     setToastMode(mode);
@@ -133,11 +140,11 @@ export function useKnownHostsComponent({
     setDialogState((s) => ({ ...s, open: false }));
   };
 
-  const handleDialogRemove = async ({ id }: { id: number }) => {
-    if (knownHosts.status !== LoadingState.READY) {
+  const handleDialogRemove = async (host: HostDTO) => {
+    if (knownHosts.status !== LoadingState.READY || host.id === undefined) {
       return;
     }
-    await knownHosts.remove(id);
+    await knownHosts.remove(host.id);
     closeKnownHostDialog();
     fireToast('deleted');
   };
@@ -161,7 +168,7 @@ export function useKnownHostsComponent({
       await knownHosts.update(id, { name, host, port });
       fireToast('edited');
     } else {
-      const newHost: App.Host = { name, host, port, editable: true };
+      const newHost: Host = { name, host, port, editable: true };
       await knownHosts.add(newHost);
       fireToast('created');
     }

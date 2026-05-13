@@ -1,11 +1,12 @@
 import { useEffect } from 'react';
 
 import { LoadingState, useSettings } from '@app/hooks';
-import { ShortcutsDispatch, ShortcutsSelectors, useAppSelector } from '@app/store';
+import { shortcuts, useAppDispatch, useAppSelector } from '@app/store';
 
 export function useShortcutsHydration(): void {
+  const dispatch = useAppDispatch();
   const settings = useSettings();
-  const hydrated = useAppSelector(ShortcutsSelectors.getHydrated);
+  const hydrated = useAppSelector(shortcuts.Selectors.getHydrated);
 
   useEffect(() => {
     if (hydrated) {
@@ -14,6 +15,6 @@ export function useShortcutsHydration(): void {
     if (settings.status !== LoadingState.READY) {
       return;
     }
-    ShortcutsDispatch.hydrate(settings.value?.shortcuts ?? {});
-  }, [settings.status, settings.value, hydrated]);
+    dispatch(shortcuts.Actions.hydrate({ overrides: settings.value?.shortcuts ?? {} }));
+  }, [dispatch, settings.status, settings.value, hydrated]);
 }

@@ -10,7 +10,6 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      '@app/api': srcPath('api/index.ts'),
       '@app/components': srcPath('components/index.ts'),
       '@app/dialogs': srcPath('dialogs/index.ts'),
       '@app/hooks': srcPath('hooks/index.ts'),
@@ -33,9 +32,6 @@ export default defineConfig({
       '@app/store': srcPath('store/index.ts'),
       '@app/types': srcPath('types/index.ts'),
       '@app/utils': srcPath('utils/index.ts'),
-      '@app/websocket/types': 'sockatrice/types',
-      '@app/websocket': 'sockatrice',
-      '@app/generated': 'sockatrice/generated',
     },
   },
   optimizeDeps: {

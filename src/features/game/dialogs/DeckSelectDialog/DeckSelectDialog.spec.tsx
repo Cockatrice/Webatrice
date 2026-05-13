@@ -5,7 +5,7 @@ import {
   makeGameEntry,
   makePlayerEntry,
   makePlayerProperties,
-} from '../../../../store/game/__mocks__/fixtures';
+} from '../../../../__test-utils__/games-fixtures';
 import DeckSelectDialog from './DeckSelectDialog';
 
 const VALID_COD_XML =

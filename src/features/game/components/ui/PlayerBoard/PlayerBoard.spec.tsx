@@ -1,6 +1,5 @@
 import { screen } from '@testing-library/react';
-import { App } from '@app/types';
-
+import { ZoneName } from 'datatrice';
 // Block Battlefield's Dexie-backed useSettings from firing an async settle
 // after mount (would produce an unwrapped React state update).
 vi.mock('../../../../../hooks/useSettings');
@@ -12,29 +11,29 @@ import {
   makePlayerEntry,
   makePlayerProperties,
   makeZoneEntry,
-} from '../../../../../store/game/__mocks__/fixtures';
+} from '../../../../../__test-utils__/games-fixtures';
 import PlayerBoard from './PlayerBoard';
 
 function buildState() {
   const table = makeZoneEntry({
-    name: App.ZoneName.TABLE,
+    name: ZoneName.TABLE,
     cards: [
       makeCard({ id: 1, name: 'Row0-Card', x: 0, y: 0 }),
       makeCard({ id: 2, name: 'Row2-Card', x: 0, y: 2 }),
     ],
     cardCount: 2,
   });
-  const hand = makeZoneEntry({ name: App.ZoneName.HAND, cardCount: 0 });
-  const deck = makeZoneEntry({ name: App.ZoneName.DECK, cardCount: 60 });
+  const hand = makeZoneEntry({ name: ZoneName.HAND, cardCount: 0 });
+  const deck = makeZoneEntry({ name: ZoneName.DECK, cardCount: 60 });
   const player = makePlayerEntry({
     properties: makePlayerProperties({
       playerId: 1,
       userInfo: makeUser({ name: 'Trajer' }),
     }),
     zones: {
-      [App.ZoneName.TABLE]: table,
-      [App.ZoneName.HAND]: hand,
-      [App.ZoneName.DECK]: deck,
+      [ZoneName.TABLE]: table,
+      [ZoneName.HAND]: hand,
+      [ZoneName.DECK]: deck,
     },
   });
   return makeStoreState({

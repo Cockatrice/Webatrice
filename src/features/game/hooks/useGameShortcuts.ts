@@ -1,8 +1,9 @@
 import { useShortcut } from '@app/feature-widgets/shortcuts';
 import { ShortcutScope, useWebClient } from '@app/hooks';
-import { GameSelectors, useAppSelector } from '@app/store';
-import { App, Data } from '@app/types';
-
+import { games } from 'datatrice';
+import { useAppSelector } from '@app/store';
+import { CardAttribute } from 'sockatrice/generated';
+import { ZoneName } from 'datatrice';
 import { useCurrentGame } from './useCurrentGame';
 import { useGameAffordances } from './useGameAffordances';
 
@@ -29,7 +30,7 @@ export function useGameShortcuts({ gameId, onRequestConcede }: UseGameShortcutsA
   const localPlayerId = game?.localPlayerId;
   const tableCards = useAppSelector((state) =>
     gameId != null && localPlayerId != null
-      ? GameSelectors.getCards(state, gameId, localPlayerId, App.ZoneName.TABLE)
+      ? games.Selectors.getCards(state, gameId, localPlayerId, ZoneName.TABLE)
       : undefined,
   );
 
@@ -42,9 +43,9 @@ export function useGameShortcuts({ gameId, onRequestConcede }: UseGameShortcutsA
       for (const card of tableCards) {
         if (card.tapped) {
           webClient.request.game.setCardAttr(gameId, {
-            zone: App.ZoneName.TABLE,
+            zone: ZoneName.TABLE,
             cardId: card.id,
-            attribute: Data.CardAttribute.AttrTapped,
+            attribute: CardAttribute.AttrTapped,
             attrValue: '0',
           });
         }

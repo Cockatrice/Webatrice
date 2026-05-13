@@ -8,7 +8,7 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
 import Typography from '@mui/material/Typography';
 
-import { ShortcutsDispatch, ShortcutsSelectors, useAppSelector } from '@app/store';
+import { shortcuts, useAppDispatch, useAppSelector } from '@app/store';
 
 import { displaySequence } from '../shortcutSequence';
 import { ActionId } from '../types';
@@ -20,17 +20,18 @@ interface SequenceEditProps {
 
 const SequenceEdit = ({ actionId, onClose }: SequenceEditProps) => {
   const { t } = useTranslation();
-  const sequences = useAppSelector(ShortcutsSelectors.getRecordingSequences);
-  const recordingActionId = useAppSelector(ShortcutsSelectors.getRecordingActionId);
+  const dispatch = useAppDispatch();
+  const sequences = useAppSelector(shortcuts.Selectors.getRecordingSequences);
+  const recordingActionId = useAppSelector(shortcuts.Selectors.getRecordingActionId);
 
   // Start recording on open. The cleanup cancels recording so leaving the dialog any
   // way (Save, Cancel, dismiss) clears the slice's capture state.
   useEffect(() => {
-    ShortcutsDispatch.startRecording(actionId);
+    dispatch(shortcuts.Actions.startRecording({ actionId }));
     return () => {
-      ShortcutsDispatch.cancelRecording();
+      dispatch(shortcuts.Actions.cancelRecording());
     };
-  }, [actionId]);
+  }, [dispatch, actionId]);
 
   // Provider's Esc-during-recording handler dispatches cancelRecording. When we observe
   // the slice flip to null while we're still mounted, treat it as the user dismissing.
@@ -50,7 +51,7 @@ const SequenceEdit = ({ actionId, onClose }: SequenceEditProps) => {
   }, [recordingActionId, onClose]);
 
   const handleSave = () => {
-    ShortcutsDispatch.setOverride(actionId, sequences);
+    dispatch(shortcuts.Actions.setOverride({ actionId, sequences }));
     onClose();
   };
 
@@ -68,7 +69,7 @@ const SequenceEdit = ({ actionId, onClose }: SequenceEditProps) => {
                 key={seq}
                 label={displaySequence(seq)}
                 size="small"
-                onDelete={() => ShortcutsDispatch.removeCapturedSequence(seq)}
+                onDelete={() => dispatch(shortcuts.Actions.removeCapturedSequence({ sequence: seq }))}
               />
             ))
           )}

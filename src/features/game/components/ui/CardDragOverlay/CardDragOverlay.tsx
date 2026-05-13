@@ -1,11 +1,10 @@
-import type { Data } from '@app/types';
-
+import { ServerInfo_Card } from 'sockatrice/generated';
 import { useScryfallCard } from '../../../hooks/useScryfallCard';
 
 import './CardDragOverlay.css';
 
 export interface CardDragOverlayProps {
-  card: Data.ServerInfo_Card;
+  card: ServerInfo_Card;
 }
 
 function CardDragOverlay({ card }: CardDragOverlayProps) {

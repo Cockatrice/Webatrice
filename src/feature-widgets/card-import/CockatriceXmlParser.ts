@@ -1,11 +1,10 @@
-import { App } from '@app/types';
-
+import { AllowedCount, Card, Format, Info, Set, Token, XmlNode } from '@app/types';
 export interface ParsedCockatriceXml {
-  info?: App.Info;
-  formats?: App.Format[];
-  sets?: App.Set[];
-  cards?: App.Card[];
-  tokens?: App.Token[];
+  info?: Info;
+  formats?: Format[];
+  sets?: Set[];
+  cards?: Card[];
+  tokens?: Token[];
 }
 
 class CockatriceXmlParser {
@@ -38,7 +37,7 @@ class CockatriceXmlParser {
 
     const setsEl = this.directChild(root, 'sets');
     if (setsEl) {
-      const sets = this.directChildren(setsEl, 'set').map(el => this.parseElement(el) as unknown as App.Set);
+      const sets = this.directChildren(setsEl, 'set').map(el => this.parseElement(el) as unknown as Set);
       if (sets.length) {
         result.sets = sets;
       }
@@ -53,14 +52,14 @@ class CockatriceXmlParser {
 
     if (cardElements.length) {
       const isLegacyTokenRoot = root.tagName === 'cockatrice_tokens';
-      const cards: App.Card[] = [];
-      const tokens: App.Token[] = [];
+      const cards: Card[] = [];
+      const tokens: Token[] = [];
 
       cardElements.forEach(el => {
-        const parsed = this.parseElement(el) as unknown as App.Card & { token?: App.XmlNode<string> };
+        const parsed = this.parseElement(el) as unknown as Card & { token?: XmlNode<string> };
         const isToken = isLegacyTokenRoot || parsed.token?.value === '1';
         if (isToken) {
-          tokens.push(parsed as unknown as App.Token);
+          tokens.push(parsed as unknown as Token);
         } else {
           cards.push(parsed);
         }
@@ -108,8 +107,8 @@ class CockatriceXmlParser {
     }, {});
   }
 
-  private parseInfo(infoEl: Element): App.Info {
-    const flat = this.parseElement(infoEl) as Record<string, App.XmlNode<string> | undefined>;
+  private parseInfo(infoEl: Element): Info {
+    const flat = this.parseElement(infoEl) as Record<string, XmlNode<string> | undefined>;
     return {
       id: 'singleton',
       source: 'oracle-local-fs',
@@ -121,7 +120,7 @@ class CockatriceXmlParser {
     };
   }
 
-  private parseFormat(formatEl: Element): App.Format {
+  private parseFormat(formatEl: Element): Format {
     const formatName = formatEl.getAttribute('formatName') ?? '';
     const fields = this.parseElement(formatEl) as Record<string, unknown>;
 
@@ -140,7 +139,7 @@ class CockatriceXmlParser {
   }
 
   private toInt(node: unknown): number | undefined {
-    const raw = (node as App.XmlNode<string> | undefined)?.value;
+    const raw = (node as XmlNode<string> | undefined)?.value;
     if (raw === undefined || raw === '') {
       return undefined;
     }
@@ -148,7 +147,7 @@ class CockatriceXmlParser {
     return Number.isNaN(n) ? undefined : n;
   }
 
-  private toAllowedCounts(node: unknown): App.AllowedCount[] | undefined {
+  private toAllowedCounts(node: unknown): AllowedCount[] | undefined {
     const allowed = node as { value?: { count?: unknown } } | undefined;
     const countNode = allowed?.value?.count;
     if (!countNode) {

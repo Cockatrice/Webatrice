@@ -2,7 +2,8 @@ import { useCallback, useState } from 'react';
 import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core';
 
 import { useWebClient } from '@app/hooks';
-import { App, Data } from '@app/types';
+import { ServerInfo_Card } from 'sockatrice/generated';
+import { ZoneName } from 'datatrice';
 import {
   CARD_HEIGHT_PX,
   CARD_WIDTH_PX,
@@ -15,7 +16,7 @@ import {
 } from '../components/battlefield/Battlefield/gridMath';
 
 export interface GameDnd {
-  activeCard: Data.ServerInfo_Card | null;
+  activeCard: ServerInfo_Card | null;
   handleDragStart: (event: DragStartEvent) => void;
   handleDragEnd: (event: DragEndEvent) => void;
   handleDragCancel: () => void;
@@ -43,12 +44,12 @@ function computePointerXInRow(event: DragEndEvent): number {
 
 export function useGameDnd({ gameId, onDragStart }: UseGameDndArgs): GameDnd {
   const webClient = useWebClient();
-  const [activeCard, setActiveCard] = useState<Data.ServerInfo_Card | null>(null);
+  const [activeCard, setActiveCard] = useState<ServerInfo_Card | null>(null);
 
   const handleDragStart = useCallback(
     (event: DragStartEvent) => {
       const data = event.active.data.current as
-        | { card: Data.ServerInfo_Card }
+        | { card: ServerInfo_Card }
         | undefined;
       setActiveCard(data?.card ?? null);
       // Starting a drag cancels any armed pending-arrow or pending-attach —
@@ -66,7 +67,7 @@ export function useGameDnd({ gameId, onDragStart }: UseGameDndArgs): GameDnd {
         return;
       }
       const source = event.active.data.current as {
-        card: Data.ServerInfo_Card;
+        card: ServerInfo_Card;
         sourcePlayerId: number;
         sourceZone: string;
       };
@@ -74,7 +75,7 @@ export function useGameDnd({ gameId, onDragStart }: UseGameDndArgs): GameDnd {
         targetPlayerId: number;
         targetZone: string;
         row?: number;
-        rowCards?: Data.ServerInfo_Card[];
+        rowCards?: ServerInfo_Card[];
       };
 
       // Drag-drop never attaches — desktop attaches via right-click menu →
@@ -87,14 +88,14 @@ export function useGameDnd({ gameId, onDragStart }: UseGameDndArgs): GameDnd {
         source.sourceZone === target.targetZone;
       // Non-TABLE same-zone drops aren't meaningful (dragging within the hand
       // or library isn't a user-facing reorder on desktop either).
-      if (sameZone && source.sourceZone !== App.ZoneName.TABLE) {
+      if (sameZone && source.sourceZone !== ZoneName.TABLE) {
         return;
       }
 
       const targetRow = target.row ?? 0;
-      const targetIsTable = target.targetZone === App.ZoneName.TABLE;
+      const targetIsTable = target.targetZone === ZoneName.TABLE;
       const sameRowOnTable =
-        sameZone && source.sourceZone === App.ZoneName.TABLE && (source.card.y ?? 0) === targetRow;
+        sameZone && source.sourceZone === ZoneName.TABLE && (source.card.y ?? 0) === targetRow;
 
       // Compute an integer gridX matching desktop's stack-and-subposition
       // packing (table_zone.cpp:mapToGrid + closestGridPoint). Non-TABLE

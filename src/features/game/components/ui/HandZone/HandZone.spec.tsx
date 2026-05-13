@@ -1,18 +1,17 @@
 import { screen, fireEvent } from '@testing-library/react';
-import { App } from '@app/types';
-
+import { ZoneName } from 'datatrice';
 import { makeStoreState, renderWithProviders } from '../../../../../__test-utils__';
 import {
   makeCard,
   makeGameEntry,
   makePlayerEntry,
   makeZoneEntry,
-} from '../../../../../store/game/__mocks__/fixtures';
+} from '../../../../../__test-utils__/games-fixtures';
 import HandZone from './HandZone';
 
 function stateWithHand(cards: ReturnType<typeof makeCard>[]) {
   const hand = makeZoneEntry({
-    name: App.ZoneName.HAND,
+    name: ZoneName.HAND,
     type: 0,
     cardCount: cards.length,
     cards,
@@ -23,7 +22,7 @@ function stateWithHand(cards: ReturnType<typeof makeCard>[]) {
         1: makeGameEntry({
           localPlayerId: 1,
           players: {
-            1: makePlayerEntry({ zones: { [App.ZoneName.HAND]: hand } }),
+            1: makePlayerEntry({ zones: { [ZoneName.HAND]: hand } }),
           },
         }),
       },

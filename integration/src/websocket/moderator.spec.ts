@@ -1,9 +1,9 @@
 import { create } from '@bufbuild/protobuf';
 import { describe, expect, it } from 'vitest';
 
-import { Data } from '@app/types';
-import { store } from '@app/store';
-import { ModeratorCommands } from '@app/websocket';
+import { Command_BanFromServer_ext, Command_ForceActivateUser_ext, Command_GetAdminNotes_ext, Command_GetBanHistory_ext, Command_GetWarnHistory_ext, Command_GetWarnList_ext, Command_GrantReplayAccess_ext, Command_UpdateAdminNotes_ext, Command_ViewLogHistory_ext, Command_WarnUser_ext, Response_BanHistorySchema, Response_BanHistory_ext, Response_GetAdminNotesSchema, Response_GetAdminNotes_ext, Response_ResponseCode, Response_ViewLogHistorySchema, Response_ViewLogHistory_ext, Response_WarnHistorySchema, Response_WarnHistory_ext, Response_WarnListSchema, Response_WarnList_ext, ServerInfo_BanSchema, ServerInfo_ChatMessageSchema, ServerInfo_WarningSchema } from 'sockatrice/generated';
+import { store } from '../helpers/setup';
+import { ModeratorCommands } from 'sockatrice';
 
 import { connectAndLogin } from '../helpers/setup';
 import {
@@ -19,10 +19,10 @@ describe('moderator commands', () => {
 
     ModeratorCommands.getBanHistory('baduser');
 
-    const { cmdId, value } = findLastModeratorCommand(Data.Command_GetBanHistory_ext);
+    const { cmdId, value } = findLastModeratorCommand(Command_GetBanHistory_ext);
     expect(value.userName).toBe('baduser');
 
-    const banEntry = create(Data.ServerInfo_BanSchema, {
+    const banEntry = create(ServerInfo_BanSchema, {
       adminId: 'admin1',
       adminName: 'Admin',
       banTime: '2026-01-01',
@@ -31,9 +31,9 @@ describe('moderator commands', () => {
     });
     deliverMessage(buildResponseMessage(buildResponse({
       cmdId,
-      responseCode: Data.Response_ResponseCode.RespOk,
-      ext: Data.Response_BanHistory_ext,
-      value: create(Data.Response_BanHistorySchema, { banList: [banEntry] }),
+      responseCode: Response_ResponseCode.RespOk,
+      ext: Response_BanHistory_ext,
+      value: create(Response_BanHistorySchema, { banList: [banEntry] }),
     })));
 
     const history = store.getState().server.banHistory.baduser;
@@ -46,17 +46,17 @@ describe('moderator commands', () => {
 
     ModeratorCommands.viewLogHistory({ dateRange: 30 });
 
-    const { cmdId } = findLastModeratorCommand(Data.Command_ViewLogHistory_ext);
+    const { cmdId } = findLastModeratorCommand(Command_ViewLogHistory_ext);
 
-    const logMsg = create(Data.ServerInfo_ChatMessageSchema, {
+    const logMsg = create(ServerInfo_ChatMessageSchema, {
       senderName: 'alice',
       message: 'test message',
     });
     deliverMessage(buildResponseMessage(buildResponse({
       cmdId,
-      responseCode: Data.Response_ResponseCode.RespOk,
-      ext: Data.Response_ViewLogHistory_ext,
-      value: create(Data.Response_ViewLogHistorySchema, { logMessage: [logMsg] }),
+      responseCode: Response_ResponseCode.RespOk,
+      ext: Response_ViewLogHistory_ext,
+      value: create(Response_ViewLogHistorySchema, { logMessage: [logMsg] }),
     })));
 
     const logs = store.getState().server.logs;
@@ -68,13 +68,13 @@ describe('moderator commands', () => {
 
     ModeratorCommands.warnUser('troublemaker', 'spamming chat');
 
-    const { cmdId, value } = findLastModeratorCommand(Data.Command_WarnUser_ext);
+    const { cmdId, value } = findLastModeratorCommand(Command_WarnUser_ext);
     expect(value.userName).toBe('troublemaker');
     expect(value.reason).toBe('spamming chat');
 
     deliverMessage(buildResponseMessage(buildResponse({
       cmdId,
-      responseCode: Data.Response_ResponseCode.RespOk,
+      responseCode: Response_ResponseCode.RespOk,
     })));
 
     expect(store.getState().server.warnUser).toBe('troublemaker');
@@ -85,14 +85,14 @@ describe('moderator commands', () => {
 
     ModeratorCommands.banFromServer(60, 'baduser', undefined, 'repeated offenses', 'rule violation');
 
-    const { cmdId, value } = findLastModeratorCommand(Data.Command_BanFromServer_ext);
+    const { cmdId, value } = findLastModeratorCommand(Command_BanFromServer_ext);
     expect(value.userName).toBe('baduser');
     expect(value.minutes).toBe(60);
     expect(value.visibleReason).toBe('rule violation');
 
     deliverMessage(buildResponseMessage(buildResponse({
       cmdId,
-      responseCode: Data.Response_ResponseCode.RespOk,
+      responseCode: Response_ResponseCode.RespOk,
     })));
 
     expect(store.getState().server.banUser).toBe('baduser');
@@ -103,18 +103,18 @@ describe('moderator commands', () => {
 
     ModeratorCommands.getWarnHistory('baduser');
 
-    const { cmdId, value } = findLastModeratorCommand(Data.Command_GetWarnHistory_ext);
+    const { cmdId, value } = findLastModeratorCommand(Command_GetWarnHistory_ext);
     expect(value.userName).toBe('baduser');
 
-    const warning = create(Data.ServerInfo_WarningSchema, {
+    const warning = create(ServerInfo_WarningSchema, {
       adminName: 'Admin',
       reason: 'spamming',
     });
     deliverMessage(buildResponseMessage(buildResponse({
       cmdId,
-      responseCode: Data.Response_ResponseCode.RespOk,
-      ext: Data.Response_WarnHistory_ext,
-      value: create(Data.Response_WarnHistorySchema, { warnList: [warning] }),
+      responseCode: Response_ResponseCode.RespOk,
+      ext: Response_WarnHistory_ext,
+      value: create(Response_WarnHistorySchema, { warnList: [warning] }),
     })));
 
     const history = store.getState().server.warnHistory.baduser;
@@ -127,16 +127,16 @@ describe('moderator commands', () => {
 
     ModeratorCommands.getWarnList('mod', 'troublemaker', 'client-1');
 
-    const { cmdId, value } = findLastModeratorCommand(Data.Command_GetWarnList_ext);
+    const { cmdId, value } = findLastModeratorCommand(Command_GetWarnList_ext);
     expect(value.modName).toBe('mod');
     expect(value.userName).toBe('troublemaker');
     expect(value.userClientid).toBe('client-1');
 
     deliverMessage(buildResponseMessage(buildResponse({
       cmdId,
-      responseCode: Data.Response_ResponseCode.RespOk,
-      ext: Data.Response_WarnList_ext,
-      value: create(Data.Response_WarnListSchema, { warning: ['spam', 'abuse'] }),
+      responseCode: Response_ResponseCode.RespOk,
+      ext: Response_WarnList_ext,
+      value: create(Response_WarnListSchema, { warning: ['spam', 'abuse'] }),
     })));
 
     expect(store.getState().server.warnListOptions.length).toBeGreaterThan(0);
@@ -147,13 +147,13 @@ describe('moderator commands', () => {
 
     ModeratorCommands.forceActivateUser('inactive', 'mod');
 
-    const { cmdId, value } = findLastModeratorCommand(Data.Command_ForceActivateUser_ext);
+    const { cmdId, value } = findLastModeratorCommand(Command_ForceActivateUser_ext);
     expect(value.usernameToActivate).toBe('inactive');
     expect(value.moderatorName).toBe('mod');
 
     deliverMessage(buildResponseMessage(buildResponse({
       cmdId,
-      responseCode: Data.Response_ResponseCode.RespOk,
+      responseCode: Response_ResponseCode.RespOk,
     })));
   });
 
@@ -162,14 +162,14 @@ describe('moderator commands', () => {
 
     ModeratorCommands.getAdminNotes('subject');
 
-    const { cmdId, value } = findLastModeratorCommand(Data.Command_GetAdminNotes_ext);
+    const { cmdId, value } = findLastModeratorCommand(Command_GetAdminNotes_ext);
     expect(value.userName).toBe('subject');
 
     deliverMessage(buildResponseMessage(buildResponse({
       cmdId,
-      responseCode: Data.Response_ResponseCode.RespOk,
-      ext: Data.Response_GetAdminNotes_ext,
-      value: create(Data.Response_GetAdminNotesSchema, { notes: 'prior offenses' }),
+      responseCode: Response_ResponseCode.RespOk,
+      ext: Response_GetAdminNotes_ext,
+      value: create(Response_GetAdminNotesSchema, { notes: 'prior offenses' }),
     })));
 
     expect(store.getState().server.adminNotes.subject).toBe('prior offenses');
@@ -180,13 +180,13 @@ describe('moderator commands', () => {
 
     ModeratorCommands.updateAdminNotes('subject', 'updated notes text');
 
-    const { cmdId, value } = findLastModeratorCommand(Data.Command_UpdateAdminNotes_ext);
+    const { cmdId, value } = findLastModeratorCommand(Command_UpdateAdminNotes_ext);
     expect(value.userName).toBe('subject');
     expect(value.notes).toBe('updated notes text');
 
     deliverMessage(buildResponseMessage(buildResponse({
       cmdId,
-      responseCode: Data.Response_ResponseCode.RespOk,
+      responseCode: Response_ResponseCode.RespOk,
     })));
   });
 
@@ -195,13 +195,13 @@ describe('moderator commands', () => {
 
     ModeratorCommands.grantReplayAccess(42, 'mod');
 
-    const { cmdId, value } = findLastModeratorCommand(Data.Command_GrantReplayAccess_ext);
+    const { cmdId, value } = findLastModeratorCommand(Command_GrantReplayAccess_ext);
     expect(value.replayId).toBe(42);
     expect(value.moderatorName).toBe('mod');
 
     deliverMessage(buildResponseMessage(buildResponse({
       cmdId,
-      responseCode: Data.Response_ResponseCode.RespOk,
+      responseCode: Response_ResponseCode.RespOk,
     })));
   });
 });

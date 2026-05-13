@@ -1,9 +1,8 @@
 import { IndexableType } from 'dexie';
-import { App } from '@app/types';
-
+import { Token } from '@app/types';
 import { dexieService } from '../DexieService';
 
-export class TokenDTO extends App.Token {
+export class TokenDTO extends Token {
   save() {
     return dexieService.tokens.put(this);
   }

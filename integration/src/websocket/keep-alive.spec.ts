@@ -1,10 +1,10 @@
-// KeepAliveService timing scenarios — ping loop, pong correlation, timeout.
+// KeepAliveService timing scenarios â€” ping loop, pong correlation, timeout.
 
 import { describe, expect, it } from 'vitest';
 
-import { Data } from '@app/types';
-import { store } from '@app/store';
-import { WebsocketTypes } from '@app/websocket/types';
+import { Command_Ping_ext, Response_ResponseCode } from 'sockatrice/generated';
+import { store } from '../helpers/setup';
+import { WebsocketTypes } from 'sockatrice/types';
 
 import { connectRaw, getMockWebSocket } from '../helpers/setup';
 import {
@@ -18,19 +18,19 @@ describe('keep-alive', () => {
   it('sends a Command_Ping on every keepalive interval tick', () => {
     connectRaw();
 
-    expect(() => findLastSessionCommand(Data.Command_Ping_ext)).toThrow();
+    expect(() => findLastSessionCommand(Command_Ping_ext)).toThrow();
 
     vi.advanceTimersByTime(5000);
-    const first = findLastSessionCommand(Data.Command_Ping_ext);
+    const first = findLastSessionCommand(Command_Ping_ext);
     expect(first.cmdId).toBeGreaterThan(0);
 
     deliverMessage(buildResponseMessage(buildResponse({
       cmdId: first.cmdId,
-      responseCode: Data.Response_ResponseCode.RespOk,
+      responseCode: Response_ResponseCode.RespOk,
     })));
 
     vi.advanceTimersByTime(5000);
-    const second = findLastSessionCommand(Data.Command_Ping_ext);
+    const second = findLastSessionCommand(Command_Ping_ext);
     expect(second.cmdId).toBeGreaterThan(first.cmdId);
     expect(store.getState().server.status.state).toBe(WebsocketTypes.StatusEnum.CONNECTED);
   });
@@ -40,10 +40,10 @@ describe('keep-alive', () => {
 
     for (let i = 0; i < 3; i++) {
       vi.advanceTimersByTime(5000);
-      const ping = findLastSessionCommand(Data.Command_Ping_ext);
+      const ping = findLastSessionCommand(Command_Ping_ext);
       deliverMessage(buildResponseMessage(buildResponse({
         cmdId: ping.cmdId,
-        responseCode: Data.Response_ResponseCode.RespOk,
+        responseCode: Response_ResponseCode.RespOk,
       })));
     }
 
@@ -55,7 +55,7 @@ describe('keep-alive', () => {
     connectRaw();
 
     vi.advanceTimersByTime(5000);
-    expect(() => findLastSessionCommand(Data.Command_Ping_ext)).not.toThrow();
+    expect(() => findLastSessionCommand(Command_Ping_ext)).not.toThrow();
     expect(store.getState().server.status.state).toBe(WebsocketTypes.StatusEnum.CONNECTED);
 
     vi.advanceTimersByTime(5000);

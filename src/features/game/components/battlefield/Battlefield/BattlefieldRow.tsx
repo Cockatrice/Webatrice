@@ -1,6 +1,7 @@
 import { ReactNode } from 'react';
 import { useDroppable } from '@dnd-kit/core';
-import { App, Data } from '@app/types';
+import { ServerInfo_Card } from 'sockatrice/generated';
+import { ZoneName } from 'datatrice';
 import { cx } from '@app/utils';
 
 export interface BattlefieldRowProps {
@@ -9,7 +10,7 @@ export interface BattlefieldRowProps {
   // Row's current cards (sorted by x, attachments already filtered out). The
   // drop handler reads these off `event.over.data.current` to compute an
   // insertion gridX via gridMath — see useGameDnd.handleDragEnd.
-  rowCards: Data.ServerInfo_Card[];
+  rowCards: ServerInfo_Card[];
   children: ReactNode;
 }
 
@@ -18,7 +19,7 @@ function BattlefieldRow({ playerId, row, rowCards, children }: BattlefieldRowPro
     id: `battlefield-${playerId}-${row}`,
     data: {
       targetPlayerId: playerId,
-      targetZone: App.ZoneName.TABLE,
+      targetZone: ZoneName.TABLE,
       row,
       rowCards,
     },

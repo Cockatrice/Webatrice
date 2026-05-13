@@ -10,9 +10,9 @@ import Typography from '@mui/material/Typography';
 import { CountryDropdown, InputField } from '@app/components';
 import { KnownHosts } from '@app/feature-widgets/known-hosts';
 import type { HostDTO } from '@app/services';
-import { ServerActions, useAppDispatch } from '@app/store';
-import { App } from '@app/types';
-
+import { server } from 'datatrice';
+import { useAppDispatch } from '@app/store';
+import { FormErrors } from '@app/types';
 import { useRegisterForm } from './useRegisterForm';
 
 import './RegisterForm.css';
@@ -61,7 +61,7 @@ const RegisterForm = ({ onSubmit }: RegisterFormProps) => {
   } = useRegisterForm();
 
   const handleOnSubmit = (values: RegisterFormValues) => {
-    dispatch(ServerActions.clearRegistrationErrors());
+    dispatch(server.Actions.clearRegistrationErrors());
 
     onSubmit({
       ...values,
@@ -71,8 +71,8 @@ const RegisterForm = ({ onSubmit }: RegisterFormProps) => {
     });
   };
 
-  const validate = (values: Partial<RegisterFormValues>): App.FormErrors<RegisterFormValues> => {
-    const errors: App.FormErrors<RegisterFormValues> = {};
+  const validate = (values: Partial<RegisterFormValues>): FormErrors<RegisterFormValues> => {
+    const errors: FormErrors<RegisterFormValues> = {};
 
     if (!values.userName) {
       errors.userName = t('Common.validation.required');

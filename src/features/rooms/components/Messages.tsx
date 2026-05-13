@@ -1,10 +1,9 @@
 import { Message } from '@app/components';
-import type { Enriched } from '@app/types';
-
+import { Message as MessageData } from 'datatrice';
 import './Messages.css';
 
 interface MessagesProps {
-  messages?: Enriched.Message[];
+  messages?: MessageData[];
 }
 
 const Messages = ({ messages }: MessagesProps) => (

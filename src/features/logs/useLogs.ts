@@ -3,20 +3,33 @@ import { useTranslation } from 'react-i18next';
 
 import { useToast } from '@app/components';
 import { useWebClient } from '@app/hooks';
-import { ServerActions, ServerSelectors, ServerStateLogs, useAppDispatch, useAppSelector } from '@app/store';
-import { Data } from '@app/types';
+import { server, type ServerStateLogs } from 'datatrice';
+import { useAppDispatch, useAppSelector } from '@app/store';
+import { ViewLogHistoryParams } from 'sockatrice/generated';
 
 const MAXIMUM_RESULTS = 1000;
 
+// The form emits logLocation as a checkbox-state object; the wire schema
+// wants a string[] of selected location names. `onSubmit` accepts the form
+// shape and flattens internally before dispatching.
+export interface LogsFormValues {
+  userName?: string;
+  ipAddress?: string;
+  gameName?: string;
+  gameId?: string;
+  message?: string;
+  logLocation?: { room?: boolean; game?: boolean; chat?: boolean };
+}
+
 export interface Logs {
   logs: ServerStateLogs;
-  onSubmit: (fields: Data.ViewLogHistoryParams) => void;
+  onSubmit: (fields: LogsFormValues) => void;
 }
 
 export function useLogs(): Logs {
   const { t } = useTranslation();
   const dispatch = useAppDispatch();
-  const logs = useAppSelector((state) => ServerSelectors.getLogs(state));
+  const logs = useAppSelector((state) => server.Selectors.getLogs(state));
   const webClient = useWebClient();
   const { openToast } = useToast({
     key: 'logs-empty-filter',
@@ -25,13 +38,13 @@ export function useLogs(): Logs {
 
   useEffect(() => {
     return () => {
-      dispatch(ServerActions.clearLogs());
+      dispatch(server.Actions.clearLogs());
     };
   }, [dispatch]);
 
-  const trimFields = (fields: Data.ViewLogHistoryParams): Data.ViewLogHistoryParams => {
-    const result: Data.ViewLogHistoryParams = { ...fields };
-    for (const key of Object.keys(result) as (keyof Data.ViewLogHistoryParams)[]) {
+  const trimFields = (fields: LogsFormValues): LogsFormValues => {
+    const result: LogsFormValues = { ...fields };
+    for (const key of Object.keys(result) as (keyof ViewLogHistoryParams)[]) {
       const field = result[key];
       if (typeof field === 'string') {
         const trimmed = field.trim();
@@ -45,24 +58,28 @@ export function useLogs(): Logs {
     return result;
   };
 
-  const flattenLogLocations = (logLocations: Record<string, unknown>): string[] =>
-    Object.keys(logLocations);
+  const flattenLogLocations = (logLocations: { room?: boolean; game?: boolean; chat?: boolean }): string[] =>
+    (['room', 'game', 'chat'] as const).filter((k) => logLocations[k]);
 
-  const onSubmit = (fields: Data.ViewLogHistoryParams) => {
-    const trimmedFields = trimFields(fields);
-    const { userName, ipAddress, gameName, gameId, message, logLocation } = trimmedFields as
-      Data.ViewLogHistoryParams & { logLocation?: Record<string, unknown> };
+  const onSubmit = (fields: LogsFormValues) => {
+    const trimmed = trimFields(fields);
+    const { userName, ipAddress, gameName, gameId, message, logLocation } = trimmed;
 
     const required = [userName, ipAddress, gameName, gameId, message].filter(Boolean);
 
-    if (logLocation) {
-      trimmedFields.logLocation = flattenLogLocations(logLocation);
-    }
-
-    trimmedFields.maximumResults = MAXIMUM_RESULTS;
+    const wireParams: ViewLogHistoryParams = {
+      $typeName: 'Command_ViewLogHistory.Params',
+      userName: trimmed.userName,
+      ipAddress: trimmed.ipAddress,
+      gameName: trimmed.gameName,
+      gameId: trimmed.gameId,
+      message: trimmed.message,
+      logLocation: logLocation ? flattenLogLocations(logLocation) : [],
+      maximumResults: MAXIMUM_RESULTS,
+    } as ViewLogHistoryParams;
 
     if (required.length) {
-      webClient.request.moderator.viewLogHistory(trimmedFields);
+      webClient.request.moderator.viewLogHistory(wireParams);
     } else {
       openToast();
     }

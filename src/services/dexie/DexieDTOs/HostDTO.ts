@@ -1,14 +1,13 @@
 import { IndexableType } from 'dexie';
-import { App } from '@app/types';
-
+import { Host } from '@app/types';
 import { dexieService } from '../DexieService';
 
-export class HostDTO extends App.Host {
+export class HostDTO extends Host {
   save() {
     return dexieService.hosts.put(this);
   }
 
-  static add(host: App.Host): Promise<IndexableType> {
+  static add(host: Host): Promise<IndexableType> {
     return dexieService.hosts.add(host);
   }
 
@@ -20,7 +19,7 @@ export class HostDTO extends App.Host {
     return dexieService.hosts.toArray();
   }
 
-  static bulkAdd(hosts: App.Host[]): Promise<IndexableType> {
+  static bulkAdd(hosts: Host[]): Promise<IndexableType> {
     return dexieService.hosts.bulkAdd(hosts);
   }
 

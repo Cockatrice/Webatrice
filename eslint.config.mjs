@@ -16,6 +16,26 @@ export default tseslint.config(
   // Enforce module boundaries
   ...boundariesConfig,
 
+  // External boundary: UI/store/feature code must not value-import the
+  // WebClient class — runtime access is via `useWebClient()` from
+  // `datatrice/react`. Type-only `import type { WebClient } from 'sockatrice'`
+  // is allowed everywhere. Other Sockatrice exports are unrestricted.
+  // Integration tests are exempt. Datatrice's WebClientProvider is the
+  // sole construction site, and it lives outside this repo.
+  {
+    rules: {
+      '@typescript-eslint/no-restricted-imports': ['error', {
+        paths: [{
+          name: 'sockatrice',
+          importNames: ['WebClient'],
+          message: 'UI/store/feature code must use useWebClient() from `datatrice/react` for runtime WebClient access. For type-only references, use `import type { WebClient } from "sockatrice"`.',
+          allowTypeImports: true,
+        }],
+      }],
+    },
+  },
+  { files: ['integration/**'], rules: { '@typescript-eslint/no-restricted-imports': 'off' } },
+
   // Project-specific config
   {
     languageOptions: {

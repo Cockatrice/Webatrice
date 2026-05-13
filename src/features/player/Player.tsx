@@ -7,8 +7,7 @@ import Typography from '@mui/material/Typography';
 import { AuthGuard } from '@app/components';
 import { Images } from '@app/images';
 import { Layout } from '@app/feature-core';
-import { Data } from '@app/types';
-
+import { ServerInfo_User_UserLevelFlag } from 'sockatrice/generated';
 import { usePlayer } from './usePlayer';
 
 import './Player.css';
@@ -27,7 +26,7 @@ function avatarSrc(bmp: Uint8Array | undefined): string | null {
 }
 
 function userLevelLabel(userLevel: number, t: (k: string) => string): string {
-  const Flag = Data.ServerInfo_User_UserLevelFlag;
+  const Flag = ServerInfo_User_UserLevelFlag;
   const parts: string[] = [];
   if ((userLevel & Flag.IsAdmin) === Flag.IsAdmin) {
     parts.push(t('Player.level.administrator'));
@@ -49,7 +48,7 @@ function formatAccountAge(
   userLevel: number,
   t: (k: string, params?: Record<string, unknown>) => string,
 ): string {
-  const Flag = Data.ServerInfo_User_UserLevelFlag;
+  const Flag = ServerInfo_User_UserLevelFlag;
   const isRegistered =
     (userLevel & Flag.IsAdmin) === Flag.IsAdmin ||
     (userLevel & Flag.IsModerator) === Flag.IsModerator ||

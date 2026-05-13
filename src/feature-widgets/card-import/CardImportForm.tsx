@@ -8,8 +8,7 @@ import StepLabel from '@mui/material/StepLabel';
 import CircularProgress from '@mui/material/CircularProgress';
 
 import { VirtualList } from '@app/components';
-import type { App } from '@app/types';
-
+import { Card, Format, Set, Token } from '@app/types';
 import { useCardImportForm } from './useCardImportForm';
 
 import './CardImportForm.css';
@@ -39,10 +38,10 @@ const ErrorMessage = ({ error }: ErrorMessageProps): ReactNode => (
 );
 
 interface CardsImportedProps {
-  cards: App.Card[];
-  sets: App.Set[];
-  tokens?: App.Token[];
-  formats?: App.Format[];
+  cards: Card[];
+  sets: Set[];
+  tokens?: Token[];
+  formats?: Format[];
   acceptedFiles?: string[];
   skippedFiles?: string[];
 }

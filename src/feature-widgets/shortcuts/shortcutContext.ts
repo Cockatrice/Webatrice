@@ -1,9 +1,8 @@
 import { createContext } from 'react';
 
-import { App } from '@app/types';
-
+import { ShortcutRegistration } from '@app/types';
 export interface ShortcutContextValue {
-  register: (registration: App.ShortcutRegistration) => () => void;
+  register: (registration: ShortcutRegistration) => () => void;
 }
 
 const noopUnregister = () => {};

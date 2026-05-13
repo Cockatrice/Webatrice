@@ -1,4 +1,5 @@
-import { GameSelectors, useAppSelector } from '@app/store';
+import { games } from 'datatrice';
+import { useAppSelector } from '@app/store';
 import { cx } from '@app/utils';
 
 import './PlayerList.css';
@@ -22,13 +23,13 @@ function pingCssColor(pingSeconds: number | undefined): string {
 
 function PlayerList({ gameId }: PlayerListProps) {
   const players = useAppSelector((state) =>
-    gameId != null ? GameSelectors.getPlayers(state, gameId) : undefined,
+    gameId != null ? games.Selectors.getPlayers(state, gameId) : undefined,
   );
   const activePlayerId = useAppSelector((state) =>
-    gameId != null ? GameSelectors.getActivePlayerId(state, gameId) : undefined,
+    gameId != null ? games.Selectors.getActivePlayerId(state, gameId) : undefined,
   );
   const hostId = useAppSelector((state) =>
-    gameId != null ? GameSelectors.getHostId(state, gameId) : undefined,
+    gameId != null ? games.Selectors.getHostId(state, gameId) : undefined,
   );
 
   const entries = players ? Object.values(players) : [];

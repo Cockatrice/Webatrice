@@ -6,7 +6,7 @@ import { screen, fireEvent } from '@testing-library/react';
 vi.mock('../../../../../hooks/useSettings');
 
 import { makeStoreState, renderWithProviders } from '../../../../../__test-utils__';
-import { makeCard, makeGameEntry } from '../../../../../store/game/__mocks__/fixtures';
+import { makeCard, makeGameEntry } from '../../../../../__test-utils__/games-fixtures';
 import RightPanel from './RightPanel';
 
 function stateWithGame() {

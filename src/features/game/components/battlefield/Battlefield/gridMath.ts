@@ -1,7 +1,6 @@
 // Port of cockatrice/src/game/zones/table_zone.cpp.
 
-import { Data } from '@app/types';
-
+import { ServerInfo_Card } from 'sockatrice/generated';
 export const CARD_WIDTH_PX = 146;
 export const CARD_HEIGHT_PX = 204;
 export const STACKED_CARD_OFFSET_X_PX = 49;
@@ -41,7 +40,7 @@ export function stackColumnWidth(
   return cardWidth + extras * offsetX;
 }
 
-export function stackCountsForRow(cards: Data.ServerInfo_Card[]): Map<number, number> {
+export function stackCountsForRow(cards: ServerInfo_Card[]): Map<number, number> {
   const counts = new Map<number, number>();
   for (const card of cards) {
     const col = Math.floor((card.x ?? 0) / MAX_SUBPOS);

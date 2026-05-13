@@ -1,11 +1,13 @@
 import { useDroppable } from '@dnd-kit/core';
 import type { Ref } from 'react';
 
-import { App, Data } from '@app/types';
-import { GameSelectors, useAppSelector } from '@app/store';
+import { ServerInfo_Card } from 'sockatrice/generated';
+import { ZoneName } from 'datatrice';
+import { games } from 'datatrice';
+import { useAppSelector } from '@app/store';
 
 export interface HandZone {
-  cards: Data.ServerInfo_Card[];
+  cards: ServerInfo_Card[];
   setNodeRef: Ref<HTMLDivElement>;
   isOver: boolean;
   handleZoneContextMenu: (e: React.MouseEvent<HTMLDivElement>) => void;
@@ -25,7 +27,7 @@ export function useHandZone({
   onZoneContextMenu,
 }: UseHandZoneArgs): HandZone {
   const cards = useAppSelector((state) =>
-    GameSelectors.getCards(state, gameId, playerId, App.ZoneName.HAND),
+    games.Selectors.getCards(state, gameId, playerId, ZoneName.HAND),
   );
 
   // Match desktop: can't drop into a hand zone that isn't yours (judges
@@ -33,7 +35,7 @@ export function useHandZone({
   // HandZone mounts, but this guard future-proofs opponent-hand mirrors.
   const { setNodeRef, isOver } = useDroppable({
     id: `hand-${playerId}`,
-    data: { targetPlayerId: playerId, targetZone: App.ZoneName.HAND },
+    data: { targetPlayerId: playerId, targetZone: ZoneName.HAND },
     disabled: !canAct,
   });
 

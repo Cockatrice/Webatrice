@@ -1,8 +1,8 @@
 import { ReactNode, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 
-import { ShortcutsDispatch, ShortcutsSelectors, useAppSelector } from '@app/store';
-import { App } from '@app/types';
+import { shortcuts, useAppDispatch, useAppSelector } from '@app/store';
+import { ShortcutRegistration, ShortcutScope } from '@app/types';
 import { firesInTextInputsFor, getDefaultFor } from './defaults';
 import {
   formatEvent,
@@ -14,13 +14,12 @@ import { ShortcutContext, ShortcutContextValue } from './shortcutContext';
 import { useShortcutsHydration } from './useShortcutsHydration';
 import { useShortcutsPersistence } from './useShortcutsPersistence';
 
-const ShortcutScope = App.ShortcutScope;
 
 interface ShortcutProviderProps {
   children: ReactNode;
 }
 
-function computeRouteScope(pathname: string): App.ShortcutScope | null {
+function computeRouteScope(pathname: string): ShortcutScope | null {
   if (pathname.startsWith('/game/')) {
     return ShortcutScope.GAME;
   }
@@ -51,11 +50,12 @@ export function ShortcutProvider({ children }: ShortcutProviderProps) {
   useShortcutsHydration();
   useShortcutsPersistence();
 
+  const dispatch = useAppDispatch();
   const location = useLocation();
-  const recordingActionId = useAppSelector(ShortcutsSelectors.getRecordingActionId);
-  const overrides = useAppSelector(ShortcutsSelectors.getOverrides);
+  const recordingActionId = useAppSelector(shortcuts.Selectors.getRecordingActionId);
+  const overrides = useAppSelector(shortcuts.Selectors.getOverrides);
 
-  const registry = useRef<Map<string, App.ShortcutRegistration[]>>(new Map());
+  const registry = useRef<Map<string, ShortcutRegistration[]>>(new Map());
 
   const recordingRef = useRef(recordingActionId);
   recordingRef.current = recordingActionId;
@@ -64,7 +64,7 @@ export function ShortcutProvider({ children }: ShortcutProviderProps) {
   const pathnameRef = useRef(location.pathname);
   pathnameRef.current = location.pathname;
 
-  const register = useCallback((reg: App.ShortcutRegistration) => {
+  const register = useCallback((reg: ShortcutRegistration) => {
     const list = registry.current.get(reg.actionId) ?? [];
     list.push(reg);
     registry.current.set(reg.actionId, list);
@@ -92,7 +92,7 @@ export function ShortcutProvider({ children }: ShortcutProviderProps) {
     const sequencesFor = (actionId: string): string[] =>
       overridesRef.current[actionId] ?? getDefaultFor(actionId)?.sequences ?? [];
 
-    const tryFire = (regs: App.ShortcutRegistration[], event: KeyboardEvent): boolean => {
+    const tryFire = (regs: ShortcutRegistration[], event: KeyboardEvent): boolean => {
       for (let i = regs.length - 1; i >= 0; i--) {
         const reg = regs[i];
         if (isTextInputTarget(event.target) && !firesInTextInputsFor(reg.actionId)) {
@@ -114,9 +114,9 @@ export function ShortcutProvider({ children }: ShortcutProviderProps) {
     const handler = (event: KeyboardEvent) => {
       if (recordingRef.current) {
         if (event.code === 'Escape') {
-          ShortcutsDispatch.cancelRecording();
+          dispatch(shortcuts.Actions.cancelRecording());
         } else if (!isModifierOnly(event)) {
-          ShortcutsDispatch.appendCapturedSequence(normalizeSequence(formatEvent(event)));
+          dispatch(shortcuts.Actions.appendCapturedSequence({ sequence: normalizeSequence(formatEvent(event)) }));
         }
         event.preventDefault();
         event.stopPropagation();
@@ -125,7 +125,7 @@ export function ShortcutProvider({ children }: ShortcutProviderProps) {
 
       const activeRoute = computeRouteScope(pathnameRef.current);
 
-      const candidates: App.ShortcutRegistration[] = [];
+      const candidates: ShortcutRegistration[] = [];
       for (const list of registry.current.values()) {
         for (const reg of list) {
           if (reg.scope === ShortcutScope.GLOBAL || reg.scope === activeRoute) {
@@ -138,7 +138,7 @@ export function ShortcutProvider({ children }: ShortcutProviderProps) {
 
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, []);
+  }, [dispatch]);
 
   return <ShortcutContext.Provider value={contextValue}>{children}</ShortcutContext.Provider>;
 }

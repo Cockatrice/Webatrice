@@ -1,5 +1,4 @@
-import { Data } from '@app/types';
-
+import { ServerInfo_Card } from 'sockatrice/generated';
 import BattlefieldRow from './BattlefieldRow';
 import BattlefieldStackColumn from './BattlefieldStackColumn';
 import { useBattlefield } from './useBattlefield';
@@ -12,10 +11,10 @@ export interface BattlefieldProps {
   mirrored?: boolean;
   canAct?: boolean;
   arrowSourceKey?: string | null;
-  onCardHover?: (card: Data.ServerInfo_Card) => void;
-  onCardClick?: (playerId: number, zone: string, card: Data.ServerInfo_Card) => void;
-  onCardContextMenu?: (card: Data.ServerInfo_Card, event: React.MouseEvent) => void;
-  onCardDoubleClick?: (card: Data.ServerInfo_Card) => void;
+  onCardHover?: (card: ServerInfo_Card) => void;
+  onCardClick?: (playerId: number, zone: string, card: ServerInfo_Card) => void;
+  onCardContextMenu?: (card: ServerInfo_Card, event: React.MouseEvent) => void;
+  onCardDoubleClick?: (card: ServerInfo_Card) => void;
 }
 
 function Battlefield({

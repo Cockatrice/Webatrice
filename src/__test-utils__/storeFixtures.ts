@@ -1,8 +1,9 @@
-import { App, Data } from '@app/types';
-import { WebsocketTypes } from '@app/websocket/types';
-import type { RootState } from '../store/store';
+import { ServerInfo_User } from 'sockatrice/generated';
+import { GameSortField, SortDirection, UserSortField } from 'datatrice';
+import { WebsocketTypes } from 'sockatrice/types';
+import type { RootState } from '../store';
 
-function makeUser(overrides: Partial<Data.ServerInfo_User> = {}): Data.ServerInfo_User {
+function makeUser(overrides: Partial<ServerInfo_User> = {}): ServerInfo_User {
   return {
     name: 'testUser',
     realName: '',
@@ -14,7 +15,7 @@ function makeUser(overrides: Partial<Data.ServerInfo_User> = {}): Data.ServerInf
     $unknown: undefined,
     gender: 0,
     ...overrides,
-  } as Data.ServerInfo_User;
+  } as ServerInfo_User;
 }
 
 export const disconnectedState: Partial<RootState> = {
@@ -32,7 +33,7 @@ export const disconnectedState: Partial<RootState> = {
     logs: { room: [], game: [], chat: [] },
     user: null,
     users: {},
-    sortUsersBy: { field: App.UserSortField.NAME, order: App.SortDirection.ASC },
+    sortUsersBy: { field: UserSortField.NAME, order: SortDirection.ASC },
     messages: {},
     userInfo: {},
     notifications: [],
@@ -55,8 +56,8 @@ export const disconnectedState: Partial<RootState> = {
     joinedRoomIds: {},
     joinedGameIds: {},
     messages: {},
-    sortGamesBy: { field: App.GameSortField.START_TIME, order: App.SortDirection.DESC },
-    sortUsersBy: { field: App.UserSortField.NAME, order: App.SortDirection.ASC },
+    sortGamesBy: { field: GameSortField.START_TIME, order: SortDirection.DESC },
+    sortUsersBy: { field: UserSortField.NAME, order: SortDirection.ASC },
     selectedGameIds: {},
     gameFilters: {},
     joinGamePending: false,

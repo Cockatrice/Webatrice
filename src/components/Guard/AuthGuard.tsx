@@ -1,12 +1,12 @@
 import { Navigate } from 'react-router-dom';
 
-import { ServerSelectors, useAppSelector } from '@app/store';
-import { App } from '@app/types';
-
+import { server } from 'datatrice';
+import { useAppSelector } from '@app/store';
+import { RouteEnum } from '@app/types';
 const AuthGuard = () => {
-  const isConnected = useAppSelector(ServerSelectors.getIsConnected);
+  const isConnected = useAppSelector(server.Selectors.getIsConnected);
   return !isConnected
-    ? <Navigate to={App.RouteEnum.LOGIN} />
+    ? <Navigate to={RouteEnum.LOGIN} />
     : <></>;
 };
 

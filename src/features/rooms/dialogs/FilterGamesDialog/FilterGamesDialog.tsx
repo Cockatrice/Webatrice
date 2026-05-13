@@ -13,17 +13,15 @@ import Select from '@mui/material/Select';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 
-import { DEFAULT_GAME_FILTERS } from '@app/store';
-import type { GameFilters } from '@app/store';
-import type { Enriched } from '@app/types';
-
+import { rooms, type GameFilters } from 'datatrice';
+import { GametypeMap } from 'datatrice';
 import './FilterGamesDialog.css';
 
 export interface FilterGamesDialogProps {
   isOpen: boolean;
   // MUST be a stable reference: an unstable reference resets the draft form on every parent render.
   initialFilters: GameFilters;
-  gametypeMap: Enriched.GametypeMap;
+  gametypeMap: GametypeMap;
   onCancel: () => void;
   onSubmit: (filters: GameFilters) => void;
 }
@@ -89,7 +87,7 @@ function FilterGamesDialog({
   };
 
   const handleReset = () => {
-    setForm(DEFAULT_GAME_FILTERS);
+    setForm(rooms.DEFAULT_GAME_FILTERS);
     setCreatorNamesText('');
   };
 

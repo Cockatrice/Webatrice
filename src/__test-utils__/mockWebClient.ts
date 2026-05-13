@@ -1,4 +1,4 @@
-import type { WebClient } from '@app/websocket';
+import type { WebClient } from 'sockatrice';
 
 export function createMockWebClient() {
   return {

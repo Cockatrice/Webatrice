@@ -4,14 +4,14 @@ import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 
 import { Images } from '@app/images';
-import { App, Data } from '@app/types';
-
+import { ServerInfo_User } from 'sockatrice/generated';
+import { RouteEnum } from '@app/types';
 import { useUserDisplay } from './useUserDisplay';
 
 import './UserDisplay.css';
 
 interface UserDisplayProps {
-  user: Data.ServerInfo_User;
+  user: ServerInfo_User;
 }
 
 const UserDisplay = ({ user }: UserDisplayProps) => {
@@ -30,7 +30,7 @@ const UserDisplay = ({ user }: UserDisplayProps) => {
 
   return (
     <div className="user-display">
-      <NavLink to={generatePath(App.RouteEnum.PLAYER, { name })} className="plain-link">
+      <NavLink to={generatePath(RouteEnum.PLAYER, { name })} className="plain-link">
         <div className="user-display__details" onContextMenu={handleClick}>
           <img className="user-display__country" src={Images.Countries[country]} alt={country} />
           <div className="user-display__name single-line-ellipsis">{name}</div>
@@ -47,7 +47,7 @@ const UserDisplay = ({ user }: UserDisplayProps) => {
               : undefined
           }
         >
-          <NavLink to={generatePath(App.RouteEnum.PLAYER, { name })} className="user-display__link plain-link">
+          <NavLink to={generatePath(RouteEnum.PLAYER, { name })} className="user-display__link plain-link">
             <MenuItem dense>Chat</MenuItem>
           </NavLink>
           {

@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useToast } from '@app/components';
 import { useReduxEffect } from '@app/hooks';
-import { ServerSelectors, ServerTypes } from '@app/store';
+import { server } from 'datatrice';
 
 export interface RegisterForm {
   emailRequired: boolean;
@@ -24,7 +24,7 @@ export function useRegisterForm(): RegisterForm {
   const [emailError, setEmailError] = useState<string | null>(null);
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [userNameError, setUserNameError] = useState<string | null>(null);
-  const error = useSelector(ServerSelectors.getRegistrationError);
+  const error = useSelector(server.Selectors.getRegistrationError);
   const { openToast } = useToast({
     key: 'registration-success',
     children: t('RegisterForm.toast.registerSuccess'),
@@ -37,23 +37,23 @@ export function useRegisterForm(): RegisterForm {
 
   useReduxEffect(() => {
     setEmailRequired(true);
-  }, ServerTypes.REGISTRATION_REQUIRES_EMAIL);
+  }, server.Types.REGISTRATION_REQUIRES_EMAIL);
 
   useReduxEffect(() => {
     openToast();
-  }, ServerTypes.REGISTRATION_SUCCESS);
+  }, server.Types.REGISTRATION_SUCCESS);
 
-  useReduxEffect(({ payload: { error } }) => {
+  useReduxEffect<{ error: string }>(({ payload: { error } }) => {
     setEmailError(error);
-  }, ServerTypes.REGISTRATION_EMAIL_ERROR);
+  }, server.Types.REGISTRATION_EMAIL_ERROR);
 
-  useReduxEffect(({ payload: { error } }) => {
+  useReduxEffect<{ error: string }>(({ payload: { error } }) => {
     setPasswordError(error);
-  }, ServerTypes.REGISTRATION_PASSWORD_ERROR);
+  }, server.Types.REGISTRATION_PASSWORD_ERROR);
 
-  useReduxEffect(({ payload: { error } }) => {
+  useReduxEffect<{ error: string }>(({ payload: { error } }) => {
     setUserNameError(error);
-  }, ServerTypes.REGISTRATION_USERNAME_ERROR);
+  }, server.Types.REGISTRATION_USERNAME_ERROR);
 
   return {
     emailRequired,

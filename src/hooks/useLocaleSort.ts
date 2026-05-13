@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-export function useLocaleSort(arr: string[], valueGetter: (value: string) => string): string[] {
+export function useLocaleSort(arr: readonly string[], valueGetter: (value: string) => string): string[] {
   const { i18n } = useTranslation();
 
   return useMemo(() => {

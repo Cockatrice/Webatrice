@@ -1,9 +1,9 @@
 import { create } from '@bufbuild/protobuf';
 import { describe, expect, it } from 'vitest';
 
-import { Data } from '@app/types';
-import { store } from '@app/store';
-import { GameCommands, RoomCommands } from '@app/websocket';
+import { Command_Concede_ext, Command_CreateGame_ext, Command_DeckSelect_ext, Command_GameSay_ext, Command_JoinGame_ext, Command_JoinRoom_ext, Command_LeaveGame_ext, Event_CreateCounterSchema, Event_CreateCounter_ext, Event_DrawCardsSchema, Event_DrawCards_ext, Event_GameClosedSchema, Event_GameClosed_ext, Event_GameJoinedSchema, Event_GameJoined_ext, Event_GameSaySchema, Event_GameSay_ext, Event_GameStateChangedSchema, Event_GameStateChanged_ext, Event_LeaveSchema, Event_Leave_LeaveReason, Event_Leave_ext, Event_ListRoomsSchema, Event_ListRooms_ext, Event_MoveCardSchema, Event_MoveCard_ext, Event_PlayerPropertiesChangedSchema, Event_PlayerPropertiesChanged_ext, Event_SetCounterSchema, Event_SetCounter_ext, Response_JoinRoomSchema, Response_JoinRoom_ext, Response_ResponseCode, ServerInfo_CardSchema, ServerInfo_CounterSchema, ServerInfo_GameSchema, ServerInfo_PlayerPropertiesSchema, ServerInfo_PlayerSchema, ServerInfo_RoomSchema, ServerInfo_UserSchema, ServerInfo_ZoneSchema, ServerInfo_Zone_ZoneType } from 'sockatrice/generated';
+import { store } from '../helpers/setup';
+import { GameCommands, RoomCommands } from 'sockatrice';
 
 import { connectAndHandshake, connectAndLogin } from '../helpers/setup';
 import {
@@ -18,9 +18,9 @@ import { findLastGameCommand, findLastRoomCommand, findLastSessionCommand } from
 
 function joinGame(gameId: number): void {
   deliverMessage(buildSessionEventMessage(
-    Data.Event_GameJoined_ext,
-    create(Data.Event_GameJoinedSchema, {
-      gameInfo: create(Data.ServerInfo_GameSchema, {
+    Event_GameJoined_ext,
+    create(Event_GameJoinedSchema, {
+      gameInfo: create(ServerInfo_GameSchema, {
         gameId,
         description: 'Test Game',
         maxPlayers: 2,
@@ -36,30 +36,30 @@ function joinGame(gameId: number): void {
 }
 
 function setupGameState(gameId: number): void {
-  const deckCard = create(Data.ServerInfo_CardSchema, { id: 100, name: 'Forest' });
-  const handCard = create(Data.ServerInfo_CardSchema, { id: 101, name: 'Lightning Bolt' });
+  const deckCard = create(ServerInfo_CardSchema, { id: 100, name: 'Forest' });
+  const handCard = create(ServerInfo_CardSchema, { id: 101, name: 'Lightning Bolt' });
 
-  const deckZone = create(Data.ServerInfo_ZoneSchema, {
+  const deckZone = create(ServerInfo_ZoneSchema, {
     name: 'deck',
-    type: Data.ServerInfo_Zone_ZoneType.HiddenZone,
+    type: ServerInfo_Zone_ZoneType.HiddenZone,
     cardList: [deckCard],
   });
-  const handZone = create(Data.ServerInfo_ZoneSchema, {
+  const handZone = create(ServerInfo_ZoneSchema, {
     name: 'hand',
-    type: Data.ServerInfo_Zone_ZoneType.HiddenZone,
+    type: ServerInfo_Zone_ZoneType.HiddenZone,
     cardList: [handCard],
   });
-  const tableZone = create(Data.ServerInfo_ZoneSchema, {
+  const tableZone = create(ServerInfo_ZoneSchema, {
     name: 'table',
-    type: Data.ServerInfo_Zone_ZoneType.PublicZone,
+    type: ServerInfo_Zone_ZoneType.PublicZone,
     withCoords: true,
     cardList: [],
   });
 
-  const player = create(Data.ServerInfo_PlayerSchema, {
-    properties: create(Data.ServerInfo_PlayerPropertiesSchema, {
+  const player = create(ServerInfo_PlayerSchema, {
+    properties: create(ServerInfo_PlayerPropertiesSchema, {
       playerId: 1,
-      userInfo: create(Data.ServerInfo_UserSchema, { name: 'alice' }),
+      userInfo: create(ServerInfo_UserSchema, { name: 'alice' }),
     }),
     zoneList: [deckZone, handZone, tableZone],
     counterList: [],
@@ -69,8 +69,8 @@ function setupGameState(gameId: number): void {
   deliverMessage(buildGameEventMessage({
     gameId,
     playerId: -1,
-    ext: Data.Event_GameStateChanged_ext,
-    value: create(Data.Event_GameStateChangedSchema, {
+    ext: Event_GameStateChanged_ext,
+    value: create(Event_GameStateChangedSchema, {
       playerList: [player],
       gameStarted: true,
       activePlayerId: 1,
@@ -106,12 +106,12 @@ describe('game', () => {
     joinGame(42);
     setupGameState(42);
 
-    const drawnCard = create(Data.ServerInfo_CardSchema, { id: 200, name: 'Mountain' });
+    const drawnCard = create(ServerInfo_CardSchema, { id: 200, name: 'Mountain' });
     deliverMessage(buildGameEventMessage({
       gameId: 42,
       playerId: 1,
-      ext: Data.Event_DrawCards_ext,
-      value: create(Data.Event_DrawCardsSchema, {
+      ext: Event_DrawCards_ext,
+      value: create(Event_DrawCardsSchema, {
         number: 1,
         cards: [drawnCard],
       }),
@@ -129,8 +129,8 @@ describe('game', () => {
     deliverMessage(buildGameEventMessage({
       gameId: 42,
       playerId: 1,
-      ext: Data.Event_GameSay_ext,
-      value: create(Data.Event_GameSaySchema, { message: 'good game' }),
+      ext: Event_GameSay_ext,
+      value: create(Event_GameSaySchema, { message: 'good game' }),
     }));
 
     const messages = store.getState().games.games[42].messages;
@@ -148,8 +148,8 @@ describe('game', () => {
     deliverMessage(buildGameEventMessage({
       gameId: 42,
       playerId: -1,
-      ext: Data.Event_GameClosed_ext,
-      value: create(Data.Event_GameClosedSchema),
+      ext: Event_GameClosed_ext,
+      value: create(Event_GameClosedSchema),
     }));
 
     expect(store.getState().games.games[42]).toBeUndefined();
@@ -161,7 +161,7 @@ describe('game', () => {
 
     GameCommands.gameSay(42, { message: 'hello opponent' });
 
-    const { value, cmdId } = findLastGameCommand(Data.Command_GameSay_ext);
+    const { value, cmdId } = findLastGameCommand(Command_GameSay_ext);
     expect(value.message).toBe('hello opponent');
     expect(cmdId).toBeGreaterThan(0);
   });
@@ -174,8 +174,8 @@ describe('game', () => {
     deliverMessage(buildGameEventMessage({
       gameId: 42,
       playerId: 1,
-      ext: Data.Event_MoveCard_ext,
-      value: create(Data.Event_MoveCardSchema, {
+      ext: Event_MoveCard_ext,
+      value: create(Event_MoveCardSchema, {
         cardId: 101,
         cardName: 'Lightning Bolt',
         startPlayerId: 1,
@@ -201,7 +201,7 @@ describe('game', () => {
     joinGame(42);
     setupGameState(42);
 
-    const counterInfo = create(Data.ServerInfo_CounterSchema, {
+    const counterInfo = create(ServerInfo_CounterSchema, {
       id: 1,
       name: 'Life',
       count: 20,
@@ -211,8 +211,8 @@ describe('game', () => {
     deliverMessage(buildGameEventMessage({
       gameId: 42,
       playerId: 1,
-      ext: Data.Event_CreateCounter_ext,
-      value: create(Data.Event_CreateCounterSchema, { counterInfo }),
+      ext: Event_CreateCounter_ext,
+      value: create(Event_CreateCounterSchema, { counterInfo }),
     }));
 
     const player = store.getState().games.games[42].players[1];
@@ -223,55 +223,55 @@ describe('game', () => {
     deliverMessage(buildGameEventMessage({
       gameId: 42,
       playerId: 1,
-      ext: Data.Event_SetCounter_ext,
-      value: create(Data.Event_SetCounterSchema, { counterId: 1, value: 17 }),
+      ext: Event_SetCounter_ext,
+      value: create(Event_SetCounterSchema, { counterId: 1, value: 17 }),
     }));
 
     expect(store.getState().games.games[42].players[1].counters[1].count).toBe(17);
   });
 
-  it('full lifecycle: create → join → deck select → draw → chat → discard → concede → leave', () => {
+  it('full lifecycle: create â†’ join â†’ deck select â†’ draw â†’ chat â†’ discard â†’ concede â†’ leave', () => {
     connectAndHandshake();
 
-    // ── Setup: join a room so we can create a game in it ──────────────────
+    // â”€â”€ Setup: join a room so we can create a game in it â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     deliverMessage(buildSessionEventMessage(
-      Data.Event_ListRooms_ext,
-      create(Data.Event_ListRoomsSchema, {
-        roomList: [create(Data.ServerInfo_RoomSchema, { roomId: 1, autoJoin: true, gameList: [], userList: [], gametypeList: [] })],
+      Event_ListRooms_ext,
+      create(Event_ListRoomsSchema, {
+        roomList: [create(ServerInfo_RoomSchema, { roomId: 1, autoJoin: true, gameList: [], userList: [], gametypeList: [] })],
       })
     ));
-    const roomJoin = findLastSessionCommand(Data.Command_JoinRoom_ext);
+    const roomJoin = findLastSessionCommand(Command_JoinRoom_ext);
     deliverMessage(buildResponseMessage(buildResponse({
       cmdId: roomJoin.cmdId,
-      responseCode: Data.Response_ResponseCode.RespOk,
-      ext: Data.Response_JoinRoom_ext,
-      value: create(Data.Response_JoinRoomSchema, {
-        roomInfo: create(Data.ServerInfo_RoomSchema, { roomId: 1, gameList: [], userList: [], gametypeList: [] }),
+      responseCode: Response_ResponseCode.RespOk,
+      ext: Response_JoinRoom_ext,
+      value: create(Response_JoinRoomSchema, {
+        roomInfo: create(ServerInfo_RoomSchema, { roomId: 1, gameList: [], userList: [], gametypeList: [] }),
       }),
     })));
 
-    // ── 1. Create game ───────────────────────────────────────────────────
+    // â”€â”€ 1. Create game â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     RoomCommands.createGame(1, { description: 'Ranked Match', maxPlayers: 2 });
-    const createCmd = findLastRoomCommand(Data.Command_CreateGame_ext);
+    const createCmd = findLastRoomCommand(Command_CreateGame_ext);
     deliverMessage(buildResponseMessage(buildResponse({
       cmdId: createCmd.cmdId,
-      responseCode: Data.Response_ResponseCode.RespOk,
+      responseCode: Response_ResponseCode.RespOk,
     })));
 
-    // ── 2. Join game ─────────────────────────────────────────────────────
+    // â”€â”€ 2. Join game â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     RoomCommands.joinGame(1, { gameId: 99 });
-    const joinCmd = findLastRoomCommand(Data.Command_JoinGame_ext);
+    const joinCmd = findLastRoomCommand(Command_JoinGame_ext);
     deliverMessage(buildResponseMessage(buildResponse({
       cmdId: joinCmd.cmdId,
-      responseCode: Data.Response_ResponseCode.RespOk,
+      responseCode: Response_ResponseCode.RespOk,
     })));
     expect(store.getState().rooms.joinedGameIds[1]?.[99]).toBe(true);
 
     // Server sends Event_GameJoined (session event)
     deliverMessage(buildSessionEventMessage(
-      Data.Event_GameJoined_ext,
-      create(Data.Event_GameJoinedSchema, {
-        gameInfo: create(Data.ServerInfo_GameSchema, { gameId: 99, description: 'Ranked Match', maxPlayers: 2 }),
+      Event_GameJoined_ext,
+      create(Event_GameJoinedSchema, {
+        gameInfo: create(ServerInfo_GameSchema, { gameId: 99, description: 'Ranked Match', maxPlayers: 2 }),
         playerId: 1,
         hostId: 1,
         spectator: false,
@@ -281,42 +281,42 @@ describe('game', () => {
     ));
     expect(store.getState().games.games[99]).toBeDefined();
 
-    // ── 3. Select deck ───────────────────────────────────────────────────
+    // â”€â”€ 3. Select deck â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     GameCommands.deckSelect(99, { deck: '4 Lightning Bolt\n20 Mountain\n4 Goblin Guide' });
-    const deckCmd = findLastGameCommand(Data.Command_DeckSelect_ext);
+    const deckCmd = findLastGameCommand(Command_DeckSelect_ext);
     expect(deckCmd.value.deck).toContain('Lightning Bolt');
 
     // Server responds with full game state (deck in zones)
     const deckCards = [
-      create(Data.ServerInfo_CardSchema, { id: 1, name: 'Lightning Bolt' }),
-      create(Data.ServerInfo_CardSchema, { id: 2, name: 'Mountain' }),
-      create(Data.ServerInfo_CardSchema, { id: 3, name: 'Goblin Guide' }),
+      create(ServerInfo_CardSchema, { id: 1, name: 'Lightning Bolt' }),
+      create(ServerInfo_CardSchema, { id: 2, name: 'Mountain' }),
+      create(ServerInfo_CardSchema, { id: 3, name: 'Goblin Guide' }),
     ];
     deliverMessage(buildGameEventMessage({
       gameId: 99,
       playerId: -1,
-      ext: Data.Event_GameStateChanged_ext,
-      value: create(Data.Event_GameStateChangedSchema, {
-        playerList: [create(Data.ServerInfo_PlayerSchema, {
-          properties: create(Data.ServerInfo_PlayerPropertiesSchema, {
+      ext: Event_GameStateChanged_ext,
+      value: create(Event_GameStateChangedSchema, {
+        playerList: [create(ServerInfo_PlayerSchema, {
+          properties: create(ServerInfo_PlayerPropertiesSchema, {
             playerId: 1,
-            userInfo: create(Data.ServerInfo_UserSchema, { name: 'alice' }),
+            userInfo: create(ServerInfo_UserSchema, { name: 'alice' }),
           }),
           zoneList: [
-            create(Data.ServerInfo_ZoneSchema, {
-              name: 'deck', type: Data.ServerInfo_Zone_ZoneType.HiddenZone,
+            create(ServerInfo_ZoneSchema, {
+              name: 'deck', type: ServerInfo_Zone_ZoneType.HiddenZone,
               cardList: deckCards, cardCount: 3,
             }),
-            create(Data.ServerInfo_ZoneSchema, {
-              name: 'hand', type: Data.ServerInfo_Zone_ZoneType.HiddenZone,
+            create(ServerInfo_ZoneSchema, {
+              name: 'hand', type: ServerInfo_Zone_ZoneType.HiddenZone,
               cardList: [], cardCount: 0,
             }),
-            create(Data.ServerInfo_ZoneSchema, {
-              name: 'table', type: Data.ServerInfo_Zone_ZoneType.PublicZone,
+            create(ServerInfo_ZoneSchema, {
+              name: 'table', type: ServerInfo_Zone_ZoneType.PublicZone,
               withCoords: true, cardList: [], cardCount: 0,
             }),
-            create(Data.ServerInfo_ZoneSchema, {
-              name: 'grave', type: Data.ServerInfo_Zone_ZoneType.PublicZone,
+            create(ServerInfo_ZoneSchema, {
+              name: 'grave', type: ServerInfo_Zone_ZoneType.PublicZone,
               cardList: [], cardCount: 0,
             }),
           ],
@@ -333,16 +333,16 @@ describe('game', () => {
     expect(gameAfterDeck.players[1].zones.deck.order).toHaveLength(3);
     expect(gameAfterDeck.players[1].zones.hand.order).toHaveLength(0);
 
-    // ── 4. Draw cards ────────────────────────────────────────────────────
+    // â”€â”€ 4. Draw cards â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     deliverMessage(buildGameEventMessage({
       gameId: 99,
       playerId: 1,
-      ext: Data.Event_DrawCards_ext,
-      value: create(Data.Event_DrawCardsSchema, {
+      ext: Event_DrawCards_ext,
+      value: create(Event_DrawCardsSchema, {
         number: 2,
         cards: [
-          create(Data.ServerInfo_CardSchema, { id: 1, name: 'Lightning Bolt' }),
-          create(Data.ServerInfo_CardSchema, { id: 2, name: 'Mountain' }),
+          create(ServerInfo_CardSchema, { id: 1, name: 'Lightning Bolt' }),
+          create(ServerInfo_CardSchema, { id: 2, name: 'Mountain' }),
         ],
       }),
     }));
@@ -353,17 +353,17 @@ describe('game', () => {
     expect(afterDraw.zones.hand.order).toContain(2);
     expect(afterDraw.zones.deck.cardCount).toBe(1);
 
-    // ── 5. Send game message ─────────────────────────────────────────────
+    // â”€â”€ 5. Send game message â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     GameCommands.gameSay(99, { message: 'good luck!' });
-    const sayCmd = findLastGameCommand(Data.Command_GameSay_ext);
+    const sayCmd = findLastGameCommand(Command_GameSay_ext);
     expect(sayCmd.value.message).toBe('good luck!');
 
     // Server echoes the message back
     deliverMessage(buildGameEventMessage({
       gameId: 99,
       playerId: 1,
-      ext: Data.Event_GameSay_ext,
-      value: create(Data.Event_GameSaySchema, { message: 'good luck!' }),
+      ext: Event_GameSay_ext,
+      value: create(Event_GameSaySchema, { message: 'good luck!' }),
     }));
     // game.messages is a merged chat + event-log stream (matches desktop's
     // MessageLogWidget). Earlier steps in this lifecycle (game-started,
@@ -374,12 +374,12 @@ describe('game', () => {
     expect(chatMessages).toHaveLength(1);
     expect(chatMessages[0].message).toBe('good luck!');
 
-    // ── 6. Discard (move card from hand to graveyard) ────────────────────
+    // â”€â”€ 6. Discard (move card from hand to graveyard) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     deliverMessage(buildGameEventMessage({
       gameId: 99,
       playerId: 1,
-      ext: Data.Event_MoveCard_ext,
-      value: create(Data.Event_MoveCardSchema, {
+      ext: Event_MoveCard_ext,
+      value: create(Event_MoveCardSchema, {
         cardId: 1,
         cardName: 'Lightning Bolt',
         startPlayerId: 1,
@@ -396,35 +396,35 @@ describe('game', () => {
     expect(afterDiscard.zones.grave.order).toContain(1);
     expect(afterDiscard.zones.grave.byId[1]?.name).toBe('Lightning Bolt');
 
-    // ── 7. Concede ───────────────────────────────────────────────────────
+    // â”€â”€ 7. Concede â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     GameCommands.concede(99);
-    expect(() => findLastGameCommand(Data.Command_Concede_ext)).not.toThrow();
+    expect(() => findLastGameCommand(Command_Concede_ext)).not.toThrow();
 
     // Server confirms concession
     deliverMessage(buildGameEventMessage({
       gameId: 99,
       playerId: 1,
-      ext: Data.Event_PlayerPropertiesChanged_ext,
-      value: create(Data.Event_PlayerPropertiesChangedSchema, {
-        playerProperties: create(Data.ServerInfo_PlayerPropertiesSchema, {
+      ext: Event_PlayerPropertiesChanged_ext,
+      value: create(Event_PlayerPropertiesChangedSchema, {
+        playerProperties: create(ServerInfo_PlayerPropertiesSchema, {
           playerId: 1,
           conceded: true,
-          userInfo: create(Data.ServerInfo_UserSchema, { name: 'alice' }),
+          userInfo: create(ServerInfo_UserSchema, { name: 'alice' }),
         }),
       }),
     }));
     expect(store.getState().games.games[99].players[1].properties.conceded).toBe(true);
 
-    // ── 8. Leave game ────────────────────────────────────────────────────
+    // â”€â”€ 8. Leave game â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     GameCommands.leaveGame(99);
-    expect(() => findLastGameCommand(Data.Command_LeaveGame_ext)).not.toThrow();
+    expect(() => findLastGameCommand(Command_LeaveGame_ext)).not.toThrow();
 
     // Server confirms player left
     deliverMessage(buildGameEventMessage({
       gameId: 99,
       playerId: 1,
-      ext: Data.Event_Leave_ext,
-      value: create(Data.Event_LeaveSchema, { reason: Data.Event_Leave_LeaveReason.USER_LEFT }),
+      ext: Event_Leave_ext,
+      value: create(Event_LeaveSchema, { reason: Event_Leave_LeaveReason.USER_LEFT }),
     }));
 
     expect(store.getState().games.games[99].players[1]).toBeUndefined();

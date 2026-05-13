@@ -1,7 +1,7 @@
 import { useState } from 'react';
 
 import { useReduxEffect } from '@app/hooks';
-import { ServerTypes } from '@app/store';
+import { server } from 'datatrice';
 
 export interface ResetPasswordForm {
   errorMessage: boolean;
@@ -12,7 +12,7 @@ export function useResetPasswordForm(): ResetPasswordForm {
 
   useReduxEffect(() => {
     setErrorMessage(true);
-  }, ServerTypes.RESET_PASSWORD_FAILED, []);
+  }, server.Types.RESET_PASSWORD_FAILED, []);
 
   return { errorMessage };
 }

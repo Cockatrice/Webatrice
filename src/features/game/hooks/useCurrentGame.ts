@@ -1,11 +1,11 @@
 import { useMemo } from 'react';
-import { GameSelectors, useAppSelector } from '@app/store';
-import type { Enriched } from '@app/types';
-
+import { games } from 'datatrice';
+import { useAppSelector } from '@app/store';
+import { GameEntry, PlayerEntry } from 'datatrice';
 export interface CurrentGame {
   gameId: number | undefined;
-  game: Enriched.GameEntry | undefined;
-  localPlayer: Enriched.PlayerEntry | undefined;
+  game: GameEntry | undefined;
+  localPlayer: PlayerEntry | undefined;
   isSpectator: boolean;
   isJudge: boolean;
   isHost: boolean;
@@ -13,13 +13,13 @@ export interface CurrentGame {
 }
 
 export function useCurrentGame(gameId?: number): CurrentGame {
-  const activeGameIds = useAppSelector(GameSelectors.getActiveGameIds);
+  const activeGameIds = useAppSelector(games.Selectors.getActiveGameIds);
 
   const resolvedGameId: number | undefined =
     gameId ?? (activeGameIds.length > 0 ? activeGameIds[0] : undefined);
 
   const game = useAppSelector((state) =>
-    resolvedGameId != null ? GameSelectors.getGame(state, resolvedGameId) : undefined,
+    resolvedGameId != null ? games.Selectors.getGame(state, resolvedGameId) : undefined,
   );
 
   return useMemo<CurrentGame>(() => {

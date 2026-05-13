@@ -2,12 +2,13 @@ import { ReactNode } from 'react';
 import { Provider } from 'react-redux';
 import { configureStore, Reducer } from '@reduxjs/toolkit';
 
-import { WebClientContext } from '../hooks/useWebClient';
-import type { WebClient } from '@app/websocket';
+import type { WebClient } from 'sockatrice';
+import { WebClientContext } from 'datatrice/react';
+
 import { createMockWebClient } from './mockWebClient';
 
 // Minimal Provider wrapper for hook-only tests. Use this instead of
-// `renderWithProviders` when you need `renderHook` — the full provider tree
+// `renderWithProviders` when you need `renderHook` â€” the full provider tree
 // auto-instantiates the singleton store via `@app/store`, which races with
 // any test-local store you preload. Deep-import the reducer(s) you need and
 // pass them here (see useCurrentGame.spec.tsx for the canonical pattern).

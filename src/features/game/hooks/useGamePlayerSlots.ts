@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 
-import type { Enriched } from '@app/types';
-
+import { GameEntry } from 'datatrice';
 export interface PlayerSlotEntry {
   playerId: number;
   name: string;
@@ -17,7 +16,7 @@ export interface GamePlayerSlots {
 }
 
 export function useGamePlayerSlots(
-  game: Enriched.GameEntry | undefined,
+  game: GameEntry | undefined,
 ): GamePlayerSlots {
   const [slotAPlayerId, setSlotAPlayerId] = useState<number | undefined>();
   const [slotBPlayerId, setSlotBPlayerId] = useState<number | undefined>();

@@ -11,11 +11,6 @@ export default defineConfig({
     coverage: {
       ...viteConfig.test?.coverage,
       reportsDirectory: './coverage/integration',
-      include: [
-        'src/websocket/**/*.{ts,tsx}',
-        'src/store/**/*.{ts,tsx}',
-        'src/api/**/*.{ts,tsx}',
-      ],
     },
   },
 });

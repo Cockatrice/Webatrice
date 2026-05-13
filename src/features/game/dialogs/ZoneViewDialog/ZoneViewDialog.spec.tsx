@@ -1,6 +1,5 @@
 import { screen, fireEvent } from '@testing-library/react';
-import { App } from '@app/types';
-
+import { ZoneName } from 'datatrice';
 import { makeStoreState, renderWithProviders, makeUser } from '../../../../__test-utils__';
 import {
   makeCard,
@@ -8,7 +7,7 @@ import {
   makePlayerEntry,
   makePlayerProperties,
   makeZoneEntry,
-} from '../../../../store/game/__mocks__/fixtures';
+} from '../../../../__test-utils__/games-fixtures';
 import ZoneViewDialog from './ZoneViewDialog';
 
 function stateWith(zone: Parameters<typeof makeZoneEntry>[0]) {
@@ -41,10 +40,10 @@ describe('ZoneViewDialog', () => {
         isOpen={false}
         gameId={1}
         playerId={1}
-        zoneName={App.ZoneName.GRAVE}
+        zoneName={ZoneName.GRAVE}
         handleClose={() => {}}
       />,
-      { preloadedState: stateWith({ name: App.ZoneName.GRAVE, cardCount: 0 }) },
+      { preloadedState: stateWith({ name: ZoneName.GRAVE, cardCount: 0 }) },
     );
 
     expect(screen.queryByTestId('zone-view-dialog')).not.toBeInTheDocument();
@@ -60,12 +59,12 @@ describe('ZoneViewDialog', () => {
         isOpen
         gameId={1}
         playerId={1}
-        zoneName={App.ZoneName.GRAVE}
+        zoneName={ZoneName.GRAVE}
         handleClose={() => {}}
       />,
       {
         preloadedState: stateWith({
-          name: App.ZoneName.GRAVE,
+          name: ZoneName.GRAVE,
           cards,
           cardCount: 2,
         }),
@@ -82,12 +81,12 @@ describe('ZoneViewDialog', () => {
         isOpen
         gameId={1}
         playerId={1}
-        zoneName={App.ZoneName.GRAVE}
+        zoneName={ZoneName.GRAVE}
         handleClose={() => {}}
       />,
       {
         preloadedState: stateWith({
-          name: App.ZoneName.GRAVE,
+          name: ZoneName.GRAVE,
           cards: [makeCard({ id: 1 })],
           cardCount: 1,
         }),
@@ -103,10 +102,10 @@ describe('ZoneViewDialog', () => {
         isOpen
         gameId={1}
         playerId={1}
-        zoneName={App.ZoneName.EXILE}
+        zoneName={ZoneName.EXILE}
         handleClose={() => {}}
       />,
-      { preloadedState: stateWith({ name: App.ZoneName.EXILE, cardCount: 0 }) },
+      { preloadedState: stateWith({ name: ZoneName.EXILE, cardCount: 0 }) },
     );
 
     expect(screen.getByText(/this zone is empty/i)).toBeInTheDocument();
@@ -118,12 +117,12 @@ describe('ZoneViewDialog', () => {
         isOpen
         gameId={1}
         playerId={1}
-        zoneName={App.ZoneName.DECK}
+        zoneName={ZoneName.DECK}
         handleClose={() => {}}
       />,
       {
         preloadedState: stateWith({
-          name: App.ZoneName.DECK,
+          name: ZoneName.DECK,
           cardCount: 40,
           cards: [],
         }),
@@ -140,12 +139,12 @@ describe('ZoneViewDialog', () => {
         isOpen
         gameId={1}
         playerId={1}
-        zoneName={App.ZoneName.EXILE}
+        zoneName={ZoneName.EXILE}
         handleClose={() => {}}
       />,
       {
         preloadedState: stateWith({
-          name: App.ZoneName.EXILE,
+          name: ZoneName.EXILE,
           cards: [faceDown],
           cardCount: 1,
         }),
@@ -163,10 +162,10 @@ describe('ZoneViewDialog', () => {
         isOpen
         gameId={1}
         playerId={1}
-        zoneName={App.ZoneName.GRAVE}
+        zoneName={ZoneName.GRAVE}
         handleClose={handleClose}
       />,
-      { preloadedState: stateWith({ name: App.ZoneName.GRAVE, cardCount: 0 }) },
+      { preloadedState: stateWith({ name: ZoneName.GRAVE, cardCount: 0 }) },
     );
 
     fireEvent.click(screen.getByRole('button', { name: /close zone view/i }));
@@ -180,11 +179,11 @@ describe('ZoneViewDialog', () => {
         isOpen
         gameId={1}
         playerId={1}
-        zoneName={App.ZoneName.GRAVE}
+        zoneName={ZoneName.GRAVE}
         handleClose={() => {}}
         initialPosition={{ x: 200, y: 150 }}
       />,
-      { preloadedState: stateWith({ name: App.ZoneName.GRAVE, cardCount: 0 }) },
+      { preloadedState: stateWith({ name: ZoneName.GRAVE, cardCount: 0 }) },
     );
 
     const panel = screen.getByTestId('zone-view-dialog');

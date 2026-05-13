@@ -1,9 +1,9 @@
 import { create } from '@bufbuild/protobuf';
 import { describe, expect, it } from 'vitest';
 
-import { Data } from '@app/types';
-import { store } from '@app/store';
-import { AdminCommands } from '@app/websocket';
+import { Command_AdjustMod_ext, Command_ReloadConfig_ext, Command_ShutdownServer_ext, Command_UpdateServerMessage_ext, Event_UserJoinedSchema, Event_UserJoined_ext, Response_ResponseCode, ServerInfo_UserSchema, ServerInfo_User_UserLevelFlag } from 'sockatrice/generated';
+import { store } from '../helpers/setup';
+import { AdminCommands } from 'sockatrice';
 
 import { connectAndLogin } from '../helpers/setup';
 import {
@@ -20,11 +20,11 @@ describe('admin commands', () => {
 
     // Add bob to the user list so the reducer has a target
     deliverMessage(buildSessionEventMessage(
-      Data.Event_UserJoined_ext,
-      create(Data.Event_UserJoinedSchema, {
-        userInfo: create(Data.ServerInfo_UserSchema, {
+      Event_UserJoined_ext,
+      create(Event_UserJoinedSchema, {
+        userInfo: create(ServerInfo_UserSchema, {
           name: 'bob',
-          userLevel: Data.ServerInfo_User_UserLevelFlag.IsRegistered,
+          userLevel: ServerInfo_User_UserLevelFlag.IsRegistered,
         }),
       })
     ));
@@ -32,18 +32,18 @@ describe('admin commands', () => {
 
     AdminCommands.adjustMod('bob', true, false);
 
-    const { cmdId, value } = findLastAdminCommand(Data.Command_AdjustMod_ext);
+    const { cmdId, value } = findLastAdminCommand(Command_AdjustMod_ext);
     expect(value.userName).toBe('bob');
     expect(value.shouldBeMod).toBe(true);
     expect(value.shouldBeJudge).toBe(false);
 
     deliverMessage(buildResponseMessage(buildResponse({
       cmdId,
-      responseCode: Data.Response_ResponseCode.RespOk,
+      responseCode: Response_ResponseCode.RespOk,
     })));
 
     const bobLevel = store.getState().server.users.bob.userLevel;
-    expect(bobLevel & Data.ServerInfo_User_UserLevelFlag.IsModerator).toBeTruthy();
+    expect(bobLevel & ServerInfo_User_UserLevelFlag.IsModerator).toBeTruthy();
   });
 
   it('shutdownServer sends command and dispatches on success', () => {
@@ -51,13 +51,13 @@ describe('admin commands', () => {
 
     AdminCommands.shutdownServer('Scheduled maintenance', 10);
 
-    const { cmdId, value } = findLastAdminCommand(Data.Command_ShutdownServer_ext);
+    const { cmdId, value } = findLastAdminCommand(Command_ShutdownServer_ext);
     expect(value.reason).toBe('Scheduled maintenance');
     expect(value.minutes).toBe(10);
 
     deliverMessage(buildResponseMessage(buildResponse({
       cmdId,
-      responseCode: Data.Response_ResponseCode.RespOk,
+      responseCode: Response_ResponseCode.RespOk,
     })));
   });
 
@@ -66,12 +66,12 @@ describe('admin commands', () => {
 
     AdminCommands.reloadConfig();
 
-    const { cmdId } = findLastAdminCommand(Data.Command_ReloadConfig_ext);
+    const { cmdId } = findLastAdminCommand(Command_ReloadConfig_ext);
     expect(cmdId).toBeGreaterThan(0);
 
     deliverMessage(buildResponseMessage(buildResponse({
       cmdId,
-      responseCode: Data.Response_ResponseCode.RespOk,
+      responseCode: Response_ResponseCode.RespOk,
     })));
   });
 
@@ -80,12 +80,12 @@ describe('admin commands', () => {
 
     AdminCommands.updateServerMessage();
 
-    const { cmdId } = findLastAdminCommand(Data.Command_UpdateServerMessage_ext);
+    const { cmdId } = findLastAdminCommand(Command_UpdateServerMessage_ext);
     expect(cmdId).toBeGreaterThan(0);
 
     deliverMessage(buildResponseMessage(buildResponse({
       cmdId,
-      responseCode: Data.Response_ResponseCode.RespOk,
+      responseCode: Response_ResponseCode.RespOk,
     })));
   });
 });

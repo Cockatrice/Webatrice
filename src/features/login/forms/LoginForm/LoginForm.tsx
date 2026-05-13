@@ -1,5 +1,6 @@
 import React from 'react';
-import { Form, Field, FormApi } from 'react-final-form';
+import { Form, Field } from 'react-final-form';
+import type { FormApi } from 'final-form';
 import { OnChange } from 'react-final-form-listeners';
 import { useTranslation } from 'react-i18next';
 
@@ -12,9 +13,9 @@ import { CheckboxField, InputField } from '@app/components';
 import { KnownHosts } from '@app/feature-widgets/known-hosts';
 import { LoadingState, useKnownHosts, useSettings } from '@app/hooks';
 import { HostDTO } from '@app/services';
-import { ServerSelectors, TestConnectionStatus, useAppSelector } from '@app/store';
-import { App } from '@app/types';
-
+import { server, type TestConnectionStatus } from 'datatrice';
+import { useAppSelector } from '@app/store';
+import { FormErrors } from '@app/types';
 import { useLoginFormBody } from './useLoginForm';
 
 import './LoginForm.css';
@@ -69,7 +70,7 @@ const LoginFormBody = ({
     passwordFieldBlur,
   } = useLoginFormBody(form);
 
-  const testConnectionStatus = useAppSelector(ServerSelectors.getTestConnectionStatus);
+  const testConnectionStatus = useAppSelector(server.Selectors.getTestConnectionStatus);
   const showHashingGatedOptions = hostSupportsHashedPassword(selectedHost, testConnectionStatus);
   // Login is only meaningful once we know the host is reachable + speaks the
   // Cockatrice protocol. Keep the button disabled until test-connection resolves
@@ -158,8 +159,8 @@ const LoginForm = (props: LoginFormProps) => {
   const knownHosts = useKnownHosts();
   const settings = useSettings();
 
-  const validate = (values: Partial<LoginFormValues>): App.FormErrors<LoginFormValues> => {
-    const errors: App.FormErrors<LoginFormValues> = {};
+  const validate = (values: Partial<LoginFormValues>): FormErrors<LoginFormValues> => {
+    const errors: FormErrors<LoginFormValues> = {};
 
     if (!values.userName) {
       errors.userName = t('Common.validation.required');

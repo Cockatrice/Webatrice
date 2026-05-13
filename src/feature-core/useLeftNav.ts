@@ -2,12 +2,12 @@ import { useMemo, useState } from 'react';
 import { useNavigate, generatePath } from 'react-router-dom';
 
 import { useLeaveGame, useWebClient } from '@app/hooks';
-import { GameSelectors, RoomsSelectors, ServerSelectors, useAppSelector } from '@app/store';
-import { App } from '@app/types';
-
+import { server, rooms, games } from 'datatrice';
+import { useAppSelector } from '@app/store';
+import { RouteEnum } from '@app/types';
 export interface LeftNavOption {
   label: string;
-  route: App.RouteEnum;
+  route: RouteEnum;
 }
 
 interface LeftNavState {
@@ -17,8 +17,8 @@ interface LeftNavState {
 }
 
 export interface LeftNav {
-  joinedRooms: ReturnType<typeof RoomsSelectors.getJoinedRooms>;
-  joinedGames: ReturnType<typeof GameSelectors.getActiveGames>;
+  joinedRooms: ReturnType<typeof rooms.Selectors.getJoinedRooms>;
+  joinedGames: ReturnType<typeof games.Selectors.getActiveGames>;
   isConnected: boolean;
   state: LeftNavState;
   handleMenuOpen: (event: React.MouseEvent) => void;
@@ -31,20 +31,20 @@ export interface LeftNav {
 }
 
 const BASE_OPTIONS: LeftNavOption[] = [
-  { label: 'Account', route: App.RouteEnum.ACCOUNT },
-  { label: 'Replays', route: App.RouteEnum.REPLAYS },
+  { label: 'Account', route: RouteEnum.ACCOUNT },
+  { label: 'Replays', route: RouteEnum.REPLAYS },
 ];
 
 const MODERATOR_OPTIONS: LeftNavOption[] = [
-  { label: 'Administration', route: App.RouteEnum.ADMINISTRATION },
-  { label: 'Logs', route: App.RouteEnum.LOGS },
+  { label: 'Administration', route: RouteEnum.ADMINISTRATION },
+  { label: 'Logs', route: RouteEnum.LOGS },
 ];
 
 export function useLeftNav(): LeftNav {
-  const joinedRooms = useAppSelector((state) => RoomsSelectors.getJoinedRooms(state));
-  const joinedGames = useAppSelector(GameSelectors.getActiveGames);
-  const isConnected = useAppSelector(ServerSelectors.getIsConnected);
-  const isModerator = useAppSelector(ServerSelectors.getIsUserModerator);
+  const joinedRooms = useAppSelector((state) => rooms.Selectors.getJoinedRooms(state));
+  const joinedGames = useAppSelector(games.Selectors.getActiveGames);
+  const isConnected = useAppSelector(server.Selectors.getIsConnected);
+  const isModerator = useAppSelector(server.Selectors.getIsUserModerator);
   const navigate = useNavigate();
   const webClient = useWebClient();
   const leaveGameRequest = useLeaveGame();

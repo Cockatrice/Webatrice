@@ -1,15 +1,16 @@
 import { useWebClient } from '@app/hooks';
-import { GameSelectors, useAppSelector } from '@app/store';
-import { App, Data } from '@app/types';
-
+import { games } from 'datatrice';
+import { useAppSelector } from '@app/store';
+import { CardAttribute } from 'sockatrice/generated';
+import { Phase, ZoneName } from 'datatrice';
 import { useCurrentGame } from '../../../hooks/useCurrentGame';
 import { useGameAffordances } from '../../../hooks/useGameAffordances';
 
 export interface PhaseBar {
-  activePhase: App.Phase | undefined;
+  activePhase: Phase | undefined;
   canPassTurn: boolean;
   canAdvancePhase: boolean;
-  handlePhaseClick: (phase: App.Phase) => void;
+  handlePhaseClick: (phase: Phase) => void;
   handlePass: () => void;
   handleUntapAll: () => void;
   handleDrawOne: () => void;
@@ -20,16 +21,16 @@ export function usePhaseBar(gameId: number | undefined): PhaseBar {
   const { game } = useCurrentGame(gameId);
   const { canPassTurn, canAdvancePhase } = useGameAffordances(gameId);
   const activePhase = useAppSelector((state) =>
-    gameId != null ? GameSelectors.getActivePhase(state, gameId) : undefined,
+    gameId != null ? games.Selectors.getActivePhase(state, gameId) : undefined,
   );
   const localPlayerId = game?.localPlayerId;
   const tableCards = useAppSelector((state) =>
     gameId != null && localPlayerId != null
-      ? GameSelectors.getCards(state, gameId, localPlayerId, App.ZoneName.TABLE)
+      ? games.Selectors.getCards(state, gameId, localPlayerId, ZoneName.TABLE)
       : undefined,
   );
 
-  const handlePhaseClick = (phase: App.Phase) => {
+  const handlePhaseClick = (phase: Phase) => {
     if (!canAdvancePhase || gameId == null) {
       return;
     }
@@ -55,9 +56,9 @@ export function usePhaseBar(gameId: number | undefined): PhaseBar {
     for (const card of tableCards) {
       if (card.tapped) {
         webClient.request.game.setCardAttr(gameId, {
-          zone: App.ZoneName.TABLE,
+          zone: ZoneName.TABLE,
           cardId: card.id,
-          attribute: Data.CardAttribute.AttrTapped,
+          attribute: CardAttribute.AttrTapped,
           attrValue: '0',
         });
       }

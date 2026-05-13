@@ -2,9 +2,9 @@ import { ReactElement } from 'react';
 import { render as rtlRender, screen, fireEvent } from '@testing-library/react';
 import { create } from '@bufbuild/protobuf';
 import { DndContext } from '@dnd-kit/core';
-import { App, Data } from '@app/types';
-
-import { makeCard } from '../../../../../store/game/__mocks__/fixtures';
+import { ServerInfo_CardCounterSchema } from 'sockatrice/generated';
+import { ZoneName } from 'datatrice';
+import { makeCard } from '../../../../../__test-utils__/games-fixtures';
 import CardSlot from './CardSlot';
 
 // useDraggable requires a DndContext ancestor; keep a lightweight wrapper
@@ -36,7 +36,7 @@ describe('CardSlot', () => {
       name: 'Hidden',
       faceDown: true,
       pt: '3/3',
-      counterList: [create(Data.ServerInfo_CardCounterSchema, { id: 1, value: 2 })],
+      counterList: [create(ServerInfo_CardCounterSchema, { id: 1, value: 2 })],
     });
     render(<CardSlot card={card} />);
 
@@ -59,19 +59,19 @@ describe('CardSlot', () => {
 
   it('does not render the annotation when zone is not TABLE', () => {
     const card = makeCard({ annotation: 'note' });
-    render(<CardSlot card={card} zone={App.ZoneName.HAND} />);
+    render(<CardSlot card={card} zone={ZoneName.HAND} />);
     expect(screen.queryByText('note')).not.toBeInTheDocument();
   });
 
   it('renders card.annotation as the owner pill on the battlefield', () => {
     const card = makeCard({ annotation: 'Bob' });
-    render(<CardSlot card={card} zone={App.ZoneName.TABLE} />);
+    render(<CardSlot card={card} zone={ZoneName.TABLE} />);
     expect(screen.getByText('Bob')).toBeInTheDocument();
   });
 
   it('does not render any pill when annotation is empty even on battlefield', () => {
     const card = makeCard({ annotation: '' });
-    const { container } = render(<CardSlot card={card} zone={App.ZoneName.TABLE} />);
+    const { container } = render(<CardSlot card={card} zone={ZoneName.TABLE} />);
     expect(container.querySelector('.card-slot__owner')).toBeNull();
   });
 
@@ -79,13 +79,13 @@ describe('CardSlot', () => {
     // The server populates card.annotation whenever the card's owner differs
     // from the controller — including stolen / cloned cards on YOUR table.
     const card = makeCard({ annotation: 'Owner: Bob' });
-    render(<CardSlot card={card} zone={App.ZoneName.TABLE} />);
+    render(<CardSlot card={card} zone={ZoneName.TABLE} />);
     expect(screen.getByText('Bob')).toBeInTheDocument();
   });
 
   it('strips a leading "Owner: " prefix from the annotation pill', () => {
     const card = makeCard({ annotation: 'Owner: Bob' });
-    render(<CardSlot card={card} zone={App.ZoneName.TABLE} />);
+    render(<CardSlot card={card} zone={ZoneName.TABLE} />);
     expect(screen.getByText('Bob')).toBeInTheDocument();
     expect(screen.queryByText('Owner: Bob')).not.toBeInTheDocument();
   });
@@ -105,13 +105,13 @@ describe('CardSlot', () => {
     expect(screen.queryByText('Alice')).not.toBeInTheDocument();
     unmount();
 
-    render(<CardSlot card={card} zone={App.ZoneName.TABLE} />);
+    render(<CardSlot card={card} zone={ZoneName.TABLE} />);
     expect(screen.getByText('Alice')).toBeInTheDocument();
   });
 
   it('suppresses name and annotation overlays when face-down', () => {
     const card = makeCard({ name: 'Hidden', annotation: 'Alice', faceDown: true });
-    render(<CardSlot card={card} zone={App.ZoneName.TABLE} />);
+    render(<CardSlot card={card} zone={ZoneName.TABLE} />);
     expect(screen.queryByText('Hidden')).not.toBeInTheDocument();
     expect(screen.queryByText('Alice')).not.toBeInTheDocument();
   });
@@ -119,8 +119,8 @@ describe('CardSlot', () => {
   it('renders a counter badge per card counter', () => {
     const card = makeCard({
       counterList: [
-        create(Data.ServerInfo_CardCounterSchema, { id: 1, value: 3 }),
-        create(Data.ServerInfo_CardCounterSchema, { id: 2, value: 7 }),
+        create(ServerInfo_CardCounterSchema, { id: 1, value: 3 }),
+        create(ServerInfo_CardCounterSchema, { id: 2, value: 7 }),
       ],
     });
     render(<CardSlot card={card} />);

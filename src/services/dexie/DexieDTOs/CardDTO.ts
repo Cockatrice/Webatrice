@@ -1,9 +1,8 @@
 import { IndexableType } from 'dexie';
-import { App } from '@app/types';
-
+import { Card } from '@app/types';
 import { dexieService } from '../DexieService';
 
-export class CardDTO extends App.Card {
+export class CardDTO extends Card {
   save() {
     return dexieService.cards.put(this);
   }

@@ -1,9 +1,8 @@
-import { App } from '@app/types';
-
+import { Info } from '@app/types';
 import { dexieService } from '../DexieService';
 
-export class InfoDTO extends App.Info {
-  constructor(info?: Partial<App.Info>) {
+export class InfoDTO extends Info {
+  constructor(info?: Partial<Info>) {
     super();
     this.id = 'singleton';
     this.source = info?.source ?? 'oracle-local-fs';

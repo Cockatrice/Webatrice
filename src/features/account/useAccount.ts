@@ -1,15 +1,15 @@
 import { useEffect, useMemo } from 'react';
 
 import { useWebClient } from '@app/hooks';
-import { ServerSelectors, useAppSelector } from '@app/store';
-import { Data } from '@app/types';
-
+import { server } from 'datatrice';
+import { useAppSelector } from '@app/store';
+import { ServerInfo_User } from 'sockatrice/generated';
 export interface Account {
-  buddyList: Data.ServerInfo_User[];
-  ignoreList: Data.ServerInfo_User[];
+  buddyList: ServerInfo_User[];
+  ignoreList: ServerInfo_User[];
   serverName: string | undefined;
   serverVersion: string | undefined;
-  user: Data.ServerInfo_User | null;
+  user: ServerInfo_User | null;
   avatarUrl: string;
   handleAddToBuddies: (args: { userName: string }) => void;
   handleAddToIgnore: (args: { userName: string }) => void;
@@ -17,11 +17,11 @@ export interface Account {
 }
 
 export function useAccount(): Account {
-  const buddyList = useAppSelector((state) => ServerSelectors.getSortedBuddyList(state));
-  const ignoreList = useAppSelector((state) => ServerSelectors.getSortedIgnoreList(state));
-  const serverName = useAppSelector((state) => ServerSelectors.getName(state));
-  const serverVersion = useAppSelector((state) => ServerSelectors.getVersion(state));
-  const user = useAppSelector((state) => ServerSelectors.getUser(state));
+  const buddyList = useAppSelector((state) => server.Selectors.getSortedBuddyList(state));
+  const ignoreList = useAppSelector((state) => server.Selectors.getSortedIgnoreList(state));
+  const serverName = useAppSelector((state) => server.Selectors.getName(state));
+  const serverVersion = useAppSelector((state) => server.Selectors.getVersion(state));
+  const user = useAppSelector((state) => server.Selectors.getUser(state));
   const webClient = useWebClient();
   const avatarBmp = user?.avatarBmp;
 
@@ -29,7 +29,9 @@ export function useAccount(): Account {
     if (!avatarBmp) {
       return '';
     }
-    return URL.createObjectURL(new Blob([avatarBmp], { type: 'image/png' }));
+    // Cast: avatarBmp is `Uint8Array<ArrayBufferLike>` from generated protos but
+    // Blob's BlobPart wants `Uint8Array<ArrayBuffer>`. The runtime is identical.
+    return URL.createObjectURL(new Blob([avatarBmp as BlobPart], { type: 'image/png' }));
   }, [avatarBmp]);
 
   useEffect(() => {

@@ -1,6 +1,7 @@
 import { memo } from 'react';
 
-import { App, type Data } from '@app/types';
+import { ServerInfo_Card } from 'sockatrice/generated';
+import { ZoneName } from 'datatrice';
 import { cx } from '@app/utils';
 
 import { counterColorForId } from './counterColors';
@@ -9,15 +10,15 @@ import { useCardSlot } from './useCardSlot';
 import './CardSlot.css';
 
 export interface CardSlotProps {
-  card: Data.ServerInfo_Card;
+  card: ServerInfo_Card;
   draggable?: boolean;
   isArrowSource?: boolean;
   ownerPlayerId?: number;
   zone?: string;
-  onClick?: (card: Data.ServerInfo_Card) => void;
-  onDoubleClick?: (card: Data.ServerInfo_Card) => void;
-  onContextMenu?: (card: Data.ServerInfo_Card, event: React.MouseEvent) => void;
-  onMouseEnter?: (card: Data.ServerInfo_Card) => void;
+  onClick?: (card: ServerInfo_Card) => void;
+  onDoubleClick?: (card: ServerInfo_Card) => void;
+  onContextMenu?: (card: ServerInfo_Card, event: React.MouseEvent) => void;
+  onMouseEnter?: (card: ServerInfo_Card) => void;
 }
 
 function CardSlot({
@@ -69,10 +70,10 @@ function CardSlot({
         )
       )}
 
-      {!card.faceDown && (card.name || (zone === App.ZoneName.TABLE && card.annotation)) && (
+      {!card.faceDown && (card.name || (zone === ZoneName.TABLE && card.annotation)) && (
         <div className="card-slot__top">
           {card.name && <div className="card-slot__name">{card.name}</div>}
-          {zone === App.ZoneName.TABLE && card.annotation && (
+          {zone === ZoneName.TABLE && card.annotation && (
             <div className="card-slot__owner">
               {card.annotation.replace(/^Owner:\s*/i, '')}
             </div>

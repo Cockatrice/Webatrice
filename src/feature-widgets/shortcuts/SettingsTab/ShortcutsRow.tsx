@@ -6,7 +6,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import RestoreIcon from '@mui/icons-material/Restore';
 import WarningIcon from '@mui/icons-material/Warning';
 
-import { ShortcutsDispatch, ShortcutsSelectors, useAppSelector } from '@app/store';
+import { shortcuts, useAppDispatch, useAppSelector } from '@app/store';
 
 import { displaySequence } from '../shortcutSequence';
 import { ActionId } from '../types';
@@ -20,8 +20,9 @@ interface ShortcutsRowProps {
 
 const ShortcutsRow = ({ actionId, conflicts, onEdit }: ShortcutsRowProps) => {
   const { t } = useTranslation();
+  const dispatch = useAppDispatch();
   const sequences = useResolvedBinding(actionId);
-  const isOverridden = useAppSelector((s) => ShortcutsSelectors.isOverridden(s, actionId));
+  const isOverridden = useAppSelector((s) => shortcuts.Selectors.isOverridden(s, actionId));
   const hasConflict = conflicts.length > 0;
 
   return (
@@ -63,7 +64,7 @@ const ShortcutsRow = ({ actionId, conflicts, onEdit }: ShortcutsRowProps) => {
           <span>
             <IconButton
               size="small"
-              onClick={() => ShortcutsDispatch.resetAction(actionId)}
+              onClick={() => dispatch(shortcuts.Actions.resetAction({ actionId }))}
               disabled={!isOverridden}
               aria-label={t('ShortcutsTab.resetAction')}
             >

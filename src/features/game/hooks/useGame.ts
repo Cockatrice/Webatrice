@@ -2,8 +2,7 @@ import { RefObject, useCallback, useMemo, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 
-import type { Data } from '@app/types';
-
+import { ServerInfo_Card } from 'sockatrice/generated';
 import { createCardRegistry, type CardRegistry } from '../utils/CardRegistry/CardRegistryContext';
 import { useCurrentGame, type CurrentGame } from './useCurrentGame';
 import { useGameAccess, type GameAccess } from './useGameAccess';
@@ -18,8 +17,8 @@ export interface Game extends CurrentGame {
   boardRef: RefObject<HTMLDivElement>;
   cardRegistry: CardRegistry;
   sensors: ReturnType<typeof useSensors>;
-  hoveredCard: Data.ServerInfo_Card | null;
-  setHoveredCard: (card: Data.ServerInfo_Card | null) => void;
+  hoveredCard: ServerInfo_Card | null;
+  setHoveredCard: (card: ServerInfo_Card | null) => void;
   isRotated: boolean;
   toggleRotated: () => void;
   localAccess: GameAccess;
@@ -54,7 +53,7 @@ export function useGame(): Game {
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
     useSensor(KeyboardSensor),
   );
-  const [hoveredCard, setHoveredCard] = useState<Data.ServerInfo_Card | null>(null);
+  const [hoveredCard, setHoveredCard] = useState<ServerInfo_Card | null>(null);
   // View-only 90° rotation; local to this tab, mirrors desktop's
   // Player::actRotateLocal which applies a QGraphicsView transform with no
   // server call.

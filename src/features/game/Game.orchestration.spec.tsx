@@ -5,8 +5,7 @@
 // the end-to-end dispatch so a regression that disconnects state from its
 // consumers is caught even when both sides still pass in isolation.
 import { screen, fireEvent, waitFor } from '@testing-library/react';
-import { App } from '@app/types';
-
+import { ZoneName } from 'datatrice';
 import { createMockWebClient, makeStoreState, renderWithProviders, connectedState, makeUser } from '../../__test-utils__';
 import {
   makeCard,
@@ -14,7 +13,7 @@ import {
   makePlayerEntry,
   makePlayerProperties,
   makeZoneEntry,
-} from '../../store/game/__mocks__/fixtures';
+} from '../../__test-utils__/games-fixtures';
 import Game from './Game';
 
 // Layout pulls in LeftNav which is not under test here; stub to a no-op.
@@ -57,19 +56,19 @@ function buildGame({
         readyStart: pid === localId ? localReadyStart : false,
       }),
       zones: {
-        [App.ZoneName.TABLE]: makeZoneEntry({
-          name: App.ZoneName.TABLE,
+        [ZoneName.TABLE]: makeZoneEntry({
+          name: ZoneName.TABLE,
           cards: pid === localId ? tableCards : [],
           cardCount: pid === localId ? tableCards.length : 0,
         }),
-        [App.ZoneName.HAND]: makeZoneEntry({ name: App.ZoneName.HAND }),
-        [App.ZoneName.DECK]: makeZoneEntry({ name: App.ZoneName.DECK, cardCount: 40 }),
-        [App.ZoneName.GRAVE]: makeZoneEntry({
-          name: App.ZoneName.GRAVE,
+        [ZoneName.HAND]: makeZoneEntry({ name: ZoneName.HAND }),
+        [ZoneName.DECK]: makeZoneEntry({ name: ZoneName.DECK, cardCount: 40 }),
+        [ZoneName.GRAVE]: makeZoneEntry({
+          name: ZoneName.GRAVE,
           cards: pid === localId ? graveCards : [],
           cardCount: pid === localId ? graveCards.length : 0,
         }),
-        [App.ZoneName.EXILE]: makeZoneEntry({ name: App.ZoneName.EXILE }),
+        [ZoneName.EXILE]: makeZoneEntry({ name: ZoneName.EXILE }),
       },
     });
   }
@@ -140,7 +139,7 @@ describe('Game orchestration (M4–M6)', () => {
 
     expect(webClient.request.game.createToken).toHaveBeenCalledWith(
       1,
-      expect.objectContaining({ cardName: 'Goblin', zone: App.ZoneName.TABLE }),
+      expect.objectContaining({ cardName: 'Goblin', zone: ZoneName.TABLE }),
     );
   });
 
@@ -149,8 +148,8 @@ describe('Game orchestration (M4–M6)', () => {
     const state = buildGame({ localId: 1, opponentIds: [2] });
     // Seed the local hand with 5 cards so "same size" sends number: 5.
     const localPlayer = state.games.games[1].players[1];
-    localPlayer.zones[App.ZoneName.HAND] = makeZoneEntry({
-      name: App.ZoneName.HAND,
+    localPlayer.zones[ZoneName.HAND] = makeZoneEntry({
+      name: ZoneName.HAND,
       cards: Array.from({ length: 5 }, (_, i) => makeCard({ id: 100 + i })),
       cardCount: 5,
     });
@@ -169,13 +168,13 @@ describe('Game orchestration (M4–M6)', () => {
     const webClient = createMockWebClient();
     const state = buildGame({ localId: 1, opponentIds: [2] });
     const localPlayer = state.games.games[1].players[1];
-    localPlayer.zones[App.ZoneName.HAND] = makeZoneEntry({
-      name: App.ZoneName.HAND,
+    localPlayer.zones[ZoneName.HAND] = makeZoneEntry({
+      name: ZoneName.HAND,
       cards: Array.from({ length: 7 }, (_, i) => makeCard({ id: 100 + i })),
       cardCount: 7,
     });
-    localPlayer.zones[App.ZoneName.DECK] = makeZoneEntry({
-      name: App.ZoneName.DECK, cards: [], cardCount: 53,
+    localPlayer.zones[ZoneName.DECK] = makeZoneEntry({
+      name: ZoneName.DECK, cards: [], cardCount: 53,
     });
     renderWithProviders(<Game />, { preloadedState: state, webClient });
 
@@ -197,13 +196,13 @@ describe('Game orchestration (M4–M6)', () => {
     const webClient = createMockWebClient();
     const state = buildGame({ localId: 1, opponentIds: [2] });
     const localPlayer = state.games.games[1].players[1];
-    localPlayer.zones[App.ZoneName.HAND] = makeZoneEntry({
-      name: App.ZoneName.HAND,
+    localPlayer.zones[ZoneName.HAND] = makeZoneEntry({
+      name: ZoneName.HAND,
       cards: Array.from({ length: 7 }, (_, i) => makeCard({ id: 100 + i })),
       cardCount: 7,
     });
-    localPlayer.zones[App.ZoneName.DECK] = makeZoneEntry({
-      name: App.ZoneName.DECK, cards: [], cardCount: 53,
+    localPlayer.zones[ZoneName.DECK] = makeZoneEntry({
+      name: ZoneName.DECK, cards: [], cardCount: 53,
     });
     renderWithProviders(<Game />, { preloadedState: state, webClient });
 
@@ -230,8 +229,8 @@ describe('Game orchestration (M4–M6)', () => {
       tableCards: [makeCard({ id: 50, name: 'Bear' })],
     });
     const localPlayer = state.games.games[1].players[1];
-    localPlayer.zones[App.ZoneName.HAND] = makeZoneEntry({
-      name: App.ZoneName.HAND,
+    localPlayer.zones[ZoneName.HAND] = makeZoneEntry({
+      name: ZoneName.HAND,
       cards: [makeCard({ id: 10, name: 'Lightning Bolt' })],
       cardCount: 1,
     });
@@ -251,9 +250,9 @@ describe('Game orchestration (M4–M6)', () => {
         1,
         expect.objectContaining({
           startPlayerId: 1,
-          startZone: App.ZoneName.HAND,
+          startZone: ZoneName.HAND,
           targetPlayerId: 1,
-          targetZone: App.ZoneName.TABLE,
+          targetZone: ZoneName.TABLE,
           cardsToMove: { card: [{ cardId: 10 }] },
         }),
       );
@@ -265,13 +264,13 @@ describe('Game orchestration (M4–M6)', () => {
     const webClient = createMockWebClient();
     const state = buildGame({ localId: 1, opponentIds: [2] });
     const localPlayer = state.games.games[1].players[1];
-    localPlayer.zones[App.ZoneName.HAND] = makeZoneEntry({
-      name: App.ZoneName.HAND,
+    localPlayer.zones[ZoneName.HAND] = makeZoneEntry({
+      name: ZoneName.HAND,
       cards: Array.from({ length: 7 }, (_, i) => makeCard({ id: 100 + i })),
       cardCount: 7,
     });
-    localPlayer.zones[App.ZoneName.DECK] = makeZoneEntry({
-      name: App.ZoneName.DECK, cards: [], cardCount: 53,
+    localPlayer.zones[ZoneName.DECK] = makeZoneEntry({
+      name: ZoneName.DECK, cards: [], cardCount: 53,
     });
     renderWithProviders(<Game />, { preloadedState: state, webClient });
 
@@ -290,13 +289,13 @@ describe('Game orchestration (M4–M6)', () => {
     const webClient = createMockWebClient();
     const state = buildGame({ localId: 1, opponentIds: [2] });
     const localPlayer = state.games.games[1].players[1];
-    localPlayer.zones[App.ZoneName.DECK] = makeZoneEntry({
-      name: App.ZoneName.DECK,
+    localPlayer.zones[ZoneName.DECK] = makeZoneEntry({
+      name: ZoneName.DECK,
       cards: [makeCard({ id: 100, name: 'Island' })],
       cardCount: 1,
     });
-    localPlayer.zones[App.ZoneName.SIDEBOARD] = makeZoneEntry({
-      name: App.ZoneName.SIDEBOARD,
+    localPlayer.zones[ZoneName.SIDEBOARD] = makeZoneEntry({
+      name: ZoneName.SIDEBOARD,
       cards: [makeCard({ id: 200, name: 'Counterspell' })],
       cardCount: 1,
     });
@@ -311,7 +310,7 @@ describe('Game orchestration (M4–M6)', () => {
       1,
       expect.objectContaining({
         moveList: [
-          { cardName: 'Island', startZone: App.ZoneName.DECK, targetZone: App.ZoneName.SIDEBOARD },
+          { cardName: 'Island', startZone: ZoneName.DECK, targetZone: ZoneName.SIDEBOARD },
         ],
       }),
     );
@@ -341,14 +340,14 @@ describe('Game orchestration (M4–M6)', () => {
     fireEvent.contextMenu(
       screen
         .getByTestId('player-board-1')
-        .querySelector(`[data-testid="zone-stack-${App.ZoneName.DECK}"]`)!,
+        .querySelector(`[data-testid="zone-stack-${ZoneName.DECK}"]`)!,
     );
     fireEvent.click(await screen.findByText(/always reveal top card/i));
 
     expect(webClient.request.game.changeZoneProperties).toHaveBeenCalledWith(
       1,
       expect.objectContaining({
-        zoneName: App.ZoneName.DECK,
+        zoneName: ZoneName.DECK,
         alwaysRevealTopCard: true,
       }),
     );

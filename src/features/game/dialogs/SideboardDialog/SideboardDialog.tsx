@@ -10,8 +10,7 @@ import FormControlLabel from '@mui/material/FormControlLabel';
 import Checkbox from '@mui/material/Checkbox';
 import Tooltip from '@mui/material/Tooltip';
 
-import { App, Enriched } from '@app/types';
-
+import { ZoneEntry, ZoneName } from 'datatrice';
 import './SideboardDialog.css';
 
 const PREFIX = 'SideboardDialog';
@@ -55,8 +54,8 @@ function applyMoves(
   const deck = [...initialDeck];
   const sideboard = [...initialSideboard];
   for (const move of moves) {
-    const from = move.startZone === App.ZoneName.DECK ? deck : sideboard;
-    const to = move.targetZone === App.ZoneName.DECK ? deck : sideboard;
+    const from = move.startZone === ZoneName.DECK ? deck : sideboard;
+    const to = move.targetZone === ZoneName.DECK ? deck : sideboard;
     const idx = from.findIndex((c) => c.name === move.cardName);
     if (idx < 0) {
       continue;
@@ -101,14 +100,14 @@ function SideboardDialog({
     if (isLocked) {
       return;
     }
-    addMove(card.name, App.ZoneName.DECK, App.ZoneName.SIDEBOARD);
+    addMove(card.name, ZoneName.DECK, ZoneName.SIDEBOARD);
   };
 
   const handleMoveToDeck = (card: Card) => {
     if (isLocked) {
       return;
     }
-    addMove(card.name, App.ZoneName.SIDEBOARD, App.ZoneName.DECK);
+    addMove(card.name, ZoneName.SIDEBOARD, ZoneName.DECK);
   };
 
   const handleApply = () => {
@@ -231,10 +230,10 @@ export default SideboardDialog;
 export { applyMoves };
 
 // Helper to derive the card-display arrays a parent needs to pass.
-// Takes the normalized Enriched.ZoneEntry and materializes the
+// Takes the normalized ZoneEntry and materializes the
 // [{id, name}] shape the dialog expects.
 export function cardsFromZone(
-  zone: Enriched.ZoneEntry | undefined,
+  zone: ZoneEntry | undefined,
 ): Card[] {
   if (!zone) {
     return [];

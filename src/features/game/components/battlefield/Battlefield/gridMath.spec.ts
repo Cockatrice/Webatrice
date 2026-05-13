@@ -1,4 +1,4 @@
-import { makeCard } from '../../../../../store/game/__mocks__/fixtures';
+import { makeCard } from '../../../../../__test-utils__/games-fixtures';
 import {
   ATTACH_OFFSET_FRACTION,
   CARD_HEIGHT_PX,

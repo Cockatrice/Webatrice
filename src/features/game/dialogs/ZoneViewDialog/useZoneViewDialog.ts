@@ -1,12 +1,12 @@
 import { useRef, useState } from 'react';
 
-import { GameSelectors, useAppSelector } from '@app/store';
-import type { Data } from '@app/types';
-
-const EMPTY_CARDS: Data.ServerInfo_Card[] = [];
+import { games } from 'datatrice';
+import { useAppSelector } from '@app/store';
+import { ServerInfo_Card } from 'sockatrice/generated';
+const EMPTY_CARDS: ServerInfo_Card[] = [];
 
 export interface ZoneViewDialog {
-  cards: Data.ServerInfo_Card[];
+  cards: ServerInfo_Card[];
   count: number;
   title: string;
   position: { x: number; y: number };
@@ -43,19 +43,19 @@ export function useZoneViewDialog({
 }: UseZoneViewDialogArgs): ZoneViewDialog {
   const cards = useAppSelector((state) =>
     gameId != null && playerId != null && zoneName != null
-      ? GameSelectors.getCards(state, gameId, playerId, zoneName)
+      ? games.Selectors.getCards(state, gameId, playerId, zoneName)
       : EMPTY_CARDS,
   );
   const zone = useAppSelector((state) =>
     gameId != null && playerId != null && zoneName != null
-      ? GameSelectors.getZone(state, gameId, playerId, zoneName)
+      ? games.Selectors.getZone(state, gameId, playerId, zoneName)
       : undefined,
   );
   const playerName = useAppSelector((state) => {
     if (gameId == null || playerId == null) {
       return undefined;
     }
-    return GameSelectors.getPlayer(state, gameId, playerId)?.properties.userInfo?.name;
+    return games.Selectors.getPlayer(state, gameId, playerId)?.properties.userInfo?.name;
   });
 
   const count = zone?.cardCount ?? cards.length;

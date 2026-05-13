@@ -2,8 +2,7 @@ import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import Divider from '@mui/material/Divider';
 
-import { Data } from '@app/types';
-
+import { ServerInfo_Card } from 'sockatrice/generated';
 import {
   COUNTER_TYPE_COUNT,
   COUNTER_TYPE_LABELS,
@@ -20,7 +19,7 @@ export interface CardContextMenuProps {
   anchorPosition: { top: number; left: number } | null;
   gameId: number;
   localPlayerId: number | null;
-  card: Data.ServerInfo_Card | null;
+  card: ServerInfo_Card | null;
   ownerPlayerId: number | null;
   sourceZone: string | null;
   onClose: () => void;
@@ -38,7 +37,7 @@ const COUNTER_TYPE_IDS: ReadonlyArray<number> = Array.from(
   (_, i) => i,
 );
 
-function hasCounter(card: Data.ServerInfo_Card, counterId: number): boolean {
+function hasCounter(card: ServerInfo_Card, counterId: number): boolean {
   return card.counterList.some((c) => c.id === counterId && c.value > 0);
 }
 

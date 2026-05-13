@@ -1,9 +1,9 @@
 import { create } from '@bufbuild/protobuf';
 import { describe, expect, it } from 'vitest';
 
-import { Data } from '@app/types';
-import { store } from '@app/store';
-import { WebsocketTypes } from '@app/websocket/types';
+import { Event_ConnectionClosedSchema, Event_ConnectionClosed_CloseReason, Event_ConnectionClosed_ext, Event_NotifyUserSchema, Event_NotifyUser_NotificationType, Event_NotifyUser_ext, Event_ServerMessageSchema, Event_ServerMessage_ext, Event_ServerShutdownSchema, Event_ServerShutdown_ext } from 'sockatrice/generated';
+import { store } from '../helpers/setup';
+import { WebsocketTypes } from 'sockatrice/types';
 
 import { connectAndHandshake } from '../helpers/setup';
 import {
@@ -16,8 +16,8 @@ describe('server events', () => {
     connectAndHandshake();
 
     deliverMessage(buildSessionEventMessage(
-      Data.Event_ServerMessage_ext,
-      create(Data.Event_ServerMessageSchema, { message: 'Welcome to TestServer!' })
+      Event_ServerMessage_ext,
+      create(Event_ServerMessageSchema, { message: 'Welcome to TestServer!' })
     ));
 
     expect(store.getState().server.info.message).toBe('Welcome to TestServer!');
@@ -27,8 +27,8 @@ describe('server events', () => {
     connectAndHandshake();
 
     deliverMessage(buildSessionEventMessage(
-      Data.Event_ServerShutdown_ext,
-      create(Data.Event_ServerShutdownSchema, {
+      Event_ServerShutdown_ext,
+      create(Event_ServerShutdownSchema, {
         reason: 'Scheduled maintenance',
         minutes: 5,
       })
@@ -44,9 +44,9 @@ describe('server events', () => {
     connectAndHandshake();
 
     deliverMessage(buildSessionEventMessage(
-      Data.Event_NotifyUser_ext,
-      create(Data.Event_NotifyUserSchema, {
-        type: Data.Event_NotifyUser_NotificationType.PROMOTION,
+      Event_NotifyUser_ext,
+      create(Event_NotifyUserSchema, {
+        type: Event_NotifyUser_NotificationType.PROMOTION,
         customTitle: 'You have been promoted',
         customContent: 'Now a judge',
       })
@@ -62,9 +62,9 @@ describe('server events', () => {
       connectAndHandshake();
 
       deliverMessage(buildSessionEventMessage(
-        Data.Event_ConnectionClosed_ext,
-        create(Data.Event_ConnectionClosedSchema, {
-          reason: Data.Event_ConnectionClosed_CloseReason.OTHER,
+        Event_ConnectionClosed_ext,
+        create(Event_ConnectionClosedSchema, {
+          reason: Event_ConnectionClosed_CloseReason.OTHER,
           reasonStr: 'kicked by admin',
         })
       ));
@@ -78,9 +78,9 @@ describe('server events', () => {
       connectAndHandshake();
 
       deliverMessage(buildSessionEventMessage(
-        Data.Event_ConnectionClosed_ext,
-        create(Data.Event_ConnectionClosedSchema, {
-          reason: Data.Event_ConnectionClosed_CloseReason.USER_LIMIT_REACHED,
+        Event_ConnectionClosed_ext,
+        create(Event_ConnectionClosedSchema, {
+          reason: Event_ConnectionClosed_CloseReason.USER_LIMIT_REACHED,
         })
       ));
 
@@ -91,9 +91,9 @@ describe('server events', () => {
       connectAndHandshake();
 
       deliverMessage(buildSessionEventMessage(
-        Data.Event_ConnectionClosed_ext,
-        create(Data.Event_ConnectionClosedSchema, {
-          reason: Data.Event_ConnectionClosed_CloseReason.LOGGEDINELSEWERE,
+        Event_ConnectionClosed_ext,
+        create(Event_ConnectionClosedSchema, {
+          reason: Event_ConnectionClosed_CloseReason.LOGGEDINELSEWERE,
         })
       ));
 

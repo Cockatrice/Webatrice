@@ -3,8 +3,7 @@ import { DndContext, DragOverlay } from '@dnd-kit/core';
 import { AuthGuard } from '@app/components';
 import { Layout } from '@app/feature-core';
 import { ConfirmDialog, PromptDialog } from '@app/dialogs';
-import { App } from '@app/types';
-
+import { ZoneName } from 'datatrice';
 import GameArrowOverlay from './components/arrows/GameArrowOverlay/GameArrowOverlay';
 import CardContextMenu from './components/context-menus/CardContextMenu/CardContextMenu';
 import HandContextMenu from './components/context-menus/HandContextMenu/HandContextMenu';
@@ -107,10 +106,10 @@ function Game() {
                     onCardHover={setHoveredCard}
                     onCardClick={arrows.handleCardClick}
                     onCardContextMenu={(card, e) =>
-                      dialogs.handleCardContextMenu(slots.slotBPlayerId!, App.ZoneName.TABLE, card, e)
+                      dialogs.handleCardContextMenu(slots.slotBPlayerId!, ZoneName.TABLE, card, e)
                     }
                     onCardDoubleClick={(card) =>
-                      arrows.handleCardDoubleClick(App.ZoneName.TABLE, card)
+                      arrows.handleCardDoubleClick(ZoneName.TABLE, card)
                     }
                     onZoneClick={dialogs.handleZoneClick}
                     onZoneContextMenu={dialogs.handleZoneContextMenu}
@@ -124,10 +123,10 @@ function Game() {
                     onCardHover={setHoveredCard}
                     onCardClick={arrows.handleCardClick}
                     onCardContextMenu={(card, e) =>
-                      dialogs.handleCardContextMenu(slots.slotAPlayerId!, App.ZoneName.TABLE, card, e)
+                      dialogs.handleCardContextMenu(slots.slotAPlayerId!, ZoneName.TABLE, card, e)
                     }
                     onCardDoubleClick={(card) =>
-                      arrows.handleCardDoubleClick(App.ZoneName.TABLE, card)
+                      arrows.handleCardDoubleClick(ZoneName.TABLE, card)
                     }
                     onZoneClick={dialogs.handleZoneClick}
                     onZoneContextMenu={dialogs.handleZoneContextMenu}
@@ -142,10 +141,10 @@ function Game() {
                       onCardHover={setHoveredCard}
                       onCardClick={arrows.handleCardClick}
                       onCardContextMenu={(card, e) =>
-                        dialogs.handleCardContextMenu(slots.slotAPlayerId!, App.ZoneName.HAND, card, e)
+                        dialogs.handleCardContextMenu(slots.slotAPlayerId!, ZoneName.HAND, card, e)
                       }
                       onCardDoubleClick={(card) =>
-                        arrows.handleCardDoubleClick(App.ZoneName.HAND, card)
+                        arrows.handleCardDoubleClick(ZoneName.HAND, card)
                       }
                       onZoneContextMenu={dialogs.handleHandContextMenu}
                     />
@@ -235,7 +234,7 @@ function Game() {
               isOpen={dialogs.handMenu != null}
               anchorPosition={dialogs.handMenu}
               gameId={gameId ?? 0}
-              handSize={localPlayer?.zones[App.ZoneName.HAND]?.cardCount ?? 0}
+              handSize={localPlayer?.zones[ZoneName.HAND]?.cardCount ?? 0}
               onClose={dialogs.closeHandMenu}
               onRequestChooseMulligan={dialogs.handleRequestChooseMulligan}
               onRequestRevealHand={dialogs.handleRequestRevealHand}
@@ -276,8 +275,8 @@ function Game() {
             <SideboardDialog
               isOpen={dialogs.sideboardOpen}
               playerName={localPlayer?.properties.userInfo?.name ?? ''}
-              deckCards={cardsFromZone(localPlayer?.zones[App.ZoneName.DECK])}
-              sideboardCards={cardsFromZone(localPlayer?.zones[App.ZoneName.SIDEBOARD])}
+              deckCards={cardsFromZone(localPlayer?.zones[ZoneName.DECK])}
+              sideboardCards={cardsFromZone(localPlayer?.zones[ZoneName.SIDEBOARD])}
               isLocked={localPlayer?.properties.sideboardLocked ?? false}
               onSubmit={dialogs.handleSideboardSubmit}
               onCancel={dialogs.closeSideboard}

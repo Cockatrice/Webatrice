@@ -1,6 +1,6 @@
 import { SOCKATRICE_FEATURES } from 'sockatrice';
 
-import type { WebsocketTypes } from '@app/websocket/types';
+import type { WebsocketTypes } from 'sockatrice/types';
 
 const APP_FEATURES = [
   '2.7.0_min_version',

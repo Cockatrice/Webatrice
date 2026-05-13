@@ -1,12 +1,12 @@
 import { useEffect, useRef } from 'react';
 
 import { LoadingState, useSettings } from '@app/hooks';
-import { ShortcutsSelectors, useAppSelector } from '@app/store';
+import { shortcuts, useAppSelector } from '@app/store';
 
 export function useShortcutsPersistence(): void {
   const settings = useSettings();
-  const hydrated = useAppSelector(ShortcutsSelectors.getHydrated);
-  const overrides = useAppSelector(ShortcutsSelectors.getOverrides);
+  const hydrated = useAppSelector(shortcuts.Selectors.getHydrated);
+  const overrides = useAppSelector(shortcuts.Selectors.getOverrides);
   const lastSeenOverrides = useRef<typeof overrides | null>(null);
 
   useEffect(() => {

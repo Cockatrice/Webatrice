@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
-import { GameSelectors, useAppSelector } from '@app/store';
+import { games } from 'datatrice';
+import { useAppSelector } from '@app/store';
 
 export interface GameAccess {
   canAct: boolean;
@@ -9,7 +10,7 @@ export interface GameAccess {
 
 export function useGameAccess(gameId: number | undefined, targetPlayerId?: number): GameAccess {
   const game = useAppSelector((state) =>
-    gameId != null ? GameSelectors.getGame(state, gameId) : undefined,
+    gameId != null ? games.Selectors.getGame(state, gameId) : undefined,
   );
 
   return useMemo<GameAccess>(() => {

@@ -1,7 +1,8 @@
 import { useWebClient } from '@app/hooks';
-import { GameSelectors, useAppSelector } from '@app/store';
-import type { Data, Enriched } from '@app/types';
-
+import { games } from 'datatrice';
+import { useAppSelector } from '@app/store';
+import { ServerInfo_Counter } from 'sockatrice/generated';
+import { PlayerEntry } from 'datatrice';
 type ServerColor = { r: number; g: number; b: number; a: number } | undefined;
 
 // Canonical MTG mana colors, mirroring the dead-code table in desktop's
@@ -61,12 +62,12 @@ function isLifeCounter(c: { name: string }): boolean {
 }
 
 export interface PlayerInfoPanel {
-  player: Enriched.PlayerEntry | undefined;
+  player: PlayerEntry | undefined;
   isHost: boolean;
   // Life renders in the header alongside the name; all other counters render
   // as circles centered in the rail body.
-  lifeCounter: Data.ServerInfo_Counter | undefined;
-  otherCounters: Data.ServerInfo_Counter[];
+  lifeCounter: ServerInfo_Counter | undefined;
+  otherCounters: ServerInfo_Counter[];
   handleIncrement: (counterId: number, delta: number) => void;
 }
 
@@ -80,9 +81,9 @@ export function usePlayerInfoPanel({
   playerId,
 }: UsePlayerInfoPanelArgs): PlayerInfoPanel {
   const webClient = useWebClient();
-  const player = useAppSelector((state) => GameSelectors.getPlayer(state, gameId, playerId));
-  const countersMap = useAppSelector((state) => GameSelectors.getCounters(state, gameId, playerId));
-  const hostId = useAppSelector((state) => GameSelectors.getHostId(state, gameId));
+  const player = useAppSelector((state) => games.Selectors.getPlayer(state, gameId, playerId));
+  const countersMap = useAppSelector((state) => games.Selectors.getCounters(state, gameId, playerId));
+  const hostId = useAppSelector((state) => games.Selectors.getHostId(state, gameId));
 
   const isHost = hostId != null && hostId === playerId;
   const allCounters = Object.values(countersMap);

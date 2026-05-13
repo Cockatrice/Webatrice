@@ -1,6 +1,7 @@
-import { GameActions, useAppDispatch } from '@app/store';
+import { games } from 'datatrice';
+import { useAppDispatch } from '@app/store';
 
-import { useWebClient } from './useWebClient';
+import { useWebClient } from 'datatrice/react';
 
 export function useLeaveGame(): (gameId: number) => void {
   const webClient = useWebClient();
@@ -9,6 +10,6 @@ export function useLeaveGame(): (gameId: number) => void {
     webClient.request.game.leaveGame(gameId);
     // @critical Servatrice strips the leaver from the broadcast list before Event_Leave; dispatch locally.
     // See .github/instructions/root.instructions.md#ui--server-layering-invariant.
-    dispatch(GameActions.gameLeft({ gameId }));
+    dispatch(games.Actions.gameLeft({ gameId }));
   };
 }

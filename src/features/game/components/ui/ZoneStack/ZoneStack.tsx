@@ -1,7 +1,8 @@
 import { useDroppable } from '@dnd-kit/core';
 
-import { GameSelectors, useAppSelector } from '@app/store';
-import type { Data } from '@app/types';
+import { games } from 'datatrice';
+import { useAppSelector } from '@app/store';
+import { ServerInfo_Card } from 'sockatrice/generated';
 import { cx } from '@app/utils';
 
 import { useGameAccess } from '../../../hooks/useGameAccess';
@@ -15,7 +16,7 @@ export interface ZoneStackProps {
   zoneName: string;
   label: string;
   rotated?: boolean;
-  onCardHover?: (card: Data.ServerInfo_Card) => void;
+  onCardHover?: (card: ServerInfo_Card) => void;
   onClick?: (zoneName: string) => void;
   onContextMenu?: (zoneName: string, event: React.MouseEvent) => void;
 }
@@ -31,9 +32,9 @@ function ZoneStack({
   onContextMenu,
 }: ZoneStackProps) {
   const zone = useAppSelector((state) =>
-    GameSelectors.getZone(state, gameId, playerId, zoneName),
+    games.Selectors.getZone(state, gameId, playerId, zoneName),
   );
-  const topCard: Data.ServerInfo_Card | undefined = zone
+  const topCard: ServerInfo_Card | undefined = zone
     ? zone.byId[zone.order[zone.order.length - 1]]
     : undefined;
 

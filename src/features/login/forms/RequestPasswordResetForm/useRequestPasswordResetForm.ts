@@ -1,7 +1,7 @@
 import { useState } from 'react';
 
 import { useReduxEffect } from '@app/hooks';
-import { ServerTypes } from '@app/store';
+import { server } from 'datatrice';
 
 export interface RequestPasswordResetForm {
   errorMessage: boolean;
@@ -16,11 +16,11 @@ export function useRequestPasswordResetForm(): RequestPasswordResetForm {
 
   useReduxEffect(() => {
     setErrorMessage(true);
-  }, ServerTypes.RESET_PASSWORD_FAILED, []);
+  }, server.Types.RESET_PASSWORD_FAILED, []);
 
   useReduxEffect(() => {
     setIsMFA(true);
-  }, ServerTypes.RESET_PASSWORD_CHALLENGE, []);
+  }, server.Types.RESET_PASSWORD_CHALLENGE, []);
 
   return { errorMessage, setErrorMessage, isMFA, setIsMFA };
 }

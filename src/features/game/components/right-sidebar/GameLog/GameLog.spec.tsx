@@ -1,20 +1,19 @@
 import { act, screen, fireEvent } from '@testing-library/react';
-import type { Enriched } from '@app/types';
+import { Event_GameStateChangedSchema } from 'sockatrice/generated';
+import { GameMessage } from 'datatrice';
 import { create } from '@bufbuild/protobuf';
-import { Data } from '@app/types';
-
 import { createMockWebClient, makeStoreState, renderWithProviders, makeUser } from '../../../../../__test-utils__';
 import {
   makeGameEntry,
   makePlayerEntry,
   makePlayerProperties,
-} from '../../../../../store/game/__mocks__/fixtures';
-import { Actions } from '../../../../../store/game/game.actions';
+} from '../../../../../__test-utils__/games-fixtures';
+import { games } from 'datatrice';
 import GameLog from './GameLog';
 
 function stateWithMessages(
   players: ReturnType<typeof makePlayerEntry>[],
-  messages: Enriched.GameMessage[],
+  messages: GameMessage[],
   secondsElapsed = 0,
 ) {
   const byId: Record<number, ReturnType<typeof makePlayerEntry>> = {};
@@ -258,9 +257,9 @@ describe('GameLog', () => {
 
       // Server pushes a fresh snapshot (real reducer path).
       act(() => {
-        store.dispatch(Actions.gameStateChanged({
+        store.dispatch(games.Actions.gameStateChanged({
           gameId: 1,
-          data: create(Data.Event_GameStateChangedSchema, { secondsElapsed: 120 }),
+          data: create(Event_GameStateChangedSchema, { secondsElapsed: 120 }),
         }));
       });
 

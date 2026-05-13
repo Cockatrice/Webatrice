@@ -1,10 +1,9 @@
-import { App } from '@app/types';
-
+import { ScryfallImageSize } from 'datatrice';
 const SCRYFALL_API = 'https://api.scryfall.com';
 
 export function getScryfallUrlById(
   providerId: string,
-  size: App.ScryfallImageSize = App.ScryfallImageSize.Small,
+  size: ScryfallImageSize = ScryfallImageSize.Small,
 ): string {
   const id = encodeURIComponent(providerId);
   return `${SCRYFALL_API}/cards/${id}?format=image&version=${size}`;
@@ -12,7 +11,7 @@ export function getScryfallUrlById(
 
 export function getScryfallUrlByName(
   name: string,
-  size: App.ScryfallImageSize = App.ScryfallImageSize.Small,
+  size: ScryfallImageSize = ScryfallImageSize.Small,
 ): string {
   // Strip Cockatrice's "(Token)" suffix; Scryfall uses the unsuffixed printed name.
   const cleaned = name.replace(/\s*\(?\bToken\b\)?\s*$/i, '');
@@ -22,7 +21,7 @@ export function getScryfallUrlByName(
 
 export function getScryfallUrl(
   card: { providerId?: string; name?: string },
-  size: App.ScryfallImageSize = App.ScryfallImageSize.Small,
+  size: ScryfallImageSize = ScryfallImageSize.Small,
 ): string | null {
   if (card.providerId) {
     return getScryfallUrlById(card.providerId, size);

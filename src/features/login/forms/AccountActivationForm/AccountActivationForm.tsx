@@ -7,9 +7,8 @@ import Typography from '@mui/material/Typography';
 
 import { InputField } from '@app/components';
 import { useReduxEffect } from '@app/hooks';
-import { ServerTypes } from '@app/store';
-import { App } from '@app/types';
-
+import { server } from 'datatrice';
+import { FormErrors } from '@app/types';
 import './AccountActivationForm.css';
 
 export interface AccountActivationFormValues {
@@ -26,7 +25,7 @@ const AccountActivationForm = ({ onSubmit }: AccountActivationFormProps) => {
 
   useReduxEffect(() => {
     setErrorMessage(true);
-  }, ServerTypes.ACCOUNT_ACTIVATION_FAILED, []);
+  }, server.Types.ACCOUNT_ACTIVATION_FAILED, []);
 
   const handleOnSubmit = ({ token, ...values }: AccountActivationFormValues) => {
     setErrorMessage(false);
@@ -34,8 +33,8 @@ const AccountActivationForm = ({ onSubmit }: AccountActivationFormProps) => {
     onSubmit({ ...values, token: token?.trim() });
   };
 
-  const validate = (values: Partial<AccountActivationFormValues>): App.FormErrors<AccountActivationFormValues> => {
-    const errors: App.FormErrors<AccountActivationFormValues> = {};
+  const validate = (values: Partial<AccountActivationFormValues>): FormErrors<AccountActivationFormValues> => {
+    const errors: FormErrors<AccountActivationFormValues> = {};
 
     if (!values.token) {
       errors.token = t('Common.validation.required');

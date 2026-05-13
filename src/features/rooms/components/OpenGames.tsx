@@ -7,18 +7,18 @@ import TableSortLabel from '@mui/material/TableSortLabel';
 import Tooltip from '@mui/material/Tooltip';
 
 import { UserDisplay } from '@app/components';
-import { Data, Enriched } from '@app/types';
-
+import { ServerInfo_Game } from 'sockatrice/generated';
+import { Game, Room } from 'datatrice';
 import { useOpenGames } from './useOpenGames';
 
 import './OpenGames.css';
 
 interface OpenGamesProps {
-  room: Enriched.Room;
+  room: Room;
   onActivateGame?: (gameId: number) => void;
 }
 
-function formatRestrictions(info: Data.ServerInfo_Game): string {
+function formatRestrictions(info: ServerInfo_Game): string {
   const parts: string[] = [];
   if (info.withPassword) {
     parts.push('password');
@@ -35,7 +35,7 @@ function formatRestrictions(info: Data.ServerInfo_Game): string {
   return parts.join(', ');
 }
 
-function formatSpectators(info: Data.ServerInfo_Game): string {
+function formatSpectators(info: ServerInfo_Game): string {
   if (!info.spectatorsAllowed) {
     return 'not allowed';
   }
@@ -84,7 +84,7 @@ const OpenGames = ({ room, onActivateGame }: OpenGamesProps) => {
                   {!field ? label : (
                     <TableSortLabel
                       active={active}
-                      direction={order}
+                      direction={order === 'asc' ? 'asc' : 'desc'}
                       onClick={() => handleSort(field)}
                     >
                       {label}
@@ -96,7 +96,7 @@ const OpenGames = ({ room, onActivateGame }: OpenGamesProps) => {
           </TableRow>
         </TableHead>
         <TableBody>
-          {games.map((game: Enriched.Game) => {
+          {games.map((game: Game) => {
             const { info, gameType } = game;
             const { description, gameId, creatorInfo, maxPlayers, playerCount, startTime } = info;
             const isSelected = gameId === selectedGameId;

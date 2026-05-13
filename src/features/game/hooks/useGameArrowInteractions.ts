@@ -1,8 +1,9 @@
 import { RefObject, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useSettings, useWebClient } from '@app/hooks';
-import { App, Data, type Enriched } from '@app/types';
-
+import { CardAttribute, ServerInfo_Card } from 'sockatrice/generated';
+import { GameEntry, ZoneName } from 'datatrice';
+import { ArrowColor, ColorRGBA, rgbaToCss } from '@app/types';
 import { makeCardKey, type CardRegistry } from '../utils/CardRegistry/CardRegistryContext';
 
 import { playCardViaTableRow } from './playCard';
@@ -48,9 +49,9 @@ export interface GameArrowInteractions {
   handleCardClick: (
     ownerPlayerId: number,
     zone: string,
-    card: Data.ServerInfo_Card,
+    card: ServerInfo_Card,
   ) => void;
-  handleCardDoubleClick: (sourceZone: string, card: Data.ServerInfo_Card) => void;
+  handleCardDoubleClick: (sourceZone: string, card: ServerInfo_Card) => void;
   startPendingArrow: (source: PendingArrow) => void;
   startPendingAttach: (source: PendingAttach) => void;
   cancelPendingOnDragStart: () => void;
@@ -58,7 +59,7 @@ export interface GameArrowInteractions {
 
 export interface UseGameArrowInteractionsArgs {
   gameId: number | undefined;
-  game: Enriched.GameEntry | undefined;
+  game: GameEntry | undefined;
   boardRef: RefObject<HTMLDivElement>;
   cardRegistry: CardRegistry;
 }
@@ -67,17 +68,17 @@ function arrowColorForModifiers(e: {
   ctrlKey: boolean;
   altKey: boolean;
   shiftKey: boolean;
-}): App.ColorRGBA {
+}): ColorRGBA {
   if (e.ctrlKey) {
-    return App.ArrowColor.YELLOW;
+    return ArrowColor.YELLOW;
   }
   if (e.altKey) {
-    return App.ArrowColor.BLUE;
+    return ArrowColor.BLUE;
   }
   if (e.shiftKey) {
-    return App.ArrowColor.GREEN;
+    return ArrowColor.GREEN;
   }
-  return App.ArrowColor.RED;
+  return ArrowColor.RED;
 }
 
 const ARROW_DRAG_THRESHOLD_PX = 8;
@@ -182,16 +183,16 @@ export function useGameArrowInteractions({
       // server re-keys the card id during the move, so we can't also send
       // createArrow here; instead we resolve this drag as a play-card intent.
       if (
-        drag.sourceZone === App.ZoneName.HAND &&
+        drag.sourceZone === ZoneName.HAND &&
         drag.sourcePlayerId === game?.localPlayerId &&
-        targetZone !== App.ZoneName.HAND
+        targetZone !== ZoneName.HAND
       ) {
         webClient.request.game.moveCard(gameId, {
           startPlayerId: drag.sourcePlayerId,
           startZone: drag.sourceZone,
           cardsToMove: { card: [{ cardId: drag.sourceCardId }] },
           targetPlayerId: drag.sourcePlayerId,
-          targetZone: App.ZoneName.TABLE,
+          targetZone: ZoneName.TABLE,
           x: 0,
           y: 0,
           isReversed: false,
@@ -282,12 +283,12 @@ export function useGameArrowInteractions({
       y1: sourceRect.top + sourceRect.height / 2 - boardRect.top,
       x2: arrowDrag.currentX - boardRect.left,
       y2: arrowDrag.currentY - boardRect.top,
-      color: App.rgbaToCss(App.ArrowColor.RED),
+      color: rgbaToCss(ArrowColor.RED),
     };
   }, [arrowDrag, cardRegistry, boardRef]);
 
   const handleCardClick = useCallback(
-    (ownerPlayerId: number, zone: string, card: Data.ServerInfo_Card) => {
+    (ownerPlayerId: number, zone: string, card: ServerInfo_Card) => {
       if (gameId == null) {
         return;
       }
@@ -331,16 +332,16 @@ export function useGameArrowInteractions({
       // card (card_item.cpp:243-250). The server re-keys the moved card id, so
       // we resolve this as a play-card intent and drop the arrow command.
       if (
-        pendingArrow.sourceZone === App.ZoneName.HAND &&
+        pendingArrow.sourceZone === ZoneName.HAND &&
         pendingArrow.sourcePlayerId === game?.localPlayerId &&
-        zone !== App.ZoneName.HAND
+        zone !== ZoneName.HAND
       ) {
         webClient.request.game.moveCard(gameId, {
           startPlayerId: pendingArrow.sourcePlayerId,
           startZone: pendingArrow.sourceZone,
           cardsToMove: { card: [{ cardId: pendingArrow.sourceCardId }] },
           targetPlayerId: pendingArrow.sourcePlayerId,
-          targetZone: App.ZoneName.TABLE,
+          targetZone: ZoneName.TABLE,
           x: 0,
           y: 0,
           isReversed: false,
@@ -355,7 +356,7 @@ export function useGameArrowInteractions({
         targetPlayerId: ownerPlayerId,
         targetZone: zone,
         targetCardId: card.id,
-        arrowColor: App.ArrowColor.RED,
+        arrowColor: ArrowColor.RED,
       });
       setPendingArrow(null);
     },
@@ -363,7 +364,7 @@ export function useGameArrowInteractions({
   );
 
   const handleCardDoubleClick = useCallback(
-    (sourceZone: string, card: Data.ServerInfo_Card) => {
+    (sourceZone: string, card: ServerInfo_Card) => {
       if (gameId == null) {
         return;
       }
@@ -372,16 +373,16 @@ export function useGameArrowInteractions({
       if (pendingArrow || pendingAttach) {
         return;
       }
-      if (sourceZone === App.ZoneName.TABLE) {
+      if (sourceZone === ZoneName.TABLE) {
         webClient.request.game.setCardAttr(gameId, {
           zone: sourceZone,
           cardId: card.id,
-          attribute: Data.CardAttribute.AttrTapped,
+          attribute: CardAttribute.AttrTapped,
           attrValue: card.tapped ? '0' : '1',
         });
         return;
       }
-      if (sourceZone === App.ZoneName.HAND && game?.localPlayerId != null) {
+      if (sourceZone === ZoneName.HAND && game?.localPlayerId != null) {
         const localPlayerId = game.localPlayerId;
         // Hand-zone visibility is gated on the local player being in slotA
         // (see useGame.ts:96-102), so the local target is never per-player
@@ -392,11 +393,11 @@ export function useGameArrowInteractions({
           gameId,
           localPlayerId,
           sourcePlayerId: localPlayerId,
-          sourceZone: App.ZoneName.HAND,
+          sourceZone: ZoneName.HAND,
           card,
           faceDown: false,
           isInverted: invertVerticalCoordinate,
-          tableZone: game.players[localPlayerId]?.zones[App.ZoneName.TABLE],
+          tableZone: game.players[localPlayerId]?.zones[ZoneName.TABLE],
         });
       }
     },

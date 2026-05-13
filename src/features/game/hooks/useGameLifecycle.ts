@@ -1,5 +1,5 @@
 import { useReduxEffect } from '@app/hooks';
-import { GameTypes } from '@app/store';
+import { games } from 'datatrice';
 
 export interface GameLifecycleHandlers {
   onKicked: () => void;
@@ -13,22 +13,23 @@ export function useGameLifecycle(
 ): void {
   useReduxEffect(
     (action) => {
-      if (gameId == null || action.payload?.gameId !== gameId) {
+      const payload = action.payload as { gameId?: number } | undefined;
+      if (gameId == null || payload?.gameId !== gameId) {
         return;
       }
       switch (action.type) {
-        case GameTypes.KICKED:
+        case games.Types.KICKED:
           handlers.onKicked();
           return;
-        case GameTypes.GAME_CLOSED:
+        case games.Types.GAME_CLOSED:
           handlers.onGameClosed();
           return;
-        case GameTypes.GAME_LEFT:
+        case games.Types.GAME_LEFT:
           handlers.onGameLeft();
           return;
       }
     },
-    [GameTypes.KICKED, GameTypes.GAME_CLOSED, GameTypes.GAME_LEFT],
+    [games.Types.KICKED, games.Types.GAME_CLOSED, games.Types.GAME_LEFT],
     [gameId],
   );
 }

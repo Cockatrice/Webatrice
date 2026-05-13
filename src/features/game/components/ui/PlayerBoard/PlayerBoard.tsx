@@ -1,4 +1,4 @@
-import type { Data } from '@app/types';
+import { ServerInfo_Card } from 'sockatrice/generated';
 import { cx } from '@app/utils';
 
 import Battlefield from '../../battlefield/Battlefield/Battlefield';
@@ -14,10 +14,10 @@ export interface PlayerBoardProps {
   canAct?: boolean;
   canEditCounters?: boolean;
   arrowSourceKey?: string | null;
-  onCardHover?: (card: Data.ServerInfo_Card) => void;
-  onCardClick?: (playerId: number, zone: string, card: Data.ServerInfo_Card) => void;
-  onCardContextMenu?: (card: Data.ServerInfo_Card, event: React.MouseEvent) => void;
-  onCardDoubleClick?: (card: Data.ServerInfo_Card) => void;
+  onCardHover?: (card: ServerInfo_Card) => void;
+  onCardClick?: (playerId: number, zone: string, card: ServerInfo_Card) => void;
+  onCardContextMenu?: (card: ServerInfo_Card, event: React.MouseEvent) => void;
+  onCardDoubleClick?: (card: ServerInfo_Card) => void;
   onZoneClick?: (playerId: number, zoneName: string) => void;
   onZoneContextMenu?: (playerId: number, zoneName: string, event: React.MouseEvent) => void;
   onPlayerContextMenu?: (event: React.MouseEvent) => void;

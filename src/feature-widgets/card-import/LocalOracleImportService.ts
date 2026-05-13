@@ -1,5 +1,4 @@
-import { App } from '@app/types';
-
+import { Card, Format, Info, Set, Token } from '@app/types';
 import { CardDTO, SetDTO, TokenDTO, FormatDTO, InfoDTO } from '@app/services';
 
 import { cockatriceXmlParser } from './CockatriceXmlParser';
@@ -7,11 +6,11 @@ import { cockatriceXmlParser } from './CockatriceXmlParser';
 const ACCEPTED_FILENAME = /^(cards|tokens|spoiler)\.xml$/i;
 
 export interface IngestResult {
-  cards: App.Card[];
-  sets: App.Set[];
-  tokens: App.Token[];
-  formats: App.Format[];
-  info?: App.Info;
+  cards: Card[];
+  sets: Set[];
+  tokens: Token[];
+  formats: Format[];
+  info?: Info;
   acceptedFiles: string[];
   skippedFiles: string[];
 }

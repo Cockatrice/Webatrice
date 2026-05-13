@@ -3,14 +3,13 @@ import { renderHook } from '@testing-library/react';
 import { configureStore } from '@reduxjs/toolkit';
 import { Provider } from 'react-redux';
 
-// Deep imports are intentional here: pulling from `@app/store` eagerly
-// evaluates `store/index.ts` → `configureStore(rootReducer)`, instantiating
-// the real singleton store that would race with the test-local store
-// created in makeWrapper. Importing the reducer + type directly side-steps
-// that and keeps this hook spec self-contained.
-import { gamesReducer } from '../../../store/game/game.reducer';
-import { makeGameEntry } from '../../../store/game/__mocks__/fixtures';
-import type { GamesState } from '../../../store/game/game.interfaces';
+// Pulling the raw reducer + state type from `datatrice` (not `@app/store`)
+// keeps this spec from evaluating Webatrice's singleton store. Going
+// through `@app/store` eagerly evaluates `src/store/index.ts` →
+// `createDatatriceStore(rootReducer)`, instantiating the real singleton
+// store and racing the test-local store created in makeWrapper.
+import { games, type GamesState } from 'datatrice';
+import { makeGameEntry } from '../../../__test-utils__/games-fixtures';
 import { useGameAccess } from './useGameAccess';
 
 // `preloadedState` on configureStore is typed as `PreloadedState<S>` which
@@ -18,7 +17,7 @@ import { useGameAccess } from './useGameAccess';
 // the spec strict while avoiding the broader `as any`.
 function makeWrapper(gamesState: GamesState) {
   const store = configureStore({
-    reducer: { games: gamesReducer },
+    reducer: { games: games.gamesReducer },
     preloadedState: { games: gamesState } as { games: GamesState },
   });
   return function Wrapper({ children }: { children: ReactNode }) {

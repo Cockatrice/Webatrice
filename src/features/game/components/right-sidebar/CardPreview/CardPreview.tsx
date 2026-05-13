@@ -1,12 +1,11 @@
 import { useEffect, useState } from 'react';
-import type { Data } from '@app/types';
-
+import { ServerInfo_Card } from 'sockatrice/generated';
 import { useScryfallCard } from '../../../hooks/useScryfallCard';
 
 import './CardPreview.css';
 
 export interface CardPreviewProps {
-  card: Data.ServerInfo_Card | null | undefined;
+  card: ServerInfo_Card | null | undefined;
 }
 
 function CardPreview({ card }: CardPreviewProps) {

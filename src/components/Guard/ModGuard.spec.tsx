@@ -1,5 +1,5 @@
 import { renderWithProviders, connectedState, makeUser } from '../../__test-utils__';
-import { Data } from '@app/types';
+import { ServerInfo_User_UserLevelFlag } from 'sockatrice/generated';
 import ModGuard from './ModGuard';
 
 vi.mock('@app/hooks', async (importOriginal) => {
@@ -19,7 +19,7 @@ describe('ModGuard', () => {
 
   it('renders nothing visible when user is a moderator', () => {
     const modUser = makeUser({
-      userLevel: Data.ServerInfo_User_UserLevelFlag.IsModerator,
+      userLevel: ServerInfo_User_UserLevelFlag.IsModerator,
     });
 
     const { container } = renderWithProviders(<ModGuard />, {

@@ -1,5 +1,5 @@
-import { Data } from '@app/types';
-import type { AttachedChild } from '@app/store';
+import { ServerInfo_Card } from 'sockatrice/generated';
+import { games } from 'datatrice';
 
 import AttachmentStack from './AttachmentStack';
 import {
@@ -13,7 +13,7 @@ import {
 
 import './BattlefieldStackColumn.css';
 
-const EMPTY_ATTACHMENTS: AttachedChild[] = [];
+const EMPTY_ATTACHMENTS: games.AttachedChild[] = [];
 
 const round = (n: number): number => Math.round(n * 100) / 100;
 
@@ -29,8 +29,8 @@ const round = (n: number): number => Math.round(n * 100) / 100;
 // left/top/width/height are expressed as percentages of this footprint so
 // positions stay proportional at any zoom level.
 function computeStackFootprint(
-  cards: Data.ServerInfo_Card[],
-  attachmentsByParent: ReadonlyMap<number, AttachedChild[]>,
+  cards: ServerInfo_Card[],
+  attachmentsByParent: ReadonlyMap<number, games.AttachedChild[]>,
 ): { widthPx: number; heightPx: number } {
   let maxRight = CARD_WIDTH_PX;
   let maxBottom = CARD_HEIGHT_PX;
@@ -48,23 +48,23 @@ function computeStackFootprint(
 }
 
 function slotWidthFor(
-  card: Data.ServerInfo_Card,
-  attachmentsByParent: ReadonlyMap<number, AttachedChild[]>,
+  card: ServerInfo_Card,
+  attachmentsByParent: ReadonlyMap<number, games.AttachedChild[]>,
 ): number {
   const attachCount = attachmentsByParent.get(card.id)?.length ?? 0;
   return CARD_WIDTH_PX * (1 + attachCount * ATTACH_OFFSET_FRACTION);
 }
 
 export interface BattlefieldStackColumnProps {
-  cards: Data.ServerInfo_Card[]; // 1..MAX_SUBPOS cards, sorted by sub-position
-  attachmentsByParent: ReadonlyMap<number, AttachedChild[]>;
+  cards: ServerInfo_Card[]; // 1..MAX_SUBPOS cards, sorted by sub-position
+  attachmentsByParent: ReadonlyMap<number, games.AttachedChild[]>;
   draggable: boolean;
   ownerPlayerId: number;
   arrowSourceKey: string | null;
-  onCardHover?: (card: Data.ServerInfo_Card) => void;
-  onCardClick?: (playerId: number, zone: string, card: Data.ServerInfo_Card) => void;
-  onCardContextMenu?: (card: Data.ServerInfo_Card, event: React.MouseEvent) => void;
-  onCardDoubleClick?: (card: Data.ServerInfo_Card) => void;
+  onCardHover?: (card: ServerInfo_Card) => void;
+  onCardClick?: (playerId: number, zone: string, card: ServerInfo_Card) => void;
+  onCardContextMenu?: (card: ServerInfo_Card, event: React.MouseEvent) => void;
+  onCardDoubleClick?: (card: ServerInfo_Card) => void;
 }
 
 function BattlefieldStackColumn({

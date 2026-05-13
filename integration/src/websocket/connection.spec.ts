@@ -1,9 +1,9 @@
 import { create } from '@bufbuild/protobuf';
 import { describe, expect, it } from 'vitest';
 
-import { Data } from '@app/types';
-import { store } from '@app/store';
-import { WebsocketTypes } from '@app/websocket/types';
+import { Command_Login_ext, Event_ServerIdentificationSchema, Event_ServerIdentification_ServerOptions, Event_ServerIdentification_ext } from 'sockatrice/generated';
+import { store } from '../helpers/setup';
+import { WebsocketTypes } from 'sockatrice/types';
 
 import {
   getMockWebSocket,
@@ -39,17 +39,17 @@ function serverIdentification(
   serverName = 'TestServer',
   serverVersion = '2.8.0'
 ): Uint8Array {
-  const payload = create(Data.Event_ServerIdentificationSchema, {
+  const payload = create(Event_ServerIdentificationSchema, {
     serverName,
     serverVersion,
     protocolVersion,
-    serverOptions: Data.Event_ServerIdentification_ServerOptions.NoOptions,
+    serverOptions: Event_ServerIdentification_ServerOptions.NoOptions,
   });
-  return buildSessionEventMessage(Data.Event_ServerIdentification_ext, payload);
+  return buildSessionEventMessage(Event_ServerIdentification_ext, payload);
 }
 
 describe('connection lifecycle', () => {
-  it('flips status through CONNECTING → CONNECTED on socket open', () => {
+  it('flips status through CONNECTING â†’ CONNECTED on socket open', () => {
     connectWithOptions(loginOptions());
 
     expect(store.getState().server.status.connectionAttemptMade).toBe(true);
@@ -70,7 +70,7 @@ describe('connection lifecycle', () => {
     expect(store.getState().server.info.name).toBe('TestServer');
     expect(store.getState().server.info.version).toBe('2.8.0');
 
-    const { value, cmdId } = findLastSessionCommand(Data.Command_Login_ext);
+    const { value, cmdId } = findLastSessionCommand(Command_Login_ext);
     expect(value.userName).toBe('alice');
     expect(cmdId).toBeGreaterThan(0);
   });
@@ -84,7 +84,7 @@ describe('connection lifecycle', () => {
     const mock = getMockWebSocket();
     expect(mock.close).toHaveBeenCalled();
     expect(store.getState().server.status.state).toBe(WebsocketTypes.StatusEnum.DISCONNECTED);
-    expect(() => findLastSessionCommand(Data.Command_Login_ext)).toThrow();
+    expect(() => findLastSessionCommand(Command_Login_ext)).toThrow();
   });
 
   it('times out when onopen never fires within the keepalive window', () => {
@@ -123,7 +123,7 @@ describe('connection lifecycle', () => {
     connectAndHandshake();
 
     // A login command is now pending (sent during handshake)
-    expect(() => findLastSessionCommand(Data.Command_Login_ext)).not.toThrow();
+    expect(() => findLastSessionCommand(Command_Login_ext)).not.toThrow();
 
     // Simulate unexpected socket close
     const mock = getMockWebSocket();

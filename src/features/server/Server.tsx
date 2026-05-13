@@ -7,23 +7,25 @@ import Paper from '@mui/material/Paper';
 import { AuthGuard, ThreePaneLayout, UserDisplay, VirtualList } from '@app/components';
 import { useReduxEffect } from '@app/hooks';
 import { Layout } from '@app/feature-core';
-import { RoomsSelectors, RoomsTypes, ServerSelectors, useAppSelector } from '@app/store';
-import { App, Data } from '@app/types';
+import { server, rooms } from 'datatrice';
+import { useAppSelector } from '@app/store';
+import { ServerInfo_Room } from 'sockatrice/generated';
+import { RouteEnum } from '@app/types';
 import RoomsList from './RoomsList';
 
 import './Server.css';
 
 const Server = () => {
-  const message = useAppSelector(state => ServerSelectors.getMessage(state));
-  const rooms = useAppSelector(state => RoomsSelectors.getRooms(state));
-  const joinedRooms = useAppSelector(state => RoomsSelectors.getJoinedRooms(state));
-  const users = useAppSelector(state => ServerSelectors.getSortedUsers(state));
+  const message = useAppSelector(state => server.Selectors.getMessage(state));
+  const roomsList = useAppSelector(state => rooms.Selectors.getRooms(state));
+  const joinedRooms = useAppSelector(state => rooms.Selectors.getJoinedRooms(state));
+  const users = useAppSelector(state => server.Selectors.getSortedUsers(state));
   const navigate = useNavigate();
 
-  useReduxEffect<{ roomInfo: Data.ServerInfo_Room }>((action) => {
+  useReduxEffect<{ roomInfo: ServerInfo_Room }>((action) => {
     const roomId = action.payload.roomInfo.roomId.toString();
-    navigate(generatePath(App.RouteEnum.ROOM, { roomId }));
-  }, RoomsTypes.JOIN_ROOM, []);
+    navigate(generatePath(RouteEnum.ROOM, { roomId }));
+  }, rooms.Types.JOIN_ROOM, []);
 
   const userItems = useMemo(
     () => users.map((user) => (
@@ -41,7 +43,7 @@ const Server = () => {
       <ThreePaneLayout
         top={(
           <Paper className="serverRoomWrapper overflow-scroll">
-            <RoomsList rooms={rooms} joinedRooms={joinedRooms} />
+            <RoomsList rooms={roomsList} joinedRooms={joinedRooms} />
           </Paper>
         )}
 

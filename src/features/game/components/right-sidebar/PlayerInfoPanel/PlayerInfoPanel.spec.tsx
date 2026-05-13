@@ -1,14 +1,14 @@
 import { screen, fireEvent } from '@testing-library/react';
 import { create } from '@bufbuild/protobuf';
-import { App, Data } from '@app/types';
-
+import { colorSchema } from 'sockatrice/generated';
+import { ZoneName } from 'datatrice';
 import { createMockWebClient, makeStoreState, renderWithProviders, makeUser } from '../../../../../__test-utils__';
 import {
   makeCounter,
   makeGameEntry,
   makePlayerEntry,
   makePlayerProperties,
-} from '../../../../../store/game/__mocks__/fixtures';
+} from '../../../../../__test-utils__/games-fixtures';
 import PlayerInfoPanel from './PlayerInfoPanel';
 
 function statefulPlayer(
@@ -69,13 +69,13 @@ describe('PlayerInfoPanel', () => {
       id: 1,
       name: 'Life',
       count: 20,
-      counterColor: create(Data.colorSchema, { r: 255, g: 150, b: 0, a: 255 }),
+      counterColor: create(colorSchema, { r: 255, g: 150, b: 0, a: 255 }),
     });
     const white = makeCounter({
       id: 2,
       name: 'W',
       count: 3,
-      counterColor: create(Data.colorSchema, { r: 250, g: 245, b: 220, a: 255 }),
+      counterColor: create(colorSchema, { r: 250, g: 245, b: 220, a: 255 }),
     });
 
     const { container } = renderWithProviders(
@@ -257,7 +257,7 @@ describe('PlayerInfoPanel', () => {
         id: 1,
         name: 'W',
         count: 1,
-        counterColor: create(Data.colorSchema, { r: 0, g: 0, b: 0, a: 0 }),
+        counterColor: create(colorSchema, { r: 0, g: 0, b: 0, a: 0 }),
       });
       renderWithProviders(<PlayerInfoPanel gameId={1} playerId={1} />, {
         preloadedState: statefulPlayer({ counters: { 1: white } }),
@@ -273,7 +273,7 @@ describe('PlayerInfoPanel', () => {
         id: 2,
         name: 'W',
         count: 1,
-        counterColor: create(Data.colorSchema, { r: 10, g: 20, b: 30, a: 255 }),
+        counterColor: create(colorSchema, { r: 10, g: 20, b: 30, a: 255 }),
       });
       renderWithProviders(<PlayerInfoPanel gameId={1} playerId={1} />, {
         preloadedState: statefulPlayer({ counters: { 2: custom } }),
@@ -289,7 +289,7 @@ describe('PlayerInfoPanel', () => {
         id: 3,
         name: 'Poison',
         count: 1,
-        counterColor: create(Data.colorSchema, { r: 0, g: 0, b: 0, a: 0 }),
+        counterColor: create(colorSchema, { r: 0, g: 0, b: 0, a: 0 }),
       });
       const { unmount } = renderWithProviders(
         <PlayerInfoPanel gameId={1} playerId={1} />,
@@ -315,7 +315,7 @@ describe('PlayerInfoPanel', () => {
       id: 1,
       name: 'Life',
       count: 20,
-      counterColor: create(Data.colorSchema, { r: 255, g: 255, b: 255, a: 255 }),
+      counterColor: create(colorSchema, { r: 255, g: 255, b: 255, a: 255 }),
     });
 
     it('does not attach click handlers when canEdit is false (default)', () => {
@@ -389,7 +389,7 @@ describe('PlayerInfoPanel', () => {
         { preloadedState: statefulPlayer({ counters: { 1: life } }) },
       );
 
-      fireEvent.contextMenu(screen.getByTestId(`zone-stack-${App.ZoneName.DECK}`));
+      fireEvent.contextMenu(screen.getByTestId(`zone-stack-${ZoneName.DECK}`));
 
       expect(onZoneContextMenu).toHaveBeenCalled();
       expect(onContextMenu).not.toHaveBeenCalled();

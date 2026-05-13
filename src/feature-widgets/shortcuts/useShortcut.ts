@@ -1,18 +1,17 @@
 import { useContext, useEffect, useRef } from 'react';
 
-import { App } from '@app/types';
-
+import { ShortcutHandler, ShortcutScope } from '@app/types';
 import { ShortcutContext } from './shortcutContext';
 
 export interface UseShortcutOptions {
-  scope: App.ShortcutScope;
+  scope: ShortcutScope;
   preventDefault?: boolean;
   enabled?: boolean;
 }
 
 export function useShortcut(
   actionId: string,
-  handler: App.ShortcutHandler,
+  handler: ShortcutHandler,
   options: UseShortcutOptions,
 ): void {
   const { register } = useContext(ShortcutContext);

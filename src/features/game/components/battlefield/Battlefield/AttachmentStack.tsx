@@ -1,5 +1,6 @@
-import { App, Data } from '@app/types';
-import type { AttachedChild } from '@app/store';
+import { ServerInfo_Card } from 'sockatrice/generated';
+import { ZoneName } from 'datatrice';
+import { games } from 'datatrice';
 
 import CardSlot from '../../ui/CardSlot/CardSlot';
 import { makeCardKey } from '../../../utils/CardRegistry/CardRegistryContext';
@@ -13,15 +14,15 @@ import {
 import './AttachmentStack.css';
 
 export interface AttachmentStackProps {
-  parent: Data.ServerInfo_Card;
+  parent: ServerInfo_Card;
   ownerPlayerId: number;
-  attachments: AttachedChild[];
+  attachments: games.AttachedChild[];
   draggable: boolean;
   arrowSourceKey: string | null;
-  onCardHover?: (card: Data.ServerInfo_Card) => void;
-  onCardClick?: (playerId: number, zone: string, card: Data.ServerInfo_Card) => void;
-  onCardContextMenu?: (card: Data.ServerInfo_Card, event: React.MouseEvent) => void;
-  onCardDoubleClick?: (card: Data.ServerInfo_Card) => void;
+  onCardHover?: (card: ServerInfo_Card) => void;
+  onCardClick?: (playerId: number, zone: string, card: ServerInfo_Card) => void;
+  onCardContextMenu?: (card: ServerInfo_Card, event: React.MouseEvent) => void;
+  onCardDoubleClick?: (card: ServerInfo_Card) => void;
 }
 
 const round = (n: number): number => Math.round(n * 100) / 100;
@@ -37,7 +38,7 @@ function AttachmentStack({
   onCardContextMenu,
   onCardDoubleClick,
 }: AttachmentStackProps) {
-  const parentKey = makeCardKey(ownerPlayerId, App.ZoneName.TABLE, parent.id);
+  const parentKey = makeCardKey(ownerPlayerId, ZoneName.TABLE, parent.id);
 
   const N = attachments.length;
   const stackFactor = 1 + N * ATTACH_OFFSET_FRACTION;
@@ -63,17 +64,17 @@ function AttachmentStack({
           card={parent}
           draggable={draggable}
           ownerPlayerId={ownerPlayerId}
-          zone={App.ZoneName.TABLE}
+          zone={ZoneName.TABLE}
           isArrowSource={arrowSourceKey === parentKey}
           onMouseEnter={onCardHover}
-          onClick={(c) => onCardClick?.(ownerPlayerId, App.ZoneName.TABLE, c)}
+          onClick={(c) => onCardClick?.(ownerPlayerId, ZoneName.TABLE, c)}
           onContextMenu={onCardContextMenu}
           onDoubleClick={onCardDoubleClick}
         />
       </div>
       {attachments.map((entry, i) => {
         const { card: child, ownerPlayerId: childOwnerId } = entry;
-        const childKey = makeCardKey(childOwnerId, App.ZoneName.TABLE, child.id);
+        const childKey = makeCardKey(childOwnerId, ZoneName.TABLE, child.id);
         const leftPct = round(((N - 1 - i) * ATTACH_OFFSET_FRACTION * 100) / stackFactor);
         return (
           <div
@@ -90,10 +91,10 @@ function AttachmentStack({
               card={child}
               draggable={draggable}
               ownerPlayerId={childOwnerId}
-              zone={App.ZoneName.TABLE}
+              zone={ZoneName.TABLE}
               isArrowSource={arrowSourceKey === childKey}
               onMouseEnter={onCardHover}
-              onClick={(c) => onCardClick?.(childOwnerId, App.ZoneName.TABLE, c)}
+              onClick={(c) => onCardClick?.(childOwnerId, ZoneName.TABLE, c)}
               onContextMenu={onCardContextMenu}
               onDoubleClick={onCardDoubleClick}
             />

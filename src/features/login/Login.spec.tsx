@@ -29,8 +29,8 @@ vi.mock('../../hooks/useKnownHosts', () => ({
   useKnownHosts: hoisted.useKnownHosts,
   getKnownHosts: hoisted.getKnownHosts,
 }));
-vi.mock('../../hooks/useWebClient', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../../hooks/useWebClient')>();
+vi.mock('datatrice/react', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('datatrice/react')>();
   return {
     ...actual,
     useWebClient: () => hoisted.mockWebClient,

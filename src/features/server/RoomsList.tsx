@@ -9,13 +9,13 @@ import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 
 import { useWebClient } from '@app/hooks';
-import { App, Enriched } from '@app/types';
-
+import { Room } from 'datatrice';
+import { RouteEnum } from '@app/types';
 import './RoomsList.css';
 
 interface RoomsListProps {
-  rooms: Record<number, Enriched.Room>;
-  joinedRooms: Enriched.Room[];
+  rooms: Record<number, Room>;
+  joinedRooms: Room[];
 }
 
 const RoomsList = ({ rooms, joinedRooms }: RoomsListProps) => {
@@ -29,7 +29,7 @@ const RoomsList = ({ rooms, joinedRooms }: RoomsListProps) => {
 
   const onClick = (roomId: number) => {
     if (joinedRoomIds.has(roomId)) {
-      navigate(generatePath(App.RouteEnum.ROOM, { roomId: String(roomId) }));
+      navigate(generatePath(RouteEnum.ROOM, { roomId: String(roomId) }));
     } else {
       webClient.request.session.joinRoom(roomId);
     }

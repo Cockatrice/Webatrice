@@ -1,14 +1,13 @@
 import { useEffect, useState } from 'react';
 
 import { localOracleImportService, IngestResult } from './LocalOracleImportService';
-import type { App } from '@app/types';
-
+import { Card, Set } from '@app/types';
 export interface CardImportForm {
   loading: boolean;
   activeStep: number;
   steps: { key: string; label: string }[];
-  importedCards: App.Card[];
-  importedSets: App.Set[];
+  importedCards: Card[];
+  importedSets: Set[];
   ingest: IngestResult | null;
   error: string | null;
   handleBack: () => void;
@@ -21,8 +20,8 @@ const STEP_KEYS = ['importFiles', 'reviewAndSave', 'finished'] as const;
 export function useCardImportForm(): CardImportForm {
   const [loading, setLoading] = useState(false);
   const [activeStep, setActiveStep] = useState(0);
-  const [importedCards, setImportedCards] = useState<App.Card[]>([]);
-  const [importedSets, setImportedSets] = useState<App.Set[]>([]);
+  const [importedCards, setImportedCards] = useState<Card[]>([]);
+  const [importedSets, setImportedSets] = useState<Set[]>([]);
   const [ingest, setIngest] = useState<IngestResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 

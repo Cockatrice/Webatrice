@@ -1,9 +1,9 @@
 import { create } from '@bufbuild/protobuf';
 import { describe, expect, it, vi } from 'vitest';
 
-import { Data } from '@app/types';
-import { store } from '@app/store';
-import { WebsocketTypes } from '@app/websocket/types';
+import { Command_Activate_ext, Command_ListRooms_ext, Command_ListUsers_ext, Command_Login_ext, Command_Register_ext, Command_RequestPasswordSalt_ext, Response_LoginSchema, Response_Login_ext, Response_PasswordSaltSchema, Response_PasswordSalt_ext, Response_ResponseCode, ServerInfo_User, ServerInfo_UserSchema, ServerInfo_User_UserLevelFlag } from 'sockatrice/generated';
+import { store } from '../helpers/setup';
+import { WebsocketTypes } from 'sockatrice/types';
 
 import { connectAndHandshake, connectAndHandshakeWithSalt } from '../helpers/setup';
 import {
@@ -13,30 +13,30 @@ import {
 } from '../helpers/protobuf-builders';
 import { findLastSessionCommand } from '../helpers/command-capture';
 
-function makeUser(name: string): Data.ServerInfo_User {
-  return create(Data.ServerInfo_UserSchema, {
+function makeUser(name: string): ServerInfo_User {
+  return create(ServerInfo_UserSchema, {
     name,
-    userLevel: Data.ServerInfo_User_UserLevelFlag.IsRegistered,
+    userLevel: ServerInfo_User_UserLevelFlag.IsRegistered,
   });
 }
 
 describe('authentication', () => {
   describe('login', () => {
-    it('drives LOGIN → LOGGED_IN and populates user info + buddy/ignore lists', () => {
+    it('drives LOGIN â†’ LOGGED_IN and populates user info + buddy/ignore lists', () => {
       connectAndHandshake({ userName: 'alice' });
 
-      const { cmdId, value } = findLastSessionCommand(Data.Command_Login_ext);
+      const { cmdId, value } = findLastSessionCommand(Command_Login_ext);
       expect(value.userName).toBe('alice');
 
-      const loginPayload = create(Data.Response_LoginSchema, {
+      const loginPayload = create(Response_LoginSchema, {
         userInfo: makeUser('alice'),
         buddyList: [makeUser('bob')],
         ignoreList: [makeUser('mallory')],
       });
       deliverMessage(buildResponseMessage(buildResponse({
         cmdId,
-        responseCode: Data.Response_ResponseCode.RespOk,
-        ext: Data.Response_Login_ext,
+        responseCode: Response_ResponseCode.RespOk,
+        ext: Response_Login_ext,
         value: loginPayload,
       })));
 
@@ -47,17 +47,17 @@ describe('authentication', () => {
       expect(Object.keys(state.buddyList)).toEqual(['bob']);
       expect(Object.keys(state.ignoreList)).toEqual(['mallory']);
 
-      expect(() => findLastSessionCommand(Data.Command_ListUsers_ext)).not.toThrow();
-      expect(() => findLastSessionCommand(Data.Command_ListRooms_ext)).not.toThrow();
+      expect(() => findLastSessionCommand(Command_ListUsers_ext)).not.toThrow();
+      expect(() => findLastSessionCommand(Command_ListRooms_ext)).not.toThrow();
     });
 
     it('flips status to DISCONNECTED on RespWrongPassword', () => {
       connectAndHandshake();
 
-      const { cmdId } = findLastSessionCommand(Data.Command_Login_ext);
+      const { cmdId } = findLastSessionCommand(Command_Login_ext);
       deliverMessage(buildResponseMessage(buildResponse({
         cmdId,
-        responseCode: Data.Response_ResponseCode.RespWrongPassword,
+        responseCode: Response_ResponseCode.RespWrongPassword,
       })));
 
       const state = store.getState().server;
@@ -82,15 +82,15 @@ describe('authentication', () => {
     it('auto-logs-in on RespRegistrationAccepted', () => {
       connectAndHandshake(registerOptions);
 
-      const register = findLastSessionCommand(Data.Command_Register_ext);
+      const register = findLastSessionCommand(Command_Register_ext);
       expect(register.value.userName).toBe('newbie');
 
       deliverMessage(buildResponseMessage(buildResponse({
         cmdId: register.cmdId,
-        responseCode: Data.Response_ResponseCode.RespRegistrationAccepted,
+        responseCode: Response_ResponseCode.RespRegistrationAccepted,
       })));
 
-      const login = findLastSessionCommand(Data.Command_Login_ext);
+      const login = findLastSessionCommand(Command_Login_ext);
       expect(login.value.userName).toBe('newbie');
       expect(login.cmdId).toBeGreaterThan(register.cmdId);
     });
@@ -98,14 +98,14 @@ describe('authentication', () => {
     it('parks registration in awaiting-activation on RespRegistrationAcceptedNeedsActivation', () => {
       connectAndHandshake(registerOptions);
 
-      const register = findLastSessionCommand(Data.Command_Register_ext);
+      const register = findLastSessionCommand(Command_Register_ext);
       deliverMessage(buildResponseMessage(buildResponse({
         cmdId: register.cmdId,
-        responseCode: Data.Response_ResponseCode.RespRegistrationAcceptedNeedsActivation,
+        responseCode: Response_ResponseCode.RespRegistrationAcceptedNeedsActivation,
       })));
 
       expect(store.getState().server.status.state).toBe(WebsocketTypes.StatusEnum.DISCONNECTED);
-      expect(() => findLastSessionCommand(Data.Command_Login_ext)).toThrow();
+      expect(() => findLastSessionCommand(Command_Login_ext)).toThrow();
     });
   });
 
@@ -120,43 +120,50 @@ describe('authentication', () => {
         password: 'secret',
       });
 
-      const activate = findLastSessionCommand(Data.Command_Activate_ext);
+      const activate = findLastSessionCommand(Command_Activate_ext);
       expect(activate.value.userName).toBe('alice');
 
       deliverMessage(buildResponseMessage(buildResponse({
         cmdId: activate.cmdId,
-        responseCode: Data.Response_ResponseCode.RespActivationAccepted,
+        responseCode: Response_ResponseCode.RespActivationAccepted,
       })));
 
-      const login = findLastSessionCommand(Data.Command_Login_ext);
+      const login = findLastSessionCommand(Command_Login_ext);
       expect(login.value.userName).toBe('alice');
     });
   });
 
   describe('hashed-password login (salt path)', () => {
     it('requests salt then sends login with hashedPassword instead of plaintext', async () => {
+      // Switch off the harness's fake timers for this test. hashPassword loops 1000
+      // awaits of `crypto.subtle.digest('SHA-512', …)` — purely microtask-driven.
+      // Fake timers don't touch microtasks, so vi.waitFor's poll cap races the hash
+      // chain on slow hosts. Real timers + a generous waitFor timeout makes the
+      // crypto completion deterministic. afterEach unconditionally calls
+      // useRealTimers, so no restore is needed.
+      vi.useRealTimers();
+
       connectAndHandshakeWithSalt({ userName: 'alice', password: 'secret' });
 
       // First command should be RequestPasswordSalt, not Login
-      const salt = findLastSessionCommand(Data.Command_RequestPasswordSalt_ext);
+      const salt = findLastSessionCommand(Command_RequestPasswordSalt_ext);
       expect(salt.value.userName).toBe('alice');
-      expect(() => findLastSessionCommand(Data.Command_Login_ext)).toThrow();
+      expect(() => findLastSessionCommand(Command_Login_ext)).toThrow();
 
       // Deliver salt response
       deliverMessage(buildResponseMessage(buildResponse({
         cmdId: salt.cmdId,
-        responseCode: Data.Response_ResponseCode.RespOk,
-        ext: Data.Response_PasswordSalt_ext,
-        value: create(Data.Response_PasswordSaltSchema, { passwordSalt: 'test-salt-value' }),
+        responseCode: Response_ResponseCode.RespOk,
+        ext: Response_PasswordSalt_ext,
+        value: create(Response_PasswordSaltSchema, { passwordSalt: 'test-salt-value' }),
       })));
 
-      // Sockatrice's serverIdentification handler awaits hashPassword (1000 SHA-512 rounds)
-      // before dispatching Command_Login. With fake timers active, advance real-time enough
-      // for crypto.subtle.digest + the chained microtasks to complete.
-      await vi.waitFor(() => findLastSessionCommand(Data.Command_Login_ext));
+      // hashPassword (1000 SHA-512 rounds) completes its microtask chain then
+      // dispatches Command_Login. Allow 5s for slow hosts.
+      await vi.waitFor(() => findLastSessionCommand(Command_Login_ext), { timeout: 5000 });
 
       // Now login should have been sent with hashedPassword
-      const login = findLastSessionCommand(Data.Command_Login_ext);
+      const login = findLastSessionCommand(Command_Login_ext);
       expect(login.value.userName).toBe('alice');
       expect(login.value.hashedPassword).toBeTruthy();
       expect(login.value.password).toBeFalsy();
@@ -164,9 +171,9 @@ describe('authentication', () => {
       // Complete login
       deliverMessage(buildResponseMessage(buildResponse({
         cmdId: login.cmdId,
-        responseCode: Data.Response_ResponseCode.RespOk,
-        ext: Data.Response_Login_ext,
-        value: create(Data.Response_LoginSchema, {
+        responseCode: Response_ResponseCode.RespOk,
+        ext: Response_Login_ext,
+        value: create(Response_LoginSchema, {
           userInfo: makeUser('alice'),
           buddyList: [],
           ignoreList: [],

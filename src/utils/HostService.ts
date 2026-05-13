@@ -1,6 +1,5 @@
-import { App } from '@app/types';
-
-export const DefaultHosts: App.Host[] = [
+import { Host } from '@app/types';
+export const DefaultHosts: Host[] = [
   {
     name: 'Chickatrice',
     host: 'mtg.chickatrice.net',
@@ -30,7 +29,7 @@ export const DefaultHosts: App.Host[] = [
   },
 ];
 
-export const getHostPort = (host: App.Host): { host: string, port: string } => {
+export const getHostPort = (host: Host): { host: string, port: string } => {
   const isLocal = window.location.hostname === 'localhost';
 
   if (!host) {

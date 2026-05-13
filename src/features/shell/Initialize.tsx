@@ -5,8 +5,8 @@ import Typography from '@mui/material/Typography';
 
 import { Layout } from '@app/feature-core';
 import { Images } from '@app/images';
-import { ServerSelectors } from '@app/store';
-import { App } from '@app/types';
+import { server } from 'datatrice';
+import { RouteEnum } from '@app/types';
 import { useAppSelector } from '@app/store';
 
 import './Initialize.css';
@@ -30,11 +30,11 @@ const Root = styled('div')(({ theme }) => ({
 }));
 
 const Initialize = () => {
-  const initialized = useAppSelector(state => ServerSelectors.getInitialized(state));
+  const initialized = useAppSelector(state => server.Selectors.getInitialized(state));
   const { t } = useTranslation();
 
   return initialized
-    ? <Navigate to={App.RouteEnum.LOGIN} />
+    ? <Navigate to={RouteEnum.LOGIN} />
     : (
       <Layout>
         <Root className={'Initialize ' + classes.root}>

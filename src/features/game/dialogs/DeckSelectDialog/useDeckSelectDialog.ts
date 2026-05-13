@@ -1,7 +1,8 @@
 import { useState } from 'react';
 
 import { useWebClient } from '@app/hooks';
-import { GameSelectors, useAppSelector } from '@app/store';
+import { games } from 'datatrice';
+import { useAppSelector } from '@app/store';
 
 export interface DeckSelectDialog {
   deckText: string;
@@ -33,7 +34,7 @@ function validateCodXml(xml: string): boolean {
 export function useDeckSelectDialog(gameId: number | undefined): DeckSelectDialog {
   const webClient = useWebClient();
   const localPlayer = useAppSelector((state) =>
-    gameId != null ? GameSelectors.getLocalPlayer(state, gameId) : undefined,
+    gameId != null ? games.Selectors.getLocalPlayer(state, gameId) : undefined,
   );
   const [deckText, setDeckTextState] = useState('');
   const [fileXml, setFileXml] = useState<string | null>(null);

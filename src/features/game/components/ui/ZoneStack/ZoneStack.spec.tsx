@@ -1,16 +1,15 @@
 import { screen, fireEvent } from '@testing-library/react';
-import { App } from '@app/types';
-
+import { ZoneName, type ZoneNameValue } from 'datatrice';
 import { makeStoreState, renderWithProviders } from '../../../../../__test-utils__';
 import {
   makeCard,
   makeGameEntry,
   makePlayerEntry,
   makeZoneEntry,
-} from '../../../../../store/game/__mocks__/fixtures';
+} from '../../../../../__test-utils__/games-fixtures';
 import ZoneStack from './ZoneStack';
 
-function stateWithZone(zoneName: string, overrides: Parameters<typeof makeZoneEntry>[0]) {
+function stateWithZone(zoneName: ZoneNameValue, overrides: Parameters<typeof makeZoneEntry>[0]) {
   return makeStoreState({
     games: {
       games: {
@@ -32,8 +31,8 @@ function stateWithZone(zoneName: string, overrides: Parameters<typeof makeZoneEn
 describe('ZoneStack', () => {
   it('renders the label', () => {
     renderWithProviders(
-      <ZoneStack gameId={1} playerId={1} zoneName={App.ZoneName.GRAVE} label="Graveyard" />,
-      { preloadedState: stateWithZone(App.ZoneName.GRAVE, { cardCount: 0 }) },
+      <ZoneStack gameId={1} playerId={1} zoneName={ZoneName.GRAVE} label="Graveyard" />,
+      { preloadedState: stateWithZone(ZoneName.GRAVE, { cardCount: 0 }) },
     );
 
     expect(screen.getByText('Graveyard')).toBeInTheDocument();
@@ -41,9 +40,9 @@ describe('ZoneStack', () => {
 
   it('shows the authoritative cardCount, even when order is empty (hidden zone)', () => {
     renderWithProviders(
-      <ZoneStack gameId={1} playerId={1} zoneName={App.ZoneName.DECK} label="Deck" />,
+      <ZoneStack gameId={1} playerId={1} zoneName={ZoneName.DECK} label="Deck" />,
       {
-        preloadedState: stateWithZone(App.ZoneName.DECK, {
+        preloadedState: stateWithZone(ZoneName.DECK, {
           cardCount: 40,
           cards: [],
         }),
@@ -57,9 +56,9 @@ describe('ZoneStack', () => {
     const a = makeCard({ id: 1, name: 'Bottom Card' });
     const b = makeCard({ id: 2, name: 'Top Card' });
     renderWithProviders(
-      <ZoneStack gameId={1} playerId={1} zoneName={App.ZoneName.GRAVE} label="Graveyard" />,
+      <ZoneStack gameId={1} playerId={1} zoneName={ZoneName.GRAVE} label="Graveyard" />,
       {
-        preloadedState: stateWithZone(App.ZoneName.GRAVE, {
+        preloadedState: stateWithZone(ZoneName.GRAVE, {
           cardCount: 2,
           cards: [a, b],
         }),
@@ -72,8 +71,8 @@ describe('ZoneStack', () => {
 
   it('renders a placeholder when the zone has no visible cards', () => {
     const { container } = renderWithProviders(
-      <ZoneStack gameId={1} playerId={1} zoneName={App.ZoneName.EXILE} label="Exile" />,
-      { preloadedState: stateWithZone(App.ZoneName.EXILE, { cardCount: 0 }) },
+      <ZoneStack gameId={1} playerId={1} zoneName={ZoneName.EXILE} label="Exile" />,
+      { preloadedState: stateWithZone(ZoneName.EXILE, { cardCount: 0 }) },
     );
 
     expect(container.querySelector('.zone-stack__placeholder')).not.toBeNull();
@@ -83,9 +82,9 @@ describe('ZoneStack', () => {
   it('hides the image when the top card is face-down', () => {
     const hidden = makeCard({ id: 1, name: 'Secret', faceDown: true });
     const { container } = renderWithProviders(
-      <ZoneStack gameId={1} playerId={1} zoneName={App.ZoneName.EXILE} label="Exile" />,
+      <ZoneStack gameId={1} playerId={1} zoneName={ZoneName.EXILE} label="Exile" />,
       {
-        preloadedState: stateWithZone(App.ZoneName.EXILE, {
+        preloadedState: stateWithZone(ZoneName.EXILE, {
           cardCount: 1,
           cards: [hidden],
         }),
@@ -121,25 +120,25 @@ describe('ZoneStack', () => {
       <ZoneStack
         gameId={1}
         playerId={1}
-        zoneName={App.ZoneName.GRAVE}
+        zoneName={ZoneName.GRAVE}
         label="Graveyard"
         onClick={onClick}
       />,
-      { preloadedState: stateWithZone(App.ZoneName.GRAVE, { cardCount: 0 }) },
+      { preloadedState: stateWithZone(ZoneName.GRAVE, { cardCount: 0 }) },
     );
 
-    fireEvent.click(screen.getByTestId(`zone-stack-${App.ZoneName.GRAVE}`));
+    fireEvent.click(screen.getByTestId(`zone-stack-${ZoneName.GRAVE}`));
 
-    expect(onClick).toHaveBeenCalledWith(App.ZoneName.GRAVE);
+    expect(onClick).toHaveBeenCalledWith(ZoneName.GRAVE);
   });
 
   it('does not gain button semantics when onClick is omitted', () => {
     renderWithProviders(
-      <ZoneStack gameId={1} playerId={1} zoneName={App.ZoneName.GRAVE} label="Graveyard" />,
-      { preloadedState: stateWithZone(App.ZoneName.GRAVE, { cardCount: 0 }) },
+      <ZoneStack gameId={1} playerId={1} zoneName={ZoneName.GRAVE} label="Graveyard" />,
+      { preloadedState: stateWithZone(ZoneName.GRAVE, { cardCount: 0 }) },
     );
 
-    const el = screen.getByTestId(`zone-stack-${App.ZoneName.GRAVE}`);
+    const el = screen.getByTestId(`zone-stack-${ZoneName.GRAVE}`);
     expect(el).not.toHaveAttribute('role', 'button');
     expect(el).not.toHaveAttribute('tabindex');
   });
@@ -149,25 +148,25 @@ describe('ZoneStack', () => {
       <ZoneStack
         gameId={1}
         playerId={1}
-        zoneName={App.ZoneName.GRAVE}
+        zoneName={ZoneName.GRAVE}
         label="Graveyard"
         rotated
       />,
-      { preloadedState: stateWithZone(App.ZoneName.GRAVE, { cardCount: 0 }) },
+      { preloadedState: stateWithZone(ZoneName.GRAVE, { cardCount: 0 }) },
     );
 
-    expect(screen.getByTestId(`zone-stack-${App.ZoneName.GRAVE}`)).toHaveClass(
+    expect(screen.getByTestId(`zone-stack-${ZoneName.GRAVE}`)).toHaveClass(
       'zone-stack--rotated',
     );
   });
 
   it('omits the rotated modifier by default', () => {
     renderWithProviders(
-      <ZoneStack gameId={1} playerId={1} zoneName={App.ZoneName.DECK} label="Deck" />,
-      { preloadedState: stateWithZone(App.ZoneName.DECK, { cardCount: 0 }) },
+      <ZoneStack gameId={1} playerId={1} zoneName={ZoneName.DECK} label="Deck" />,
+      { preloadedState: stateWithZone(ZoneName.DECK, { cardCount: 0 }) },
     );
 
-    expect(screen.getByTestId(`zone-stack-${App.ZoneName.DECK}`)).not.toHaveClass(
+    expect(screen.getByTestId(`zone-stack-${ZoneName.DECK}`)).not.toHaveClass(
       'zone-stack--rotated',
     );
   });
@@ -178,14 +177,14 @@ describe('ZoneStack', () => {
       <ZoneStack
         gameId={1}
         playerId={1}
-        zoneName={App.ZoneName.GRAVE}
+        zoneName={ZoneName.GRAVE}
         label="Graveyard"
         onClick={onClick}
       />,
-      { preloadedState: stateWithZone(App.ZoneName.GRAVE, { cardCount: 0 }) },
+      { preloadedState: stateWithZone(ZoneName.GRAVE, { cardCount: 0 }) },
     );
 
-    fireEvent.keyDown(screen.getByTestId(`zone-stack-${App.ZoneName.GRAVE}`), { key });
-    expect(onClick).toHaveBeenCalledWith(App.ZoneName.GRAVE);
+    fireEvent.keyDown(screen.getByTestId(`zone-stack-${ZoneName.GRAVE}`), { key });
+    expect(onClick).toHaveBeenCalledWith(ZoneName.GRAVE);
   });
 });

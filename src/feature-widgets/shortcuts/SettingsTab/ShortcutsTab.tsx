@@ -9,7 +9,7 @@ import Typography from '@mui/material/Typography';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 
 import { ShortcutScope } from '@app/hooks';
-import { ShortcutsSelectors, useAppSelector } from '@app/store';
+import { shortcuts, useAppSelector } from '@app/store';
 
 import { allActionIds, defaults } from '../defaults';
 import { ActionId, ShortcutGroupId } from '../types';
@@ -29,7 +29,7 @@ const GROUP_ORDER: ShortcutGroupId[] = [
 
 const ShortcutsTab = () => {
   const { t } = useTranslation();
-  const overrides = useAppSelector(ShortcutsSelectors.getOverrides);
+  const overrides = useAppSelector(shortcuts.Selectors.getOverrides);
 
   const [search, setSearch] = useState('');
   const [editingActionId, setEditingActionId] = useState<ActionId | null>(null);

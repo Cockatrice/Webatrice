@@ -1,24 +1,26 @@
 import { useMemo } from 'react';
-import { App, Data } from '@app/types';
-import { GameSelectors, useAppSelector, type AttachedChild } from '@app/store';
+import { ServerInfo_Card } from 'sockatrice/generated';
+import { ZoneName } from 'datatrice';
+import { games } from 'datatrice';
+import { useAppSelector } from '@app/store';
 import { useSettings } from '@app/hooks';
 
 import { MAX_SUBPOS, ROW_COUNT, clampRow } from './gridMath';
 
 export interface Battlefield {
   // Flat rows (preserved for drop-handler occupancy and legacy consumers).
-  rows: Data.ServerInfo_Card[][];
+  rows: ServerInfo_Card[][];
   // Row → stack columns → ≤ MAX_SUBPOS cards sorted by sub-position
   // (x mod MAX_SUBPOS). Empty stack columns are preserved as `null` so a
   // card stored at x=9 (stack col 3) renders at visual column 3, not visual
   // column 0 — matching desktop's ability to hold mid-lane positions.
-  stackColumnsByRow: (Data.ServerInfo_Card[] | null)[][];
+  stackColumnsByRow: (ServerInfo_Card[] | null)[][];
   rowOrder: number[];
   isInverted: boolean;
   // Attachments parented to this player's TABLE cards. Children may live in
-  // a different player's zone (cross-player attach) — `AttachedChild` carries
+  // a different player's zone (cross-player attach) — `games.AttachedChild` carries
   // the child's actual owner so handlers wire to the right player.
-  attachmentsByParent: ReadonlyMap<number, AttachedChild[]>;
+  attachmentsByParent: ReadonlyMap<number, games.AttachedChild[]>;
 }
 
 export interface UseBattlefieldArgs {
@@ -27,20 +29,20 @@ export interface UseBattlefieldArgs {
   mirrored: boolean;
 }
 
-function rowIndexFor(card: Data.ServerInfo_Card): number {
+function rowIndexFor(card: ServerInfo_Card): number {
   return clampRow(card.y ?? 0);
 }
 
-function isAttachedChild(card: Data.ServerInfo_Card): boolean {
+function isAttachedChild(card: ServerInfo_Card): boolean {
   return card.attachCardId != null && card.attachCardId !== -1;
 }
 
 export function useBattlefield({ gameId, playerId, mirrored }: UseBattlefieldArgs): Battlefield {
   const cards = useAppSelector((state) =>
-    GameSelectors.getCards(state, gameId, playerId, App.ZoneName.TABLE),
+    games.Selectors.getCards(state, gameId, playerId, ZoneName.TABLE),
   );
   const attachmentsByParent = useAppSelector((state) =>
-    GameSelectors.getAttachmentsByParent(state, gameId, playerId),
+    games.Selectors.getAttachmentsByParent(state, gameId, playerId),
   );
 
   const { value: settings } = useSettings();
@@ -49,8 +51,8 @@ export function useBattlefield({ gameId, playerId, mirrored }: UseBattlefieldArg
   // the global invertVerticalCoordinate preference.
   const isInverted = mirrored !== invertVerticalCoordinate;
 
-  const rows = useMemo<Data.ServerInfo_Card[][]>(() => {
-    const bucketed: Data.ServerInfo_Card[][] = Array.from({ length: ROW_COUNT }, () => []);
+  const rows = useMemo<ServerInfo_Card[][]>(() => {
+    const bucketed: ServerInfo_Card[][] = Array.from({ length: ROW_COUNT }, () => []);
     for (const card of cards) {
       // Children render nested under their parent via AttachmentStack, not as
       // their own lane slot.
@@ -73,21 +75,21 @@ export function useBattlefield({ gameId, playerId, mirrored }: UseBattlefieldArg
   // so the renderer can emit a placeholder spacer for each gap — otherwise a
   // card dropped at gridX=9 (stack col 3) in an empty row would render at
   // visual column 0, breaking WYSIWYG drop positioning.
-  const stackColumnsByRow = useMemo<(Data.ServerInfo_Card[] | null)[][]>(() => {
+  const stackColumnsByRow = useMemo<(ServerInfo_Card[] | null)[][]>(() => {
     return rows.map((rowCards) => {
-      const sparse: (Data.ServerInfo_Card[] | null)[] = [];
+      const sparse: (ServerInfo_Card[] | null)[] = [];
       let maxCol = -1;
       for (const card of rowCards) {
         const col = Math.floor((card.x ?? 0) / MAX_SUBPOS);
         if (!sparse[col]) {
           sparse[col] = [];
         }
-        (sparse[col] as Data.ServerInfo_Card[]).push(card);
+        (sparse[col] as ServerInfo_Card[]).push(card);
         if (col > maxCol) {
           maxCol = col;
         }
       }
-      const filled: (Data.ServerInfo_Card[] | null)[] = [];
+      const filled: (ServerInfo_Card[] | null)[] = [];
       for (let i = 0; i <= maxCol; i++) {
         filled[i] = sparse[i] ?? null;
       }

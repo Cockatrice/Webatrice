@@ -1,15 +1,14 @@
 import { useRef } from 'react';
 import { screen, fireEvent } from '@testing-library/react';
 import { create } from '@bufbuild/protobuf';
-import { Data } from '@app/types';
-
+import { colorSchema } from 'sockatrice/generated';
 import { createMockWebClient, makeStoreState, renderWithProviders } from '../../../../../__test-utils__';
 import {
   makeArrow,
   makeGameEntry,
   makePlayerEntry,
   makePlayerProperties,
-} from '../../../../../store/game/__mocks__/fixtures';
+} from '../../../../../__test-utils__/games-fixtures';
 import GameArrowOverlay from './GameArrowOverlay';
 import {
   CardRegistryContext,
@@ -53,7 +52,7 @@ function stateWithOneArrow() {
     targetPlayerId: 1,
     targetZone: 'table',
     targetCardId: 11,
-    arrowColor: create(Data.colorSchema, { r: 224, g: 75, b: 59, a: 255 }),
+    arrowColor: create(colorSchema, { r: 224, g: 75, b: 59, a: 255 }),
   });
   return makeStoreState({
     games: {

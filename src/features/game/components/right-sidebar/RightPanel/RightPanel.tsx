@@ -1,5 +1,6 @@
-import type { Data } from '@app/types';
-import { GameSelectors, useAppSelector } from '@app/store';
+import { ServerInfo_Card } from 'sockatrice/generated';
+import { games } from 'datatrice';
+import { useAppSelector } from '@app/store';
 
 import CardPreview from '../CardPreview/CardPreview';
 import GameLog from '../GameLog/GameLog';
@@ -10,7 +11,7 @@ import './RightPanel.css';
 
 export interface RightPanelProps {
   gameId: number | undefined;
-  hoveredCard: Data.ServerInfo_Card | null | undefined;
+  hoveredCard: ServerInfo_Card | null | undefined;
   onRequestRollDie: () => void;
   onRequestConcede: () => void;
   onRequestUnconcede: () => void;
@@ -30,7 +31,7 @@ function RightPanel({
   isRotated,
 }: RightPanelProps) {
   const isSpectator = useAppSelector((state) =>
-    gameId != null ? GameSelectors.isSpectator(state, gameId) : false,
+    gameId != null ? games.Selectors.isSpectator(state, gameId) : false,
   );
 
   return (

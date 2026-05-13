@@ -5,7 +5,7 @@ import {
   makeGameEntry,
   makePlayerEntry,
   makePlayerProperties,
-} from '../../../../store/game/__mocks__/fixtures';
+} from '../../../../__test-utils__/games-fixtures';
 import GameInfoDialog from './GameInfoDialog';
 
 function stateWithGame(overrides: Partial<Parameters<typeof makeGameEntry>[0]> = {}) {

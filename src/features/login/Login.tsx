@@ -9,8 +9,7 @@ import { LanguageDropdown } from '@app/components';
 import { Images } from '@app/images';
 import { serverProps } from '@app/services';
 import { Layout } from '@app/feature-core';
-import { App } from '@app/types';
-
+import { RouteEnum } from '@app/types';
 import RegistrationDialog from './dialogs/RegistrationDialog/RegistrationDialog';
 import RequestPasswordResetDialog from './dialogs/RequestPasswordResetDialog/RequestPasswordResetDialog';
 import ResetPasswordDialog from './dialogs/ResetPasswordDialog/ResetPasswordDialog';
@@ -89,7 +88,7 @@ const Login = () => {
   return (
     <Layout showNav={false} noHeightLimit={true}>
       <Root className={'login overflow-scroll ' + classes.root}>
-        {isConnected && <Navigate to={App.RouteEnum.SERVER} />}
+        {isConnected && <Navigate to={RouteEnum.SERVER} />}
 
         <div className="login__wrapper">
           <Paper className="login-content">

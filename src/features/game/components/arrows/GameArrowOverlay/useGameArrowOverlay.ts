@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 
 import { useWebClient } from '@app/hooks';
-import { GameSelectors, useAppSelector } from '@app/store';
-import { App } from '@app/types';
-import type { Data, Enriched } from '@app/types';
-
+import { games } from 'datatrice';
+import { useAppSelector } from '@app/store';
+import { ServerInfo_Arrow } from 'sockatrice/generated';
+import { PlayerEntry } from 'datatrice';
+import { ArrowColor, rgbaToCss } from '@app/types';
 import { makeCardKey, useCardRegistry } from '../../../utils/CardRegistry/CardRegistryContext';
 
 export interface ResolvedArrow {
@@ -17,13 +18,13 @@ export interface ResolvedArrow {
   color: string;
 }
 
-const ARROW_FALLBACK_CSS = App.rgbaToCss(App.ArrowColor.RED);
+const ARROW_FALLBACK_CSS = rgbaToCss(ArrowColor.RED);
 
 function cssColor(c: { r: number; g: number; b: number; a: number } | undefined): string {
   if (!c) {
     return ARROW_FALLBACK_CSS;
   }
-  return App.rgbaToCss({ r: c.r, g: c.g, b: c.b, a: c.a ?? 255 });
+  return rgbaToCss({ r: c.r, g: c.g, b: c.b, a: c.a ?? 255 });
 }
 
 export interface GameArrowOverlay {
@@ -45,7 +46,7 @@ export function useGameArrowOverlay({
   const webClient = useWebClient();
   const registry = useCardRegistry();
   const players = useAppSelector((state) =>
-    gameId != null ? GameSelectors.getPlayers(state, gameId) : undefined,
+    gameId != null ? games.Selectors.getPlayers(state, gameId) : undefined,
   );
 
   // Tick is bumped whenever we need to re-query DOM rects (card registry
@@ -87,8 +88,8 @@ export function useGameArrowOverlay({
       return [];
     }
     const out: ResolvedArrow[] = [];
-    for (const player of Object.values(players) as Enriched.PlayerEntry[]) {
-      for (const a of Object.values(player.arrows) as Data.ServerInfo_Arrow[]) {
+    for (const player of Object.values(players) as PlayerEntry[]) {
+      for (const a of Object.values(player.arrows) as ServerInfo_Arrow[]) {
         const sourceEl = registry.get(
           makeCardKey(a.startPlayerId, a.startZone, a.startCardId),
         );

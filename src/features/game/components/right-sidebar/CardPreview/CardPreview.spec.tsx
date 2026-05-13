@@ -1,6 +1,6 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 
-import { makeCard } from '../../../../../store/game/__mocks__/fixtures';
+import { makeCard } from '../../../../../__test-utils__/games-fixtures';
 import CardPreview from './CardPreview';
 
 describe('CardPreview', () => {

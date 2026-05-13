@@ -1,7 +1,6 @@
 import { useMemo, type ReactNode } from 'react';
 
-import { App } from '@app/types';
-
+import { CARD_CALLOUT_REGEX, MESSAGE_SENDER_REGEX } from '@app/types';
 export interface ParsedMessage {
   name: string | null;
   chunks: ReactNode[];
@@ -13,7 +12,7 @@ export type ChunkParser = (chunk: string, index: number) => ReactNode;
 // or `useCallback`). Passing a fresh closure every render will thrash the memo.
 export function useParsedMessage(message: string, parseChunk: ChunkParser): ParsedMessage {
   return useMemo<ParsedMessage>(() => {
-    const match = message.match(App.MESSAGE_SENDER_REGEX);
+    const match = message.match(MESSAGE_SENDER_REGEX);
     const name = match ? match[1] : null;
     return {
       name,
@@ -24,8 +23,8 @@ export function useParsedMessage(message: string, parseChunk: ChunkParser): Pars
 
 export function parseMessage(message: string, parseChunk: ChunkParser): ReactNode[] {
   return message
-    .replace(App.MESSAGE_SENDER_REGEX, '')
-    .split(App.CARD_CALLOUT_REGEX)
+    .replace(MESSAGE_SENDER_REGEX, '')
+    .split(CARD_CALLOUT_REGEX)
     .filter((chunk) => !!chunk)
     .map(parseChunk);
 }

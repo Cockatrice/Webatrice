@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
-import { Form, Field, FormApi } from 'react-final-form';
+import { Form, Field } from 'react-final-form';
+import type { FormApi } from 'final-form';
 import { OnChange } from 'react-final-form-listeners';
 import { useTranslation } from 'react-i18next';
 
@@ -9,8 +10,7 @@ import Typography from '@mui/material/Typography';
 import { InputField } from '@app/components';
 import { KnownHosts } from '@app/feature-widgets/known-hosts';
 import { HostDTO } from '@app/services';
-import { App } from '@app/types';
-
+import { FormErrors } from '@app/types';
 import { useRequestPasswordResetForm } from './useRequestPasswordResetForm';
 
 import './RequestPasswordResetForm.css';
@@ -44,8 +44,8 @@ const RequestPasswordResetForm = ({ onSubmit, skipTokenRequest }: RequestPasswor
     });
   };
 
-  const validate = (values: Partial<RequestPasswordResetFormValues>): App.FormErrors<RequestPasswordResetFormValues> => {
-    const errors: App.FormErrors<RequestPasswordResetFormValues> = {};
+  const validate = (values: Partial<RequestPasswordResetFormValues>): FormErrors<RequestPasswordResetFormValues> => {
+    const errors: FormErrors<RequestPasswordResetFormValues> = {};
 
     if (!values.userName) {
       errors.userName = t('Common.validation.required');

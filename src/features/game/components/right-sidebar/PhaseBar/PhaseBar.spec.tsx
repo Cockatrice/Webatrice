@@ -1,6 +1,6 @@
 import { screen, fireEvent } from '@testing-library/react';
-import { App, Data } from '@app/types';
-
+import { CardAttribute } from 'sockatrice/generated';
+import { Phase } from 'datatrice';
 import { createMockWebClient, makeStoreState, renderWithProviders } from '../../../../../__test-utils__';
 import {
   makeCard,
@@ -8,7 +8,7 @@ import {
   makePlayerEntry,
   makePlayerProperties,
   makeZoneEntry,
-} from '../../../../../store/game/__mocks__/fixtures';
+} from '../../../../../__test-utils__/games-fixtures';
 import PhaseBar from './PhaseBar';
 
 function stateWith(opts: {
@@ -66,11 +66,11 @@ describe('PhaseBar', () => {
 
   it('applies the active modifier only to the button matching activePhase', () => {
     renderWithProviders(<PhaseBar gameId={1} />, {
-      preloadedState: stateWith({ phase: App.Phase.DeclareAttackers }),
+      preloadedState: stateWith({ phase: Phase.DeclareAttackers }),
     });
 
     const active = document.querySelector('.phase-bar__btn--active')!;
-    expect(active.getAttribute('data-phase')).toBe(String(App.Phase.DeclareAttackers));
+    expect(active.getAttribute('data-phase')).toBe(String(Phase.DeclareAttackers));
     expect(document.querySelectorAll('.phase-bar__btn--active')).toHaveLength(1);
   });
 
@@ -154,7 +154,7 @@ describe('PhaseBar', () => {
     fireEvent.click(screen.getByText('ATTK'));
 
     expect(webClient.request.game.setActivePhase).toHaveBeenCalledWith(1, {
-      phase: App.Phase.DeclareAttackers,
+      phase: Phase.DeclareAttackers,
     });
   });
 
@@ -176,7 +176,7 @@ describe('PhaseBar', () => {
         games: {
           games: {
             1: makeGameEntry({
-              activePhase: App.Phase.Untap,
+              activePhase: Phase.Untap,
               localPlayerId: 1,
               activePlayerId: 1,
               started: true,
@@ -211,13 +211,13 @@ describe('PhaseBar', () => {
       expect(webClient.request.game.setCardAttr).toHaveBeenCalledWith(1, {
         zone: 'table',
         cardId: 1,
-        attribute: Data.CardAttribute.AttrTapped,
+        attribute: CardAttribute.AttrTapped,
         attrValue: '0',
       });
       expect(webClient.request.game.setCardAttr).toHaveBeenCalledWith(1, {
         zone: 'table',
         cardId: 3,
-        attribute: Data.CardAttribute.AttrTapped,
+        attribute: CardAttribute.AttrTapped,
         attrValue: '0',
       });
     });

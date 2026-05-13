@@ -1,24 +1,23 @@
 import { fromBinary, getExtension, hasExtension } from '@bufbuild/protobuf';
 import type { GenExtension } from '@bufbuild/protobuf/codegenv2';
 
-import { Data } from '@app/types';
-
+import { AdminCommand, CommandContainer, CommandContainerSchema, GameCommand, ModeratorCommand, RoomCommand, SessionCommand } from 'sockatrice/generated';
 import { getMockWebSocket } from './setup';
 
-type SessionCmd = Data.SessionCommand;
-type RoomCmd = Data.RoomCommand;
-type GameCmd = Data.GameCommand;
-type AdminCmd = Data.AdminCommand;
-type ModeratorCmd = Data.ModeratorCommand;
+type SessionCmd = SessionCommand;
+type RoomCmd = RoomCommand;
+type GameCmd = GameCommand;
+type AdminCmd = AdminCommand;
+type ModeratorCmd = ModeratorCommand;
 
-export function captureAllOutbound(): Data.CommandContainer[] {
+export function captureAllOutbound(): CommandContainer[] {
   const mock = getMockWebSocket();
   return mock.send.mock.calls.map(([bytes]: [Uint8Array]) =>
-    fromBinary(Data.CommandContainerSchema, bytes)
+    fromBinary(CommandContainerSchema, bytes)
   );
 }
 
-export function captureLastOutbound(): Data.CommandContainer {
+export function captureLastOutbound(): CommandContainer {
   const all = captureAllOutbound();
   if (all.length === 0) {
     throw new Error('No outbound command has been sent through the mock WebSocket.');
@@ -32,7 +31,7 @@ export function lastCmdId(): number {
 
 export function findLastSessionCommand<V>(
   ext: GenExtension<SessionCmd, V>
-): { container: Data.CommandContainer; value: V; cmdId: number } {
+): { container: CommandContainer; value: V; cmdId: number } {
   const containers = captureAllOutbound();
   for (let i = containers.length - 1; i >= 0; i--) {
     const container = containers[i];
@@ -53,7 +52,7 @@ export function findLastSessionCommand<V>(
 
 export function findLastRoomCommand<V>(
   ext: GenExtension<RoomCmd, V>
-): { container: Data.CommandContainer; value: V; cmdId: number; roomId: number } {
+): { container: CommandContainer; value: V; cmdId: number; roomId: number } {
   const containers = captureAllOutbound();
   for (let i = containers.length - 1; i >= 0; i--) {
     const container = containers[i];
@@ -75,7 +74,7 @@ export function findLastRoomCommand<V>(
 
 export function findLastGameCommand<V>(
   ext: GenExtension<GameCmd, V>
-): { container: Data.CommandContainer; value: V; cmdId: number; gameId: number } {
+): { container: CommandContainer; value: V; cmdId: number; gameId: number } {
   const containers = captureAllOutbound();
   for (let i = containers.length - 1; i >= 0; i--) {
     const container = containers[i];
@@ -97,7 +96,7 @@ export function findLastGameCommand<V>(
 
 export function findLastAdminCommand<V>(
   ext: GenExtension<AdminCmd, V>
-): { container: Data.CommandContainer; value: V; cmdId: number } {
+): { container: CommandContainer; value: V; cmdId: number } {
   const containers = captureAllOutbound();
   for (let i = containers.length - 1; i >= 0; i--) {
     const container = containers[i];
@@ -118,7 +117,7 @@ export function findLastAdminCommand<V>(
 
 export function findLastModeratorCommand<V>(
   ext: GenExtension<ModeratorCmd, V>
-): { container: Data.CommandContainer; value: V; cmdId: number } {
+): { container: CommandContainer; value: V; cmdId: number } {
   const containers = captureAllOutbound();
   for (let i = containers.length - 1; i >= 0; i--) {
     const container = containers[i];

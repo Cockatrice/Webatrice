@@ -1,12 +1,11 @@
 import { SettingDTO } from '@app/services';
-import { App } from '@app/types';
-
+import { APP_USER } from '@app/types';
 import { createSharedStore, Loadable, useSharedStore } from './useSharedStore';
 
 export const settingsStore = createSharedStore<SettingDTO>(async () => {
-  let loaded = await SettingDTO.get(App.APP_USER);
+  let loaded = await SettingDTO.get(APP_USER);
   if (!loaded) {
-    loaded = new SettingDTO(App.APP_USER);
+    loaded = new SettingDTO(APP_USER);
     await loaded.save();
   }
   return loaded;

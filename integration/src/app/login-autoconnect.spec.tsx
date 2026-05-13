@@ -14,19 +14,19 @@ import { knownHostsStore } from '../../../src/hooks/useKnownHosts';
 import { Login } from '@app/features/login';
 import { autoLoginGate } from '../../../src/features/login/useAutoLogin';
 import { HostDTO, SettingDTO } from '@app/services';
-import { App } from '@app/types';
-import { ServerSelectors, ServerDispatch } from '@app/store';
-import { WebsocketTypes } from '@app/websocket/types';
+import { APP_USER } from '@app/types';
+import { server } from 'datatrice';
+import { WebsocketTypes } from 'sockatrice/types';
 
 import { resetDexie } from '../services/dexie/resetDexie';
 import { renderAppScreen, store } from './helpers';
 
 const simulateLogout = () => {
-  ServerDispatch.updateStatus(WebsocketTypes.StatusEnum.DISCONNECTED, null);
+  store.dispatch(server.Actions.updateStatus({ status: { state: WebsocketTypes.StatusEnum.DISCONNECTED, description: null } }));
 };
 
 const seedAutoConnect = async () => {
-  const setting = new SettingDTO(App.APP_USER);
+  const setting = new SettingDTO(APP_USER);
   setting.autoConnect = true;
   await setting.save();
 
@@ -45,7 +45,7 @@ const seedAutoConnect = async () => {
 };
 
 const attempted = (): boolean =>
-  ServerSelectors.getConnectionAttemptMade(store.getState());
+  server.Selectors.getConnectionAttemptMade(store.getState());
 
 afterEach(async () => {
   // Absorb any state updates that lingered past the test body (stores
@@ -70,7 +70,7 @@ beforeEach(async () => {
   autoLoginGate.hasChecked = false;
 });
 
-describe('autoconnect — cold start', () => {
+describe('autoconnect â€” cold start', () => {
   it('auto-logs in when Dexie has autoConnect=true + host with stored credentials', async () => {
     await seedAutoConnect();
 
@@ -90,7 +90,7 @@ describe('autoconnect — cold start', () => {
   });
 
   it('does NOT attempt login when autoConnect=true but lastSelected host lacks credentials', async () => {
-    const setting = new SettingDTO(App.APP_USER);
+    const setting = new SettingDTO(APP_USER);
     setting.autoConnect = true;
     await setting.save();
     await HostDTO.add({
@@ -109,7 +109,7 @@ describe('autoconnect — cold start', () => {
   });
 });
 
-describe('autoconnect — logout cycle (same session)', () => {
+describe('autoconnect â€” logout cycle (same session)', () => {
   it('does not auto-reconnect after first auto-login + logout within the same JS session', async () => {
     await seedAutoConnect();
 
@@ -120,7 +120,7 @@ describe('autoconnect — logout cycle (same session)', () => {
 
     // Simulate "logged out and returned to /login": unmount, clear the
     // store's connectionAttemptMade flag (the app-level equivalent of
-    // DISCONNECTED → status.connectionAttemptMade reset), remount.
+    // DISCONNECTED â†’ status.connectionAttemptMade reset), remount.
     first.unmount();
     simulateLogout();
 
@@ -133,13 +133,13 @@ describe('autoconnect — logout cycle (same session)', () => {
   });
 
   it('does not auto-connect when the user enabled autoConnect mid-session and then logged out', async () => {
-    // First mount with autoConnect=false — gate latches without firing.
+    // First mount with autoConnect=false â€” gate latches without firing.
     const first = renderAppScreen(<Login />);
     await flushStoresAndEffects();
     expect(attempted()).toBe(false);
     first.unmount();
 
-    // Mid-session: user ticked the checkbox → Dexie flipped to autoConnect=true.
+    // Mid-session: user ticked the checkbox â†’ Dexie flipped to autoConnect=true.
     await seedAutoConnect();
 
     // Remount (post-logout). The gate MUST keep useAutoLogin silent.
@@ -150,7 +150,7 @@ describe('autoconnect — logout cycle (same session)', () => {
   });
 });
 
-describe('autoconnect — refresh', () => {
+describe('autoconnect â€” refresh', () => {
   it('auto-connects again after resetting the session gate (page-refresh equivalent)', async () => {
     await seedAutoConnect();
 

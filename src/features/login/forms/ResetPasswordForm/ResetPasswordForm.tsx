@@ -7,8 +7,7 @@ import Typography from '@mui/material/Typography';
 import { InputField } from '@app/components';
 import { KnownHosts } from '@app/feature-widgets/known-hosts';
 import { HostDTO } from '@app/services';
-import { App } from '@app/types';
-
+import { FormErrors } from '@app/types';
 import { useResetPasswordForm } from './useResetPasswordForm';
 
 import './ResetPasswordForm.css';
@@ -30,8 +29,8 @@ const ResetPasswordForm = ({ onSubmit, userName }: ResetPasswordFormProps) => {
   const { t } = useTranslation();
   const { errorMessage } = useResetPasswordForm();
 
-  const validate = (values: Partial<ResetPasswordFormValues>): App.FormErrors<ResetPasswordFormValues> => {
-    const errors: App.FormErrors<ResetPasswordFormValues> = {};
+  const validate = (values: Partial<ResetPasswordFormValues>): FormErrors<ResetPasswordFormValues> => {
+    const errors: FormErrors<ResetPasswordFormValues> = {};
 
     if (!values.userName) {
       errors.userName = t('Common.validation.required');

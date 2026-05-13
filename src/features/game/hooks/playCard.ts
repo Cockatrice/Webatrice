@@ -1,10 +1,10 @@
-import type { WebClient } from '@app/websocket';
-import { App, type Data, type Enriched } from '@app/types';
-
+import type { WebClient } from 'sockatrice';
+import { ServerInfo_Card } from 'sockatrice/generated';
+import { ZoneEntry, ZoneName } from 'datatrice';
 import { CardDTO } from '../../../services/dexie/DexieDTOs/CardDTO';
 import { MAX_SUBPOS, applyInvertY, clampRow } from '../components/battlefield/Battlefield/gridMath';
 
-// Mirrors desktop's player_actions.cpp:47-93 (PlayerActions::playCard) — the
+// Mirrors desktop's player_actions.cpp:47-93 (PlayerActions::playCard) â€” the
 // destination zone is chosen from CardInfo's `tableRow`. tableRow=3 routes to
 // the stack (instant/sorcery); 0/1/2 route to the battlefield with a
 // per-row default that the user can later drag-correct.
@@ -32,10 +32,10 @@ export async function playCardViaTableRow({
   localPlayerId: number;
   sourcePlayerId: number;
   sourceZone: string;
-  card: Data.ServerInfo_Card;
+  card: ServerInfo_Card;
   faceDown: boolean;
   isInverted: boolean;
-  tableZone: Enriched.ZoneEntry | undefined;
+  tableZone: ZoneEntry | undefined;
 }): Promise<void> {
   // Cockatrice XML schema: `<tablerow>` is a top-level element on `<card>`
   // (not inside `<prop>`). See types/cards.ts and CockatriceXmlParser.spec.ts.
@@ -51,7 +51,7 @@ export async function playCardViaTableRow({
       // `face_down` is per-card on CardToMove, not on Command_MoveCard.
       cardsToMove: { card: [{ cardId: card.id, faceDown }] },
       targetPlayerId: localPlayerId,
-      targetZone: App.ZoneName.STACK,
+      targetZone: ZoneName.STACK,
       x: 0,
       y: 0,
       isReversed: false,
@@ -88,7 +88,7 @@ export async function playCardViaTableRow({
     startZone: sourceZone,
     cardsToMove: { card: [{ cardId: card.id, faceDown }] },
     targetPlayerId: localPlayerId,
-    targetZone: App.ZoneName.TABLE,
+    targetZone: ZoneName.TABLE,
     x: nextCol * MAX_SUBPOS,
     y: wireY,
     isReversed: false,

@@ -1,9 +1,9 @@
 import { create } from '@bufbuild/protobuf';
 import { describe, expect, it } from 'vitest';
 
-import { Data } from '@app/types';
-import { store } from '@app/store';
-import { RoomCommands } from '@app/websocket';
+import { Command_CreateGame_ext, Command_JoinGame_ext, Command_JoinRoom_ext, Command_LeaveRoom_ext, Command_RoomSay_ext, Event_JoinRoomSchema, Event_JoinRoom_ext, Event_LeaveRoomSchema, Event_LeaveRoom_ext, Event_ListGamesSchema, Event_ListGames_ext, Event_ListRoomsSchema, Event_ListRooms_ext, Event_RoomSaySchema, Event_RoomSay_RoomMessageType, Event_RoomSay_ext, Response_JoinRoomSchema, Response_JoinRoom_ext, Response_ResponseCode, ServerInfo_GameSchema, ServerInfo_Room, ServerInfo_RoomSchema, ServerInfo_UserSchema } from 'sockatrice/generated';
+import { store } from '../helpers/setup';
+import { RoomCommands } from 'sockatrice';
 
 import { connectAndHandshake } from '../helpers/setup';
 import {
@@ -20,8 +20,8 @@ function makeRoom(overrides: Partial<{
   roomId: number;
   name: string;
   autoJoin: boolean;
-}> = {}): Data.ServerInfo_Room {
-  return create(Data.ServerInfo_RoomSchema, {
+}> = {}): ServerInfo_Room {
+  return create(ServerInfo_RoomSchema, {
     roomId: overrides.roomId ?? 1,
     name: overrides.name ?? 'Lobby',
     description: 'Test room',
@@ -36,15 +36,15 @@ function makeRoom(overrides: Partial<{
 
 function setupJoinedRoom(roomId = 1): void {
   deliverMessage(buildSessionEventMessage(
-    Data.Event_ListRooms_ext,
-    create(Data.Event_ListRoomsSchema, { roomList: [makeRoom({ roomId, autoJoin: true })] })
+    Event_ListRooms_ext,
+    create(Event_ListRoomsSchema, { roomList: [makeRoom({ roomId, autoJoin: true })] })
   ));
-  const join = findLastSessionCommand(Data.Command_JoinRoom_ext);
+  const join = findLastSessionCommand(Command_JoinRoom_ext);
   deliverMessage(buildResponseMessage(buildResponse({
     cmdId: join.cmdId,
-    responseCode: Data.Response_ResponseCode.RespOk,
-    ext: Data.Response_JoinRoom_ext,
-    value: create(Data.Response_JoinRoomSchema, { roomInfo: makeRoom({ roomId }) }),
+    responseCode: Response_ResponseCode.RespOk,
+    ext: Response_JoinRoom_ext,
+    value: create(Response_JoinRoomSchema, { roomInfo: makeRoom({ roomId }) }),
   })));
 }
 
@@ -52,13 +52,13 @@ describe('rooms', () => {
   it('populates rooms state from Event_ListRooms', () => {
     connectAndHandshake();
 
-    const listRooms = create(Data.Event_ListRoomsSchema, {
+    const listRooms = create(Event_ListRoomsSchema, {
       roomList: [
         makeRoom({ roomId: 1, name: 'Lobby' }),
         makeRoom({ roomId: 2, name: 'Legacy' }),
       ],
     });
-    deliverMessage(buildSessionEventMessage(Data.Event_ListRooms_ext, listRooms));
+    deliverMessage(buildSessionEventMessage(Event_ListRooms_ext, listRooms));
 
     const { rooms } = store.getState().rooms;
     expect(rooms[1]?.info?.name).toBe('Lobby');
@@ -68,24 +68,24 @@ describe('rooms', () => {
   it('auto-joins rooms flagged with autoJoin and flips joinedRoomIds on Response_JoinRoom', () => {
     connectAndHandshake();
 
-    const listRooms = create(Data.Event_ListRoomsSchema, {
+    const listRooms = create(Event_ListRoomsSchema, {
       roomList: [
         makeRoom({ roomId: 1, name: 'Lobby', autoJoin: true }),
         makeRoom({ roomId: 2, name: 'Legacy', autoJoin: false }),
       ],
     });
-    deliverMessage(buildSessionEventMessage(Data.Event_ListRooms_ext, listRooms));
+    deliverMessage(buildSessionEventMessage(Event_ListRooms_ext, listRooms));
 
-    const join = findLastSessionCommand(Data.Command_JoinRoom_ext);
+    const join = findLastSessionCommand(Command_JoinRoom_ext);
     expect(join.value.roomId).toBe(1);
 
-    const joined = create(Data.Response_JoinRoomSchema, {
+    const joined = create(Response_JoinRoomSchema, {
       roomInfo: makeRoom({ roomId: 1, name: 'Lobby' }),
     });
     deliverMessage(buildResponseMessage(buildResponse({
       cmdId: join.cmdId,
-      responseCode: Data.Response_ResponseCode.RespOk,
-      ext: Data.Response_JoinRoom_ext,
+      responseCode: Response_ResponseCode.RespOk,
+      ext: Response_JoinRoom_ext,
       value: joined,
     })));
 
@@ -96,12 +96,12 @@ describe('rooms', () => {
     connectAndHandshake();
     setupJoinedRoom(1);
 
-    const say = create(Data.Event_RoomSaySchema, {
+    const say = create(Event_RoomSaySchema, {
       name: 'bob',
       message: 'hello world',
-      messageType: Data.Event_RoomSay_RoomMessageType.UserMessage,
+      messageType: Event_RoomSay_RoomMessageType.UserMessage,
     });
-    deliverMessage(buildRoomEventMessage(1, Data.Event_RoomSay_ext, say));
+    deliverMessage(buildRoomEventMessage(1, Event_RoomSay_ext, say));
 
     const messages = store.getState().rooms.messages[1];
     expect(messages).toHaveLength(1);
@@ -113,15 +113,15 @@ describe('rooms', () => {
     connectAndHandshake();
     setupJoinedRoom(1);
 
-    const game = create(Data.ServerInfo_GameSchema, {
+    const game = create(ServerInfo_GameSchema, {
       gameId: 42,
       description: 'Test Game',
       maxPlayers: 4,
       playerCount: 1,
       startTime: 1,
     });
-    const listGames = create(Data.Event_ListGamesSchema, { gameList: [game] });
-    deliverMessage(buildRoomEventMessage(1, Data.Event_ListGames_ext, listGames));
+    const listGames = create(Event_ListGamesSchema, { gameList: [game] });
+    deliverMessage(buildRoomEventMessage(1, Event_ListGames_ext, listGames));
 
     const roomGames = store.getState().rooms.rooms[1]?.games;
     expect(roomGames).toBeDefined();
@@ -133,8 +133,8 @@ describe('rooms', () => {
     connectAndHandshake();
 
     deliverMessage(buildSessionEventMessage(
-      Data.Event_ListRooms_ext,
-      create(Data.Event_ListRoomsSchema, {
+      Event_ListRooms_ext,
+      create(Event_ListRoomsSchema, {
         roomList: [
           makeRoom({ roomId: 1, name: 'Lobby', autoJoin: true }),
           makeRoom({ roomId: 2, name: 'Legacy', autoJoin: false }),
@@ -148,8 +148,8 @@ describe('rooms', () => {
     const joinCommands: number[] = [];
     for (const container of containers) {
       for (const cmd of container.sessionCommand ?? []) {
-        if (hasExtension(cmd, Data.Command_JoinRoom_ext)) {
-          joinCommands.push(getExtension(cmd, Data.Command_JoinRoom_ext).roomId);
+        if (hasExtension(cmd, Command_JoinRoom_ext)) {
+          joinCommands.push(getExtension(cmd, Command_JoinRoom_ext).roomId);
         }
       }
     }
@@ -165,7 +165,7 @@ describe('rooms', () => {
 
     RoomCommands.roomSay(1, '  hello  ');
 
-    const { value } = findLastRoomCommand(Data.Command_RoomSay_ext);
+    const { value } = findLastRoomCommand(Command_RoomSay_ext);
     expect(value.message).toBe('hello');
   });
 
@@ -176,10 +176,10 @@ describe('rooms', () => {
 
     RoomCommands.leaveRoom(1);
 
-    const leave = findLastRoomCommand(Data.Command_LeaveRoom_ext);
+    const leave = findLastRoomCommand(Command_LeaveRoom_ext);
     deliverMessage(buildResponseMessage(buildResponse({
       cmdId: leave.cmdId,
-      responseCode: Data.Response_ResponseCode.RespOk,
+      responseCode: Response_ResponseCode.RespOk,
     })));
 
     expect(store.getState().rooms.joinedRoomIds[1]).toBeUndefined();
@@ -189,13 +189,13 @@ describe('rooms', () => {
     connectAndHandshake();
     setupJoinedRoom(1);
 
-    deliverMessage(buildRoomEventMessage(1, Data.Event_JoinRoom_ext, create(Data.Event_JoinRoomSchema, {
-      userInfo: create(Data.ServerInfo_UserSchema, { name: 'bob' }),
+    deliverMessage(buildRoomEventMessage(1, Event_JoinRoom_ext, create(Event_JoinRoomSchema, {
+      userInfo: create(ServerInfo_UserSchema, { name: 'bob' }),
     })));
 
     expect(store.getState().rooms.rooms[1]?.users?.bob).toBeDefined();
 
-    deliverMessage(buildRoomEventMessage(1, Data.Event_LeaveRoom_ext, create(Data.Event_LeaveRoomSchema, {
+    deliverMessage(buildRoomEventMessage(1, Event_LeaveRoom_ext, create(Event_LeaveRoomSchema, {
       name: 'bob',
     })));
 
@@ -208,20 +208,20 @@ describe('rooms', () => {
 
     RoomCommands.createGame(1, { description: 'Casual', maxPlayers: 2 });
 
-    const create_ = findLastRoomCommand(Data.Command_CreateGame_ext);
+    const create_ = findLastRoomCommand(Command_CreateGame_ext);
     expect(create_.value.description).toBe('Casual');
 
     deliverMessage(buildResponseMessage(buildResponse({
       cmdId: create_.cmdId,
-      responseCode: Data.Response_ResponseCode.RespOk,
+      responseCode: Response_ResponseCode.RespOk,
     })));
 
     RoomCommands.joinGame(1, { gameId: 99 });
 
-    const join = findLastRoomCommand(Data.Command_JoinGame_ext);
+    const join = findLastRoomCommand(Command_JoinGame_ext);
     deliverMessage(buildResponseMessage(buildResponse({
       cmdId: join.cmdId,
-      responseCode: Data.Response_ResponseCode.RespOk,
+      responseCode: Response_ResponseCode.RespOk,
     })));
 
     expect(store.getState().rooms.joinedGameIds[1]?.[99]).toBe(true);

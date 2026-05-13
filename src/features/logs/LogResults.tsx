@@ -12,8 +12,8 @@ import TableRow from '@mui/material/TableRow';
 import Tab from '@mui/material/Tab';
 import Tabs from '@mui/material/Tabs';
 
-import type { Data } from '@app/types';
-import type { ServerStateLogs } from '@app/store';
+import { ServerInfo_ChatMessage } from 'sockatrice/generated';
+import type { ServerStateLogs } from 'datatrice';
 
 import { useLogResults } from './useLogResults';
 
@@ -29,7 +29,7 @@ interface HeaderCell {
 
 interface ResultsProps {
   headerCells: HeaderCell[];
-  logs: Data.ServerInfo_ChatMessage[];
+  logs: ServerInfo_ChatMessage[];
 }
 
 interface TabPanelProps {

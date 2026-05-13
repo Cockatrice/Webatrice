@@ -94,7 +94,7 @@ vi.mock('@app/utils', () => ({
   ],
 }));
 
-vi.mock('@app/types', () => ({ App: {} }));
+vi.mock('@app/types', () => ({}));
 
 let useKnownHostsModule: typeof import('./useKnownHosts');
 let LoadingState: typeof import('./useSharedStore').LoadingState;

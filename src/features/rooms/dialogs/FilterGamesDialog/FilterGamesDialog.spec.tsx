@@ -1,16 +1,16 @@
 import { fireEvent, screen } from '@testing-library/react';
 import { renderWithProviders } from '../../../../__test-utils__';
-import { DEFAULT_GAME_FILTERS } from '@app/store';
+import { rooms } from 'datatrice';
 import FilterGamesDialog from './FilterGamesDialog';
 
-function renderDialog(opts: { gametypeMap?: Record<number, string>; initialFilters?: typeof DEFAULT_GAME_FILTERS } = {}) {
+function renderDialog(opts: { gametypeMap?: Record<number, string>; initialFilters?: typeof rooms.DEFAULT_GAME_FILTERS } = {}) {
   const onSubmit = vi.fn();
   const onCancel = vi.fn();
   renderWithProviders(
     <FilterGamesDialog
       isOpen
       gametypeMap={opts.gametypeMap ?? {}}
-      initialFilters={opts.initialFilters ?? DEFAULT_GAME_FILTERS}
+      initialFilters={opts.initialFilters ?? rooms.DEFAULT_GAME_FILTERS}
       onSubmit={onSubmit}
       onCancel={onCancel}
     />,
@@ -42,7 +42,7 @@ describe('FilterGamesDialog', () => {
   it('Apply submits the unchanged defaults when nothing is edited', () => {
     const { onSubmit } = renderDialog();
     fireEvent.click(screen.getByRole('button', { name: /Apply/i }));
-    expect(onSubmit).toHaveBeenCalledWith(DEFAULT_GAME_FILTERS);
+    expect(onSubmit).toHaveBeenCalledWith(rooms.DEFAULT_GAME_FILTERS);
   });
 
   it('Apply forwards the toggled hide-full-games filter', () => {
@@ -69,11 +69,11 @@ describe('FilterGamesDialog', () => {
 
   it('Reset restores defaults in the form (Apply submits defaults)', () => {
     const { onSubmit } = renderDialog({
-      initialFilters: { ...DEFAULT_GAME_FILTERS, hideFullGames: true, gameNameFilter: 'foo' },
+      initialFilters: { ...rooms.DEFAULT_GAME_FILTERS, hideFullGames: true, gameNameFilter: 'foo' },
     });
     fireEvent.click(screen.getByRole('button', { name: /Reset/i }));
     fireEvent.click(screen.getByRole('button', { name: /Apply/i }));
-    expect(onSubmit).toHaveBeenCalledWith(DEFAULT_GAME_FILTERS);
+    expect(onSubmit).toHaveBeenCalledWith(rooms.DEFAULT_GAME_FILTERS);
   });
 
   it('Cancel calls onCancel', () => {

@@ -1,6 +1,6 @@
 import Tooltip from '@mui/material/Tooltip';
 
-import { App } from '@app/types';
+import { Phase } from 'datatrice';
 import { cx } from '@app/utils';
 
 import { usePhaseBar } from './usePhaseBar';
@@ -12,22 +12,22 @@ export interface PhaseBarProps {
 }
 
 const PHASE_LABELS: ReadonlyArray<{
-  phase: App.Phase;
+  phase: Phase;
   label: string;
   title: string;
   builtInOnDoubleClick?: 'untapAll' | 'drawCard';
 }> = [
-  { phase: App.Phase.Untap, label: 'UNTAP', title: 'Untap step (double-click: untap all)', builtInOnDoubleClick: 'untapAll' },
-  { phase: App.Phase.Upkeep, label: 'UPKP', title: 'Upkeep step' },
-  { phase: App.Phase.Draw, label: 'DRAW', title: 'Draw step (double-click: draw a card)', builtInOnDoubleClick: 'drawCard' },
-  { phase: App.Phase.FirstMain, label: 'M1', title: 'First main phase' },
-  { phase: App.Phase.BeginCombat, label: 'CMBT', title: 'Beginning of combat' },
-  { phase: App.Phase.DeclareAttackers, label: 'ATTK', title: 'Declare attackers' },
-  { phase: App.Phase.DeclareBlockers, label: 'BLCK', title: 'Declare blockers' },
-  { phase: App.Phase.CombatDamage, label: 'DMGE', title: 'Combat damage' },
-  { phase: App.Phase.EndCombat, label: 'ECMB', title: 'End of combat' },
-  { phase: App.Phase.SecondMain, label: 'M2', title: 'Second main phase' },
-  { phase: App.Phase.EndCleanup, label: 'END', title: 'End step / cleanup' },
+  { phase: Phase.Untap, label: 'UNTAP', title: 'Untap step (double-click: untap all)', builtInOnDoubleClick: 'untapAll' },
+  { phase: Phase.Upkeep, label: 'UPKP', title: 'Upkeep step' },
+  { phase: Phase.Draw, label: 'DRAW', title: 'Draw step (double-click: draw a card)', builtInOnDoubleClick: 'drawCard' },
+  { phase: Phase.FirstMain, label: 'M1', title: 'First main phase' },
+  { phase: Phase.BeginCombat, label: 'CMBT', title: 'Beginning of combat' },
+  { phase: Phase.DeclareAttackers, label: 'ATTK', title: 'Declare attackers' },
+  { phase: Phase.DeclareBlockers, label: 'BLCK', title: 'Declare blockers' },
+  { phase: Phase.CombatDamage, label: 'DMGE', title: 'Combat damage' },
+  { phase: Phase.EndCombat, label: 'ECMB', title: 'End of combat' },
+  { phase: Phase.SecondMain, label: 'M2', title: 'Second main phase' },
+  { phase: Phase.EndCleanup, label: 'END', title: 'End step / cleanup' },
 ];
 
 function PhaseBar({ gameId }: PhaseBarProps) {

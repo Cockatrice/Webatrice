@@ -1,6 +1,5 @@
 import { CardDTO, getScryfallUrl } from '@app/services';
-import { App } from '@app/types';
-
+import { ScryfallImageSize } from 'datatrice';
 import './Card.css';
 
 interface CardProps {
@@ -16,7 +15,7 @@ const Card = ({ card }: CardProps) => {
   const oracleUrl = printing?.picurl ?? printing?.picURL;
   const name = card.name?.value;
   const src = oracleUrl
-    ?? (name ? getScryfallUrl({ name }, App.ScryfallImageSize.Normal) : null)
+    ?? (name ? getScryfallUrl({ name }, ScryfallImageSize.Normal) : null)
     ?? undefined;
 
   return <img className="card" src={src} alt={name} />;

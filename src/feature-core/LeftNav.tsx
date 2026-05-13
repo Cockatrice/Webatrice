@@ -9,8 +9,7 @@ import MenuRoundedIcon from '@mui/icons-material/MenuRounded';
 
 import { CardImportDialog } from '@app/feature-widgets/card-import';
 import { Images } from '@app/images';
-import { App } from '@app/types';
-
+import { RouteEnum } from '@app/types';
 import { useLeftNav } from './useLeftNav';
 
 import './LeftNav.css';
@@ -34,7 +33,7 @@ const LeftNav = () => {
     <div className="LeftNav__container">
       <div>
         <div className="LeftNav__logo">
-          <NavLink to={App.RouteEnum.SERVER}>
+          <NavLink to={RouteEnum.SERVER}>
             <img src={Images.Logo} alt="logo" />
           </NavLink>
           {isConnected && (
@@ -50,8 +49,8 @@ const LeftNav = () => {
                     className="LeftNav-nav__link-btn"
                     to={
                       joinedRooms.length
-                        ? generatePath(App.RouteEnum.ROOM, { roomId: joinedRooms[0].info.roomId.toString() })
-                        : App.RouteEnum.SERVER
+                        ? generatePath(RouteEnum.ROOM, { roomId: joinedRooms[0].info.roomId.toString() })
+                        : RouteEnum.SERVER
                     }
                   >
                     Rooms
@@ -61,7 +60,7 @@ const LeftNav = () => {
                     {joinedRooms.map((room) => (
                       <div className="LeftNav-nav__link-menu__item" key={room.info.roomId}>
                         <NavLink className="LeftNav-nav__link-menu__btn"
-                          to={generatePath(App.RouteEnum.ROOM, { roomId: room.info.roomId.toString() })}
+                          to={generatePath(RouteEnum.ROOM, { roomId: room.info.roomId.toString() })}
                         >
                           {room.info.name}
 
@@ -78,8 +77,8 @@ const LeftNav = () => {
                     className="LeftNav-nav__link-btn"
                     to={
                       joinedGames.length
-                        ? generatePath(App.RouteEnum.GAME, { gameId: joinedGames[0].info.gameId.toString() })
-                        : App.RouteEnum.SERVER
+                        ? generatePath(RouteEnum.GAME, { gameId: joinedGames[0].info.gameId.toString() })
+                        : RouteEnum.SERVER
                     }
                   >
                     Games
@@ -89,7 +88,7 @@ const LeftNav = () => {
                     {joinedGames.map((game) => (
                       <div className="LeftNav-nav__link-menu__item" key={game.info.gameId}>
                         <NavLink className="LeftNav-nav__link-menu__btn"
-                          to={generatePath(App.RouteEnum.GAME, { gameId: game.info.gameId.toString() })}
+                          to={generatePath(RouteEnum.GAME, { gameId: game.info.gameId.toString() })}
                         >
                           {game.info.description || `#${game.info.gameId}`}
 
@@ -102,13 +101,13 @@ const LeftNav = () => {
                   </div>
                 </div>
                 <div className="LeftNav-nav__link">
-                  <NavLink className="LeftNav-nav__link-btn" to={App.RouteEnum.DECKS}>
+                  <NavLink className="LeftNav-nav__link-btn" to={RouteEnum.DECKS}>
                     Decks
                     <ArrowDropDownIcon className="LeftNav-nav__link-btn__icon" fontSize="small" />
                   </NavLink>
                 </div>
                 <div className="LeftNav-nav__link">
-                  <NavLink className="LeftNav-nav__link-btn" to={App.RouteEnum.SETTINGS}>
+                  <NavLink className="LeftNav-nav__link-btn" to={RouteEnum.SETTINGS}>
                     Settings
                   </NavLink>
                 </div>

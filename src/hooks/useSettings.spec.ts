@@ -16,7 +16,7 @@ vi.mock('@app/services', () => ({
 }));
 
 vi.mock('@app/types', () => ({
-  App: { APP_USER: '*app' },
+  APP_USER: '*app',
 }));
 
 // Each spec resets module state so the shared store starts fresh.

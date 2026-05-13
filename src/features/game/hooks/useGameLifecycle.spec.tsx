@@ -3,15 +3,15 @@ import { act, renderHook } from '@testing-library/react';
 import { combineReducers, configureStore } from '@reduxjs/toolkit';
 import { Provider } from 'react-redux';
 
+import { games } from 'datatrice';
+
 import { actionReducer } from '../../../store/actions/actionReducer';
-import { gamesReducer } from '../../../store/game/game.reducer';
-import { Types as GameTypes } from '../../../store/game/game.types';
 
 import { useGameLifecycle } from './useGameLifecycle';
 
 function makeStore() {
   return configureStore({
-    reducer: combineReducers({ games: gamesReducer, action: actionReducer }),
+    reducer: combineReducers({ games: games.gamesReducer, action: actionReducer }),
   });
 }
 
@@ -34,7 +34,7 @@ describe('useGameLifecycle', () => {
     );
 
     act(() => {
-      store.dispatch({ type: GameTypes.KICKED, payload: { gameId: 42 } });
+      store.dispatch({ type: games.Types.KICKED, payload: { gameId: 42 } });
     });
 
     expect(onKicked).toHaveBeenCalledTimes(1);
@@ -54,7 +54,7 @@ describe('useGameLifecycle', () => {
     );
 
     act(() => {
-      store.dispatch({ type: GameTypes.GAME_CLOSED, payload: { gameId: 42 } });
+      store.dispatch({ type: games.Types.GAME_CLOSED, payload: { gameId: 42 } });
     });
 
     expect(onGameClosed).toHaveBeenCalledTimes(1);
@@ -74,7 +74,7 @@ describe('useGameLifecycle', () => {
     );
 
     act(() => {
-      store.dispatch({ type: GameTypes.GAME_LEFT, payload: { gameId: 42 } });
+      store.dispatch({ type: games.Types.GAME_LEFT, payload: { gameId: 42 } });
     });
 
     expect(onGameLeft).toHaveBeenCalledTimes(1);
@@ -94,9 +94,9 @@ describe('useGameLifecycle', () => {
     );
 
     act(() => {
-      store.dispatch({ type: GameTypes.KICKED, payload: { gameId: 7 } });
-      store.dispatch({ type: GameTypes.GAME_CLOSED, payload: { gameId: 7 } });
-      store.dispatch({ type: GameTypes.GAME_LEFT, payload: { gameId: 7 } });
+      store.dispatch({ type: games.Types.KICKED, payload: { gameId: 7 } });
+      store.dispatch({ type: games.Types.GAME_CLOSED, payload: { gameId: 7 } });
+      store.dispatch({ type: games.Types.GAME_LEFT, payload: { gameId: 7 } });
     });
 
     expect(onKicked).not.toHaveBeenCalled();
@@ -116,9 +116,9 @@ describe('useGameLifecycle', () => {
     );
 
     act(() => {
-      store.dispatch({ type: GameTypes.KICKED, payload: { gameId: 42 } });
-      store.dispatch({ type: GameTypes.GAME_CLOSED, payload: { gameId: 42 } });
-      store.dispatch({ type: GameTypes.GAME_LEFT, payload: { gameId: 42 } });
+      store.dispatch({ type: games.Types.KICKED, payload: { gameId: 42 } });
+      store.dispatch({ type: games.Types.GAME_CLOSED, payload: { gameId: 42 } });
+      store.dispatch({ type: games.Types.GAME_LEFT, payload: { gameId: 42 } });
     });
 
     expect(onKicked).not.toHaveBeenCalled();
@@ -138,7 +138,7 @@ describe('useGameLifecycle', () => {
     );
 
     act(() => {
-      store.dispatch({ type: GameTypes.GAME_HOST_CHANGED, payload: { gameId: 42, hostId: 7 } });
+      store.dispatch({ type: games.Types.GAME_HOST_CHANGED, payload: { gameId: 42, hostId: 7 } });
     });
 
     expect(onKicked).not.toHaveBeenCalled();

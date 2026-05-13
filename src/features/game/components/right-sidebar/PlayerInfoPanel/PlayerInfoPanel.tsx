@@ -1,6 +1,6 @@
 import { cx } from '@app/utils';
-import { App, Data } from '@app/types';
-
+import { ServerInfo_Card, ServerInfo_Counter } from 'sockatrice/generated';
+import { ZoneName } from 'datatrice';
 import ZoneStack from '../../ui/ZoneStack/ZoneStack';
 
 import { counterCssColor, usePlayerInfoPanel } from './usePlayerInfoPanel';
@@ -10,10 +10,10 @@ import './PlayerInfoPanel.css';
 // All four zones render as landscape thumbs in the info rail. Hand sits
 // between Deck and Graveyard to match desktop's hand counter placement.
 const ZONE_ROWS: Array<{ name: string; label: string; rotated?: boolean }> = [
-  { name: App.ZoneName.DECK, label: 'Deck', rotated: true },
-  { name: App.ZoneName.HAND, label: 'Hand', rotated: true },
-  { name: App.ZoneName.GRAVE, label: 'Graveyard', rotated: true },
-  { name: App.ZoneName.EXILE, label: 'Exile', rotated: true },
+  { name: ZoneName.DECK, label: 'Deck', rotated: true },
+  { name: ZoneName.HAND, label: 'Hand', rotated: true },
+  { name: ZoneName.GRAVE, label: 'Graveyard', rotated: true },
+  { name: ZoneName.EXILE, label: 'Exile', rotated: true },
 ];
 
 export interface PlayerInfoPanelProps {
@@ -21,7 +21,7 @@ export interface PlayerInfoPanelProps {
   playerId: number;
   canEdit?: boolean;
   onContextMenu?: (event: React.MouseEvent) => void;
-  onCardHover?: (card: Data.ServerInfo_Card) => void;
+  onCardHover?: (card: ServerInfo_Card) => void;
   onZoneClick?: (playerId: number, zoneName: string) => void;
   onZoneContextMenu?: (playerId: number, zoneName: string, event: React.MouseEvent) => void;
 }
@@ -48,7 +48,7 @@ function PlayerInfoPanel({
   const conceded = player.properties.conceded;
   const ready = player.properties.readyStart;
 
-  const counterHandlers = (c: Data.ServerInfo_Counter) =>
+  const counterHandlers = (c: ServerInfo_Counter) =>
     canEdit
       ? {
         role: 'button' as const,
@@ -66,7 +66,7 @@ function PlayerInfoPanel({
       }
       : {};
 
-  const renderCounterCircle = (c: Data.ServerInfo_Counter, modifier?: string) => (
+  const renderCounterCircle = (c: ServerInfo_Counter, modifier?: string) => (
     <li
       key={c.id}
       className={cx('player-info-panel__counter', modifier)}
@@ -116,7 +116,7 @@ function PlayerInfoPanel({
             // Hand is context-menu only: desktop's hand counter doesn't open
             // a zone view on left-click, and HandZone already renders the cards.
             const clickHandler =
-              onZoneClick && z.name !== App.ZoneName.HAND
+              onZoneClick && z.name !== ZoneName.HAND
                 ? (name: string) => onZoneClick(playerId, name)
                 : undefined;
             return (

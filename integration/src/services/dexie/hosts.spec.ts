@@ -1,11 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { HostDTO } from '@app/services';
-import type { App } from '@app/types';
-
+import { Host } from '@app/types';
 import { resetDexie } from './resetDexie';
 
-const makeRow = (overrides: Partial<App.Host> = {}): App.Host => ({
+const makeRow = (overrides: Partial<Host> = {}): Host => ({
   name: 'Test',
   host: 'host.example',
   port: '4747',

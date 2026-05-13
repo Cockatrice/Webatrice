@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState, RefObject } from 'react';
 import { useWebClient } from '@app/hooks';
-import { GameSelectors, useAppSelector } from '@app/store';
-import type { Enriched } from '@app/types';
-
-const EMPTY_MESSAGES: Enriched.GameMessage[] = [];
+import { games } from 'datatrice';
+import { useAppSelector } from '@app/store';
+import { GameMessage, PlayerEntry } from 'datatrice';
+const EMPTY_MESSAGES: GameMessage[] = [];
 
 export function formatElapsed(totalSeconds: number): string {
   const s = Math.max(0, Math.floor(totalSeconds));
@@ -14,8 +14,8 @@ export function formatElapsed(totalSeconds: number): string {
 }
 
 export interface GameLog {
-  messages: Enriched.GameMessage[];
-  players: Record<number, Enriched.PlayerEntry> | undefined;
+  messages: GameMessage[];
+  players: Record<number, PlayerEntry> | undefined;
   displaySeconds: number;
   draft: string;
   setDraft: (v: string) => void;
@@ -34,13 +34,13 @@ export function useGameLog({ gameId, listRef }: UseGameLogArgs): GameLog {
   // (see game.selectors.ts). The runtime array is empty, so the cast is safe;
   // fixing the selector's fallback type is out of scope for this refactor.
   const messages = useAppSelector((state) =>
-    gameId != null ? GameSelectors.getMessages(state, gameId) : EMPTY_MESSAGES,
-  ) as Enriched.GameMessage[];
+    gameId != null ? games.Selectors.getMessages(state, gameId) : EMPTY_MESSAGES,
+  ) as GameMessage[];
   const players = useAppSelector((state) =>
-    gameId != null ? GameSelectors.getPlayers(state, gameId) : undefined,
+    gameId != null ? games.Selectors.getPlayers(state, gameId) : undefined,
   );
   const secondsElapsed = useAppSelector((state) =>
-    gameId != null ? GameSelectors.getSecondsElapsed(state, gameId) : 0,
+    gameId != null ? games.Selectors.getSecondsElapsed(state, gameId) : 0,
   );
 
   // Local 1Hz ticker, resynced from Redux whenever a server event delivers a

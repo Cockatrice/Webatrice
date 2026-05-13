@@ -1,3 +1,5 @@
+import type { ShortcutScope } from '@app/types';
+
 export type ActionId =
   | 'app.openSettings'
   | 'app.toggleFullscreen'
@@ -24,7 +26,7 @@ export type ShortcutGroupId =
   | 'room';
 
 export interface ShortcutDef {
-  scope: import('@app/types').App.ShortcutScope;
+  scope: ShortcutScope;
   group: ShortcutGroupId;
   sequences: string[];
 }

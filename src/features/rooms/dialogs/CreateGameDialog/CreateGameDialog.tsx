@@ -11,16 +11,17 @@ import RadioGroup from '@mui/material/RadioGroup';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 
-import { ServerSelectors, useAppSelector } from '@app/store';
-import type { App, Enriched } from '@app/types';
-
+import { server } from 'datatrice';
+import { useAppSelector } from '@app/store';
+import { CreateGameParams } from 'sockatrice/generated';
+import { GametypeMap } from 'datatrice';
 import './CreateGameDialog.css';
 
 export interface CreateGameDialogProps {
   isOpen: boolean;
-  gametypeMap: Enriched.GametypeMap;
+  gametypeMap: GametypeMap;
   onCancel: () => void;
-  onSubmit: (params: App.CreateGameParams) => void;
+  onSubmit: (params: CreateGameParams) => void;
 }
 
 const DEFAULT_MAX_PLAYERS = 2;
@@ -63,8 +64,8 @@ function initialFormState(isRegistered: boolean): FormState {
 }
 
 function CreateGameDialog({ isOpen, gametypeMap, onCancel, onSubmit }: CreateGameDialogProps) {
-  const isRegistered = useAppSelector(ServerSelectors.getIsUserRegistered);
-  const isJudge = useAppSelector(ServerSelectors.getIsUserJudge);
+  const isRegistered = useAppSelector(server.Selectors.getIsUserRegistered);
+  const isJudge = useAppSelector(server.Selectors.getIsUserJudge);
 
   const gameTypes = useMemo(() => {
     return Object.entries(gametypeMap).map(([id, name]) => ({ id: Number(id), name }));
@@ -84,7 +85,7 @@ function CreateGameDialog({ isOpen, gametypeMap, onCancel, onSubmit }: CreateGam
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const params: App.CreateGameParams = {
+    const params: CreateGameParams = {
       description: form.description,
       password: form.password,
       maxPlayers: form.maxPlayers,

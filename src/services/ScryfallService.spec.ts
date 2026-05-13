@@ -1,4 +1,4 @@
-import { App } from '@app/types';
+import { ScryfallImageSize } from 'datatrice';
 import {
   getScryfallUrlById,
   getScryfallUrlByName,
@@ -14,7 +14,7 @@ describe('ScryfallService', () => {
     });
 
     it('honors the requested size', () => {
-      expect(getScryfallUrlById('abc-123', App.ScryfallImageSize.Normal)).toBe(
+      expect(getScryfallUrlById('abc-123', ScryfallImageSize.Normal)).toBe(
         'https://api.scryfall.com/cards/abc-123?format=image&version=normal',
       );
     });
@@ -32,7 +32,7 @@ describe('ScryfallService', () => {
     });
 
     it('honors the requested size', () => {
-      expect(getScryfallUrlByName('Island', App.ScryfallImageSize.Normal)).toBe(
+      expect(getScryfallUrlByName('Island', ScryfallImageSize.Normal)).toBe(
         'https://api.scryfall.com/cards/named?exact=Island&format=image&version=normal',
       );
     });

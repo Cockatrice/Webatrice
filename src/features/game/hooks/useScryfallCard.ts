@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { App } from '@app/types';
+import { ScryfallImageSize } from 'datatrice';
 import { getScryfallUrl } from '@app/services';
 
 export interface ScryfallCard {
@@ -18,8 +18,8 @@ export function useScryfallCard(card: CardLike | null | undefined): ScryfallCard
     if (!card) {
       return { smallUrl: null, normalUrl: null, ready: false };
     }
-    const smallUrl = getScryfallUrl(card, App.ScryfallImageSize.Small);
-    const normalUrl = getScryfallUrl(card, App.ScryfallImageSize.Normal);
+    const smallUrl = getScryfallUrl(card, ScryfallImageSize.Small);
+    const normalUrl = getScryfallUrl(card, ScryfallImageSize.Normal);
     return {
       smallUrl,
       normalUrl,

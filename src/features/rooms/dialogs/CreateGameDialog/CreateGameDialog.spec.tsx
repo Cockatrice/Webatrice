@@ -1,12 +1,12 @@
 import { fireEvent, screen } from '@testing-library/react';
 import { renderWithProviders, makeStoreState, makeUser } from '../../../../__test-utils__';
-import { Data } from '@app/types';
+import { ServerInfo_User_UserLevelFlag } from 'sockatrice/generated';
 import CreateGameDialog from './CreateGameDialog';
 
 function renderDialog(opts: { isJudge?: boolean; isRegistered?: boolean; gametypeMap?: Record<number, string> } = {}) {
   const userLevel =
-    (opts.isRegistered ? Data.ServerInfo_User_UserLevelFlag.IsRegistered : 0) |
-    (opts.isJudge ? Data.ServerInfo_User_UserLevelFlag.IsJudge : 0);
+    (opts.isRegistered ? ServerInfo_User_UserLevelFlag.IsRegistered : 0) |
+    (opts.isJudge ? ServerInfo_User_UserLevelFlag.IsJudge : 0);
   const onSubmit = vi.fn();
   const onCancel = vi.fn();
   renderWithProviders(

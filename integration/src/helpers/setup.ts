@@ -4,19 +4,36 @@ import '../../../src/polyfills';
 import 'fake-indexeddb/auto';
 
 import { create } from '@bufbuild/protobuf';
+import { combineReducers } from '@reduxjs/toolkit';
 import { afterEach, beforeEach, vi } from 'vitest';
 
-import { ServerDispatch, RoomsDispatch, GameDispatch } from '@app/store';
-import { Data } from '@app/types';
-import { PROTOCOL_VERSION } from 'sockatrice';
+import { rootReducerMap } from '@app/store';
+import { attachResponseHandlers, createStore, games, rooms, server } from 'datatrice';
 
-import { WebClient, setPendingOptions } from '@app/websocket';
-import { WebsocketTypes } from '@app/websocket/types';
+// Integration tests run in vitest (node) with a mocked WebSocket; they don't
+// mount <DatatriceProvider>, so they can't get a store from React context.
+// This module owns the integration store directly. Specs import it from here
+// — NOT from `@app/store`, which no longer exports a singleton post-v0.5.0
+// migration.
+export const store = createStore({ reducer: combineReducers(rootReducerMap) });
 import {
-  CLIENT_CONFIG,
-  CLIENT_OPTIONS,
-  createWebClientResponse,
-} from '@app/api';
+  PROTOCOL_VERSION,
+  WebClient,
+  setPendingOptions,
+} from 'sockatrice';
+import { WebsocketTypes } from 'sockatrice/types';
+import {
+  Command_Login_ext,
+  Event_ServerIdentificationSchema,
+  Event_ServerIdentification_ServerOptions,
+  Event_ServerIdentification_ext,
+  Response_Login_ext,
+  Response_LoginSchema,
+  Response_ResponseCode,
+  ServerInfo_UserSchema,
+  ServerInfo_User_UserLevelFlag,
+} from 'sockatrice/generated';
+import { CLIENT_CONFIG, CLIENT_OPTIONS } from '../../../src/clientConfig';
 
 export { PROTOCOL_VERSION };
 
@@ -102,9 +119,9 @@ function resetAll(): void {
   client.protobuf.resetCommands();
   client.status = WebsocketTypes.StatusEnum.DISCONNECTED;
 
-  ServerDispatch.clearStore();
-  RoomsDispatch.clearStore();
-  GameDispatch.clearStore();
+  store.dispatch(server.Actions.clearStore());
+  store.dispatch(rooms.Actions.clearStore());
+  store.dispatch(games.Actions.clearStore());
 
   if (currentMockInstance) {
     currentMockInstance.onopen = null;
@@ -139,8 +156,8 @@ export function connectAndHandshake(
 ): void {
   connectRaw(overrides);
   deliverMessage(buildSessionEventMessage(
-    Data.Event_ServerIdentification_ext,
-    create(Data.Event_ServerIdentificationSchema, {
+    Event_ServerIdentification_ext,
+    create(Event_ServerIdentificationSchema, {
       serverName: 'TestServer',
       serverVersion: '2.8.0',
       protocolVersion: PROTOCOL_VERSION,
@@ -153,12 +170,12 @@ export function connectAndHandshakeWithSalt(
 ): void {
   connectRaw(overrides);
   deliverMessage(buildSessionEventMessage(
-    Data.Event_ServerIdentification_ext,
-    create(Data.Event_ServerIdentificationSchema, {
+    Event_ServerIdentification_ext,
+    create(Event_ServerIdentificationSchema, {
       serverName: 'TestServer',
       serverVersion: '2.8.0',
       protocolVersion: PROTOCOL_VERSION,
-      serverOptions: Data.Event_ServerIdentification_ServerOptions.SupportsPasswordHash,
+      serverOptions: Event_ServerIdentification_ServerOptions.SupportsPasswordHash,
     })
   ));
 }
@@ -166,16 +183,16 @@ export function connectAndHandshakeWithSalt(
 export function connectAndLogin(userName: string = 'alice'): void {
   connectAndHandshake({ userName });
 
-  const login = findLastSessionCommand(Data.Command_Login_ext);
-  const userInfo = create(Data.ServerInfo_UserSchema, {
+  const login = findLastSessionCommand(Command_Login_ext);
+  const userInfo = create(ServerInfo_UserSchema, {
     name: userName,
-    userLevel: Data.ServerInfo_User_UserLevelFlag.IsRegistered,
+    userLevel: ServerInfo_User_UserLevelFlag.IsRegistered,
   });
   deliverMessage(buildResponseMessage(buildResponse({
     cmdId: login.cmdId,
-    responseCode: Data.Response_ResponseCode.RespOk,
-    ext: Data.Response_Login_ext,
-    value: create(Data.Response_LoginSchema, {
+    responseCode: Response_ResponseCode.RespOk,
+    ext: Response_Login_ext,
+    value: create(Response_LoginSchema, {
       userInfo,
       buddyList: [],
       ignoreList: [],
@@ -188,7 +205,7 @@ installMockWebSocket();
 beforeEach(() => {
   vi.useFakeTimers();
   new WebClient(
-    createWebClientResponse(),
+    attachResponseHandlers(store),
     CLIENT_CONFIG,
     CLIENT_OPTIONS,
   );

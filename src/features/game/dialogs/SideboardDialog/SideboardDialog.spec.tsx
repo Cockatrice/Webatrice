@@ -1,6 +1,5 @@
 import { screen, fireEvent, within } from '@testing-library/react';
-import { App } from '@app/types';
-
+import { ZoneName } from 'datatrice';
 import { renderWithProviders } from '../../../../__test-utils__';
 import SideboardDialog, { applyMoves } from './SideboardDialog';
 
@@ -56,8 +55,8 @@ describe('SideboardDialog', () => {
     fireEvent.click(screen.getByRole('button', { name: /apply plan/i }));
 
     expect(onSubmit).toHaveBeenCalledWith([
-      { cardName: 'Island', startZone: App.ZoneName.DECK, targetZone: App.ZoneName.SIDEBOARD },
-      { cardName: 'Counterspell', startZone: App.ZoneName.SIDEBOARD, targetZone: App.ZoneName.DECK },
+      { cardName: 'Island', startZone: ZoneName.DECK, targetZone: ZoneName.SIDEBOARD },
+      { cardName: 'Counterspell', startZone: ZoneName.SIDEBOARD, targetZone: ZoneName.DECK },
     ]);
   });
 
@@ -123,8 +122,8 @@ describe('applyMoves', () => {
     const sb = [{ id: 3, name: 'C' }];
 
     const result = applyMoves(deck, sb, [
-      { cardName: 'A', startZone: App.ZoneName.DECK, targetZone: App.ZoneName.SIDEBOARD },
-      { cardName: 'C', startZone: App.ZoneName.SIDEBOARD, targetZone: App.ZoneName.DECK },
+      { cardName: 'A', startZone: ZoneName.DECK, targetZone: ZoneName.SIDEBOARD },
+      { cardName: 'C', startZone: ZoneName.SIDEBOARD, targetZone: ZoneName.DECK },
     ]);
 
     expect(result.deck.map((c) => c.name).sort()).toEqual(['B', 'C']);
@@ -134,7 +133,7 @@ describe('applyMoves', () => {
   it('drops moves that reference cards not present in the source zone', () => {
     const deck = [{ id: 1, name: 'A' }];
     const result = applyMoves(deck, [], [
-      { cardName: 'Missing', startZone: App.ZoneName.DECK, targetZone: App.ZoneName.SIDEBOARD },
+      { cardName: 'Missing', startZone: ZoneName.DECK, targetZone: ZoneName.SIDEBOARD },
     ]);
 
     expect(result.deck).toHaveLength(1);

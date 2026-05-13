@@ -8,7 +8,8 @@ import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
 import CloseIcon from '@mui/icons-material/Close';
 
-import { GameSelectors, useAppSelector } from '@app/store';
+import { games } from 'datatrice';
+import { useAppSelector } from '@app/store';
 
 import './GameInfoDialog.css';
 
@@ -42,7 +43,7 @@ function formatElapsed(totalSeconds: number): string {
 
 function GameInfoDialog({ isOpen, gameId, onClose }: GameInfoDialogProps) {
   const game = useAppSelector((state) =>
-    gameId != null ? GameSelectors.getGame(state, gameId) : undefined,
+    gameId != null ? games.Selectors.getGame(state, gameId) : undefined,
   );
 
   if (!game) {

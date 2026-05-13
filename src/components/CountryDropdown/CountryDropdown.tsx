@@ -5,8 +5,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useLocaleSort } from '@app/hooks';
 import { Images } from '@app/images';
-import { App } from '@app/types';
-
+import { countryCodes } from '@app/types';
 import type { FinalFormFieldProps } from '../fieldTypes';
 
 import './CountryDropdown.css';
@@ -18,7 +17,7 @@ const CountryDropdown = ({ input }: CountryDropdownProps) => {
   const currentValue = (input.value as string | undefined) ?? '';
 
   const translateCountry = (country: string) => t(`Common.countries.${country}`);
-  const sortedCountries = useLocaleSort(App.countryCodes, translateCountry);
+  const sortedCountries = useLocaleSort(countryCodes, translateCountry);
 
   return (
     <FormControl size="small" variant="outlined" className="CountryDropdown">

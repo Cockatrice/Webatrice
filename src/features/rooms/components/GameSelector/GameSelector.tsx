@@ -3,18 +3,12 @@ import { generatePath, useNavigate } from 'react-router-dom';
 import Paper from '@mui/material/Paper';
 import Typography from '@mui/material/Typography';
 
-import {
-  GameSelectors,
-  GameTypes,
-  RoomsActions,
-  RoomsSelectors,
-  ServerSelectors,
-  useAppDispatch,
-  useAppSelector,
-  type GameFilters,
-} from '@app/store';
+import { server, rooms, games, type GameFilters } from 'datatrice';
+import { useAppDispatch, useAppSelector } from '@app/store';
 import { useReduxEffect, useWebClient } from '@app/hooks';
-import { App, type Data, type Enriched } from '@app/types';
+import { CreateGameParams, Event_GameJoined, JoinGameParams } from 'sockatrice/generated';
+import { Room } from 'datatrice';
+import { RouteEnum } from '@app/types';
 import { AlertDialog, PromptDialog } from '@app/dialogs';
 
 import OpenGames from '../OpenGames';
@@ -25,7 +19,7 @@ import GameSelectorToolbar from './GameSelectorToolbar';
 import './GameSelector.css';
 
 interface GameSelectorProps {
-  room: Enriched.Room;
+  room: Room;
 }
 
 interface PendingPasswordJoin {
@@ -40,28 +34,28 @@ const GameSelector = ({ room }: GameSelectorProps) => {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
 
-  const selectedGameId = useAppSelector((state) => RoomsSelectors.getSelectedGameId(state, roomId));
+  const selectedGameId = useAppSelector((state) => rooms.Selectors.getSelectedGameId(state, roomId));
   const selectedGame = useAppSelector((state) =>
-    selectedGameId != null ? RoomsSelectors.getRoomGames(state, roomId)[selectedGameId] : undefined,
+    selectedGameId != null ? rooms.Selectors.getRoomGames(state, roomId)[selectedGameId] : undefined,
   );
-  const counts = useAppSelector((state) => RoomsSelectors.getRoomGameCounts(state, roomId));
-  const isFilterActive = useAppSelector((state) => RoomsSelectors.isGameFilterActive(state, roomId));
-  const filters = useAppSelector((state) => RoomsSelectors.getGameFilters(state, roomId));
-  const isJudgeUser = useAppSelector(ServerSelectors.getIsUserJudge);
-  const joinPending = useAppSelector(RoomsSelectors.getJoinGamePending);
-  const joinError = useAppSelector(RoomsSelectors.getJoinGameError);
-  const activeGameIds = useAppSelector(GameSelectors.getActiveGameIds);
+  const counts = useAppSelector((state) => rooms.Selectors.getRoomGameCounts(state, roomId));
+  const isFilterActive = useAppSelector((state) => rooms.Selectors.isGameFilterActive(state, roomId));
+  const filters = useAppSelector((state) => rooms.Selectors.getGameFilters(state, roomId));
+  const isJudgeUser = useAppSelector(server.Selectors.getIsUserJudge);
+  const joinPending = useAppSelector(rooms.Selectors.getJoinGamePending);
+  const joinError = useAppSelector(rooms.Selectors.getJoinGameError);
+  const activeGameIds = useAppSelector(games.Selectors.getActiveGameIds);
 
   // Mirrors Server.tsx's JOIN_ROOM → navigate(ROOM) pattern: when Event_GameJoined
   // lands, we're actually in the game — route to /game/:gameId so the URL
   // identifies which joined game to display.
-  useReduxEffect<{ data: Data.Event_GameJoined }>((action) => {
+  useReduxEffect<{ data: Event_GameJoined }>((action) => {
     const gameId = action.payload.data.gameInfo?.gameId;
     if (gameId == null) {
       return;
     }
-    navigate(generatePath(App.RouteEnum.GAME, { gameId: gameId.toString() }));
-  }, GameTypes.GAME_JOINED, [navigate]);
+    navigate(generatePath(RouteEnum.GAME, { gameId: gameId.toString() }));
+  }, games.Types.GAME_JOINED, [navigate]);
 
   const [createOpen, setCreateOpen] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
@@ -74,10 +68,10 @@ const GameSelector = ({ room }: GameSelectorProps) => {
       // JoinGame — the server would reject it with RespContextError — and go
       // straight to the game view.
       if (activeGameIds.includes(gameId)) {
-        navigate(generatePath(App.RouteEnum.GAME, { gameId: gameId.toString() }));
+        navigate(generatePath(RouteEnum.GAME, { gameId: gameId.toString() }));
         return;
       }
-      const params: App.JoinGameParams = {
+      const params: JoinGameParams = {
         gameId,
         password,
         spectator: asSpectator,
@@ -120,13 +114,13 @@ const GameSelector = ({ room }: GameSelectorProps) => {
     Boolean(selectedGame && selectedGame.info.playerCount < selectedGame.info.maxPlayers) && !joinPending;
   const canSpectate = Boolean(selectedGame && selectedGame.info.spectatorsAllowed) && !joinPending;
 
-  const handleCreateSubmit = (params: App.CreateGameParams) => {
+  const handleCreateSubmit = (params: CreateGameParams) => {
     webClient.request.rooms.createGame(roomId, params);
     setCreateOpen(false);
   };
 
   const handleFilterSubmit = (next: GameFilters) => {
-    dispatch(RoomsActions.setGameFilters({ roomId, filters: next }));
+    dispatch(rooms.Actions.setGameFilters({ roomId, filters: next }));
     setFilterOpen(false);
   };
 
@@ -153,7 +147,7 @@ const GameSelector = ({ room }: GameSelectorProps) => {
         canSpectate={canSpectate}
         isJudgeUser={isJudgeUser}
         onFilter={() => setFilterOpen(true)}
-        onClearFilter={() => dispatch(RoomsActions.clearGameFilters({ roomId }))}
+        onClearFilter={() => dispatch(rooms.Actions.clearGameFilters({ roomId }))}
         onCreate={() => setCreateOpen(true)}
         onJoin={() => beginJoin(false, false)}
         onSpectate={() => beginJoin(true, false)}
@@ -186,7 +180,7 @@ const GameSelector = ({ room }: GameSelectorProps) => {
         isOpen={joinError !== null}
         title="Error"
         message={joinError?.message ?? ''}
-        onDismiss={() => dispatch(RoomsActions.clearJoinGameError())}
+        onDismiss={() => dispatch(rooms.Actions.clearJoinGameError())}
       />
     </Paper>
   );

@@ -11,8 +11,8 @@
 // as a later-milestone item.
 
 import { screen, fireEvent, waitFor } from '@testing-library/react';
-import { App, Data } from '@app/types';
-
+import { ServerInfo_Card } from 'sockatrice/generated';
+import { ZoneName } from 'datatrice';
 vi.mock('../../components/Layout/Layout', () => ({
   default: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
@@ -25,35 +25,35 @@ import {
   makePlayerEntry,
   makePlayerProperties,
   makeZoneEntry,
-} from '../../store/game/__mocks__/fixtures';
+} from '../../__test-utils__/games-fixtures';
 import Game from './Game';
 
-function buildGame(card: Data.ServerInfo_Card) {
+function buildGame(card: ServerInfo_Card) {
   const local = makePlayerEntry({
     properties: makePlayerProperties({
       playerId: 1,
       userInfo: makeUser({ name: 'P1' }),
     }),
     zones: {
-      [App.ZoneName.TABLE]: makeZoneEntry({
-        name: App.ZoneName.TABLE,
+      [ZoneName.TABLE]: makeZoneEntry({
+        name: ZoneName.TABLE,
         cards: [card],
         cardCount: 1,
       }),
-      [App.ZoneName.HAND]: makeZoneEntry({ name: App.ZoneName.HAND }),
-      [App.ZoneName.DECK]: makeZoneEntry({ name: App.ZoneName.DECK, cardCount: 40 }),
-      [App.ZoneName.GRAVE]: makeZoneEntry({ name: App.ZoneName.GRAVE }),
-      [App.ZoneName.EXILE]: makeZoneEntry({ name: App.ZoneName.EXILE }),
+      [ZoneName.HAND]: makeZoneEntry({ name: ZoneName.HAND }),
+      [ZoneName.DECK]: makeZoneEntry({ name: ZoneName.DECK, cardCount: 40 }),
+      [ZoneName.GRAVE]: makeZoneEntry({ name: ZoneName.GRAVE }),
+      [ZoneName.EXILE]: makeZoneEntry({ name: ZoneName.EXILE }),
     },
   });
   const opponent = makePlayerEntry({
     properties: makePlayerProperties({ playerId: 2, userInfo: makeUser({ name: 'P2' }) }),
     zones: {
-      [App.ZoneName.TABLE]: makeZoneEntry({ name: App.ZoneName.TABLE }),
-      [App.ZoneName.HAND]: makeZoneEntry({ name: App.ZoneName.HAND }),
-      [App.ZoneName.DECK]: makeZoneEntry({ name: App.ZoneName.DECK }),
-      [App.ZoneName.GRAVE]: makeZoneEntry({ name: App.ZoneName.GRAVE }),
-      [App.ZoneName.EXILE]: makeZoneEntry({ name: App.ZoneName.EXILE }),
+      [ZoneName.TABLE]: makeZoneEntry({ name: ZoneName.TABLE }),
+      [ZoneName.HAND]: makeZoneEntry({ name: ZoneName.HAND }),
+      [ZoneName.DECK]: makeZoneEntry({ name: ZoneName.DECK }),
+      [ZoneName.GRAVE]: makeZoneEntry({ name: ZoneName.GRAVE }),
+      [ZoneName.EXILE]: makeZoneEntry({ name: ZoneName.EXILE }),
     },
   });
   return makeStoreState({
@@ -98,7 +98,7 @@ describe('Game drag-drop (keyboard sensor)', () => {
 
     const grave = screen
       .getByTestId('player-board-1')
-      .querySelector(`[data-testid="zone-stack-${App.ZoneName.GRAVE}"]`) as HTMLElement;
+      .querySelector(`[data-testid="zone-stack-${ZoneName.GRAVE}"]`) as HTMLElement;
 
     expect(grave).not.toBeNull();
     expect(grave.getAttribute('tabindex')).toBe('0');
@@ -123,7 +123,7 @@ describe('Game drag-drop (keyboard sensor)', () => {
     // Tab to the graveyard droppable and drop.
     const grave = screen
       .getByTestId('player-board-1')
-      .querySelector(`[data-testid="zone-stack-${App.ZoneName.GRAVE}"]`) as HTMLElement;
+      .querySelector(`[data-testid="zone-stack-${ZoneName.GRAVE}"]`) as HTMLElement;
     grave.focus();
     fireEvent.keyDown(grave, { key: ' ', code: 'Space' });
 

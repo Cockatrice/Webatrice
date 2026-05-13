@@ -1,9 +1,8 @@
 import { IndexableType } from 'dexie';
-import { App } from '@app/types';
-
+import { Format } from '@app/types';
 import { dexieService } from '../DexieService';
 
-export class FormatDTO extends App.Format {
+export class FormatDTO extends Format {
   save() {
     return dexieService.formats.put(this);
   }

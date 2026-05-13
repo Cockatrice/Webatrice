@@ -3,10 +3,11 @@ import { create } from '@bufbuild/protobuf';
 import { useLocation } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { Data } from '@app/types';
-import { Command_GameSay_ext } from '@app/generated';
-import { GameDispatch, ServerDispatch, store } from '@app/store';
-import { WebsocketTypes } from '@app/websocket/types';
+import { Event_GameJoined, Event_GameJoinedSchema, Event_GameStateChanged, Event_GameStateChangedSchema, ServerInfo_GameSchema, ServerInfo_PlayerPropertiesSchema, ServerInfo_PlayerSchema, ServerInfo_UserSchema, ServerInfo_ZoneSchema } from 'sockatrice/generated';
+import { Command_GameSay_ext } from 'sockatrice/generated';
+import { store } from '../helpers/setup';
+import { games, server } from 'datatrice';
+import { WebsocketTypes } from 'sockatrice/types';
 
 import { Game } from '@app/features/game';
 import { renderAppScreen } from './helpers';
@@ -22,9 +23,9 @@ function buildEventGameJoined(args: {
   gameId: number;
   localPlayerId: number;
   hostId: number;
-}): Data.Event_GameJoined {
-  return create(Data.Event_GameJoinedSchema, {
-    gameInfo: create(Data.ServerInfo_GameSchema, {
+}): Event_GameJoined {
+  return create(Event_GameJoinedSchema, {
+    gameInfo: create(ServerInfo_GameSchema, {
       gameId: args.gameId,
       roomId: 1,
       description: 'Integration Test Game',
@@ -42,16 +43,16 @@ function buildEventGameJoined(args: {
 function buildEventGameStateChanged(
   playerIds: number[],
   localId: number,
-): Data.Event_GameStateChanged {
-  return create(Data.Event_GameStateChangedSchema, {
+): Event_GameStateChanged {
+  return create(Event_GameStateChangedSchema, {
     gameStarted: true,
     activePlayerId: localId,
     activePhase: 0,
     playerList: playerIds.map((pid) =>
-      create(Data.ServerInfo_PlayerSchema, {
-        properties: create(Data.ServerInfo_PlayerPropertiesSchema, {
+      create(ServerInfo_PlayerSchema, {
+        properties: create(ServerInfo_PlayerPropertiesSchema, {
           playerId: pid,
-          userInfo: create(Data.ServerInfo_UserSchema, { name: `P${pid}` }),
+          userInfo: create(ServerInfo_UserSchema, { name: `P${pid}` }),
           spectator: false,
           conceded: false,
           readyStart: false,
@@ -59,35 +60,35 @@ function buildEventGameStateChanged(
         }),
         deckList: '',
         zoneList: [
-          create(Data.ServerInfo_ZoneSchema, {
+          create(ServerInfo_ZoneSchema, {
             name: 'table',
             type: 1,
             withCoords: true,
             cardCount: 0,
             cardList: [],
           }),
-          create(Data.ServerInfo_ZoneSchema, {
+          create(ServerInfo_ZoneSchema, {
             name: 'hand',
             type: 0,
             withCoords: false,
             cardCount: 0,
             cardList: [],
           }),
-          create(Data.ServerInfo_ZoneSchema, {
+          create(ServerInfo_ZoneSchema, {
             name: 'deck',
             type: 2,
             withCoords: false,
             cardCount: 40,
             cardList: [],
           }),
-          create(Data.ServerInfo_ZoneSchema, {
+          create(ServerInfo_ZoneSchema, {
             name: 'grave',
             type: 1,
             withCoords: false,
             cardCount: 0,
             cardList: [],
           }),
-          create(Data.ServerInfo_ZoneSchema, {
+          create(ServerInfo_ZoneSchema, {
             name: 'rfg',
             type: 1,
             withCoords: false,
@@ -104,16 +105,16 @@ function buildEventGameStateChanged(
 
 function simulateConnected() {
   act(() => {
-    ServerDispatch.updateStatus(WebsocketTypes.StatusEnum.LOGGED_IN, null);
+    store.dispatch(server.Actions.updateStatus({ status: { state: WebsocketTypes.StatusEnum.LOGGED_IN, description: null } }));
   });
 }
 
 afterEach(() => {
   act(() => {
     for (const gameId of Object.keys(store.getState().games.games)) {
-      GameDispatch.gameLeft(Number(gameId));
+      store.dispatch(games.Actions.gameLeft({ gameId: Number(gameId) }));
     }
-    ServerDispatch.updateStatus(WebsocketTypes.StatusEnum.DISCONNECTED, null);
+    store.dispatch(server.Actions.updateStatus({ status: { state: WebsocketTypes.StatusEnum.DISCONNECTED, description: null } }));
   });
 });
 
@@ -133,19 +134,14 @@ describe('Game board integration', () => {
     expect(screen.getByTestId('right-panel')).toBeInTheDocument();
   });
 
-  it('transitions from empty → active board when gameJoined + gameStateChanged fire', async () => {
+  it('transitions from empty â†’ active board when gameJoined + gameStateChanged fire', async () => {
     renderAppScreen(<Game />);
 
     expect(screen.getByTestId('game-empty')).toBeInTheDocument();
 
     act(() => {
-      GameDispatch.gameJoined(
-        buildEventGameJoined({ gameId: 42, localPlayerId: 1, hostId: 1 }),
-      );
-      GameDispatch.gameStateChanged(
-        42,
-        buildEventGameStateChanged([1, 2], 1),
-      );
+      store.dispatch(games.Actions.gameJoined({ data: buildEventGameJoined({ gameId: 42, localPlayerId: 1, hostId: 1 }), }));
+      store.dispatch(games.Actions.gameStateChanged({ gameId: 42, data: buildEventGameStateChanged([1, 2], 1), }));
     });
 
     await waitFor(() => {
@@ -161,13 +157,8 @@ describe('Game board integration', () => {
     renderAppScreen(<Game />);
 
     act(() => {
-      GameDispatch.gameJoined(
-        buildEventGameJoined({ gameId: 42, localPlayerId: 1, hostId: 1 }),
-      );
-      GameDispatch.gameStateChanged(
-        42,
-        buildEventGameStateChanged([1, 2], 1),
-      );
+      store.dispatch(games.Actions.gameJoined({ data: buildEventGameJoined({ gameId: 42, localPlayerId: 1, hostId: 1 }), }));
+      store.dispatch(games.Actions.gameStateChanged({ gameId: 42, data: buildEventGameStateChanged([1, 2], 1), }));
     });
 
     await waitFor(() => {
@@ -175,7 +166,7 @@ describe('Game board integration', () => {
     });
 
     act(() => {
-      GameDispatch.gameLeft(42);
+      store.dispatch(games.Actions.gameLeft({ gameId: 42 }));
     });
 
     await waitFor(() => {
@@ -189,13 +180,8 @@ describe('Game board integration', () => {
     renderAppScreen(<Game />);
 
     act(() => {
-      GameDispatch.gameJoined(
-        buildEventGameJoined({ gameId: 42, localPlayerId: 1, hostId: 1 }),
-      );
-      GameDispatch.gameStateChanged(
-        42,
-        buildEventGameStateChanged([1, 2], 1),
-      );
+      store.dispatch(games.Actions.gameJoined({ data: buildEventGameJoined({ gameId: 42, localPlayerId: 1, hostId: 1 }), }));
+      store.dispatch(games.Actions.gameStateChanged({ gameId: 42, data: buildEventGameStateChanged([1, 2], 1), }));
     });
 
     await waitFor(() => {
@@ -209,10 +195,7 @@ describe('Game board integration', () => {
     expect(screen.getByTestId('player-slot-selector-b')).toBeInTheDocument();
 
     act(() => {
-      GameDispatch.gameStateChanged(
-        42,
-        buildEventGameStateChanged([1, 2, 3], 1),
-      );
+      store.dispatch(games.Actions.gameStateChanged({ gameId: 42, data: buildEventGameStateChanged([1, 2, 3], 1), }));
     });
 
     await waitFor(() => {
@@ -227,13 +210,8 @@ describe('Game board integration', () => {
     renderAppScreen(<Game />);
 
     act(() => {
-      GameDispatch.gameJoined(
-        buildEventGameJoined({ gameId: 42, localPlayerId: 1, hostId: 1 }),
-      );
-      GameDispatch.gameStateChanged(
-        42,
-        buildEventGameStateChanged([1, 2], 1),
-      );
+      store.dispatch(games.Actions.gameJoined({ data: buildEventGameJoined({ gameId: 42, localPlayerId: 1, hostId: 1 }), }));
+      store.dispatch(games.Actions.gameStateChanged({ gameId: 42, data: buildEventGameStateChanged([1, 2], 1), }));
     });
 
     await waitFor(() => {
@@ -247,13 +225,8 @@ describe('Game board integration', () => {
     renderAppScreen(<Game />);
 
     act(() => {
-      GameDispatch.gameJoined(
-        buildEventGameJoined({ gameId: 42, localPlayerId: 1, hostId: 1 }),
-      );
-      GameDispatch.gameStateChanged(
-        42,
-        buildEventGameStateChanged([1, 2], 1),
-      );
+      store.dispatch(games.Actions.gameJoined({ data: buildEventGameJoined({ gameId: 42, localPlayerId: 1, hostId: 1 }), }));
+      store.dispatch(games.Actions.gameStateChanged({ gameId: 42, data: buildEventGameStateChanged([1, 2], 1), }));
     });
 
     await waitFor(() => {
@@ -278,15 +251,10 @@ describe('Game board integration', () => {
     renderAppScreen(<Game />);
 
     act(() => {
-      GameDispatch.gameJoined(
-        buildEventGameJoined({ gameId: 42, localPlayerId: 1, hostId: 1 }),
-      );
+      store.dispatch(games.Actions.gameJoined({ data: buildEventGameJoined({ gameId: 42, localPlayerId: 1, hostId: 1 }), }));
       // buildEventGameStateChanged sets gameStarted: true, suppressing the
       // deck-select dialog which would otherwise block focus/interaction.
-      GameDispatch.gameStateChanged(
-        42,
-        buildEventGameStateChanged([1, 2], 1),
-      );
+      store.dispatch(games.Actions.gameStateChanged({ gameId: 42, data: buildEventGameStateChanged([1, 2], 1), }));
     });
 
     await waitFor(() => {
@@ -311,13 +279,8 @@ describe('Game board integration', () => {
     );
 
     act(() => {
-      GameDispatch.gameJoined(
-        buildEventGameJoined({ gameId: 42, localPlayerId: 1, hostId: 1 }),
-      );
-      GameDispatch.gameStateChanged(
-        42,
-        buildEventGameStateChanged([1, 2], 1),
-      );
+      store.dispatch(games.Actions.gameJoined({ data: buildEventGameJoined({ gameId: 42, localPlayerId: 1, hostId: 1 }), }));
+      store.dispatch(games.Actions.gameStateChanged({ gameId: 42, data: buildEventGameStateChanged([1, 2], 1), }));
     });
 
     await waitFor(() => {
@@ -325,7 +288,7 @@ describe('Game board integration', () => {
     });
 
     act(() => {
-      GameDispatch.kicked(42);
+      store.dispatch(games.Actions.kicked({ gameId: 42 }));
     });
 
     await waitFor(() => {
@@ -342,13 +305,8 @@ describe('Game board integration', () => {
     );
 
     act(() => {
-      GameDispatch.gameJoined(
-        buildEventGameJoined({ gameId: 42, localPlayerId: 1, hostId: 1 }),
-      );
-      GameDispatch.gameStateChanged(
-        42,
-        buildEventGameStateChanged([1, 2], 1),
-      );
+      store.dispatch(games.Actions.gameJoined({ data: buildEventGameJoined({ gameId: 42, localPlayerId: 1, hostId: 1 }), }));
+      store.dispatch(games.Actions.gameStateChanged({ gameId: 42, data: buildEventGameStateChanged([1, 2], 1), }));
     });
 
     await waitFor(() => {
@@ -356,7 +314,7 @@ describe('Game board integration', () => {
     });
 
     act(() => {
-      GameDispatch.gameClosed(42);
+      store.dispatch(games.Actions.gameClosed({ gameId: 42 }));
     });
 
     await waitFor(() => {
@@ -368,13 +326,8 @@ describe('Game board integration', () => {
     renderAppScreen(<Game />);
 
     act(() => {
-      GameDispatch.gameJoined(
-        buildEventGameJoined({ gameId: 42, localPlayerId: 1, hostId: 1 }),
-      );
-      GameDispatch.gameStateChanged(
-        42,
-        buildEventGameStateChanged([1, 2], 1),
-      );
+      store.dispatch(games.Actions.gameJoined({ data: buildEventGameJoined({ gameId: 42, localPlayerId: 1, hostId: 1 }), }));
+      store.dispatch(games.Actions.gameStateChanged({ gameId: 42, data: buildEventGameStateChanged([1, 2], 1), }));
     });
 
     await waitFor(() => {
@@ -391,7 +344,7 @@ describe('Game board integration', () => {
 
     // Host changes to player 2.
     act(() => {
-      GameDispatch.gameHostChanged(42, 2);
+      store.dispatch(games.Actions.gameHostChanged({ gameId: 42, hostId: 2 }));
     });
 
     await waitFor(() => {
@@ -408,20 +361,16 @@ describe('Game board integration', () => {
     renderAppScreen(<Game />);
 
     act(() => {
-      GameDispatch.gameJoined(
-        buildEventGameJoined({ gameId: 42, localPlayerId: 1, hostId: 1 }),
-      );
-      GameDispatch.gameStateChanged(
-        42,
-        create(Data.Event_GameStateChangedSchema, {
+      store.dispatch(games.Actions.gameJoined({ data: buildEventGameJoined({ gameId: 42, localPlayerId: 1, hostId: 1 }), }));
+      store.dispatch(games.Actions.gameStateChanged({ gameId: 42, data: create(Event_GameStateChangedSchema, {
           gameStarted: false,
           activePlayerId: 1,
           activePhase: -1,
           playerList: [1, 2].map((pid) =>
-            create(Data.ServerInfo_PlayerSchema, {
-              properties: create(Data.ServerInfo_PlayerPropertiesSchema, {
+            create(ServerInfo_PlayerSchema, {
+              properties: create(ServerInfo_PlayerPropertiesSchema, {
                 playerId: pid,
-                userInfo: create(Data.ServerInfo_UserSchema, { name: `P${pid}` }),
+                userInfo: create(ServerInfo_UserSchema, { name: `P${pid}` }),
               }),
               deckList: '',
               zoneList: [],
@@ -429,8 +378,7 @@ describe('Game board integration', () => {
               arrowList: [],
             }),
           ),
-        }),
-      );
+        }), }));
     });
 
     await waitFor(() => {

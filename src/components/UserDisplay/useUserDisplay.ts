@@ -1,7 +1,8 @@
 import { useState } from 'react';
 
 import { useWebClient } from '@app/hooks';
-import { ServerSelectors, useAppSelector } from '@app/store';
+import { server } from 'datatrice';
+import { useAppSelector } from '@app/store';
 
 export interface UserDisplay {
   position: { x: number; y: number } | null;
@@ -16,8 +17,8 @@ export interface UserDisplay {
 }
 
 export function useUserDisplay(userName: string): UserDisplay {
-  const buddyList = useAppSelector((state) => ServerSelectors.getBuddyList(state));
-  const ignoreList = useAppSelector((state) => ServerSelectors.getIgnoreList(state));
+  const buddyList = useAppSelector((state) => server.Selectors.getBuddyList(state));
+  const ignoreList = useAppSelector((state) => server.Selectors.getIgnoreList(state));
   const [position, setPosition] = useState<{ x: number; y: number } | null>(null);
   const webClient = useWebClient();
 

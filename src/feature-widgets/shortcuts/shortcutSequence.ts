@@ -1,6 +1,4 @@
-import { App } from '@app/types';
-
-type ParsedSequence = App.ParsedSequence;
+import type { ParsedSequence } from '@app/types';
 
 const MODIFIER_ORDER = ['Ctrl', 'Alt', 'Shift', 'Meta'] as const;
 

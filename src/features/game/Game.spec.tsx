@@ -1,8 +1,6 @@
 import { screen, fireEvent, waitFor } from '@testing-library/react';
-import { App } from '@app/types';
-
-import { Data } from '@app/types';
-
+import { CardAttribute } from 'sockatrice/generated';
+import { ZoneName } from 'datatrice';
 import { createMockWebClient, makeStoreState, renderWithProviders, connectedState, makeUser } from '../../__test-utils__';
 import {
   makeCard,
@@ -10,7 +8,7 @@ import {
   makePlayerEntry,
   makePlayerProperties,
   makeZoneEntry,
-} from '../../store/game/__mocks__/fixtures';
+} from '../../__test-utils__/games-fixtures';
 import Game from './Game';
 
 // Layout pulls in LeftNav which is not under test here; stub to a no-op.
@@ -53,19 +51,19 @@ function buildGame({
         readyStart: pid === localId ? localReadyStart : false,
       }),
       zones: {
-        [App.ZoneName.TABLE]: makeZoneEntry({
-          name: App.ZoneName.TABLE,
+        [ZoneName.TABLE]: makeZoneEntry({
+          name: ZoneName.TABLE,
           cards: pid === localId ? tableCards : [],
           cardCount: pid === localId ? tableCards.length : 0,
         }),
-        [App.ZoneName.HAND]: makeZoneEntry({ name: App.ZoneName.HAND }),
-        [App.ZoneName.DECK]: makeZoneEntry({ name: App.ZoneName.DECK, cardCount: 40 }),
-        [App.ZoneName.GRAVE]: makeZoneEntry({
-          name: App.ZoneName.GRAVE,
+        [ZoneName.HAND]: makeZoneEntry({ name: ZoneName.HAND }),
+        [ZoneName.DECK]: makeZoneEntry({ name: ZoneName.DECK, cardCount: 40 }),
+        [ZoneName.GRAVE]: makeZoneEntry({
+          name: ZoneName.GRAVE,
           cards: pid === localId ? graveCards : [],
           cardCount: pid === localId ? graveCards.length : 0,
         }),
-        [App.ZoneName.EXILE]: makeZoneEntry({ name: App.ZoneName.EXILE }),
+        [ZoneName.EXILE]: makeZoneEntry({ name: ZoneName.EXILE }),
       },
     });
   }
@@ -287,7 +285,7 @@ describe('Game container', () => {
       });
 
       const localBoard = screen.getByTestId('player-board-1');
-      const graveStack = localBoard.querySelector(`[data-testid="zone-stack-${App.ZoneName.GRAVE}"]`)!;
+      const graveStack = localBoard.querySelector(`[data-testid="zone-stack-${ZoneName.GRAVE}"]`)!;
       fireEvent.click(graveStack);
 
       expect(screen.getByRole('button', { name: /close zone view/i })).toBeInTheDocument();
@@ -301,7 +299,7 @@ describe('Game container', () => {
 
       const graveStack = screen
         .getByTestId('player-board-1')
-        .querySelector(`[data-testid="zone-stack-${App.ZoneName.GRAVE}"]`)!;
+        .querySelector(`[data-testid="zone-stack-${ZoneName.GRAVE}"]`)!;
       fireEvent.click(graveStack);
       fireEvent.click(screen.getByRole('button', { name: /close zone view/i }));
 
@@ -319,7 +317,7 @@ describe('Game container', () => {
       });
 
       const opponentBoard = screen.getByTestId('player-board-2');
-      const graveStack = opponentBoard.querySelector(`[data-testid="zone-stack-${App.ZoneName.GRAVE}"]`)!;
+      const graveStack = opponentBoard.querySelector(`[data-testid="zone-stack-${ZoneName.GRAVE}"]`)!;
       fireEvent.click(graveStack);
 
       const panel = screen.getByTestId('zone-view-dialog');
@@ -345,9 +343,9 @@ describe('Game container', () => {
       fireEvent.doubleClick(slot);
 
       expect(webClient.request.game.setCardAttr).toHaveBeenCalledWith(1, {
-        zone: App.ZoneName.TABLE,
+        zone: ZoneName.TABLE,
         cardId: 7,
-        attribute: Data.CardAttribute.AttrTapped,
+        attribute: CardAttribute.AttrTapped,
         attrValue: '1',
       });
     });
@@ -376,7 +374,7 @@ describe('Game container', () => {
 
       const localDeck = screen
         .getByTestId('player-board-1')
-        .querySelector(`[data-testid="zone-stack-${App.ZoneName.DECK}"]`)!;
+        .querySelector(`[data-testid="zone-stack-${ZoneName.DECK}"]`)!;
       fireEvent.contextMenu(localDeck);
 
       expect(screen.getByText('Draw a card')).toBeInTheDocument();
@@ -390,7 +388,7 @@ describe('Game container', () => {
 
       const opponentDeck = screen
         .getByTestId('player-board-2')
-        .querySelector(`[data-testid="zone-stack-${App.ZoneName.DECK}"]`)!;
+        .querySelector(`[data-testid="zone-stack-${ZoneName.DECK}"]`)!;
       fireEvent.contextMenu(opponentDeck);
 
       expect(screen.queryByText('Draw a card')).not.toBeInTheDocument();
@@ -408,7 +406,7 @@ describe('Game container', () => {
 
       const localDeck = screen
         .getByTestId('player-board-1')
-        .querySelector(`[data-testid="zone-stack-${App.ZoneName.DECK}"]`)!;
+        .querySelector(`[data-testid="zone-stack-${ZoneName.DECK}"]`)!;
       fireEvent.contextMenu(localDeck);
       expect(screen.getByText('Draw a card')).toBeInTheDocument();
 
@@ -427,7 +425,7 @@ describe('Game container', () => {
       });
 
       fireEvent.contextMenu(
-        screen.getByTestId('player-board-1').querySelector(`[data-testid="zone-stack-${App.ZoneName.DECK}"]`)!,
+        screen.getByTestId('player-board-1').querySelector(`[data-testid="zone-stack-${ZoneName.DECK}"]`)!,
       );
       fireEvent.click(screen.getByText('Draw a card'));
 
@@ -456,9 +454,9 @@ describe('Game container', () => {
       fireEvent.click(screen.getByRole('button', { name: /ok/i }));
 
       expect(webClient.request.game.setCardAttr).toHaveBeenCalledWith(1, {
-        zone: App.ZoneName.TABLE,
+        zone: ZoneName.TABLE,
         cardId: 7,
-        attribute: Data.CardAttribute.AttrPT,
+        attribute: CardAttribute.AttrPT,
         attrValue: '3/3',
       });
     });

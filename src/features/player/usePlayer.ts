@@ -2,13 +2,13 @@ import { useEffect, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 
 import { useWebClient } from '@app/hooks';
-import { ServerSelectors, useAppSelector } from '@app/store';
-import type { Data } from '@app/types';
-
+import { server } from 'datatrice';
+import { useAppSelector } from '@app/store';
+import { ServerInfo_User } from 'sockatrice/generated';
 export interface PlayerViewModel {
   name: string | null;
-  userInfo: Data.ServerInfo_User | undefined;
-  currentUser: Data.ServerInfo_User | null;
+  userInfo: ServerInfo_User | undefined;
+  currentUser: ServerInfo_User | null;
   isSelf: boolean;
   isABuddy: boolean;
   isIgnored: boolean;
@@ -29,12 +29,12 @@ export function usePlayer(): PlayerViewModel {
   const name = params.name ?? null;
 
   const userInfo = useAppSelector((state) =>
-    name ? ServerSelectors.getUserInfoByName(state, name) : undefined,
+    name ? server.Selectors.getUserInfoByName(state, name) : undefined,
   );
-  const currentUser = useAppSelector(ServerSelectors.getUser);
-  const buddyList = useAppSelector(ServerSelectors.getBuddyList);
-  const ignoreList = useAppSelector(ServerSelectors.getIgnoreList);
-  const isModerator = useAppSelector(ServerSelectors.getIsUserModerator);
+  const currentUser = useAppSelector(server.Selectors.getUser);
+  const buddyList = useAppSelector(server.Selectors.getBuddyList);
+  const ignoreList = useAppSelector(server.Selectors.getIgnoreList);
+  const isModerator = useAppSelector(server.Selectors.getIsUserModerator);
 
   useEffect(() => {
     if (name) {

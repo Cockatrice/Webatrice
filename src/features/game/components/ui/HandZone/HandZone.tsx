@@ -1,4 +1,5 @@
-import { App, Data } from '@app/types';
+import { ServerInfo_Card } from 'sockatrice/generated';
+import { ZoneName } from 'datatrice';
 import { cx } from '@app/utils';
 
 import CardSlot from '../CardSlot/CardSlot';
@@ -12,10 +13,10 @@ export interface HandZoneProps {
   playerId: number;
   canAct?: boolean;
   arrowSourceKey?: string | null;
-  onCardHover?: (card: Data.ServerInfo_Card) => void;
-  onCardClick?: (playerId: number, zone: string, card: Data.ServerInfo_Card) => void;
-  onCardContextMenu?: (card: Data.ServerInfo_Card, event: React.MouseEvent) => void;
-  onCardDoubleClick?: (card: Data.ServerInfo_Card) => void;
+  onCardHover?: (card: ServerInfo_Card) => void;
+  onCardClick?: (playerId: number, zone: string, card: ServerInfo_Card) => void;
+  onCardContextMenu?: (card: ServerInfo_Card, event: React.MouseEvent) => void;
+  onCardDoubleClick?: (card: ServerInfo_Card) => void;
   onZoneContextMenu?: (event: React.MouseEvent) => void;
 }
 
@@ -46,17 +47,17 @@ function HandZone({
     >
       <div className="hand-zone__cards">
         {cards.map((card) => {
-          const key = makeCardKey(playerId, App.ZoneName.HAND, card.id);
+          const key = makeCardKey(playerId, ZoneName.HAND, card.id);
           return (
             <CardSlot
               key={card.id}
               card={card}
               draggable={canAct}
               ownerPlayerId={playerId}
-              zone={App.ZoneName.HAND}
+              zone={ZoneName.HAND}
               isArrowSource={arrowSourceKey === key}
               onMouseEnter={onCardHover}
-              onClick={(c) => onCardClick?.(playerId, App.ZoneName.HAND, c)}
+              onClick={(c) => onCardClick?.(playerId, ZoneName.HAND, c)}
               onContextMenu={onCardContextMenu}
               onDoubleClick={onCardDoubleClick}
             />

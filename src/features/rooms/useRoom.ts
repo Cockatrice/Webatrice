@@ -2,34 +2,37 @@ import { useCallback, useEffect } from 'react';
 import { useNavigate, useParams, generatePath } from 'react-router-dom';
 
 import { useWebClient } from '@app/hooks';
-import { RoomsSelectors, useAppSelector } from '@app/store';
-import { App, Data, Enriched } from '@app/types';
+import { rooms } from 'datatrice';
+import { useAppSelector } from '@app/store';
+import { ServerInfo_User } from 'sockatrice/generated';
+import type { Message, Room } from 'datatrice';
+import { RouteEnum } from '@app/types';
 
-export interface Room {
+export interface UseRoomResult {
   roomId: number;
-  room: Enriched.Room | undefined;
-  roomMessages: Enriched.Message[] | undefined;
-  users: Data.ServerInfo_User[];
+  room: Room | undefined;
+  roomMessages: Message[] | undefined;
+  users: ServerInfo_User[];
   handleRoomSay: (args: { message: string }) => void;
 }
 
-export function useRoom(): Room {
-  const joined = useAppSelector((state) => RoomsSelectors.getJoinedRooms(state));
-  const rooms = useAppSelector((state) => RoomsSelectors.getRooms(state));
-  const messages = useAppSelector((state) => RoomsSelectors.getMessages(state));
+export function useRoom(): UseRoomResult {
+  const joined = useAppSelector((state) => rooms.Selectors.getJoinedRooms(state));
+  const allRooms = useAppSelector((state) => rooms.Selectors.getRooms(state));
+  const messages = useAppSelector((state) => rooms.Selectors.getMessages(state));
   const navigate = useNavigate();
   const params = useParams();
 
   const parsed = params.roomId != null ? parseInt(params.roomId, 10) : NaN;
   const roomId = Number.isNaN(parsed) ? -1 : parsed;
-  const room = roomId === -1 ? undefined : rooms[roomId];
+  const room = roomId === -1 ? undefined : allRooms[roomId];
   const roomMessages = roomId === -1 ? undefined : messages[roomId];
-  const users = useAppSelector((state) => RoomsSelectors.getSortedRoomUsers(state, roomId));
+  const users = useAppSelector((state) => rooms.Selectors.getSortedRoomUsers(state, roomId));
   const webClient = useWebClient();
 
   useEffect(() => {
     if (roomId === -1 || !joined.find((r) => r.info.roomId === roomId)) {
-      navigate(generatePath(App.RouteEnum.SERVER));
+      navigate(generatePath(RouteEnum.SERVER));
     }
   }, [joined, roomId, navigate]);
 

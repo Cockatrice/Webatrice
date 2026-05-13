@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
 
 import { LoadingState, useLeaveGame, useSettings, useWebClient } from '@app/hooks';
-import { GameSelectors, useAppSelector } from '@app/store';
+import { games } from 'datatrice';
+import { useAppSelector } from '@app/store';
 
 import { useCurrentGame } from '../../../hooks/useCurrentGame';
 import { useGameAffordances } from '../../../hooks/useGameAffordances';
@@ -87,7 +88,7 @@ export function useTurnControls({
   // and deletes each one. Matches desktop's Player::actRemoveLocalArrows.
   const localArrows = useAppSelector((state) =>
     gameId != null && game != null
-      ? GameSelectors.getArrows(state, gameId, game.localPlayerId)
+      ? games.Selectors.getArrows(state, gameId, game.localPlayerId)
       : undefined,
   );
   const localArrowIds = useMemo(

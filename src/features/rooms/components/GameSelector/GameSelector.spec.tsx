@@ -6,8 +6,9 @@ import {
   makeUser,
   connectedWithRoomsState,
 } from '../../../../__test-utils__';
-import { App, Data } from '@app/types';
-import { GameTypes } from '@app/store';
+import { ServerInfo_Game, ServerInfo_GameSchema, ServerInfo_RoomSchema, ServerInfo_User_UserLevelFlag } from 'sockatrice/generated';
+import { GameSortField, SortDirection, UserSortField } from 'datatrice';
+import { games } from 'datatrice';
 import GameSelector from './GameSelector';
 
 const { mockUseWebClient, mockNavigate } = vi.hoisted(() => ({
@@ -23,9 +24,9 @@ vi.mock('react-router-dom', async (importOriginal) => {
   return { ...actual, useNavigate: () => mockNavigate };
 });
 
-function makeRoomEntry(games: Data.ServerInfo_Game[] = [], gametypeMap: Record<number, string> = {}) {
+function makeRoomEntry(games: ServerInfo_Game[] = [], gametypeMap: Record<number, string> = {}) {
   return {
-    info: create(Data.ServerInfo_RoomSchema, { roomId: 1, name: 'Main' }),
+    info: create(ServerInfo_RoomSchema, { roomId: 1, name: 'Main' }),
     gametypeMap,
     order: 0,
     games: Object.fromEntries(games.map((info) => [info.gameId, { info, gameType: '' }])),
@@ -33,8 +34,8 @@ function makeRoomEntry(games: Data.ServerInfo_Game[] = [], gametypeMap: Record<n
   };
 }
 
-function makeGame(overrides: any = {}): Data.ServerInfo_Game {
-  return create(Data.ServerInfo_GameSchema, {
+function makeGame(overrides: any = {}): ServerInfo_Game {
+  return create(ServerInfo_GameSchema, {
     gameId: 1,
     roomId: 1,
     description: 'Test',
@@ -72,8 +73,8 @@ function buildState(
       joinedRoomIds: { 1: true },
       joinedGameIds: {},
       messages: { 1: [] },
-      sortGamesBy: { field: App.GameSortField.START_TIME, order: App.SortDirection.DESC },
-      sortUsersBy: { field: App.UserSortField.NAME, order: App.SortDirection.ASC },
+      sortGamesBy: { field: GameSortField.START_TIME, order: SortDirection.DESC },
+      sortUsersBy: { field: UserSortField.NAME, order: SortDirection.ASC },
       selectedGameIds: selectedGameId != null ? { 1: selectedGameId } : {},
       gameFilters: {},
       joinGamePending: false,
@@ -188,7 +189,7 @@ describe('GameSelector', () => {
     mockUseWebClient.mockReturnValue(makeWebClient());
     const room = makeRoomEntry([]);
     renderWithProviders(<GameSelector room={room as any} />, {
-      preloadedState: buildState(room, makeUser({ userLevel: Data.ServerInfo_User_UserLevelFlag.IsJudge })),
+      preloadedState: buildState(room, makeUser({ userLevel: ServerInfo_User_UserLevelFlag.IsJudge })),
     });
     expect(screen.getByRole('button', { name: /Join as Judge$/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Join as Judge Spectator/i })).toBeInTheDocument();
@@ -243,7 +244,7 @@ describe('GameSelector', () => {
     mockNavigate.mockClear();
     await act(async () => {
       store.dispatch({
-        type: GameTypes.GAME_JOINED,
+        type: games.Types.GAME_JOINED,
         payload: { data: { gameInfo: { gameId: 42 }, hostId: 0, playerId: 0, spectator: false } },
       });
     });

@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { dexieService } from '@app/services';
-import { App } from '@app/types';
-
+import { RouteEnum } from '@app/types';
 const FeatureDetection = () => {
   const [unsupported, setUnsupported] = useState(false);
 
@@ -15,7 +14,7 @@ const FeatureDetection = () => {
   }, []);
 
   return unsupported
-    ? <Navigate to={App.RouteEnum.UNSUPPORTED} />
+    ? <Navigate to={RouteEnum.UNSUPPORTED} />
     : <></>;
 
   function detectIndexedDB() {

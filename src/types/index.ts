@@ -1,3 +1,10 @@
-export * as Data from './data';
-export * as Enriched from './enriched';
-export * as App from './app';
+export * from './cards';
+export * from './colors';
+export * from './countries';
+export * from './forms';
+export * from './languages';
+export * from './regex-patterns';
+export * from './routes';
+export * from './server';
+export * from './settings';
+export * from './shortcuts';

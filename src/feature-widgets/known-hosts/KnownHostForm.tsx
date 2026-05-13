@@ -7,8 +7,7 @@ import AnchorLink from '@mui/material/Link';
 
 import { InputField } from '@app/components';
 import type { HostDTO } from '@app/services';
-import { App } from '@app/types';
-
+import { FormErrors } from '@app/types';
 import './KnownHostForm.css';
 
 export interface KnownHostFormValues {
@@ -28,8 +27,8 @@ const KnownHostForm = ({ host, onRemove, onSubmit }: KnownHostFormProps) => {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const { t } = useTranslation();
 
-  const validate = (values: Partial<KnownHostFormValues>): App.FormErrors<KnownHostFormValues> => {
-    const errors: App.FormErrors<KnownHostFormValues> = {};
+  const validate = (values: Partial<KnownHostFormValues>): FormErrors<KnownHostFormValues> => {
+    const errors: FormErrors<KnownHostFormValues> = {};
 
     if (!values.name) {
       errors.name = t('Common.validation.required');

@@ -6,7 +6,9 @@ import { createRoot } from 'react-dom/client';
 import { StyledEngineProvider } from '@mui/material';
 import { ThemeProvider } from '@mui/material/styles';
 
-import { WebClientProvider } from '@app/hooks';
+import { DatatriceProvider, WebClientProvider } from 'datatrice/react';
+import { extensions } from '@app/store';
+import { CLIENT_CONFIG, CLIENT_OPTIONS } from './clientConfig';
 import AppShell from './AppShell';
 import { materialTheme } from './material-theme';
 
@@ -16,15 +18,17 @@ import './index.css';
 
 const AppWithMaterialTheme = () => {
   return (
-    <WebClientProvider>
-      <StrictMode>
-        <StyledEngineProvider injectFirst>
-          <ThemeProvider theme={materialTheme}>
-            <AppShell />
-          </ThemeProvider>
-        </StyledEngineProvider>
-      </StrictMode>
-    </WebClientProvider>
+    <DatatriceProvider extensions={extensions}>
+      <WebClientProvider config={CLIENT_CONFIG} options={CLIENT_OPTIONS}>
+        <StrictMode>
+          <StyledEngineProvider injectFirst>
+            <ThemeProvider theme={materialTheme}>
+              <AppShell />
+            </ThemeProvider>
+          </StyledEngineProvider>
+        </StrictMode>
+      </WebClientProvider>
+    </DatatriceProvider>
   );
 };
 

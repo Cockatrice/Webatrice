@@ -1,5 +1,7 @@
-import { GameSelectors, useAppSelector } from '@app/store';
-import { App, Data } from '@app/types';
+import { games } from 'datatrice';
+import { useAppSelector } from '@app/store';
+import { ServerInfo_Card } from 'sockatrice/generated';
+import { ZoneName } from 'datatrice';
 import { cx } from '@app/utils';
 
 import { useScryfallCard } from '../../../hooks/useScryfallCard';
@@ -10,12 +12,12 @@ export interface StackColumnProps {
   gameId: number;
   playerId: number;
   mirrored?: boolean;
-  onCardHover?: (card: Data.ServerInfo_Card) => void;
+  onCardHover?: (card: ServerInfo_Card) => void;
 }
 
 interface StackThumbProps {
-  card: Data.ServerInfo_Card;
-  onHover?: (card: Data.ServerInfo_Card) => void;
+  card: ServerInfo_Card;
+  onHover?: (card: ServerInfo_Card) => void;
 }
 
 function StackThumb({ card, onHover }: StackThumbProps) {
@@ -37,7 +39,7 @@ function StackThumb({ card, onHover }: StackThumbProps) {
 
 function StackColumn({ gameId, playerId, mirrored = false, onCardHover }: StackColumnProps) {
   const zone = useAppSelector((state) =>
-    GameSelectors.getZone(state, gameId, playerId, App.ZoneName.STACK),
+    games.Selectors.getZone(state, gameId, playerId, ZoneName.STACK),
   );
   const cards = zone ? zone.order.map((id) => zone.byId[id]).filter(Boolean) : [];
 

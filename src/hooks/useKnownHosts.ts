@@ -1,5 +1,5 @@
 import { HostDTO } from '@app/services';
-import { App } from '@app/types';
+import { Host } from '@app/types';
 import { DefaultHosts } from '@app/utils';
 
 import { createSharedStore, Loadable, useSharedStore } from './useSharedStore';
@@ -32,7 +32,7 @@ const store = knownHostsStore;
 
 export type KnownHostsHook = Loadable<KnownHostsValue> & {
   select: (id: number) => Promise<void>;
-  add: (host: App.Host) => Promise<HostDTO>;
+  add: (host: Host) => Promise<HostDTO>;
   update: (id: number, patch: Partial<HostDTO>) => Promise<HostDTO>;
   remove: (id: number) => Promise<void>;
 };
@@ -69,7 +69,7 @@ const select = async (id: number): Promise<void> => {
   store.setValue({ hosts: [...hosts], selectedHost: target });
 };
 
-const add = async (host: App.Host): Promise<HostDTO> => {
+const add = async (host: Host): Promise<HostDTO> => {
   const { hosts, selectedHost } = requireValue('add');
   const created = await HostDTO.get((await HostDTO.add(host)) as number);
   store.setValue({ hosts: [...hosts, created], selectedHost });
