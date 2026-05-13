@@ -1,138 +1,118 @@
-import { useCallback } from 'react';
-import { Form, Field } from 'react-final-form';
-import type { FormApi } from 'final-form';
-import { OnChange } from 'react-final-form-listeners';
+import { useEffect, useMemo } from 'react';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { useTranslation } from 'react-i18next';
 
 import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
 
-import { adaptRffField, InputField } from '@app/components';
+import { InputField } from '@app/components';
 import { KnownHosts } from '@app/feature-widgets/known-hosts';
-import { HostDTO } from '@app/services';
-import { FormErrors } from '@app/types';
+import type { HostDTO } from '@app/services';
 import { useRequestPasswordResetForm } from './useRequestPasswordResetForm';
 
+import {
+  buildRequestPasswordResetFormSchema,
+  type RequestPasswordResetFormValues,
+} from './requestPasswordResetFormSchema';
 import './RequestPasswordResetForm.css';
 
-export interface RequestPasswordResetFormValues {
-  userName: string;
-  email?: string;
-  selectedHost: HostDTO;
-}
+export type { RequestPasswordResetFormValues };
 
 interface RequestPasswordResetFormProps {
   onSubmit: (values: RequestPasswordResetFormValues) => void;
   skipTokenRequest: (userName: string) => void;
 }
 
-interface HostChangePayload {
-  userName?: string;
-}
-
 const RequestPasswordResetForm = ({ onSubmit, skipTokenRequest }: RequestPasswordResetFormProps) => {
   const { t } = useTranslation();
   const { errorMessage, setErrorMessage, isMFA, setIsMFA } = useRequestPasswordResetForm();
 
-  const handleOnSubmit = ({ userName, email, ...values }: RequestPasswordResetFormValues) => {
-    setErrorMessage(false);
+  // Schema branches on `isMFA` — when the server demands MFA the email
+  // field becomes required. Rebuild the resolver when the flag flips so
+  // validation matches the rendered field requirements.
+  const schema = useMemo(() => buildRequestPasswordResetFormSchema(t, isMFA), [t, isMFA]);
 
-    onSubmit({
-      ...values,
-      userName: userName?.trim(),
-      email: email?.trim(),
-    });
-  };
+  const { control, handleSubmit, setValue, watch, getValues } = useForm<RequestPasswordResetFormValues>({
+    defaultValues: {
+      userName: '',
+      email: '',
+      selectedHost: undefined as unknown as HostDTO,
+    },
+    resolver: zodResolver(schema),
+  });
 
-  const validate = (values: Partial<RequestPasswordResetFormValues>): FormErrors<RequestPasswordResetFormValues> => {
-    const errors: FormErrors<RequestPasswordResetFormValues> = {};
+  const selectedHost = watch('selectedHost');
 
-    if (!values.userName) {
-      errors.userName = t('Common.validation.required');
+  // Mirror the host's saved userName into the form whenever the user picks a
+  // new host; reset isMFA so the email field disappears until the server
+  // requests it again.
+  useEffect(() => {
+    if (!selectedHost) {
+      return;
     }
-    if (isMFA && !values.email) {
-      errors.email = t('Common.validation.required');
-    }
-    if (!values.selectedHost) {
-      errors.selectedHost = t('Common.validation.required');
-    }
-
-    return errors;
-  };
-
-  return (
-    <Form onSubmit={handleOnSubmit} validate={validate}>
-      {({ handleSubmit, form }) => (
-        <RequestPasswordResetFormBody
-          handleSubmit={handleSubmit}
-          form={form}
-          errorMessage={errorMessage}
-          isMFA={isMFA}
-          setIsMFA={setIsMFA}
-          skipTokenRequest={skipTokenRequest}
-        />
-      )}
-    </Form>
-  );
-};
-
-interface BodyProps {
-  handleSubmit: (event?: React.SyntheticEvent) => void;
-  form: FormApi;
-  errorMessage: boolean;
-  isMFA: boolean;
-  setIsMFA: (v: boolean) => void;
-  skipTokenRequest: (userName: string) => void;
-}
-
-const RequestPasswordResetFormBody = ({
-  handleSubmit,
-  form,
-  errorMessage,
-  isMFA,
-  setIsMFA,
-  skipTokenRequest,
-}: BodyProps) => {
-  const { t } = useTranslation();
-
-  const onHostChange = useCallback(({ userName }: HostChangePayload) => {
-    form.change('userName', userName);
+    setValue('userName', selectedHost.userName ?? '');
     setIsMFA(false);
-  }, [form, setIsMFA]);
+  }, [selectedHost, setValue, setIsMFA]);
+
+  const submit = handleSubmit((values) => {
+    setErrorMessage(false);
+    onSubmit(values);
+  });
 
   return (
-    <form className="RequestPasswordResetForm" onSubmit={handleSubmit}>
+    <form className="RequestPasswordResetForm" onSubmit={submit}>
       <div className="RequestPasswordResetForm-items">
         <div className="RequestPasswordResetForm-item">
-          <Field name="userName">
-            {(p) => (
+          <Controller
+            name="userName"
+            control={control}
+            render={({ field, fieldState }) => (
               <InputField
-                {...adaptRffField(p)}
+                {...field}
                 label={t('Common.label.username')}
                 autoComplete="username"
                 disabled={isMFA}
+                error={fieldState.error?.message}
+                touched={fieldState.isTouched}
               />
             )}
-          </Field>
+          />
         </div>
         {isMFA ? (
           <div className="RequestPasswordResetForm-item">
-            <Field name="email">
-              {(p) => (
+            <Controller
+              name="email"
+              control={control}
+              render={({ field, fieldState }) => (
                 <InputField
-                  {...adaptRffField(p)}
+                  {...field}
+                  value={field.value ?? ''}
                   label={t('Common.label.email')}
                   type="email"
                   autoComplete="email"
+                  error={fieldState.error?.message}
+                  touched={fieldState.isTouched}
                 />
               )}
-            </Field>
+            />
             <div>{t('RequestPasswordResetForm.mfaEnabled')}</div>
           </div>
         ) : null}
         <div className="RequestPasswordResetForm-item selectedHost">
-          <Field name='selectedHost'>{(p) => <KnownHosts {...adaptRffField(p)} disabled={isMFA} />}</Field>
-          <OnChange name="selectedHost">{onHostChange}</OnChange>
+          <Controller
+            name="selectedHost"
+            control={control}
+            render={({ field, fieldState }) => (
+              <KnownHosts
+                value={field.value}
+                onChange={field.onChange}
+                error={fieldState.error?.message}
+                touched={fieldState.isTouched}
+                disabled={isMFA}
+              />
+            )}
+          />
         </div>
 
         {errorMessage && (
@@ -142,12 +122,17 @@ const RequestPasswordResetFormBody = ({
         )}
       </div>
 
-      <Button className="RequestPasswordResetForm-submit rounded tall" color="primary" variant="contained" type="submit">
+      <Button
+        className="RequestPasswordResetForm-submit rounded tall"
+        color="primary"
+        variant="contained"
+        type="submit"
+      >
         {t('RequestPasswordResetForm.request')}
       </Button>
 
       <div>
-        <Button color="primary" onClick={() => skipTokenRequest(form.getState().values.userName)}>
+        <Button color="primary" onClick={() => skipTokenRequest(getValues('userName'))}>
           {t('RequestPasswordResetForm.skipRequest')}
         </Button>
       </div>
