@@ -1,9 +1,9 @@
 import { create } from '@bufbuild/protobuf';
 import { describe, expect, it } from 'vitest';
 
-import { Command_CreateGame_ext, Command_JoinGame_ext, Command_JoinRoom_ext, Command_LeaveRoom_ext, Command_RoomSay_ext, Event_JoinRoomSchema, Event_JoinRoom_ext, Event_LeaveRoomSchema, Event_LeaveRoom_ext, Event_ListGamesSchema, Event_ListGames_ext, Event_ListRoomsSchema, Event_ListRooms_ext, Event_RoomSaySchema, Event_RoomSay_RoomMessageType, Event_RoomSay_ext, Response_JoinRoomSchema, Response_JoinRoom_ext, Response_ResponseCode, ServerInfo_GameSchema, ServerInfo_Room, ServerInfo_RoomSchema, ServerInfo_UserSchema } from 'sockatrice/generated';
+import { Command_CreateGame_ext, Command_JoinGame_ext, Command_JoinRoom_ext, Command_LeaveRoom_ext, Command_RoomSay_ext, Event_JoinRoomSchema, Event_JoinRoom_ext, Event_LeaveRoomSchema, Event_LeaveRoom_ext, Event_ListGamesSchema, Event_ListGames_ext, Event_ListRoomsSchema, Event_ListRooms_ext, Event_RoomSaySchema, Event_RoomSay_RoomMessageType, Event_RoomSay_ext, Response_JoinRoomSchema, Response_JoinRoom_ext, Response_ResponseCode, ServerInfo_GameSchema, ServerInfo_Room, ServerInfo_RoomSchema, ServerInfo_UserSchema } from '@cockatrice/sockatrice/generated';
 import { store } from '../helpers/setup';
-import { RoomCommands } from 'sockatrice';
+import { RoomCommands } from '@cockatrice/sockatrice';
 
 import { connectAndHandshake } from '../helpers/setup';
 import {

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 
-import { useWebClient } from 'datatrice/react';
-import { games } from 'datatrice';
+import { useWebClient } from '@cockatrice/datatrice/react';
+import { games } from '@cockatrice/datatrice';
 import { useAppSelector } from '@app/store';
 
 export interface DeckSelectDialog {

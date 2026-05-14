@@ -1,9 +1,9 @@
 import { create } from '@bufbuild/protobuf';
 import { describe, expect, it, vi } from 'vitest';
 
-import { Command_Activate_ext, Command_ListRooms_ext, Command_ListUsers_ext, Command_Login_ext, Command_Register_ext, Command_RequestPasswordSalt_ext, Response_LoginSchema, Response_Login_ext, Response_PasswordSaltSchema, Response_PasswordSalt_ext, Response_ResponseCode, ServerInfo_User, ServerInfo_UserSchema, ServerInfo_User_UserLevelFlag } from 'sockatrice/generated';
+import { Command_Activate_ext, Command_ListRooms_ext, Command_ListUsers_ext, Command_Login_ext, Command_Register_ext, Command_RequestPasswordSalt_ext, Response_LoginSchema, Response_Login_ext, Response_PasswordSaltSchema, Response_PasswordSalt_ext, Response_ResponseCode, ServerInfo_User, ServerInfo_UserSchema, ServerInfo_User_UserLevelFlag } from '@cockatrice/sockatrice/generated';
 import { store } from '../helpers/setup';
-import { WebsocketTypes } from 'sockatrice/types';
+import { WebsocketTypes } from '@cockatrice/sockatrice/types';
 
 import { connectAndHandshake, connectAndHandshakeWithSalt } from '../helpers/setup';
 import {

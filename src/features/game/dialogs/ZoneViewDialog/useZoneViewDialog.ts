@@ -1,8 +1,8 @@
 import { useRef, useState } from 'react';
 
-import { games } from 'datatrice';
+import { games } from '@cockatrice/datatrice';
 import { useAppSelector } from '@app/store';
-import { ServerInfo_Card } from 'sockatrice/generated';
+import { ServerInfo_Card } from '@cockatrice/sockatrice/generated';
 const EMPTY_CARDS: ServerInfo_Card[] = [];
 
 export interface ZoneViewDialog {

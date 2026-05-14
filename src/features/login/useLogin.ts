@@ -4,11 +4,11 @@ import { useTranslation } from 'react-i18next';
 import { useToast } from '@app/components';
 import { useFireOnce, useReduxEffect } from '@app/hooks';
 import { useKnownHosts } from '@app/feature-widgets/known-hosts';
-import { useWebClient } from 'datatrice/react';
-import { server } from 'datatrice';
+import { useWebClient } from '@cockatrice/datatrice/react';
+import { server } from '@cockatrice/datatrice';
 import { useAppSelector } from '@app/store';
 import { getHostPort } from '@app/utils';
-import { WebsocketTypes } from 'sockatrice/types';
+import { WebsocketTypes } from '@cockatrice/sockatrice/types';
 
 import type { LoginFormValues } from './forms/LoginForm/LoginForm';
 import type { RegisterFormValues } from './forms/RegisterForm/RegisterForm';

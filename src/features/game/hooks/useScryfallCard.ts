@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { ScryfallImageSize } from 'datatrice';
+import { ScryfallImageSize } from '@cockatrice/datatrice';
 import { getScryfallUrl } from '@app/services';
 
 export interface ScryfallCard {

@@ -33,8 +33,8 @@ Every meaningful module in the webclient, arranged as a three-lane racetrack: ou
 
 Load-bearing invariants (enforced on `webclient-websocket-layer`; keep it that way):
 
-- **UI never imports the `WebClient` value from `sockatrice`** — always go through `useWebClient()`. Type-only `import type { ... } from "sockatrice"` is fine. Enforced by `@typescript-eslint/no-restricted-imports` in `eslint.config.mjs`.
-- **Types live in one of three places, none of them wrapped in a namespace**: proto wire types from `sockatrice/generated`, store-domain shapes (`Room`, `GameEntry`, `PlayerEntry`, etc.) from `datatrice`, and Webatrice-only app types (routes, settings, cards, colors, shortcuts) flat from `@app/types`.
+- **UI never imports the `WebClient` value from `@cockatrice/sockatrice`** — always go through `useWebClient()`. Type-only `import type { ... } from "@cockatrice/sockatrice"` is fine. Enforced by `@typescript-eslint/no-restricted-imports` in `eslint.config.mjs`.
+- **Types live in one of three places, none of them wrapped in a namespace**: proto wire types from `@cockatrice/sockatrice/generated`, store-domain shapes (`Room`, `GameEntry`, `PlayerEntry`, etc.) from `@cockatrice/datatrice`, and Webatrice-only app types (routes, settings, cards, colors, shortcuts) flat from `@app/types`.
 - **Only Datatrice's internal `*ResponseImpl` classes call `store.dispatch`** — the API response layer (now owned by Datatrice) is the single inbound seam into Redux.
 
 ## Flow — command → response → event round-trip

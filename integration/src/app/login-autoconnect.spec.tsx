@@ -15,8 +15,8 @@ import { Login } from '@app/features/login';
 import { autoLoginGate } from '../../../src/features/login/useAutoLogin';
 import { HostDTO, SettingDTO } from '@app/services';
 import { APP_USER } from '@app/types';
-import { server } from 'datatrice';
-import { WebsocketTypes } from 'sockatrice/types';
+import { server } from '@cockatrice/datatrice';
+import { WebsocketTypes } from '@cockatrice/sockatrice/types';
 
 import { resetDexie } from '../services/dexie/resetDexie';
 import { renderAppScreen, store } from './helpers';

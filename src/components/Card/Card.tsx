@@ -1,5 +1,5 @@
 import { CardDTO, getScryfallUrl } from '@app/services';
-import { ScryfallImageSize } from 'datatrice';
+import { ScryfallImageSize } from '@cockatrice/datatrice';
 import './Card.css';
 
 interface CardProps {

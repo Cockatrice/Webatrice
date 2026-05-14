@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 
-import { GameEntry } from 'datatrice';
+import { GameEntry } from '@cockatrice/datatrice';
 export interface PlayerSlotEntry {
   playerId: number;
   name: string;

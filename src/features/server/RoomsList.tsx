@@ -8,8 +8,8 @@ import TableCell from '@mui/material/TableCell';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 
-import { useWebClient } from 'datatrice/react';
-import { Room } from 'datatrice';
+import { useWebClient } from '@cockatrice/datatrice/react';
+import { Room } from '@cockatrice/datatrice';
 import { RouteEnum } from '@app/types';
 import './RoomsList.css';
 

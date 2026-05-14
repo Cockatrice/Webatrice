@@ -1,7 +1,7 @@
 import { create } from '@bufbuild/protobuf';
 import { act, screen } from '@testing-library/react';
-import { Event_AttachCardSchema, Event_MoveCardSchema } from 'sockatrice/generated';
-import { ZoneName } from 'datatrice';
+import { Event_AttachCardSchema, Event_MoveCardSchema } from '@cockatrice/sockatrice/generated';
+import { ZoneName } from '@cockatrice/datatrice';
 vi.mock('../../../../../hooks/useSettings');
 
 import { useSettings } from '../../../../../hooks/useSettings';
@@ -13,7 +13,7 @@ import {
   makePlayerEntry,
   makeZoneEntry,
 } from '../../../../../__test-utils__/games-fixtures';
-import { games } from 'datatrice';
+import { games } from '@cockatrice/datatrice';
 import Battlefield from './Battlefield';
 
 function setInvert(invert: boolean) {

@@ -13,8 +13,8 @@ import Select from '@mui/material/Select';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 
-import { rooms, type GameFilters } from 'datatrice';
-import { GametypeMap } from 'datatrice';
+import { rooms, type GameFilters } from '@cockatrice/datatrice';
+import { GametypeMap } from '@cockatrice/datatrice';
 import './FilterGamesDialog.css';
 
 export interface FilterGamesDialogProps {

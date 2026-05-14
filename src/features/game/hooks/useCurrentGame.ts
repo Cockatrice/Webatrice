@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
-import { games } from 'datatrice';
+import { games } from '@cockatrice/datatrice';
 import { useAppSelector } from '@app/store';
-import { GameEntry, PlayerEntry } from 'datatrice';
+import { GameEntry, PlayerEntry } from '@cockatrice/datatrice';
 export interface CurrentGame {
   gameId: number | undefined;
   game: GameEntry | undefined;

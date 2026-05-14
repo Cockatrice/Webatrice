@@ -1,7 +1,7 @@
-import { games } from 'datatrice';
+import { games } from '@cockatrice/datatrice';
 import { useAppSelector } from '@app/store';
-import { ServerInfo_Card } from 'sockatrice/generated';
-import { ZoneName } from 'datatrice';
+import { ServerInfo_Card } from '@cockatrice/sockatrice/generated';
+import { ZoneName } from '@cockatrice/datatrice';
 import { cx } from '@app/utils';
 
 import { useScryfallCard } from '../../../hooks/useScryfallCard';

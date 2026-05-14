@@ -2,8 +2,8 @@ import { ReactElement } from 'react';
 import { render as rtlRender, screen, fireEvent } from '@testing-library/react';
 import { create } from '@bufbuild/protobuf';
 import { DndContext } from '@dnd-kit/core';
-import { ServerInfo_CardCounterSchema } from 'sockatrice/generated';
-import { ZoneName } from 'datatrice';
+import { ServerInfo_CardCounterSchema } from '@cockatrice/sockatrice/generated';
+import { ZoneName } from '@cockatrice/datatrice';
 import { makeCard } from '../../../../../__test-utils__/games-fixtures';
 import CardSlot from './CardSlot';
 

@@ -1,9 +1,9 @@
 import { useCallback, useState } from 'react';
 import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core';
 
-import { useWebClient } from 'datatrice/react';
-import { ServerInfo_Card } from 'sockatrice/generated';
-import { ZoneName } from 'datatrice';
+import { useWebClient } from '@cockatrice/datatrice/react';
+import { ServerInfo_Card } from '@cockatrice/sockatrice/generated';
+import { ZoneName } from '@cockatrice/datatrice';
 import {
   CARD_HEIGHT_PX,
   CARD_WIDTH_PX,

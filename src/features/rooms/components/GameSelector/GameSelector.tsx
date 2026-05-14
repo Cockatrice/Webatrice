@@ -3,12 +3,12 @@ import { generatePath, useNavigate } from 'react-router-dom';
 import Paper from '@mui/material/Paper';
 import Typography from '@mui/material/Typography';
 
-import { server, rooms, games, type GameFilters } from 'datatrice';
+import { server, rooms, games, type GameFilters } from '@cockatrice/datatrice';
 import { useAppDispatch, useAppSelector } from '@app/store';
 import { useReduxEffect } from '@app/hooks';
-import { useWebClient } from 'datatrice/react';
-import { CreateGameParams, Event_GameJoined, JoinGameParams } from 'sockatrice/generated';
-import { Room } from 'datatrice';
+import { useWebClient } from '@cockatrice/datatrice/react';
+import { CreateGameParams, Event_GameJoined, JoinGameParams } from '@cockatrice/sockatrice/generated';
+import { Room } from '@cockatrice/datatrice';
 import { RouteEnum } from '@app/types';
 import { AlertDialog, PromptDialog } from '@app/dialogs';
 

@@ -5,7 +5,7 @@ import {
   type DraggableSyntheticListeners,
 } from '@dnd-kit/core';
 
-import { ServerInfo_Card } from 'sockatrice/generated';
+import { ServerInfo_Card } from '@cockatrice/sockatrice/generated';
 import { useScryfallCard } from '../../../hooks/useScryfallCard';
 import { makeCardKey, useRegisterCardRef } from '../../../utils/CardRegistry/CardRegistryContext';
 

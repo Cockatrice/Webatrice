@@ -36,7 +36,7 @@
     "@mui/material": "^9.0.0",
     "@reduxjs/toolkit": "^2.11.2",
     "crypto-js": "^4.2.0",
-    "datatrice": "https://github.com/Cockatrice/Datatrice/releases/download/v0.7.0/datatrice-0.7.0.tgz",
+    "@cockatrice/datatrice": "https://github.com/Cockatrice/Datatrice/releases/download/v1.0.0/cockatrice-datatrice-1.0.0.tgz",
     "dexie": "^4.4.2",
     "i18next": "^26.0.5",
     "i18next-browser-languagedetector": "^8.2.1",
@@ -52,7 +52,7 @@
     "react-virtualized-auto-sizer": "^2.0.3",
     "react-window": "^2.2.7",
     "rxjs": "^7.5.4",
-    "sockatrice": "https://github.com/Cockatrice/Sockatrice/releases/download/v2.3.2/sockatrice-2.3.2.tgz",
+    "@cockatrice/sockatrice": "https://github.com/Cockatrice/Sockatrice/releases/download/v3.0.0/cockatrice-sockatrice-3.0.0.tgz",
     "zod": "^4.4.3"
   },
   "devDependencies": {

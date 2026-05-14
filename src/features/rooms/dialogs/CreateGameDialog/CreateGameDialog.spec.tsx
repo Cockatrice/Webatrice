@@ -1,6 +1,6 @@
 import { fireEvent, screen } from '@testing-library/react';
 import { renderWithProviders, makeStoreState, makeUser } from '../../../../__test-utils__';
-import { ServerInfo_User_UserLevelFlag } from 'sockatrice/generated';
+import { ServerInfo_User_UserLevelFlag } from '@cockatrice/sockatrice/generated';
 import CreateGameDialog from './CreateGameDialog';
 
 function renderDialog(opts: { isJudge?: boolean; isRegistered?: boolean; gametypeMap?: Record<number, string> } = {}) {

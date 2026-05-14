@@ -2,7 +2,7 @@ import { RefObject, useCallback, useMemo, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 
-import { ServerInfo_Card } from 'sockatrice/generated';
+import { ServerInfo_Card } from '@cockatrice/sockatrice/generated';
 import { createCardRegistry, type CardRegistry } from '../utils/CardRegistry/CardRegistryContext';
 import { useCurrentGame, type CurrentGame } from './useCurrentGame';
 import { useGameAccess, type GameAccess } from './useGameAccess';

@@ -9,7 +9,7 @@ import Typography from '@mui/material/Typography';
 import { CountryDropdown, InputField } from '@app/components';
 import { KnownHosts } from '@app/feature-widgets/known-hosts';
 import type { HostDTO } from '@app/services';
-import { server } from 'datatrice';
+import { server } from '@cockatrice/datatrice';
 import { useAppDispatch } from '@app/store';
 import { useRegisterForm } from './useRegisterForm';
 import {

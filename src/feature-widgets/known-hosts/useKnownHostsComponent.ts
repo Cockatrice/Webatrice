@@ -5,9 +5,9 @@ import { useToast } from '@app/components';
 import { LoadingState, useReduxEffect } from '@app/hooks';
 
 import { useKnownHosts } from './useKnownHosts';
-import { useWebClient } from 'datatrice/react';
+import { useWebClient } from '@cockatrice/datatrice/react';
 import { HostDTO } from '@app/services';
-import { server } from 'datatrice';
+import { server } from '@cockatrice/datatrice';
 import { useAppDispatch, useAppSelector } from '@app/store';
 import { Host } from '@app/types';
 import { getHostPort } from '@app/utils';

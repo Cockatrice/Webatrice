@@ -1,10 +1,10 @@
 import { screen } from '@testing-library/react';
-import type { Room } from 'datatrice';
+import type { Room } from '@cockatrice/datatrice';
 import { renderWithProviders, connectedWithRoomsState } from '../../../__test-utils__';
 import OpenGames from './OpenGames';
 
-vi.mock('datatrice/react', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('datatrice/react')>();
+vi.mock('@cockatrice/datatrice/react', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@cockatrice/datatrice/react')>();
   return { ...actual, useWebClient: vi.fn(() => ({})) };
 });
 

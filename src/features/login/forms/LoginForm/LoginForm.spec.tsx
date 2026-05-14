@@ -15,8 +15,8 @@ vi.mock('@app/hooks', async (importOriginal) => {
     useSettings: hoisted.mockUseSettings,
   };
 });
-vi.mock('datatrice/react', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('datatrice/react')>();
+vi.mock('@cockatrice/datatrice/react', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@cockatrice/datatrice/react')>();
   return { ...actual, useWebClient: () => hoisted.mockWebClient };
 });
 

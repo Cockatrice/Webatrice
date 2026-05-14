@@ -1,5 +1,5 @@
 import { renderHook } from '@testing-library/react';
-import { ZoneName } from 'datatrice';
+import { ZoneName } from '@cockatrice/datatrice';
 vi.mock('@app/hooks', async (orig) => {
   const actual = await orig<typeof import('@app/hooks')>();
   return {

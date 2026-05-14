@@ -1,5 +1,5 @@
 import { useReduxEffect } from '@app/hooks';
-import { games } from 'datatrice';
+import { games } from '@cockatrice/datatrice';
 
 export interface GameLifecycleHandlers {
   onKicked: () => void;

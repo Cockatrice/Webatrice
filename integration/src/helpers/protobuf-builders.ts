@@ -2,7 +2,7 @@ import { create, setExtension, toBinary } from '@bufbuild/protobuf';
 import type { GenExtension, GenMessage } from '@bufbuild/protobuf/codegenv2';
 import type { MessageInitShape } from '@bufbuild/protobuf';
 
-import { GameEvent, GameEventContainerSchema, GameEventSchema, Response, ResponseSchema, Response_ResponseCode, RoomEvent, RoomEventSchema, ServerMessageSchema, ServerMessage_MessageType, SessionEvent, SessionEventSchema } from 'sockatrice/generated';
+import { GameEvent, GameEventContainerSchema, GameEventSchema, Response, ResponseSchema, Response_ResponseCode, RoomEvent, RoomEventSchema, ServerMessageSchema, ServerMessage_MessageType, SessionEvent, SessionEventSchema } from '@cockatrice/sockatrice/generated';
 import { getMockWebSocket } from './setup';
 
 export function make<S extends GenMessage<any>>(

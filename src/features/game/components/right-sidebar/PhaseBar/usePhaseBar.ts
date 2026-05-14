@@ -1,8 +1,8 @@
-import { useWebClient } from 'datatrice/react';
-import { games } from 'datatrice';
+import { useWebClient } from '@cockatrice/datatrice/react';
+import { games } from '@cockatrice/datatrice';
 import { useAppSelector } from '@app/store';
-import { CardAttribute } from 'sockatrice/generated';
-import { Phase, ZoneName } from 'datatrice';
+import { CardAttribute } from '@cockatrice/sockatrice/generated';
+import { Phase, ZoneName } from '@cockatrice/datatrice';
 import { useCurrentGame } from '../../../hooks/useCurrentGame';
 import { useGameAffordances } from '../../../hooks/useGameAffordances';
 

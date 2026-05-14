@@ -7,10 +7,10 @@ import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import { DndContext } from '@dnd-kit/core';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
-import type { WebsocketTypes } from 'sockatrice/types';
-import type { WebClient } from 'sockatrice';
-import { createStore } from 'datatrice';
-import { DatatriceProvider, WebClientProvider } from 'datatrice/react';
+import type { WebsocketTypes } from '@cockatrice/sockatrice/types';
+import type { WebClient } from '@cockatrice/sockatrice';
+import { createStore } from '@cockatrice/datatrice';
+import { DatatriceProvider, WebClientProvider } from '@cockatrice/datatrice/react';
 
 const testTheme = createTheme({
   transitions: {

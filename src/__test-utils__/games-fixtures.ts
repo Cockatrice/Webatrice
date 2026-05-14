@@ -1,5 +1,5 @@
 import { create, type MessageInitShape } from '@bufbuild/protobuf';
-import { GameEntry, PlayerEntry, ZoneEntry } from 'datatrice';
+import { GameEntry, PlayerEntry, ZoneEntry } from '@cockatrice/datatrice';
 import {
   ServerInfo_Arrow,
   ServerInfo_ArrowSchema,
@@ -12,7 +12,7 @@ import {
   ServerInfo_PlayerProperties,
   ServerInfo_PlayerPropertiesSchema,
   colorSchema,
-} from 'sockatrice/generated';
+} from '@cockatrice/sockatrice/generated';
 
 export function makeCard(overrides: MessageInitShape<typeof ServerInfo_CardSchema> = {}): ServerInfo_Card {
   return create(ServerInfo_CardSchema, {

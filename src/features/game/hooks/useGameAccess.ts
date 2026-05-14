@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { games } from 'datatrice';
+import { games } from '@cockatrice/datatrice';
 import { useAppSelector } from '@app/store';
 
 export interface GameAccess {

@@ -11,8 +11,8 @@
 // as a later-milestone item.
 
 import { screen, fireEvent, waitFor } from '@testing-library/react';
-import { ServerInfo_Card } from 'sockatrice/generated';
-import { ZoneName } from 'datatrice';
+import { ServerInfo_Card } from '@cockatrice/sockatrice/generated';
+import { ZoneName } from '@cockatrice/datatrice';
 vi.mock('../../components/Layout/Layout', () => ({
   default: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));

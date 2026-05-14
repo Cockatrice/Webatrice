@@ -12,7 +12,7 @@ import { CheckboxField, InputField } from '@app/components';
 import { KnownHosts, useKnownHosts } from '@app/feature-widgets/known-hosts';
 import { LoadingState, useSettings } from '@app/hooks';
 import { HostDTO } from '@app/services';
-import { server, type TestConnectionStatus } from 'datatrice';
+import { server, type TestConnectionStatus } from '@cockatrice/datatrice';
 import { useAppSelector } from '@app/store';
 import { useLoginFormBody } from './useLoginForm';
 import { buildLoginFormSchema, type LoginFormValues } from './loginFormSchema';

@@ -3,7 +3,7 @@ import MenuItem from '@mui/material/MenuItem';
 import Divider from '@mui/material/Divider';
 import Check from '@mui/icons-material/Check';
 
-import { ZoneName } from 'datatrice';
+import { ZoneName } from '@cockatrice/datatrice';
 import NestedMenuItem from '../CardContextMenu/NestedMenuItem';
 
 import { useZoneContextMenu } from './useZoneContextMenu';

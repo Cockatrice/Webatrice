@@ -1,7 +1,7 @@
 import { fromBinary, getExtension, hasExtension } from '@bufbuild/protobuf';
 import type { GenExtension } from '@bufbuild/protobuf/codegenv2';
 
-import { AdminCommand, CommandContainer, CommandContainerSchema, GameCommand, ModeratorCommand, RoomCommand, SessionCommand } from 'sockatrice/generated';
+import { AdminCommand, CommandContainer, CommandContainerSchema, GameCommand, ModeratorCommand, RoomCommand, SessionCommand } from '@cockatrice/sockatrice/generated';
 import { getMockWebSocket } from './setup';
 
 type SessionCmd = SessionCommand;

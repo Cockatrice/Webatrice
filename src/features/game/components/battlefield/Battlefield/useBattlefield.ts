@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
-import { ServerInfo_Card } from 'sockatrice/generated';
-import { ZoneName } from 'datatrice';
-import { games } from 'datatrice';
+import { ServerInfo_Card } from '@cockatrice/sockatrice/generated';
+import { ZoneName } from '@cockatrice/datatrice';
+import { games } from '@cockatrice/datatrice';
 import { useAppSelector } from '@app/store';
 import { useSettings } from '@app/hooks';
 

@@ -1,5 +1,5 @@
-import { ServerInfo_Card } from 'sockatrice/generated';
-import { ZoneName } from 'datatrice';
+import { ServerInfo_Card } from '@cockatrice/sockatrice/generated';
+import { ZoneName } from '@cockatrice/datatrice';
 import { cx } from '@app/utils';
 
 import CardSlot from '../CardSlot/CardSlot';

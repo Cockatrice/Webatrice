@@ -1,7 +1,7 @@
-import { games } from 'datatrice';
+import { games } from '@cockatrice/datatrice';
 import { useAppDispatch } from '@app/store';
 
-import { useWebClient } from 'datatrice/react';
+import { useWebClient } from '@cockatrice/datatrice/react';
 
 export function useLeaveGame(): (gameId: number) => void {
   const webClient = useWebClient();

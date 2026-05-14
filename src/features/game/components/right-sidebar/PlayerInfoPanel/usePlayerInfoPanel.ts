@@ -1,8 +1,8 @@
-import { useWebClient } from 'datatrice/react';
-import { games } from 'datatrice';
+import { useWebClient } from '@cockatrice/datatrice/react';
+import { games } from '@cockatrice/datatrice';
 import { useAppSelector } from '@app/store';
-import { ServerInfo_Counter } from 'sockatrice/generated';
-import { PlayerEntry } from 'datatrice';
+import { ServerInfo_Counter } from '@cockatrice/sockatrice/generated';
+import { PlayerEntry } from '@cockatrice/datatrice';
 type ServerColor = { r: number; g: number; b: number; a: number } | undefined;
 
 // Canonical MTG mana colors, mirroring the dead-code table in desktop's

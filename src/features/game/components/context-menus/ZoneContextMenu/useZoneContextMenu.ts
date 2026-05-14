@@ -1,7 +1,7 @@
-import { useWebClient } from 'datatrice/react';
-import { games } from 'datatrice';
+import { useWebClient } from '@cockatrice/datatrice/react';
+import { games } from '@cockatrice/datatrice';
 import { useAppSelector } from '@app/store';
-import { ZoneName } from 'datatrice';
+import { ZoneName } from '@cockatrice/datatrice';
 export interface ZoneContextMenu {
   ready: boolean;
   alwaysReveal: boolean;

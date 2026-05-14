@@ -1,6 +1,6 @@
 import Tooltip from '@mui/material/Tooltip';
 
-import { Phase } from 'datatrice';
+import { Phase } from '@cockatrice/datatrice';
 import { cx } from '@app/utils';
 
 import { usePhaseBar } from './usePhaseBar';

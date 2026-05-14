@@ -1,6 +1,6 @@
 import type { Reducer } from '@reduxjs/toolkit';
-import { rootReducerMap as datatriceRootReducerMap } from 'datatrice';
-import { createTypedHooks } from 'datatrice/react';
+import { rootReducerMap as datatriceRootReducerMap } from '@cockatrice/datatrice';
+import { createTypedHooks } from '@cockatrice/datatrice/react';
 
 import { actionReducer } from './actions';
 import { shortcutsReducer } from './shortcuts';

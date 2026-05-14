@@ -2,9 +2,9 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { Command_Ping_ext, Response_ResponseCode } from 'sockatrice/generated';
+import { Command_Ping_ext, Response_ResponseCode } from '@cockatrice/sockatrice/generated';
 import { store } from '../helpers/setup';
-import { WebsocketTypes } from 'sockatrice/types';
+import { WebsocketTypes } from '@cockatrice/sockatrice/types';
 
 import { connectRaw, getMockWebSocket } from '../helpers/setup';
 import {

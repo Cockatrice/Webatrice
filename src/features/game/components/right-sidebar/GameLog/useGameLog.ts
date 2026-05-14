@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState, RefObject } from 'react';
-import { useWebClient } from 'datatrice/react';
-import { games } from 'datatrice';
+import { useWebClient } from '@cockatrice/datatrice/react';
+import { games } from '@cockatrice/datatrice';
 import { useAppSelector } from '@app/store';
-import { GameMessage, PlayerEntry } from 'datatrice';
+import { GameMessage, PlayerEntry } from '@cockatrice/datatrice';
 const EMPTY_MESSAGES: GameMessage[] = [];
 
 export function formatElapsed(totalSeconds: number): string {

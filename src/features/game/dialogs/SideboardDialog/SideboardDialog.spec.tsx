@@ -1,5 +1,5 @@
 import { screen, fireEvent, within } from '@testing-library/react';
-import { ZoneName } from 'datatrice';
+import { ZoneName } from '@cockatrice/datatrice';
 import { renderWithProviders } from '../../../../__test-utils__';
 import SideboardDialog, { applyMoves } from './SideboardDialog';
 

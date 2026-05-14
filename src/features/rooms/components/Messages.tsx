@@ -1,5 +1,5 @@
 import { Message } from '@app/components';
-import { Message as MessageData } from 'datatrice';
+import { Message as MessageData } from '@cockatrice/datatrice';
 import './Messages.css';
 
 interface MessagesProps {

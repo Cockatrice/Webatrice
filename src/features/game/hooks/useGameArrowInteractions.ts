@@ -1,9 +1,9 @@
 import { RefObject, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useSettings } from '@app/hooks';
-import { useWebClient } from 'datatrice/react';
-import { CardAttribute, ServerInfo_Card } from 'sockatrice/generated';
-import { GameEntry, ZoneName } from 'datatrice';
+import { useWebClient } from '@cockatrice/datatrice/react';
+import { CardAttribute, ServerInfo_Card } from '@cockatrice/sockatrice/generated';
+import { GameEntry, ZoneName } from '@cockatrice/datatrice';
 import { ArrowColor, ColorRGBA, rgbaToCss } from '@app/types';
 import { makeCardKey, type CardRegistry } from '../utils/CardRegistry/CardRegistryContext';
 

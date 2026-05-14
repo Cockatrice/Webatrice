@@ -1,7 +1,7 @@
 import { renderHook } from '@testing-library/react';
 import type { DragEndEvent } from '@dnd-kit/core';
-import { ServerInfo_Card } from 'sockatrice/generated';
-import { ZoneName } from 'datatrice';
+import { ServerInfo_Card } from '@cockatrice/sockatrice/generated';
+import { ZoneName } from '@cockatrice/datatrice';
 import { makeCard } from '../../../__test-utils__/games-fixtures';
 import {
   CARD_WIDTH_PX,
@@ -11,8 +11,8 @@ import {
 } from '../components/battlefield/Battlefield/gridMath';
 
 const { mockUseWebClient } = vi.hoisted(() => ({ mockUseWebClient: vi.fn() }));
-vi.mock('datatrice/react', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('datatrice/react')>();
+vi.mock('@cockatrice/datatrice/react', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@cockatrice/datatrice/react')>();
   return { ...actual, useWebClient: mockUseWebClient };
 });
 

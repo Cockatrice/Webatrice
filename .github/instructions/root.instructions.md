@@ -28,11 +28,11 @@ Default to the universal browser-API subset. Don't branch per-engine, even when 
 
 Types in the app split into three flat buckets, with **no `Data` / `Enriched` / `App` namespace wrappers**:
 
-- **Proto wire types** — `import { ServerInfo_Game, ServerInfo_CardSchema, ... } from 'sockatrice/generated';`. Produced by Sockatrice from the Cockatrice protobuf definitions. Consumers reach them directly — no Webatrice-side re-export layer.
-- **Store-domain shapes** — `import { Room, GameEntry, PlayerEntry, ZoneEntry, GameMessage, Message, GametypeMap, ZoneName, Phase, SortDirection, ... } from 'datatrice';`. The normalized shapes the Redux slices maintain. Datatrice owns these because Datatrice owns the slice state.
+- **Proto wire types** — `import { ServerInfo_Game, ServerInfo_CardSchema, ... } from '@cockatrice/sockatrice/generated';`. Produced by Sockatrice from the Cockatrice protobuf definitions. Consumers reach them directly — no Webatrice-side re-export layer.
+- **Store-domain shapes** — `import { Room, GameEntry, PlayerEntry, ZoneEntry, GameMessage, Message, GametypeMap, ZoneName, Phase, SortDirection, ... } from '@cockatrice/datatrice';`. The normalized shapes the Redux slices maintain. Datatrice owns these because Datatrice owns the slice state.
 - **Webatrice-only app types** — `import { RouteEnum, Setting, Host, Card, MagicCard, ArrowColor, ShortcutScope, ... } from '@app/types';`. UI/router/persistence/keybinding concerns that have no place in the portable Redux layer.
 
-Websocket protocol/transport types (`StatusEnum`, `WebSocketConnectReason`, the `*ConnectOptions` family, signal-payload contexts, `GameEventMeta`, `I*Request`/`I*Response` contracts, `WebClientConfig`) live at `sockatrice/types` as the `WebsocketTypes` namespace. This is the only public surface for those types.
+Websocket protocol/transport types (`StatusEnum`, `WebSocketConnectReason`, the `*ConnectOptions` family, signal-payload contexts, `GameEventMeta`, `I*Request`/`I*Response` contracts, `WebClientConfig`) live at `@cockatrice/sockatrice/types` as the `WebsocketTypes` namespace. This is the only public surface for those types.
 
 ### Layer boundaries
 
@@ -45,18 +45,18 @@ Enforced by [eslint.boundaries.mjs](../../eslint.boundaries.mjs); zero violation
 
 ### UI → server layering invariant
 
-1. UI layers call `useWebClient()` ([src/hooks/useWebClient.tsx](../../src/hooks/useWebClient.tsx)) to get the Sockatrice `WebClient`, then `client.request.<scope>.<method>(…)`. The `WebClient` value may only be imported by `useWebClient.tsx` itself; type-only `import type { WebClient } from 'sockatrice'` is allowed everywhere. Enforced by `@typescript-eslint/no-restricted-imports` in [eslint.config.mjs](../../eslint.config.mjs). `new WebClient(...)` is called only inside `WebClientProvider`, never at module load.
+1. UI layers call `useWebClient()` ([src/hooks/useWebClient.tsx](../../src/hooks/useWebClient.tsx)) to get the Sockatrice `WebClient`, then `client.request.<scope>.<method>(…)`. The `WebClient` value may only be imported by `useWebClient.tsx` itself; type-only `import type { WebClient } from '@cockatrice/sockatrice'` is allowed everywhere. Enforced by `@typescript-eslint/no-restricted-imports` in [eslint.config.mjs](../../eslint.config.mjs). `new WebClient(...)` is called only inside `WebClientProvider`, never at module load.
 2. Sockatrice fires response callbacks into the `IWebClientResponse` instance built by Datatrice's `attachResponseHandlers(store)`. The per-scope `*ResponseImpl` classes (session / room / game / admin / moderator) live inside Datatrice and are the only place that dispatches to the Redux store.
 
 **Documented exception**: `useLeaveGame` optimistically dispatches `gameLeft` on send because Servatrice removes the leaving player from the broadcast list before sending `Event_Leave` — the leaver never sees confirmation. Without the optimistic dispatch, the lifecycle hook never fires and the tab stays on `/game/:gameId`.
 
 ### Public API
 
-The response layer (one `*ResponseImpl` per inbound scope — session, room, game, admin, moderator) lives in Datatrice. `attachResponseHandlers(store)` (`datatrice` main export) builds the `IWebClientResponse` Sockatrice consumes. Webatrice supplies `CLIENT_CONFIG` (clientid, clientver, clientfeatures) and `CLIENT_OPTIONS` (autojoin, keepalive) from [src/clientConfig.ts](../../src/clientConfig.ts). **UI code never constructs a `WebClient` directly — use `useWebClient()`.**
+The response layer (one `*ResponseImpl` per inbound scope — session, room, game, admin, moderator) lives in Datatrice. `attachResponseHandlers(store)` (`@cockatrice/datatrice` main export) builds the `IWebClientResponse` Sockatrice consumes. Webatrice supplies `CLIENT_CONFIG` (clientid, clientver, clientfeatures) and `CLIENT_OPTIONS` (autojoin, keepalive) from [src/clientConfig.ts](../../src/clientConfig.ts). **UI code never constructs a `WebClient` directly — use `useWebClient()`.**
 
 ### State (`src/store/`)
 
-The three server-data slices (`server`, `rooms`, `games`) live in **Datatrice** and are consumed as namespace re-exports: `import { server, rooms, games } from 'datatrice'` then `server.Selectors.X`, `rooms.Actions.Y`, `games.Types.Z`. Webatrice's local slices (`action`, `shortcuts`) live in `src/store/` and reach consumers through the `@app/store` barrel (typed hooks `useAppSelector`/`useAppDispatch`, the `store` singleton, `RootState`/`AppDispatch` types). Slice shapes and reducer-author hazards live in [store.instructions.md](store.instructions.md).
+The three server-data slices (`server`, `rooms`, `games`) live in **Datatrice** and are consumed as namespace re-exports: `import { server, rooms, games } from '@cockatrice/datatrice'` then `server.Selectors.X`, `rooms.Actions.Y`, `games.Types.Z`. Webatrice's local slices (`action`, `shortcuts`) live in `src/store/` and reach consumers through the `@app/store` barrel (typed hooks `useAppSelector`/`useAppDispatch`, the `store` singleton, `RootState`/`AppDispatch` types). Slice shapes and reducer-author hazards live in [store.instructions.md](store.instructions.md).
 
 ### Local persistence
 

@@ -1,4 +1,4 @@
-import { ServerInfo_Card } from 'sockatrice/generated';
+import { ServerInfo_Card } from '@cockatrice/sockatrice/generated';
 import BattlefieldRow from './BattlefieldRow';
 import BattlefieldStackColumn from './BattlefieldStackColumn';
 import { useBattlefield } from './useBattlefield';

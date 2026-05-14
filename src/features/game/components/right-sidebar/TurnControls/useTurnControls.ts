@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react';
 
 import { LoadingState, useLeaveGame, useSettings } from '@app/hooks';
-import { useWebClient } from 'datatrice/react';
-import { games } from 'datatrice';
+import { useWebClient } from '@cockatrice/datatrice/react';
+import { games } from '@cockatrice/datatrice';
 import { useAppSelector } from '@app/store';
 
 import { useCurrentGame } from '../../../hooks/useCurrentGame';

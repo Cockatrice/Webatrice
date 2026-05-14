@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useToast } from '@app/components';
 import { useReduxEffect } from '@app/hooks';
-import { server } from 'datatrice';
+import { server } from '@cockatrice/datatrice';
 
 export interface RegisterForm {
   emailRequired: boolean;

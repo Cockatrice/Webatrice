@@ -5,7 +5,7 @@ import Typography from '@mui/material/Typography';
 
 import { Layout } from '@app/feature-core';
 import { Images } from '@app/images';
-import { server } from 'datatrice';
+import { server } from '@cockatrice/datatrice';
 import { RouteEnum } from '@app/types';
 import { useAppSelector } from '@app/store';
 

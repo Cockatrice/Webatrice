@@ -1,6 +1,6 @@
 import { cx } from '@app/utils';
-import { ServerInfo_Card, ServerInfo_Counter } from 'sockatrice/generated';
-import { ZoneName } from 'datatrice';
+import { ServerInfo_Card, ServerInfo_Counter } from '@cockatrice/sockatrice/generated';
+import { ZoneName } from '@cockatrice/datatrice';
 import ZoneStack from '../../ui/ZoneStack/ZoneStack';
 
 import { counterCssColor, usePlayerInfoPanel } from './usePlayerInfoPanel';

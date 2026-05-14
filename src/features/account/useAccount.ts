@@ -1,9 +1,9 @@
 import { useEffect, useMemo } from 'react';
 
-import { useWebClient } from 'datatrice/react';
-import { server } from 'datatrice';
+import { useWebClient } from '@cockatrice/datatrice/react';
+import { server } from '@cockatrice/datatrice';
 import { useAppSelector } from '@app/store';
-import { ServerInfo_User } from 'sockatrice/generated';
+import { ServerInfo_User } from '@cockatrice/sockatrice/generated';
 export interface Account {
   buddyList: ServerInfo_User[];
   ignoreList: ServerInfo_User[];

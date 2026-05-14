@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 
-import { useWebClient } from 'datatrice/react';
-import { games } from 'datatrice';
+import { useWebClient } from '@cockatrice/datatrice/react';
+import { games } from '@cockatrice/datatrice';
 import { useAppSelector } from '@app/store';
-import { ServerInfo_Arrow } from 'sockatrice/generated';
-import { PlayerEntry } from 'datatrice';
+import { ServerInfo_Arrow } from '@cockatrice/sockatrice/generated';
+import { PlayerEntry } from '@cockatrice/datatrice';
 import { ArrowColor, rgbaToCss } from '@app/types';
 import { makeCardKey, useCardRegistry } from '../../../utils/CardRegistry/CardRegistryContext';
 

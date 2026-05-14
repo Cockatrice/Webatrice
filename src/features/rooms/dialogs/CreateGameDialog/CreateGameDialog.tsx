@@ -11,10 +11,10 @@ import RadioGroup from '@mui/material/RadioGroup';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 
-import { server } from 'datatrice';
+import { server } from '@cockatrice/datatrice';
 import { useAppSelector } from '@app/store';
-import { CreateGameParams } from 'sockatrice/generated';
-import { GametypeMap } from 'datatrice';
+import { CreateGameParams } from '@cockatrice/sockatrice/generated';
+import { GametypeMap } from '@cockatrice/datatrice';
 import './CreateGameDialog.css';
 
 export interface CreateGameDialogProps {

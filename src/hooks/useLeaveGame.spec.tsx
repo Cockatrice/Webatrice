@@ -1,7 +1,7 @@
 import { ReactNode } from 'react';
 import { renderHook } from '@testing-library/react';
 
-import { WebClientContext } from 'datatrice/react';
+import { WebClientContext } from '@cockatrice/datatrice/react';
 import { createMockWebClient } from '../__test-utils__/mockWebClient';
 
 const mockDispatch = vi.hoisted(() => vi.fn());

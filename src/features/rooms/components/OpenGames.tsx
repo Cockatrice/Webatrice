@@ -7,8 +7,8 @@ import TableSortLabel from '@mui/material/TableSortLabel';
 import Tooltip from '@mui/material/Tooltip';
 
 import { UserDisplay } from '@app/components';
-import { ServerInfo_Game } from 'sockatrice/generated';
-import { Game, Room } from 'datatrice';
+import { ServerInfo_Game } from '@cockatrice/sockatrice/generated';
+import { Game, Room } from '@cockatrice/datatrice';
 import { useOpenGames } from './useOpenGames';
 
 import './OpenGames.css';

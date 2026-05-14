@@ -12,8 +12,8 @@ import TableRow from '@mui/material/TableRow';
 import Tab from '@mui/material/Tab';
 import Tabs from '@mui/material/Tabs';
 
-import { ServerInfo_ChatMessage } from 'sockatrice/generated';
-import type { ServerStateLogs } from 'datatrice';
+import { ServerInfo_ChatMessage } from '@cockatrice/sockatrice/generated';
+import type { ServerStateLogs } from '@cockatrice/datatrice';
 
 import { useLogResults } from './useLogResults';
 

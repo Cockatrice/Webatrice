@@ -1,6 +1,6 @@
 import { act, screen, fireEvent } from '@testing-library/react';
-import { Event_GameStateChangedSchema } from 'sockatrice/generated';
-import { GameMessage } from 'datatrice';
+import { Event_GameStateChangedSchema } from '@cockatrice/sockatrice/generated';
+import { GameMessage } from '@cockatrice/datatrice';
 import { create } from '@bufbuild/protobuf';
 import { createMockWebClient, makeStoreState, renderWithProviders, makeUser } from '../../../../../__test-utils__';
 import {
@@ -8,7 +8,7 @@ import {
   makePlayerEntry,
   makePlayerProperties,
 } from '../../../../../__test-utils__/games-fixtures';
-import { games } from 'datatrice';
+import { games } from '@cockatrice/datatrice';
 import GameLog from './GameLog';
 
 function stateWithMessages(

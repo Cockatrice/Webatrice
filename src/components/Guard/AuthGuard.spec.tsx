@@ -2,8 +2,8 @@ import { screen } from '@testing-library/react';
 import { renderWithProviders, connectedState, disconnectedState } from '../../__test-utils__';
 import AuthGuard from './AuthGuard';
 
-vi.mock('datatrice/react', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('datatrice/react')>();
+vi.mock('@cockatrice/datatrice/react', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@cockatrice/datatrice/react')>();
   return { ...actual, useWebClient: vi.fn(() => ({})) };
 });
 

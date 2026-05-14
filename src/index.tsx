@@ -6,7 +6,7 @@ import { createRoot } from 'react-dom/client';
 import { StyledEngineProvider } from '@mui/material';
 import { ThemeProvider } from '@mui/material/styles';
 
-import { DatatriceProvider, WebClientProvider } from 'datatrice/react';
+import { DatatriceProvider, WebClientProvider } from '@cockatrice/datatrice/react';
 import { extensions } from '@app/store';
 import { CLIENT_CONFIG, CLIENT_OPTIONS } from './clientConfig';
 import AppShell from './AppShell';

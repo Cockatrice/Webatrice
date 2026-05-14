@@ -8,7 +8,7 @@ import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
 import CloseIcon from '@mui/icons-material/Close';
 
-import { games } from 'datatrice';
+import { games } from '@cockatrice/datatrice';
 import { useAppSelector } from '@app/store';
 
 import './GameInfoDialog.css';

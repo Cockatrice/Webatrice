@@ -1,9 +1,9 @@
 import { useCallback, useState } from 'react';
 
 import { useSettings } from '@app/hooks';
-import { useWebClient } from 'datatrice/react';
-import { CardAttribute, ServerInfo_Card } from 'sockatrice/generated';
-import { GameEntry, PlayerEntry, ZoneName } from 'datatrice';
+import { useWebClient } from '@cockatrice/datatrice/react';
+import { CardAttribute, ServerInfo_Card } from '@cockatrice/sockatrice/generated';
+import { GameEntry, PlayerEntry, ZoneName } from '@cockatrice/datatrice';
 import { CardDTO } from '../../../services/dexie/DexieDTOs/CardDTO';
 import { COUNTER_TYPE_LABELS } from '../components/ui/CardSlot/counterColors';
 import { DEFAULT_DIE_COUNT, DEFAULT_DIE_SIDES } from '../dialogs/RollDieDialog/RollDieDialog';

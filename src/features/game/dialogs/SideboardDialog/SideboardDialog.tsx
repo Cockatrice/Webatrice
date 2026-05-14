@@ -10,7 +10,7 @@ import FormControlLabel from '@mui/material/FormControlLabel';
 import Checkbox from '@mui/material/Checkbox';
 import Tooltip from '@mui/material/Tooltip';
 
-import { ZoneEntry, ZoneName } from 'datatrice';
+import { ZoneEntry, ZoneName } from '@cockatrice/datatrice';
 import './SideboardDialog.css';
 
 const PREFIX = 'SideboardDialog';

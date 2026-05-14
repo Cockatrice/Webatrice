@@ -6,17 +6,22 @@ import {
   makeUser,
   connectedWithRoomsState,
 } from '../../../../__test-utils__';
-import { ServerInfo_Game, ServerInfo_GameSchema, ServerInfo_RoomSchema, ServerInfo_User_UserLevelFlag } from 'sockatrice/generated';
-import { GameSortField, SortDirection, UserSortField } from 'datatrice';
-import { games } from 'datatrice';
+import {
+  ServerInfo_Game,
+  ServerInfo_GameSchema,
+  ServerInfo_RoomSchema,
+  ServerInfo_User_UserLevelFlag,
+} from '@cockatrice/sockatrice/generated';
+import { GameSortField, SortDirection, UserSortField } from '@cockatrice/datatrice';
+import { games } from '@cockatrice/datatrice';
 import GameSelector from './GameSelector';
 
 const { mockUseWebClient, mockNavigate } = vi.hoisted(() => ({
   mockUseWebClient: vi.fn(),
   mockNavigate: vi.fn(),
 }));
-vi.mock('datatrice/react', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('datatrice/react')>();
+vi.mock('@cockatrice/datatrice/react', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@cockatrice/datatrice/react')>();
   return { ...actual, useWebClient: mockUseWebClient };
 });
 vi.mock('react-router-dom', async (importOriginal) => {

@@ -1,5 +1,5 @@
-import { ServerInfo_Card } from 'sockatrice/generated';
-import { games } from 'datatrice';
+import { ServerInfo_Card } from '@cockatrice/sockatrice/generated';
+import { games } from '@cockatrice/datatrice';
 
 import AttachmentStack from './AttachmentStack';
 import {

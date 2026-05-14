@@ -5,7 +5,7 @@
 // the end-to-end dispatch so a regression that disconnects state from its
 // consumers is caught even when both sides still pass in isolation.
 import { screen, fireEvent, waitFor } from '@testing-library/react';
-import { ZoneName } from 'datatrice';
+import { ZoneName } from '@cockatrice/datatrice';
 import { createMockWebClient, makeStoreState, renderWithProviders, connectedState, makeUser } from '../../__test-utils__';
 import {
   makeCard,

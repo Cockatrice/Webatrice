@@ -2,7 +2,7 @@ import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import Divider from '@mui/material/Divider';
 
-import { ZoneName } from 'datatrice';
+import { ZoneName } from '@cockatrice/datatrice';
 import NestedMenuItem from '../CardContextMenu/NestedMenuItem';
 
 import { useHandContextMenu } from './useHandContextMenu';

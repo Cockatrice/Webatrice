@@ -3,7 +3,7 @@ import { DndContext, DragOverlay } from '@dnd-kit/core';
 import { AuthGuard } from '@app/components';
 import { Layout } from '@app/feature-core';
 import { ConfirmDialog, PromptDialog } from '@app/dialogs';
-import { ZoneName } from 'datatrice';
+import { ZoneName } from '@cockatrice/datatrice';
 import GameArrowOverlay from './components/arrows/GameArrowOverlay/GameArrowOverlay';
 import CardContextMenu from './components/context-menus/CardContextMenu/CardContextMenu';
 import HandContextMenu from './components/context-menus/HandContextMenu/HandContextMenu';

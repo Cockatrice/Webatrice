@@ -1,9 +1,9 @@
 import { create } from '@bufbuild/protobuf';
 import { describe, expect, it } from 'vitest';
 
-import { Event_ConnectionClosedSchema, Event_ConnectionClosed_CloseReason, Event_ConnectionClosed_ext, Event_NotifyUserSchema, Event_NotifyUser_NotificationType, Event_NotifyUser_ext, Event_ServerMessageSchema, Event_ServerMessage_ext, Event_ServerShutdownSchema, Event_ServerShutdown_ext } from 'sockatrice/generated';
+import { Event_ConnectionClosedSchema, Event_ConnectionClosed_CloseReason, Event_ConnectionClosed_ext, Event_NotifyUserSchema, Event_NotifyUser_NotificationType, Event_NotifyUser_ext, Event_ServerMessageSchema, Event_ServerMessage_ext, Event_ServerShutdownSchema, Event_ServerShutdown_ext } from '@cockatrice/sockatrice/generated';
 import { store } from '../helpers/setup';
-import { WebsocketTypes } from 'sockatrice/types';
+import { WebsocketTypes } from '@cockatrice/sockatrice/types';
 
 import { connectAndHandshake } from '../helpers/setup';
 import {

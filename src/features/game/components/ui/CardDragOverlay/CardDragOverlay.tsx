@@ -1,4 +1,4 @@
-import { ServerInfo_Card } from 'sockatrice/generated';
+import { ServerInfo_Card } from '@cockatrice/sockatrice/generated';
 import { useScryfallCard } from '../../../hooks/useScryfallCard';
 
 import './CardDragOverlay.css';

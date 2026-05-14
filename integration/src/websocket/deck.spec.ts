@@ -1,9 +1,9 @@
 import { create } from '@bufbuild/protobuf';
 import { describe, expect, it } from 'vitest';
 
-import { Command_DeckDelDir_ext, Command_DeckDel_ext, Command_DeckDownload_ext, Command_DeckList_ext, Command_DeckNewDir_ext, Command_DeckUpload_ext, Command_ReplayDeleteMatch_ext, Command_ReplayList_ext, Response_DeckDownloadSchema, Response_DeckDownload_ext, Response_DeckListSchema, Response_DeckList_ext, Response_DeckUploadSchema, Response_DeckUpload_ext, Response_ReplayListSchema, Response_ReplayList_ext, Response_ResponseCode, ServerInfo_DeckStorage_FileSchema, ServerInfo_DeckStorage_FolderSchema, ServerInfo_DeckStorage_TreeItemSchema, ServerInfo_ReplayMatchSchema } from 'sockatrice/generated';
+import { Command_DeckDelDir_ext, Command_DeckDel_ext, Command_DeckDownload_ext, Command_DeckList_ext, Command_DeckNewDir_ext, Command_DeckUpload_ext, Command_ReplayDeleteMatch_ext, Command_ReplayList_ext, Response_DeckDownloadSchema, Response_DeckDownload_ext, Response_DeckListSchema, Response_DeckList_ext, Response_DeckUploadSchema, Response_DeckUpload_ext, Response_ReplayListSchema, Response_ReplayList_ext, Response_ResponseCode, ServerInfo_DeckStorage_FileSchema, ServerInfo_DeckStorage_FolderSchema, ServerInfo_DeckStorage_TreeItemSchema, ServerInfo_ReplayMatchSchema } from '@cockatrice/sockatrice/generated';
 import { store } from '../helpers/setup';
-import { SessionCommands } from 'sockatrice';
+import { SessionCommands } from '@cockatrice/sockatrice';
 
 import { connectAndLogin } from '../helpers/setup';
 import {

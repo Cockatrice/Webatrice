@@ -1,9 +1,9 @@
 import { ShortcutScope, useShortcut } from '@app/feature-widgets/shortcuts';
-import { useWebClient } from 'datatrice/react';
-import { games } from 'datatrice';
+import { useWebClient } from '@cockatrice/datatrice/react';
+import { games } from '@cockatrice/datatrice';
 import { useAppSelector } from '@app/store';
-import { CardAttribute } from 'sockatrice/generated';
-import { ZoneName } from 'datatrice';
+import { CardAttribute } from '@cockatrice/sockatrice/generated';
+import { ZoneName } from '@cockatrice/datatrice';
 import { useCurrentGame } from './useCurrentGame';
 import { useGameAffordances } from './useGameAffordances';
 

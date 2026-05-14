@@ -8,7 +8,7 @@ import { combineReducers } from '@reduxjs/toolkit';
 import { afterEach, beforeEach, vi } from 'vitest';
 
 import { rootReducerMap } from '@app/store';
-import { attachResponseHandlers, createStore, games, rooms, server } from 'datatrice';
+import { attachResponseHandlers, createStore, games, rooms, server } from '@cockatrice/datatrice';
 
 // Integration tests run in vitest (node) with a mocked WebSocket; they don't
 // mount <DatatriceProvider>, so the harness owns the store directly. Specs
@@ -18,8 +18,8 @@ import {
   PROTOCOL_VERSION,
   WebClient,
   setPendingOptions,
-} from 'sockatrice';
-import { WebsocketTypes } from 'sockatrice/types';
+} from '@cockatrice/sockatrice';
+import { WebsocketTypes } from '@cockatrice/sockatrice/types';
 import {
   Command_Login_ext,
   Event_ServerIdentificationSchema,
@@ -30,7 +30,7 @@ import {
   Response_ResponseCode,
   ServerInfo_UserSchema,
   ServerInfo_User_UserLevelFlag,
-} from 'sockatrice/generated';
+} from '@cockatrice/sockatrice/generated';
 import { CLIENT_CONFIG, CLIENT_OPTIONS } from '../../../src/clientConfig';
 
 export { PROTOCOL_VERSION };

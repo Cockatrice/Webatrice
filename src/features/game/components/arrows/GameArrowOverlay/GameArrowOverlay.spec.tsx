@@ -1,7 +1,7 @@
 import { useRef } from 'react';
 import { screen, fireEvent } from '@testing-library/react';
 import { create } from '@bufbuild/protobuf';
-import { colorSchema } from 'sockatrice/generated';
+import { colorSchema } from '@cockatrice/sockatrice/generated';
 import { createMockWebClient, makeStoreState, renderWithProviders } from '../../../../../__test-utils__';
 import {
   makeArrow,

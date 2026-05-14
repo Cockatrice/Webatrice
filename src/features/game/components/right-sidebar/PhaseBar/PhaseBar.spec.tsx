@@ -1,6 +1,6 @@
 import { screen, fireEvent } from '@testing-library/react';
-import { CardAttribute } from 'sockatrice/generated';
-import { Phase } from 'datatrice';
+import { CardAttribute } from '@cockatrice/sockatrice/generated';
+import { Phase } from '@cockatrice/datatrice';
 import { createMockWebClient, makeStoreState, renderWithProviders } from '../../../../../__test-utils__';
 import {
   makeCard,

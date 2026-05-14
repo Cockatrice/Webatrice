@@ -1,5 +1,5 @@
 import { screen, fireEvent } from '@testing-library/react';
-import { ZoneName } from 'datatrice';
+import { ZoneName } from '@cockatrice/datatrice';
 import { makeStoreState, renderWithProviders, makeUser } from '../../../../__test-utils__';
 import {
   makeCard,

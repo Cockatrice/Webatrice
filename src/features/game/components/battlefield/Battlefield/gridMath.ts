@@ -1,6 +1,6 @@
 // Port of cockatrice/src/game/zones/table_zone.cpp.
 
-import { ServerInfo_Card } from 'sockatrice/generated';
+import { ServerInfo_Card } from '@cockatrice/sockatrice/generated';
 export const CARD_WIDTH_PX = 146;
 export const CARD_HEIGHT_PX = 204;
 export const STACKED_CARD_OFFSET_X_PX = 49;

@@ -3,7 +3,7 @@ import { act, renderHook } from '@testing-library/react';
 import { combineReducers, configureStore } from '@reduxjs/toolkit';
 import { Provider } from 'react-redux';
 
-import { games } from 'datatrice';
+import { games } from '@cockatrice/datatrice';
 
 import { actionReducer } from '../../../store/actions/actionReducer';
 

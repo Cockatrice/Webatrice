@@ -1,5 +1,5 @@
 import { screen } from '@testing-library/react';
-import { ZoneName } from 'datatrice';
+import { ZoneName } from '@cockatrice/datatrice';
 vi.mock('../../../../../hooks/useSettings');
 vi.mock('../../../hooks/useScryfallCard', () => ({
   useScryfallCard: () => ({ smallUrl: null, normalUrl: null, isLoading: false }),

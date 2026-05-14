@@ -1,9 +1,9 @@
 import { create } from '@bufbuild/protobuf';
 import { describe, expect, it } from 'vitest';
 
-import { Command_BanFromServer_ext, Command_ForceActivateUser_ext, Command_GetAdminNotes_ext, Command_GetBanHistory_ext, Command_GetWarnHistory_ext, Command_GetWarnList_ext, Command_GrantReplayAccess_ext, Command_UpdateAdminNotes_ext, Command_ViewLogHistory_ext, Command_WarnUser_ext, Response_BanHistorySchema, Response_BanHistory_ext, Response_GetAdminNotesSchema, Response_GetAdminNotes_ext, Response_ResponseCode, Response_ViewLogHistorySchema, Response_ViewLogHistory_ext, Response_WarnHistorySchema, Response_WarnHistory_ext, Response_WarnListSchema, Response_WarnList_ext, ServerInfo_BanSchema, ServerInfo_ChatMessageSchema, ServerInfo_WarningSchema } from 'sockatrice/generated';
+import { Command_BanFromServer_ext, Command_ForceActivateUser_ext, Command_GetAdminNotes_ext, Command_GetBanHistory_ext, Command_GetWarnHistory_ext, Command_GetWarnList_ext, Command_GrantReplayAccess_ext, Command_UpdateAdminNotes_ext, Command_ViewLogHistory_ext, Command_WarnUser_ext, Response_BanHistorySchema, Response_BanHistory_ext, Response_GetAdminNotesSchema, Response_GetAdminNotes_ext, Response_ResponseCode, Response_ViewLogHistorySchema, Response_ViewLogHistory_ext, Response_WarnHistorySchema, Response_WarnHistory_ext, Response_WarnListSchema, Response_WarnList_ext, ServerInfo_BanSchema, ServerInfo_ChatMessageSchema, ServerInfo_WarningSchema } from '@cockatrice/sockatrice/generated';
 import { store } from '../helpers/setup';
-import { ModeratorCommands } from 'sockatrice';
+import { ModeratorCommands } from '@cockatrice/sockatrice';
 
 import { connectAndLogin } from '../helpers/setup';
 import {

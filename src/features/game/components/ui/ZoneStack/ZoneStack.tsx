@@ -1,8 +1,8 @@
 import { useDroppable } from '@dnd-kit/core';
 
-import { games } from 'datatrice';
+import { games } from '@cockatrice/datatrice';
 import { useAppSelector } from '@app/store';
-import { ServerInfo_Card } from 'sockatrice/generated';
+import { ServerInfo_Card } from '@cockatrice/sockatrice/generated';
 import { cx } from '@app/utils';
 
 import { useGameAccess } from '../../../hooks/useGameAccess';

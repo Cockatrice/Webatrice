@@ -1,7 +1,7 @@
 import { screen, fireEvent } from '@testing-library/react';
 import { create } from '@bufbuild/protobuf';
-import { colorSchema } from 'sockatrice/generated';
-import { ZoneName } from 'datatrice';
+import { colorSchema } from '@cockatrice/sockatrice/generated';
+import { ZoneName } from '@cockatrice/datatrice';
 import { createMockWebClient, makeStoreState, renderWithProviders, makeUser } from '../../../../../__test-utils__';
 import {
   makeCounter,

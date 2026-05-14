@@ -1,6 +1,6 @@
-import type { WebClient } from 'sockatrice';
-import { ServerInfo_Card } from 'sockatrice/generated';
-import { ZoneEntry, ZoneName } from 'datatrice';
+import type { WebClient } from '@cockatrice/sockatrice';
+import { ServerInfo_Card } from '@cockatrice/sockatrice/generated';
+import { ZoneEntry, ZoneName } from '@cockatrice/datatrice';
 import { CardDTO } from '../../../services/dexie/DexieDTOs/CardDTO';
 import { MAX_SUBPOS, applyInvertY, clampRow } from '../components/battlefield/Battlefield/gridMath';
 

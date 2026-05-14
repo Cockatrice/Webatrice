@@ -1,4 +1,4 @@
-import { ScryfallImageSize } from 'datatrice';
+import { ScryfallImageSize } from '@cockatrice/datatrice';
 const SCRYFALL_API = 'https://api.scryfall.com';
 
 export function getScryfallUrlById(

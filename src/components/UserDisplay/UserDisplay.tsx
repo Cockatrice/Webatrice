@@ -4,7 +4,7 @@ import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 
 import { Images } from '@app/images';
-import { ServerInfo_User } from 'sockatrice/generated';
+import { ServerInfo_User } from '@cockatrice/sockatrice/generated';
 import { RouteEnum } from '@app/types';
 import { useUserDisplay } from './useUserDisplay';
 

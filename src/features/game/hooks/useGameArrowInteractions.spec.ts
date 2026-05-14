@@ -5,10 +5,10 @@ import { vi } from 'vitest';
 import { createCardRegistry } from '../utils/CardRegistry/CardRegistryContext';
 import { combineReducers } from '@reduxjs/toolkit';
 
-import { games, type GamesState } from 'datatrice';
+import { games, type GamesState } from '@cockatrice/datatrice';
 import { makeCard, makeGameEntry, makePlayerEntry, makePlayerProperties } from '../../../__test-utils__/games-fixtures';
 import { makeReduxWebClientHookWrapper } from '../../../__test-utils__/makeHookWrapper';
-import { ZoneName } from 'datatrice';
+import { ZoneName } from '@cockatrice/datatrice';
 import { CardDTO } from '../../../services/dexie/DexieDTOs/CardDTO';
 import { useGameArrowInteractions } from './useGameArrowInteractions';
 

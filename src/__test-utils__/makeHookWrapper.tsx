@@ -2,8 +2,8 @@ import { ReactNode } from 'react';
 import { Provider } from 'react-redux';
 import { configureStore, Reducer } from '@reduxjs/toolkit';
 
-import type { WebClient } from 'sockatrice';
-import { WebClientContext } from 'datatrice/react';
+import type { WebClient } from '@cockatrice/sockatrice';
+import { WebClientContext } from '@cockatrice/datatrice/react';
 
 import { createMockWebClient } from './mockWebClient';
 

@@ -1,11 +1,11 @@
 import { useCallback, useEffect } from 'react';
 import { useNavigate, useParams, generatePath } from 'react-router-dom';
 
-import { useWebClient } from 'datatrice/react';
-import { rooms } from 'datatrice';
+import { useWebClient } from '@cockatrice/datatrice/react';
+import { rooms } from '@cockatrice/datatrice';
 import { useAppSelector } from '@app/store';
-import { ServerInfo_User } from 'sockatrice/generated';
-import type { Message, Room } from 'datatrice';
+import { ServerInfo_User } from '@cockatrice/sockatrice/generated';
+import type { Message, Room } from '@cockatrice/datatrice';
 import { RouteEnum } from '@app/types';
 
 export interface UseRoomResult {

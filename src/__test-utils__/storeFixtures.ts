@@ -1,6 +1,6 @@
-import { ServerInfo_User } from 'sockatrice/generated';
-import { GameSortField, SortDirection, UserSortField } from 'datatrice';
-import { WebsocketTypes } from 'sockatrice/types';
+import { ServerInfo_User } from '@cockatrice/sockatrice/generated';
+import { GameSortField, SortDirection, UserSortField } from '@cockatrice/datatrice';
+import { WebsocketTypes } from '@cockatrice/sockatrice/types';
 import type { RootState } from '../store';
 
 function makeUser(overrides: Partial<ServerInfo_User> = {}): ServerInfo_User {

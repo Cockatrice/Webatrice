@@ -1,5 +1,5 @@
 import { screen } from '@testing-library/react';
-import { ZoneName } from 'datatrice';
+import { ZoneName } from '@cockatrice/datatrice';
 // Block Battlefield's Dexie-backed useSettings from firing an async settle
 // after mount (would produce an unwrapped React state update).
 vi.mock('../../../../../hooks/useSettings');

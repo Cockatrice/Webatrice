@@ -1,4 +1,4 @@
-import type { WebClient } from 'sockatrice';
+import type { WebClient } from '@cockatrice/sockatrice';
 
 export function createMockWebClient() {
   return {

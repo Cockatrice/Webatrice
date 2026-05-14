@@ -1,6 +1,6 @@
-import { useWebClient } from 'datatrice/react';
-import { CardAttribute, ServerInfo_Card } from 'sockatrice/generated';
-import { ZoneName } from 'datatrice';
+import { useWebClient } from '@cockatrice/datatrice/react';
+import { CardAttribute, ServerInfo_Card } from '@cockatrice/sockatrice/generated';
+import { ZoneName } from '@cockatrice/datatrice';
 interface MoveTarget {
   label: string;
   zone: string;

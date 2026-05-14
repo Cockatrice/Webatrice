@@ -1,6 +1,6 @@
 import { fireEvent, screen } from '@testing-library/react';
 import { renderWithProviders } from '../../../../__test-utils__';
-import { rooms } from 'datatrice';
+import { rooms } from '@cockatrice/datatrice';
 import FilterGamesDialog from './FilterGamesDialog';
 
 function renderDialog(opts: { gametypeMap?: Record<number, string>; initialFilters?: typeof rooms.DEFAULT_GAME_FILTERS } = {}) {

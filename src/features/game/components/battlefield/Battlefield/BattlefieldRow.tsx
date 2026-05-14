@@ -1,7 +1,7 @@
 import { ReactNode } from 'react';
 import { useDroppable } from '@dnd-kit/core';
-import { ServerInfo_Card } from 'sockatrice/generated';
-import { ZoneName } from 'datatrice';
+import { ServerInfo_Card } from '@cockatrice/sockatrice/generated';
+import { ZoneName } from '@cockatrice/datatrice';
 import { cx } from '@app/utils';
 
 export interface BattlefieldRowProps {

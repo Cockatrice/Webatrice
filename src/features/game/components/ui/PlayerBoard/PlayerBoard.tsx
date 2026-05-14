@@ -1,4 +1,4 @@
-import { ServerInfo_Card } from 'sockatrice/generated';
+import { ServerInfo_Card } from '@cockatrice/sockatrice/generated';
 import { cx } from '@app/utils';
 
 import Battlefield from '../../battlefield/Battlefield/Battlefield';

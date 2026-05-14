@@ -1,6 +1,6 @@
-import { rooms, SortUtil } from 'datatrice';
+import { rooms, SortUtil } from '@cockatrice/datatrice';
 import { useAppDispatch, useAppSelector } from '@app/store';
-import { Game, GameSortField } from 'datatrice';
+import { Game, GameSortField } from '@cockatrice/datatrice';
 export interface OpenGames {
   sortBy: { field: string; order: string };
   games: Game[];

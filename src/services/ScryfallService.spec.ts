@@ -1,4 +1,4 @@
-import { ScryfallImageSize } from 'datatrice';
+import { ScryfallImageSize } from '@cockatrice/datatrice';
 import {
   getScryfallUrlById,
   getScryfallUrlByName,
