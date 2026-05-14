@@ -4,7 +4,7 @@
 // it opens; individual handlers are tested in child specs. This suite pins
 // the end-to-end dispatch so a regression that disconnects state from its
 // consumers is caught even when both sides still pass in isolation.
-import { screen, fireEvent, waitFor } from '@testing-library/react';
+import { screen, fireEvent, waitFor, cleanup, within } from '@testing-library/react';
 import { ZoneName } from '@cockatrice/datatrice';
 import { createMockWebClient, makeStoreState, renderWithProviders, connectedState, makeUser } from '../../__test-utils__';
 import {
@@ -24,6 +24,20 @@ vi.mock('../../components/Layout/Layout', () => ({
 // Block TurnControls' / Battlefield's Dexie-backed useSettings from firing
 // an async settle after mount (would produce an unwrapped React state update).
 vi.mock('../../hooks/useSettings');
+
+// Right-panel + board chrome not exercised by this suite. Stub to no-ops so the
+// orchestration tests render only the trigger → state → dialog path. Notably this
+// drops GameLog's real-timer setInterval, the main source of cross-test variance.
+vi.mock('./components/right-sidebar/GameLog/GameLog', () => ({ default: () => null }));
+vi.mock('./components/right-sidebar/CardPreview/CardPreview', () => ({ default: () => null }));
+vi.mock('./components/right-sidebar/PlayerList/PlayerList', () => ({ default: () => null }));
+vi.mock('./components/right-sidebar/PhaseBar/PhaseBar', () => ({ default: () => null }));
+vi.mock('./components/arrows/GameArrowOverlay/GameArrowOverlay', () => ({ default: () => null }));
+
+// Every test here renders the full <Game /> tree and drives it through RTL
+// queries — a genuinely heavy integration suite. The default 15s testTimeout
+// left no headroom on a loaded dev machine; 30s reflects the real cost.
+vi.setConfig({ testTimeout: 30000 });
 
 interface BuildGameOpts {
   localId: number;
@@ -89,6 +103,18 @@ function buildGame({
 }
 
 describe('Game orchestration (M4–M6)', () => {
+  // The first <Game /> render in a worker pays one-time cold costs (V8 JIT of the
+  // render path, MUI/emotion cache warmup, initial jsdom layout). Absorb that here
+  // so it isn't charged against the first it()'s timeout budget — without it the
+  // leading test intermittently brushed the 15s testTimeout.
+  beforeAll(() => {
+    renderWithProviders(<Game />, {
+      preloadedState: buildGame({ localId: 1, opponentIds: [2] }),
+      webClient: createMockWebClient(),
+    });
+    cleanup();
+  });
+
   it('Roll Die: TurnControls → RollDieDialog → rollDie dispatch', async () => {
     const webClient = createMockWebClient();
     renderWithProviders(<Game />, {
@@ -96,12 +122,20 @@ describe('Game orchestration (M4–M6)', () => {
       webClient,
     });
 
-    fireEvent.click(screen.getByRole('button', { name: /roll die/i }));
+    // Scope role/name lookups to a small subtree. An unscoped
+    // `screen.getByRole('button', { name })` recomputes accessible names across
+    // the whole <Game /> document (~2s each here) — the dominant cost that made
+    // this test brush the timeout under load.
+    const rollDieBtn = within(screen.getByTestId('turn-controls')).getByRole('button', {
+      name: /roll die/i,
+    });
+    fireEvent.click(rollDieBtn);
     const sides = await screen.findByLabelText('Sides') as HTMLInputElement;
     const count = screen.getByLabelText('Count') as HTMLInputElement;
     fireEvent.change(sides, { target: { value: '20' } });
     fireEvent.change(count, { target: { value: '2' } });
-    fireEvent.click(screen.getByRole('button', { name: /^roll$/i }));
+    const rollBtn = within(screen.getByRole('dialog')).getByRole('button', { name: /^roll$/i });
+    fireEvent.click(rollBtn);
 
     expect(webClient.request.game.rollDie).toHaveBeenCalledWith(1, { sides: 20, count: 2 });
   });
