@@ -39,6 +39,19 @@ jobs:
       - name: Install dependencies
         run: npm clean-install
 
+      - name: Configure git identity
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      # Bump before prebuild: prebuild regenerates the tracked src/i18n-default.json
+      # (OS-dependent key order), which would otherwise leave npm version a dirty tree.
+      - name: Bump version
+        id: bump
+        run: |
+          NEW_VERSION=$(npm version ${{ inputs.bump }} -m "chore(release): %s")
+          echo "version=${NEW_VERSION}" >> "$GITHUB_OUTPUT"
+
       - name: Prebuild
         run: npm run prebuild
 
@@ -50,17 +63,6 @@ jobs:
 
       - name: Integration test with coverage
         run: npm run test:integration:coverage
-
-      - name: Configure git identity
-        run: |
-          git config user.name  "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-      - name: Bump version
-        id: bump
-        run: |
-          NEW_VERSION=$(npm version ${{ inputs.bump }} -m "chore(release): %s")
-          echo "version=${NEW_VERSION}" >> "$GITHUB_OUTPUT"
 
       - name: Build app
         run: npm run build
