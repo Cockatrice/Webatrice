@@ -39,6 +39,9 @@ jobs:
       - name: Install dependencies
         run: npm clean-install
 
+      - name: Prebuild
+        run: npm run prebuild
+
       - name: Lint
         run: npm run lint
 
