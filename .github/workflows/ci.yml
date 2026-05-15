@@ -72,23 +72,20 @@ jobs:
         run: npm clean-install
 
       - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium
-
-      - name: Prebuild
-        run: npm run prebuild
+        run: npm run test:e2e:install-browsers:linux
 
       - name: Build app
         run: npm run build
 
       - name: Start Servatrice (pulls ghcr.io/cockatrice/servatrice)
-        run: docker compose -f e2e/docker/docker-compose.e2e.yml up -d
+        run: npm run test:e2e:up
 
       - name: Run Playwright tests
         run: npm run test:e2e:run
 
       - name: Tear down
         if: always()
-        run: docker compose -f e2e/docker/docker-compose.e2e.yml down -v
+        run: npm run test:e2e:down
 
       - name: Dump container logs on failure
         if: failure()

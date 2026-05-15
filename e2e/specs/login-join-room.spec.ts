@@ -22,25 +22,29 @@ import { expect, test } from '@playwright/test';
 // The first iteration of this spec is selector-tolerant on purpose; flesh
 // out steps 1–4 once the harness has run green at least once in CI.
 
-const FLOW_TIMEOUT_MS = 60_000;
+test('login screen mounts and exposes the add-host dialog opener', async ({ page }) => {
+  await page.goto('/login');
 
-test(
-  'login screen mounts and exposes the add-host dialog opener',
-  async ({ page }) => {
-    await page.goto('/login');
+  // Webatrice's Login screen renders the LoginForm + its KnownHosts picker.
+  // The picker is an MUI Select labelled "Host"; its Add-Host control lives
+  // inside the portalled dropdown menu, so the spec has to open the Select
+  // before the button is in the DOM.
+  const hostPicker = page.getByRole('combobox', { name: /host/i });
+  await expect(hostPicker).toBeVisible();
+  await hostPicker.click();
 
-    // Webatrice's Login screen renders the LoginForm + its KnownHosts
-    // picker. The picker exposes an "Add" / Add Host control to open a new
-    // KnownHostDialog. Use a forgiving role-and-name lookup so a label
-    // tweak doesn't break the spec.
-    const addHostTrigger = page.getByRole('button', { name: /add/i }).first();
-    await expect(addHostTrigger).toBeVisible({ timeout: FLOW_TIMEOUT_MS });
-    await addHostTrigger.click();
+  // Locate by text rather than role: the button renders inside <ul role=
+  // "listbox">, where Chromium prunes non-option descendants from the
+  // accessibility tree, so getByRole('button') can't see it even though
+  // it's painted and clickable.
+  // TODO(a11y): same pruning blocks screen-reader access — fix structurally
+  // in KnownHosts.tsx by moving Add out of <Select>.
+  const addHostTrigger = page.locator('button', { hasText: /add new host/i });
+  await expect(addHostTrigger).toBeVisible();
+  await addHostTrigger.click();
 
-    // Either the KnownHostDialog opens (preferred), or the registration
-    // dialog opens — either is interactive evidence the React tree is
-    // wired up. Look for any dialog role becoming visible.
-    await expect(page.getByRole('dialog')).toBeVisible({ timeout: 5_000 });
-  },
-  FLOW_TIMEOUT_MS + 30_000,
-);
+  // KnownHostDialog opening is interactive evidence the React tree is wired
+  // up (the menu's portal uses role=listbox/presentation, not dialog, so
+  // this matches the dialog uniquely).
+  await expect(page.getByRole('dialog')).toBeVisible();
+});
