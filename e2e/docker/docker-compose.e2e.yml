@@ -1,0 +1,49 @@
+# Standalone compose used by the Webatrice e2e harness.
+# Paths are relative to THIS file's directory (e2e/docker/), so the file must
+# be invoked with `-f e2e/docker/docker-compose.e2e.yml` from anywhere —
+# Docker Compose resolves relative mounts against the compose file's own
+# directory.
+#
+# Servatrice is consumed as the published `ghcr.io/cockatrice/servatrice`
+# image (built and pushed by Cockatrice's docker-release.yml on every
+# tagged release). No C++ source build, no Cockatrice submodule.
+# `:latest` is fine for development; CI may want to pin a specific release
+# tag for reproducibility.
+#
+# `servatrice.sql` is committed under e2e/docker/ as a Webatrice-owned e2e
+# fixture: the published image does not bundle it, and the schema is small
+# and changes infrequently — sourced from Cockatrice's
+# `servatrice/servatrice.sql`.
+services:
+  mysql:
+    image: mysql:8
+    command: --sql_mode=
+    environment:
+      MYSQL_ROOT_PASSWORD: root-password
+      MYSQL_DATABASE: servatrice
+      MYSQL_USER: servatrice
+      MYSQL_PASSWORD: password
+    volumes:
+      - ./servatrice.sql:/docker-entrypoint-initdb.d/servatrice.sql:ro
+      - webatrice_e2e_mysql:/var/lib/mysql
+
+  servatrice:
+    image: ghcr.io/cockatrice/servatrice:latest
+    pull_policy: always
+    depends_on:
+      - mysql
+    ports:
+      - "4748:4748"
+    # Wait for MySQL's TCP port to accept connections before launching
+    # servatrice. The first-time `up` has to load servatrice.sql, which
+    # takes longer than any fixed sleep — without this wait, servatrice
+    # exits silently with code 0 when it can't reach the DB. The trailing
+    # `sleep 2` gives mysqld a moment after the port opens to finish
+    # accepting auth. global-setup additionally polls the WebSocket port to
+    # avoid races.
+    entrypoint: "/bin/bash -c 'until (echo > /dev/tcp/mysql/3306) 2>/dev/null; do sleep 1; done; sleep 2; servatrice --config /tmp/servatrice.ini --log-to-console'"
+    volumes:
+      - ./servatrice-e2e.ini:/tmp/servatrice.ini:ro
+
+volumes:
+  webatrice_e2e_mysql:

@@ -49,3 +49,61 @@ jobs:
 
       - name: Build
         run: npm run build
+
+  e2e:
+    name: E2E (Playwright + Servatrice)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          submodules: true
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: 'npm'
+          cache-dependency-path: 'package-lock.json'
+
+      - name: Install dependencies
+        run: npm clean-install
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Prebuild
+        run: npm run prebuild
+
+      - name: Build app
+        run: npm run build
+
+      - name: Start Servatrice (pulls ghcr.io/cockatrice/servatrice)
+        run: docker compose -f e2e/docker/docker-compose.e2e.yml up -d
+
+      - name: Run Playwright tests
+        run: npm run test:e2e:run
+
+      - name: Tear down
+        if: always()
+        run: docker compose -f e2e/docker/docker-compose.e2e.yml down -v
+
+      - name: Dump container logs on failure
+        if: failure()
+        run: |
+          echo "::group::servatrice logs"
+          docker logs docker-servatrice-1 || docker logs e2e-servatrice-1 || true
+          echo "::endgroup::"
+          echo "::group::mysql logs"
+          docker logs docker-mysql-1 || docker logs e2e-mysql-1 || true
+          echo "::endgroup::"
+
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
