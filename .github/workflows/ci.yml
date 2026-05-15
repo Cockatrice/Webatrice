@@ -91,10 +91,10 @@ jobs:
         if: failure()
         run: |
           echo "::group::servatrice logs"
-          docker logs docker-servatrice-1 || docker logs e2e-servatrice-1 || true
+          docker logs webatrice-e2e-servatrice-1 || true
           echo "::endgroup::"
           echo "::group::mysql logs"
-          docker logs docker-mysql-1 || docker logs e2e-mysql-1 || true
+          docker logs webatrice-e2e-mysql-1 || true
           echo "::endgroup::"
 
       - name: Upload Playwright report on failure

@@ -24,7 +24,7 @@
     "test:e2e:run": "playwright test",
     "test:e2e:run-with-cleanup": "run-s --continue-on-error test:e2e:run test:e2e:down",
     "test:e2e": "run-s build test:e2e:install-browsers test:e2e:up test:e2e:run-with-cleanup",
-    "assets:submodule": "git submodule update --init && git -C vendor/cockatrice sparse-checkout set --no-cone cockatrice/resources/countries/",
+    "assets:submodule": "git submodule update --init && git -C vendor/cockatrice sparse-checkout set --no-cone cockatrice/resources/countries/ servatrice/servatrice.sql",
     "prebuild": "node prebuild.js",
     "prepare": "npm run assets:submodule && husky",
     "prestart": "node prebuild.js",

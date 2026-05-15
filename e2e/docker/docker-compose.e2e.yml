@@ -6,14 +6,21 @@
 #
 # Servatrice is consumed as the published `ghcr.io/cockatrice/servatrice`
 # image (built and pushed by Cockatrice's docker-release.yml on every
-# tagged release). No C++ source build, no Cockatrice submodule.
-# `:latest` is fine for development; CI may want to pin a specific release
-# tag for reproducibility.
+# tagged release). No C++ source build, no Cockatrice submodule materialization
+# beyond the narrow sparse-checkout below.
 #
-# `servatrice.sql` is committed under e2e/docker/ as a Webatrice-owned e2e
-# fixture: the published image does not bundle it, and the schema is small
-# and changes infrequently — sourced from Cockatrice's
-# `servatrice/servatrice.sql`.
+# `servatrice.sql` is sourced from the vendored Cockatrice submodule at
+# vendor/cockatrice/servatrice/servatrice.sql, narrow-materialized via
+# sparse-checkout by `npm run assets:submodule` (invoked at install time
+# through the `prepare` hook). The submodule's gitlink is pinned to the
+# same Cockatrice release tag as the servatrice image below.
+#
+# `name:` namespaces the Compose project so that Webatrice's e2e stack
+# does not collide with Sockatrice's (which uses the same default project
+# name `docker` from its own e2e/docker/ directory). Without this, a
+# `down -v` in one repo tears down the other repo's running containers.
+name: webatrice-e2e
+
 services:
   mysql:
     image: mysql:8
@@ -24,11 +31,11 @@ services:
       MYSQL_USER: servatrice
       MYSQL_PASSWORD: password
     volumes:
-      - ./servatrice.sql:/docker-entrypoint-initdb.d/servatrice.sql:ro
+      - ../../vendor/cockatrice/servatrice/servatrice.sql:/docker-entrypoint-initdb.d/servatrice.sql:ro
       - webatrice_e2e_mysql:/var/lib/mysql
 
   servatrice:
-    image: ghcr.io/cockatrice/servatrice:latest
+    image: ghcr.io/cockatrice/servatrice:2026-05-08-Release-3.0.0
     pull_policy: always
     depends_on:
       - mysql
