@@ -41,10 +41,13 @@ const Initialize = () => {
           <div className='Initialize-content'>
             <img src={Images.Logo} alt="logo" />
             <Typography variant="subtitle1" className='subtitle'>{ t('Initialize.title') }</Typography>
-            <Trans i18nKey="Initialize.subtitle">
-              <Typography variant="subtitle2"></Typography>
-              <Typography variant="subtitle2"></Typography>
-            </Trans>
+            <Trans
+              i18nKey="Initialize.subtitle"
+              components={[
+                <Typography variant="subtitle2" key="line1" />,
+                <Typography variant="subtitle2" key="line2" />,
+              ]}
+            />
           </div>
 
           <div className="Initialize-graphics">

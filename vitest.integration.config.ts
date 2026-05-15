@@ -19,6 +19,11 @@ export default defineConfig({
     setupFiles: ['./integration/src/helpers/setup.ts'],
     include: ['integration/src/**/*.spec.{ts,tsx}'],
     exclude: ['node_modules', 'build', 'coverage'],
+    // Sockatrice and Datatrice both use threads for their integration suites
+    // without startup-timeout issues; Webatrice's forks-on-Windows hits Vitest 4's
+    // hardcoded 60s worker-startup timeout intermittently as the integration
+    // setup.ts cold-starts datatrice + sockatrice + protobuf per fork.
+    pool: 'threads',
     coverage: {
       ...viteConfig.test?.coverage,
       reportsDirectory: './coverage/integration',

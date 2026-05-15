@@ -85,16 +85,7 @@ describe('Rooms components (integration)', () => {
     renderFeatureScreen(
       <FilterGamesDialog
         isOpen
-        initialFilters={{
-          gameNameFilter: '',
-          creatorNameFilters: [],
-          gameTypeFilter: [],
-          maxPlayersFilterMin: 0,
-          maxPlayersFilterMax: 0,
-          maxGameAge: 0,
-          showFullGames: false,
-          showPasswordProtectedGames: false,
-        }}
+        initialFilters={rooms.DEFAULT_GAME_FILTERS}
         gametypeMap={{}}
         onCancel={vi.fn()}
         onSubmit={vi.fn()}
