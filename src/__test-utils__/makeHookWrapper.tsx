@@ -3,6 +3,7 @@ import { Provider } from 'react-redux';
 import { configureStore, Reducer } from '@reduxjs/toolkit';
 
 import type { WebClient } from '@cockatrice/sockatrice';
+import { storeMiddlewareOptions } from '@cockatrice/datatrice';
 import { WebClientContext } from '@cockatrice/datatrice/react';
 
 import { createMockWebClient } from './mockWebClient';
@@ -19,6 +20,7 @@ export function makeReduxHookWrapper<S>(
   const store = configureStore({
     reducer,
     preloadedState: preloadedState as Parameters<typeof configureStore>[0]['preloadedState'],
+    middleware: (getDefaultMiddleware) => getDefaultMiddleware(storeMiddlewareOptions),
   });
   function Wrapper({ children }: { children: ReactNode }) {
     return <Provider store={store}>{children}</Provider>;
@@ -40,6 +42,7 @@ export function makeReduxWebClientHookWrapper<S>({
   const store = configureStore({
     reducer,
     preloadedState: preloadedState as Parameters<typeof configureStore>[0]['preloadedState'],
+    middleware: (getDefaultMiddleware) => getDefaultMiddleware(storeMiddlewareOptions),
   });
   const client = webClient ?? createMockWebClient();
   function Wrapper({ children }: { children: ReactNode }) {

@@ -1,21 +1,11 @@
-import { ServerInfo_User } from '@cockatrice/sockatrice/generated';
+import { create, type MessageInitShape } from '@bufbuild/protobuf';
+import { ServerInfo_User, ServerInfo_UserSchema, ServerInfo_RoomSchema } from '@cockatrice/sockatrice/generated';
 import { GameSortField, SortDirection, UserSortField } from '@cockatrice/datatrice';
 import { WebsocketTypes } from '@cockatrice/sockatrice/types';
 import type { RootState } from '../store';
 
-function makeUser(overrides: Partial<ServerInfo_User> = {}): ServerInfo_User {
-  return {
-    name: 'testUser',
-    realName: '',
-    country: 'us',
-    userLevel: 0,
-    avatarBmp: new Uint8Array(),
-    accountageSecs: BigInt(0),
-    $typeName: 'ServerInfo_User' as any,
-    $unknown: undefined,
-    gender: 0,
-    ...overrides,
-  } as ServerInfo_User;
+function makeUser(overrides: MessageInitShape<typeof ServerInfo_UserSchema> = {}): ServerInfo_User {
+  return create(ServerInfo_UserSchema, { name: 'testUser', ...overrides });
 }
 
 export const disconnectedState: Partial<RootState> = {
@@ -102,9 +92,14 @@ export const connectedWithRoomsState: Partial<RootState> = {
     ...(disconnectedState.rooms as any),
     rooms: {
       1: {
-        info: { roomId: 1, name: 'Main Room', description: 'The main room', autoJoin: true, permissionLevel: 0 },
-        gameList: [],
-        userList: [makeUser(), makeUser({ name: 'otherUser' })],
+        info: create(ServerInfo_RoomSchema, { roomId: 1, name: 'Main Room', description: 'The main room', autoJoin: true }),
+        gametypeMap: {},
+        order: 0,
+        games: {},
+        users: {
+          testUser: makeUser(),
+          otherUser: makeUser({ name: 'otherUser' }),
+        },
       },
     },
     joinedRoomIds: { 1: true },

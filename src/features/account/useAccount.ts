@@ -26,7 +26,7 @@ export function useAccount(): Account {
   const avatarBmp = user?.avatarBmp;
 
   const avatarUrl = useMemo(() => {
-    if (!avatarBmp) {
+    if (!avatarBmp?.length) {
       return '';
     }
     // Cast: avatarBmp is `Uint8Array<ArrayBufferLike>` from generated protos but
