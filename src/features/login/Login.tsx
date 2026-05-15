@@ -8,7 +8,7 @@ import Typography from '@mui/material/Typography';
 import { LanguageDropdown } from '@app/components';
 import { Images } from '@app/images';
 import { serverProps } from '@app/services';
-import { Layout } from '@app/feature-core';
+import { Layout } from '@app/feature-wrappers/layout';
 import { RouteEnum } from '@app/types';
 import RegistrationDialog from './dialogs/RegistrationDialog/RegistrationDialog';
 import RequestPasswordResetDialog from './dialogs/RequestPasswordResetDialog/RequestPasswordResetDialog';

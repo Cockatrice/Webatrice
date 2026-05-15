@@ -1,7 +1,7 @@
 import { DndContext, DragOverlay } from '@dnd-kit/core';
 
 import { AuthGuard } from '@app/components';
-import { Layout } from '@app/feature-core';
+import { Layout } from '@app/feature-wrappers/layout';
 import { ConfirmDialog, PromptDialog } from '@app/dialogs';
 import { Enriched } from '@cockatrice/datatrice';
 import GameArrowOverlay from './components/arrows/GameArrowOverlay/GameArrowOverlay';

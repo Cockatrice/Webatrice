@@ -3,7 +3,7 @@ import { useTranslation, Trans } from 'react-i18next';
 import { Navigate } from 'react-router-dom';
 import Typography from '@mui/material/Typography';
 
-import { Layout } from '@app/feature-core';
+import { Layout } from '@app/feature-wrappers/layout';
 import { Images } from '@app/images';
 import { server } from '@cockatrice/datatrice';
 import { RouteEnum } from '@app/types';

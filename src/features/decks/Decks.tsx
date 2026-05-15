@@ -1,5 +1,5 @@
 import { AuthGuard } from '@app/components';
-import { Layout } from '@app/feature-core';
+import { Layout } from '@app/feature-wrappers/layout';
 
 import './Decks.css';
 

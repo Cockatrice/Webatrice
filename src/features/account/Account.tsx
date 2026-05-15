@@ -5,7 +5,7 @@ import ListItemButton from '@mui/material/ListItemButton';
 import Paper from '@mui/material/Paper';
 
 import { UserDisplay, VirtualList, AuthGuard, LanguageDropdown } from '@app/components';
-import { Layout } from '@app/feature-core';
+import { Layout } from '@app/feature-wrappers/layout';
 
 import AddUserForm from './AddUserForm';
 import { useAccount } from './useAccount';

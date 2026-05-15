@@ -26,7 +26,7 @@ export default defineConfig({
       '@app/hooks': srcPath('hooks/index.ts'),
       '@app/images': srcPath('images/index.ts'),
       '@app/services': srcPath('services/index.ts'),
-      '@app/feature-core': srcPath('feature-core/index.ts'),
+      '@app/feature-wrappers/layout': srcPath('feature-wrappers/layout/index.ts'),
       '@app/features/account': srcPath('features/account/index.ts'),
       '@app/features/decks': srcPath('features/decks/index.ts'),
       '@app/features/game': srcPath('features/game/index.ts'),

@@ -39,8 +39,8 @@ Websocket protocol/transport types (`StatusEnum`, `WebSocketConnectReason`, the 
 Enforced by [eslint.boundaries.mjs](../../eslint.boundaries.mjs); zero violations today, keep it that way.
 
 - `feature-widgets/` — multi-file capabilities composed by ≥2 features (known-hosts, shortcuts, card-import). Pull from root layers; never from features or other widgets.
-- `feature-core/` — foundational chrome (Layout, LeftNav). Composes feature-widgets; consumed by features.
-- `features/` — vertical slices, one per route. Pull from root layers + `feature-core` + `feature-widgets`. Only `AppShell` pulls from features.
+- `feature-wrappers/` — page-chrome wrappers (currently `layout/`, holding Layout + LeftNav). Composes feature-widgets; consumed by features.
+- `features/` — vertical slices, one per route. Pull from root layers + `feature-wrappers` + `feature-widgets`. Only `AppShell` pulls from features.
 - Shortcuts persistence lives in the feature layer (not a store listener) because boundaries forbid `store/* → hooks/*`. Anything that needs to bridge persistence into Redux belongs in a feature hook.
 
 ### UI → server layering invariant
@@ -66,7 +66,7 @@ Dexie (IndexedDB) holds cards, sets, tokens, known hosts, and settings; separate
 
 ### UI
 
-Route-level UI in `src/features/<slice>/` (one per route — account, decks, game, login, logs, player, rooms, server, settings, shell). Page chrome (Layout, LeftNav) in `src/feature-core/`. Root orchestration at [src/AppShell.tsx](../../src/AppShell.tsx) with route registration in [src/AppShellRoutes.tsx](../../src/AppShellRoutes.tsx). Load-bearing hooks: **`useWebClient`** (the only way UI reaches the server; see the layering invariant) and **`useAutoLogin`** (owns the once-per-session gate). `WebClientContext` is exported so integration tests can inject a pre-built `WebClient`. UI kit: MUI v9 + `@emotion`; i18n via `react-i18next` + ICU (Transifex).
+Route-level UI in `src/features/<slice>/` (one per route — account, decks, game, login, logs, player, rooms, server, settings, shell). Page chrome (Layout, LeftNav) in `src/feature-wrappers/layout/`. Root orchestration at [src/AppShell.tsx](../../src/AppShell.tsx) with route registration in [src/AppShellRoutes.tsx](../../src/AppShellRoutes.tsx). Load-bearing hooks: **`useWebClient`** (the only way UI reaches the server; see the layering invariant) and **`useAutoLogin`** (owns the once-per-session gate). `WebClientContext` is exported so integration tests can inject a pre-built `WebClient`. UI kit: MUI v9 + `@emotion`; i18n via `react-i18next` + ICU (Transifex).
 
 ### Forms (react-hook-form + Zod)
 

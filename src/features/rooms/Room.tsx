@@ -2,7 +2,7 @@ import ListItemButton from '@mui/material/ListItemButton';
 import Paper from '@mui/material/Paper';
 
 import { ScrollToBottomOnChanges, ThreePaneLayout, UserDisplay, VirtualList, AuthGuard } from '@app/components';
-import { Layout } from '@app/feature-core';
+import { Layout } from '@app/feature-wrappers/layout';
 
 import GameSelector from './components/GameSelector/GameSelector';
 import Messages from './components/Messages';

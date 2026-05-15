@@ -6,7 +6,7 @@ import Paper from '@mui/material/Paper';
 
 import { AuthGuard, ThreePaneLayout, UserDisplay, VirtualList } from '@app/components';
 import { useReduxEffect } from '@app/hooks';
-import { Layout } from '@app/feature-core';
+import { Layout } from '@app/feature-wrappers/layout';
 import { server, rooms } from '@cockatrice/datatrice';
 import { useAppSelector } from '@app/store';
 import { ServerInfo_Room } from '@cockatrice/sockatrice/generated';

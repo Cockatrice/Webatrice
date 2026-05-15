@@ -7,7 +7,7 @@ import Tabs from '@mui/material/Tabs';
 
 import { AuthGuard } from '@app/components';
 import { ShortcutsTab } from '@app/feature-widgets/shortcuts';
-import { Layout } from '@app/feature-core';
+import { Layout } from '@app/feature-wrappers/layout';
 
 import './Settings.css';
 

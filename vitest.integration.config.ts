@@ -34,7 +34,7 @@ export default defineConfig({
       // integration suite's primary concern.
       include: [
         'src/features/**/*.{ts,tsx}',
-        'src/feature-core/**/*.{ts,tsx}',
+        'src/feature-wrappers/**/*.{ts,tsx}',
         'src/hooks/**/*.{ts,tsx}',
         'src/services/**/*.{ts,tsx}',
         'src/store/**/*.{ts,tsx}',

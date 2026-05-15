@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next';
 import Paper from '@mui/material/Paper';
 import Typography from '@mui/material/Typography';
 
-import { Layout } from '@app/feature-core';
+import { Layout } from '@app/feature-wrappers/layout';
 
 import './Unsupported.css';
 

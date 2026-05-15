@@ -6,7 +6,7 @@ import Typography from '@mui/material/Typography';
 
 import { AuthGuard } from '@app/components';
 import { Images } from '@app/images';
-import { Layout } from '@app/feature-core';
+import { Layout } from '@app/feature-wrappers/layout';
 import { ServerInfo_User_UserLevelFlag } from '@cockatrice/sockatrice/generated';
 import { usePlayer } from './usePlayer';
 

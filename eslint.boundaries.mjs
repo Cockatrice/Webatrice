@@ -3,12 +3,12 @@ import boundaries from 'eslint-plugin-boundaries';
 const elements = [
   { type: 'components', pattern: ['src/components/**'] },
   { type: 'dialogs', pattern: ['src/dialogs/**'] },
-  { type: 'features', pattern: ['src/features/**'] },
   { type: 'feature-widgets', pattern: ['src/feature-widgets/**'] },
+  { type: 'feature-wrappers', pattern: ['src/feature-wrappers/**'] },
+  { type: 'features', pattern: ['src/features/**'] },
   { type: 'hooks', pattern: ['src/hooks/**'] },
   { type: 'images', pattern: ['src/images/**'] },
   { type: 'services', pattern: ['src/services/**'] },
-  { type: 'feature-core', pattern: ['src/feature-core/**'] },
   { type: 'store', pattern: ['src/store/**'] },
   { type: 'types', pattern: ['src/types/**'] },
   { type: 'utils', pattern: ['src/utils/**'] },
@@ -40,11 +40,12 @@ const rules = [
     allow: types('components', 'dialogs', 'hooks', 'images', 'services', 'store', 'types', 'utils')
   },
 
-  // Feature-core is the app's foundational chrome layer (Layout + LeftNav). It composes
-  // feature-widgets for top-level affordances (e.g. card-import dialog accessible
-  // from any page). Consumed by features (below) for wrapping their route content.
+  // Feature-wrappers are page-chrome wrappers (currently just `layout/`, holding Layout
+  // and LeftNav). They compose feature-widgets for top-level affordances (e.g. card-import
+  // dialog accessible from any page) and are consumed by features (below) for wrapping
+  // their route content.
   {
-    from: { type: 'feature-core' },
+    from: { type: 'feature-wrappers' },
     allow: types('components', 'dialogs', 'feature-widgets', 'hooks', 'images', 'services', 'store', 'types', 'utils')
   },
 
@@ -52,10 +53,10 @@ const rules = [
   // pulls from them except the root AppShell. Features may import other features only
   // implicitly via the containers that compose them. Features may also compose
   // feature-widgets (one-way: features → feature-widgets, never the reverse). Features
-  // also pull from `feature-core` for the page chrome (Layout, etc.).
+  // also pull from `feature-wrappers` for the page chrome (Layout, etc.).
   {
     from: { type: 'features' },
-    allow: types('components', 'dialogs', 'feature-widgets', 'hooks', 'images', 'services', 'feature-core', 'store', 'types', 'utils')
+    allow: types('components', 'dialogs', 'feature-widgets', 'hooks', 'images', 'services', 'feature-wrappers', 'store', 'types', 'utils')
   },
 ];
 
