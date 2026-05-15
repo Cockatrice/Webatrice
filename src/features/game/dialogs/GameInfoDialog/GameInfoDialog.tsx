@@ -63,7 +63,7 @@ function GameInfoDialog({ isOpen, gameId, onClose }: GameInfoDialogProps) {
     >
       <DialogTitle className="dialog-title">
         <div className="dialog-title__wrapper">
-          <Typography variant="h2">Game info</Typography>
+          Game info
           <IconButton onClick={onClose} size="large" aria-label="close game info">
             <CloseIcon fontSize="large" />
           </IconButton>

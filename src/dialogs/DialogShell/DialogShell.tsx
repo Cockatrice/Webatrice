@@ -3,7 +3,6 @@ import Dialog, { DialogProps } from '@mui/material/Dialog';
 import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
 import IconButton from '@mui/material/IconButton';
-import Typography from '@mui/material/Typography';
 import CloseIcon from '@mui/icons-material/Close';
 
 import './DialogShell.css';
@@ -37,7 +36,7 @@ const DialogShell = ({
       maxWidth={maxWidth}
     >
       <DialogTitle className="dialog-title">
-        <Typography variant="h6">{title}</Typography>
+        {title}
 
         {closeGuarded ? (
           <IconButton onClick={closeGuarded} size="large">

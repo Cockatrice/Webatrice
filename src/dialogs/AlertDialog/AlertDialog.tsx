@@ -4,7 +4,6 @@ import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogContentText from '@mui/material/DialogContentText';
 import DialogTitle from '@mui/material/DialogTitle';
-import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
 
 import './AlertDialog.css';
@@ -51,7 +50,7 @@ function AlertDialog({
     >
       <DialogTitle className="dialog-title">
         <div className="dialog-title__wrapper">
-          <Typography variant="h2">{title}</Typography>
+          {title}
         </div>
       </DialogTitle>
       <DialogContent className="dialog-content alert-dialog__body">

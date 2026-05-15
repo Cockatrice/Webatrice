@@ -43,6 +43,7 @@ describe('Room (integration)', () => {
     const { container } = renderFeatureScreen(
       <Routes>
         <Route path="/room/:roomId" element={<Room />} />
+        <Route path="*" element={null} />
       </Routes>,
       '/room/999',
     );

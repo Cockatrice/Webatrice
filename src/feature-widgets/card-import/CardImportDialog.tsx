@@ -3,7 +3,6 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
 import IconButton from '@mui/material/IconButton';
 import CloseIcon from '@mui/icons-material/Close';
-import Typography from '@mui/material/Typography';
 
 import CardImportForm from './CardImportForm';
 
@@ -18,7 +17,7 @@ const CardImportDialog = ({ handleClose, isOpen }: CardImportDialogProps) => {
   return (
     <Dialog onClose={handleClose} open={isOpen}>
       <DialogTitle className="dialog-title">
-        <Typography variant="h2">Import Cards</Typography>
+        Import Cards
 
         <IconButton onClick={handleClose} size="large">
           <CloseIcon />

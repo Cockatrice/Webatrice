@@ -4,7 +4,6 @@ import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
-import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Checkbox from '@mui/material/Checkbox';
@@ -123,7 +122,7 @@ function SideboardDialog({
     >
       <DialogTitle className="dialog-title">
         <div className="dialog-title__wrapper">
-          <Typography variant="h2">Sideboard — {playerName}</Typography>
+          Sideboard — {playerName}
           <FormControlLabel
             control={
               <Checkbox

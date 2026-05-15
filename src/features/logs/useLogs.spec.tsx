@@ -1,5 +1,5 @@
 import { ReactNode } from 'react';
-import { renderHook } from '@testing-library/react';
+import { act, renderHook } from '@testing-library/react';
 import { combineReducers } from '@reduxjs/toolkit';
 import { Provider } from 'react-redux';
 import { I18nextProvider, initReactI18next } from 'react-i18next';
@@ -79,7 +79,9 @@ describe('useLogs', () => {
 
   it('does not dispatch viewLogHistory when no required filter is set', () => {
     const { result, webClient } = setup();
-    result.current.onSubmit({ logLocation: { room: true } });
+    act(() => {
+      result.current.onSubmit({ logLocation: { room: true } });
+    });
     expect(webClient.request.moderator.viewLogHistory).not.toHaveBeenCalled();
   });
 

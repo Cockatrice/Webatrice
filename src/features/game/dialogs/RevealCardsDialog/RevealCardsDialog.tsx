@@ -75,8 +75,8 @@ function RevealCardsDialog({
     >
       <DialogTitle className="dialog-title">
         <div className="dialog-title__wrapper">
-          <Typography variant="h2">{title}</Typography>
-          <Typography variant="caption" className="reveal-cards-dialog__zone">
+          {title}
+          <Typography variant="caption" component="span" className="reveal-cards-dialog__zone">
             From: {zoneLabel}
           </Typography>
         </div>

@@ -3,7 +3,6 @@ import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
-import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
 import TextField from '@mui/material/TextField';
 
@@ -64,7 +63,7 @@ function PromptDialog({
     >
       <DialogTitle className="dialog-title">
         <div className="dialog-title__wrapper">
-          <Typography variant="h2">{title}</Typography>
+          {title}
         </div>
       </DialogTitle>
       <form onSubmit={handleSubmit}>

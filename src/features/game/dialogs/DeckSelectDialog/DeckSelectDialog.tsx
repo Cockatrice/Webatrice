@@ -56,7 +56,7 @@ function DeckSelectDialog({ isOpen, gameId, handleClose }: DeckSelectDialogProps
     >
       <DialogTitle className="dialog-title">
         <div className="dialog-title__wrapper">
-          <Typography variant="h2">Select Deck</Typography>
+          Select Deck
         </div>
       </DialogTitle>
       <DialogContent className="dialog-content">
