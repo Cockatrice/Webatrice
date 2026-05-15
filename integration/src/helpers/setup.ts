@@ -3,6 +3,20 @@ import '../../../src/polyfills';
 // @critical fake-indexeddb must precede any module that opens a Dexie database.
 import 'fake-indexeddb/auto';
 
+// jsdom doesn't provide these APIs; mirror the unit suite's setupTests.ts so
+// integration specs that mount feature components don't crash on real
+// browser-only APIs (react-window's ResizeObserver, scrollIntoView, etc.).
+if (typeof globalThis.ResizeObserver === 'undefined') {
+  globalThis.ResizeObserver = class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  } as never;
+}
+if (typeof Element !== 'undefined' && !Element.prototype.scrollIntoView) {
+  Element.prototype.scrollIntoView = function scrollIntoView() {};
+}
+
 import { create } from '@bufbuild/protobuf';
 import { combineReducers } from '@reduxjs/toolkit';
 import { afterEach, beforeEach, vi } from 'vitest';

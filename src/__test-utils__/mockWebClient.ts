@@ -22,6 +22,7 @@ export function createMockWebClient() {
         accountPassword: vi.fn(),
         accountImage: vi.fn(),
         message: vi.fn(),
+        joinRoom: vi.fn(),
       },
       rooms: {
         joinRoom: vi.fn(),

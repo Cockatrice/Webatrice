@@ -12,6 +12,11 @@ if (typeof globalThis.ResizeObserver === 'undefined') {
   } as any;
 }
 
+// jsdom doesn't implement Element.scrollIntoView; ScrollToBottomOnChanges uses it.
+if (typeof Element !== 'undefined' && !Element.prototype.scrollIntoView) {
+  Element.prototype.scrollIntoView = function scrollIntoView() {};
+}
+
 // Dexie eagerly opens IndexedDB on import; jsdom's fake-indexeddb is memory-intensive.
 vi.mock('dexie', () => {
   const fakeTable = {

@@ -6,6 +6,17 @@ import { defineConfig } from 'vitest/config';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const srcPath = (...segments: string[]) => path.resolve(__dirname, 'src', ...segments);
 
+// Unit test suite (`npm run test` / `test:coverage`).
+//
+// Purpose: fast, isolated tests of components, hooks, and utilities in jsdom.
+// Specs live next to their source as `src/**/*.spec.{ts,tsx}`.
+//
+// Boundary: every external boundary is mocked — WebSocket and Dexie/IndexedDB
+// are stubbed in `src/setupTests.ts`; there is no real network, no real
+// browser, no real server. Tests that need a real Redux store + Datatrice
+// reducers + protobuf round-trips belong in the integration suite
+// (`vitest.integration.config.ts`); tests that need a real browser against a
+// real Servatrice belong in the e2e suite (`playwright.config.ts`).
 export default defineConfig({
   plugins: [react()],
   resolve: {
@@ -89,7 +100,7 @@ export default defineConfig({
     testTimeout: 15000,
     coverage: {
       provider: 'v8',
-      reporter: ['text', 'html'],
+      reporter: ['text', 'html', 'json-summary'],
       reportsDirectory: './coverage/testing',
       include: ['src/**/*.{ts,tsx}'],
       exclude: [
@@ -98,6 +109,14 @@ export default defineConfig({
         'src/setupTests.ts',
         'src/polyfills.ts',
       ],
+      // Cross-repo coverage gate. Branches floored slightly lower — it is
+      // universally the weakest metric. Raise these only via a ratchet.
+      thresholds: {
+        statements: 60,
+        functions: 60,
+        lines: 60,
+        branches: 50,
+      },
     },
   },
 });
