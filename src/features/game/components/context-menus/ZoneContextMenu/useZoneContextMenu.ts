@@ -1,7 +1,7 @@
 import { useWebClient } from '@cockatrice/datatrice/react';
 import { games } from '@cockatrice/datatrice';
 import { useAppSelector } from '@app/store';
-import { ZoneName } from '@cockatrice/datatrice';
+import { Enriched } from '@cockatrice/datatrice';
 export interface ZoneContextMenu {
   ready: boolean;
   alwaysReveal: boolean;
@@ -50,12 +50,12 @@ export function useZoneContextMenu({
   };
 
   const handleShuffle = () => {
-    webClient.request.game.shuffle(gameId, { zoneName: ZoneName.DECK, start: 0, end: -1 });
+    webClient.request.game.shuffle(gameId, { zoneName: Enriched.ZoneName.DECK, start: 0, end: -1 });
   };
 
   const handleRevealTop = () => {
     webClient.request.game.revealCards(gameId, {
-      zoneName: ZoneName.DECK,
+      zoneName: Enriched.ZoneName.DECK,
       playerId: -1,
       topCards: 1,
     });
@@ -63,14 +63,14 @@ export function useZoneContextMenu({
 
   const handleToggleAlwaysReveal = () => {
     webClient.request.game.changeZoneProperties(gameId, {
-      zoneName: ZoneName.DECK,
+      zoneName: Enriched.ZoneName.DECK,
       alwaysRevealTopCard: !alwaysReveal,
     });
   };
 
   const handleToggleAlwaysLook = () => {
     webClient.request.game.changeZoneProperties(gameId, {
-      zoneName: ZoneName.DECK,
+      zoneName: Enriched.ZoneName.DECK,
       alwaysLookAtTopCard: !alwaysLook,
     });
   };

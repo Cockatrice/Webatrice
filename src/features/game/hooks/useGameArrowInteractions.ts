@@ -3,7 +3,7 @@ import { RefObject, useCallback, useEffect, useMemo, useRef, useState } from 're
 import { useSettings } from '@app/hooks';
 import { useWebClient } from '@cockatrice/datatrice/react';
 import { CardAttribute, ServerInfo_Card } from '@cockatrice/sockatrice/generated';
-import { GameEntry, ZoneName } from '@cockatrice/datatrice';
+import { Enriched, GameEntry } from '@cockatrice/datatrice';
 import { ArrowColor, ColorRGBA, rgbaToCss } from '@app/types';
 import { makeCardKey, type CardRegistry } from '../utils/CardRegistry/CardRegistryContext';
 
@@ -184,16 +184,16 @@ export function useGameArrowInteractions({
       // server re-keys the card id during the move, so we can't also send
       // createArrow here; instead we resolve this drag as a play-card intent.
       if (
-        drag.sourceZone === ZoneName.HAND &&
+        drag.sourceZone === Enriched.ZoneName.HAND &&
         drag.sourcePlayerId === game?.localPlayerId &&
-        targetZone !== ZoneName.HAND
+        targetZone !== Enriched.ZoneName.HAND
       ) {
         webClient.request.game.moveCard(gameId, {
           startPlayerId: drag.sourcePlayerId,
           startZone: drag.sourceZone,
           cardsToMove: { card: [{ cardId: drag.sourceCardId }] },
           targetPlayerId: drag.sourcePlayerId,
-          targetZone: ZoneName.TABLE,
+          targetZone: Enriched.ZoneName.TABLE,
           x: 0,
           y: 0,
           isReversed: false,
@@ -333,16 +333,16 @@ export function useGameArrowInteractions({
       // card (card_item.cpp:243-250). The server re-keys the moved card id, so
       // we resolve this as a play-card intent and drop the arrow command.
       if (
-        pendingArrow.sourceZone === ZoneName.HAND &&
+        pendingArrow.sourceZone === Enriched.ZoneName.HAND &&
         pendingArrow.sourcePlayerId === game?.localPlayerId &&
-        zone !== ZoneName.HAND
+        zone !== Enriched.ZoneName.HAND
       ) {
         webClient.request.game.moveCard(gameId, {
           startPlayerId: pendingArrow.sourcePlayerId,
           startZone: pendingArrow.sourceZone,
           cardsToMove: { card: [{ cardId: pendingArrow.sourceCardId }] },
           targetPlayerId: pendingArrow.sourcePlayerId,
-          targetZone: ZoneName.TABLE,
+          targetZone: Enriched.ZoneName.TABLE,
           x: 0,
           y: 0,
           isReversed: false,
@@ -374,7 +374,7 @@ export function useGameArrowInteractions({
       if (pendingArrow || pendingAttach) {
         return;
       }
-      if (sourceZone === ZoneName.TABLE) {
+      if (sourceZone === Enriched.ZoneName.TABLE) {
         webClient.request.game.setCardAttr(gameId, {
           zone: sourceZone,
           cardId: card.id,
@@ -383,7 +383,7 @@ export function useGameArrowInteractions({
         });
         return;
       }
-      if (sourceZone === ZoneName.HAND && game?.localPlayerId != null) {
+      if (sourceZone === Enriched.ZoneName.HAND && game?.localPlayerId != null) {
         const localPlayerId = game.localPlayerId;
         // Hand-zone visibility is gated on the local player being in slotA
         // (see useGame.ts:96-102), so the local target is never per-player
@@ -394,11 +394,11 @@ export function useGameArrowInteractions({
           gameId,
           localPlayerId,
           sourcePlayerId: localPlayerId,
-          sourceZone: ZoneName.HAND,
+          sourceZone: Enriched.ZoneName.HAND,
           card,
           faceDown: false,
           isInverted: invertVerticalCoordinate,
-          tableZone: game.players[localPlayerId]?.zones[ZoneName.TABLE],
+          tableZone: game.players[localPlayerId]?.zones[Enriched.ZoneName.TABLE],
         });
       }
     },

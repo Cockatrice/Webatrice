@@ -1,7 +1,7 @@
 import { renderHook } from '@testing-library/react';
 import type { DragEndEvent } from '@dnd-kit/core';
 import { ServerInfo_Card } from '@cockatrice/sockatrice/generated';
-import { ZoneName } from '@cockatrice/datatrice';
+import { Enriched } from '@cockatrice/datatrice';
 import { makeCard } from '../../../__test-utils__/games-fixtures';
 import {
   CARD_WIDTH_PX,
@@ -127,9 +127,9 @@ describe('useGameDnd', () => {
         buildEvent({
           sourceCard: card,
           sourcePlayerId: 1,
-          sourceZone: ZoneName.HAND,
+          sourceZone: Enriched.ZoneName.HAND,
           targetPlayerId: 1,
-          targetZone: ZoneName.TABLE,
+          targetZone: Enriched.ZoneName.TABLE,
           targetRow: 1,
           rowCards: [],
           pointerXInRow: 10,
@@ -140,7 +140,7 @@ describe('useGameDnd', () => {
       const args = webClient.request.game.moveCard.mock.calls[0][1];
       expect(args.x).toBe(0);
       expect(args.y).toBe(1);
-      expect(args.targetZone).toBe(ZoneName.TABLE);
+      expect(args.targetZone).toBe(Enriched.ZoneName.TABLE);
     });
 
     it('sends moveCard with gridX=3 when dropping into the next stack past a 1-card stack', () => {
@@ -151,9 +151,9 @@ describe('useGameDnd', () => {
         buildEvent({
           sourceCard: dragging,
           sourcePlayerId: 1,
-          sourceZone: ZoneName.TABLE,
+          sourceZone: Enriched.ZoneName.TABLE,
           targetPlayerId: 1,
-          targetZone: ZoneName.TABLE,
+          targetZone: Enriched.ZoneName.TABLE,
           targetRow: 0,
           rowCards: [existing],
           // Pointer well inside stack 1's territory.
@@ -173,9 +173,9 @@ describe('useGameDnd', () => {
         buildEvent({
           sourceCard: dragged,
           sourcePlayerId: 1,
-          sourceZone: ZoneName.TABLE,
+          sourceZone: Enriched.ZoneName.TABLE,
           targetPlayerId: 1,
-          targetZone: ZoneName.TABLE,
+          targetZone: Enriched.ZoneName.TABLE,
           targetRow: 1,
           // Dragged card still appears in rowCards from Redux during the drag.
           rowCards: [leftmost, dragged],
@@ -197,9 +197,9 @@ describe('useGameDnd', () => {
         buildEvent({
           sourceCard: dragging,
           sourcePlayerId: 1,
-          sourceZone: ZoneName.TABLE,
+          sourceZone: Enriched.ZoneName.TABLE,
           targetPlayerId: 1,
-          targetZone: ZoneName.TABLE,
+          targetZone: Enriched.ZoneName.TABLE,
           targetRow: 0,
           rowCards: [occupying],
           // Inside stack 0's territory (mapToGridX returns something in [0,2]).
@@ -223,9 +223,9 @@ describe('useGameDnd', () => {
         buildEvent({
           sourceCard: dragging,
           sourcePlayerId: 1,
-          sourceZone: ZoneName.TABLE,
+          sourceZone: Enriched.ZoneName.TABLE,
           targetPlayerId: 1,
-          targetZone: ZoneName.TABLE,
+          targetZone: Enriched.ZoneName.TABLE,
           targetRow: 0,
           rowCards: full,
           pointerXInRow: 0, // mapToGridX → 0; all three sub-slots full.
@@ -247,9 +247,9 @@ describe('useGameDnd', () => {
         buildEvent({
           sourceCard: dragging,
           sourcePlayerId: 1,
-          sourceZone: ZoneName.HAND,
+          sourceZone: Enriched.ZoneName.HAND,
           targetPlayerId: 2,
-          targetZone: ZoneName.TABLE,
+          targetZone: Enriched.ZoneName.TABLE,
           targetRow: 2, // visual top of mirrored opponent = logical y=2
           rowCards: [],
           pointerXInRow: 0,
@@ -268,9 +268,9 @@ describe('useGameDnd', () => {
         buildEvent({
           sourceCard: card,
           sourcePlayerId: 1,
-          sourceZone: ZoneName.TABLE,
+          sourceZone: Enriched.ZoneName.TABLE,
           targetPlayerId: 1,
-          targetZone: ZoneName.GRAVE,
+          targetZone: Enriched.ZoneName.GRAVE,
           targetRow: 0,
           pointerXInRow: 500, // ignored for non-TABLE
         }),
@@ -279,7 +279,7 @@ describe('useGameDnd', () => {
       const args = webClient.request.game.moveCard.mock.calls[0][1];
       expect(args.x).toBe(0);
       expect(args.y).toBe(0);
-      expect(args.targetZone).toBe(ZoneName.GRAVE);
+      expect(args.targetZone).toBe(Enriched.ZoneName.GRAVE);
     });
 
     it('skips dispatch for same-zone drops on non-TABLE zones', () => {
@@ -289,9 +289,9 @@ describe('useGameDnd', () => {
         buildEvent({
           sourceCard: card,
           sourcePlayerId: 1,
-          sourceZone: ZoneName.HAND,
+          sourceZone: Enriched.ZoneName.HAND,
           targetPlayerId: 1,
-          targetZone: ZoneName.HAND,
+          targetZone: Enriched.ZoneName.HAND,
           targetRow: 0,
         }),
       );
@@ -312,9 +312,9 @@ describe('useGameDnd', () => {
         buildEvent({
           sourceCard: source,
           sourcePlayerId: 1,
-          sourceZone: ZoneName.TABLE,
+          sourceZone: Enriched.ZoneName.TABLE,
           targetPlayerId: 1,
-          targetZone: ZoneName.TABLE,
+          targetZone: Enriched.ZoneName.TABLE,
           targetRow: 0,
           rowCards: [occupant],
           pointerXInRow: 0,

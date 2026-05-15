@@ -1,7 +1,7 @@
 import { create } from '@bufbuild/protobuf';
 import { act, screen } from '@testing-library/react';
 import { Event_AttachCardSchema, Event_MoveCardSchema } from '@cockatrice/sockatrice/generated';
-import { ZoneName } from '@cockatrice/datatrice';
+import { Enriched } from '@cockatrice/datatrice';
 vi.mock('../../../../../hooks/useSettings');
 
 import { useSettings } from '../../../../../hooks/useSettings';
@@ -24,14 +24,14 @@ function setInvert(invert: boolean) {
 
 function stateWithBattlefield(cards: ReturnType<typeof makeCard>[]) {
   const table = makeZoneEntry({
-    name: ZoneName.TABLE,
+    name: Enriched.ZoneName.TABLE,
     type: 1,
     withCoords: true,
     cardCount: cards.length,
     cards,
   });
   const player = makePlayerEntry({
-    zones: { [ZoneName.TABLE]: table },
+    zones: { [Enriched.ZoneName.TABLE]: table },
   });
   const game = makeGameEntry({
     localPlayerId: 1,
@@ -47,8 +47,8 @@ function stateWithTwoBattlefields(
   const buildPlayer = (cards: ReturnType<typeof makeCard>[]) =>
     makePlayerEntry({
       zones: {
-        [ZoneName.TABLE]: makeZoneEntry({
-          name: ZoneName.TABLE,
+        [Enriched.ZoneName.TABLE]: makeZoneEntry({
+          name: Enriched.ZoneName.TABLE,
           type: 1,
           withCoords: true,
           cardCount: cards.length,
@@ -192,7 +192,7 @@ describe('Battlefield', () => {
     function attachedChild(overrides: Parameters<typeof makeCard>[0]) {
       return makeCard({
         attachPlayerId: 1,
-        attachZone: ZoneName.TABLE,
+        attachZone: Enriched.ZoneName.TABLE,
         ...overrides,
       });
     }
@@ -338,7 +338,7 @@ describe('Battlefield', () => {
       // though it lives in player 1's TABLE zone.
       const ownersAura = makeCard({
         id: 11, name: 'Cross-player aura', x: 3, y: 0,
-        attachPlayerId: 2, attachZone: ZoneName.TABLE, attachCardId: 21,
+        attachPlayerId: 2, attachZone: Enriched.ZoneName.TABLE, attachCardId: 21,
       });
       const enemyCreature = makeCard({ id: 21, name: 'Enemy creature', x: 0, y: 0 });
 
@@ -373,11 +373,11 @@ describe('Battlefield', () => {
       const parent = makeCard({ id: 10, name: 'Creature', x: 0, y: 0 });
       const auraA = makeCard({
         id: 11, name: 'AuraA', x: 1, y: 0,
-        attachPlayerId: 1, attachZone: ZoneName.TABLE, attachCardId: 10,
+        attachPlayerId: 1, attachZone: Enriched.ZoneName.TABLE, attachCardId: 10,
       });
       const auraB = makeCard({
         id: 12, name: 'AuraB', x: 2, y: 0,
-        attachPlayerId: 1, attachZone: ZoneName.TABLE, attachCardId: 10,
+        attachPlayerId: 1, attachZone: Enriched.ZoneName.TABLE, attachCardId: 10,
       });
       const { store, container } = renderWithProviders(
         <Battlefield gameId={1} playerId={2} mirrored />,
@@ -393,8 +393,8 @@ describe('Battlefield', () => {
             gameId: 1,
             playerId: 1,
             data: create(Event_MoveCardSchema, {
-              cardId: 10, cardName: '', startPlayerId: 1, startZone: ZoneName.TABLE,
-              position: -1, targetPlayerId: 2, targetZone: ZoneName.TABLE,
+              cardId: 10, cardName: '', startPlayerId: 1, startZone: Enriched.ZoneName.TABLE,
+              position: -1, targetPlayerId: 2, targetZone: Enriched.ZoneName.TABLE,
               x: 0, y: 0, newCardId: 99, faceDown: false, newCardProviderId: '',
             }),
           }),
@@ -438,10 +438,10 @@ describe('Battlefield', () => {
             gameId: 1,
             playerId: 1,
             data: create(Event_AttachCardSchema, {
-              startZone: ZoneName.TABLE,
+              startZone: Enriched.ZoneName.TABLE,
               cardId: 11,
               targetPlayerId: 1,
-              targetZone: ZoneName.TABLE,
+              targetZone: Enriched.ZoneName.TABLE,
               targetCardId: 10,
             }),
           }),
@@ -606,8 +606,8 @@ describe('Battlefield', () => {
             playerId: 1,
             data: create(Event_MoveCardSchema, {
               cardId: 50, cardName: '', startPlayerId: 1,
-              startZone: ZoneName.TABLE, position: -1,
-              targetPlayerId: 1, targetZone: ZoneName.TABLE,
+              startZone: Enriched.ZoneName.TABLE, position: -1,
+              targetPlayerId: 1, targetZone: Enriched.ZoneName.TABLE,
               x: 3, y: 0, // Move Mover from col 0 to col 1, same row
               newCardId: -1, faceDown: false, newCardProviderId: '',
             }),
@@ -652,10 +652,10 @@ describe('Battlefield', () => {
               cardId: 42,
               cardName: '',
               startPlayerId: 1,
-              startZone: ZoneName.TABLE,
+              startZone: Enriched.ZoneName.TABLE,
               position: -1,
               targetPlayerId: 1,
-              targetZone: ZoneName.TABLE,
+              targetZone: Enriched.ZoneName.TABLE,
               x: 6,
               y: 1,
               newCardId: -1,

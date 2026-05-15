@@ -3,7 +3,7 @@ import { useCallback, useState } from 'react';
 import { useSettings } from '@app/hooks';
 import { useWebClient } from '@cockatrice/datatrice/react';
 import { CardAttribute, ServerInfo_Card } from '@cockatrice/sockatrice/generated';
-import { GameEntry, PlayerEntry, ZoneName } from '@cockatrice/datatrice';
+import { Enriched, GameEntry, PlayerEntry } from '@cockatrice/datatrice';
 import { CardDTO } from '../../../services/dexie/DexieDTOs/CardDTO';
 import { COUNTER_TYPE_LABELS } from '../components/ui/CardSlot/counterColors';
 import { DEFAULT_DIE_COUNT, DEFAULT_DIE_SIDES } from '../dialogs/RollDieDialog/RollDieDialog';
@@ -269,9 +269,9 @@ export function useGameDialogs({
         return;
       }
       const supported =
-        zoneName === ZoneName.DECK ||
-        zoneName === ZoneName.GRAVE ||
-        zoneName === ZoneName.EXILE;
+        zoneName === Enriched.ZoneName.DECK ||
+        zoneName === Enriched.ZoneName.GRAVE ||
+        zoneName === Enriched.ZoneName.EXILE;
       if (!supported) {
         return;
       }
@@ -420,7 +420,7 @@ export function useGameDialogs({
         card: menu.card,
         faceDown,
         isInverted: invertVerticalCoordinate,
-        tableZone: game.players[localPlayerId]?.zones[ZoneName.TABLE],
+        tableZone: game.players[localPlayerId]?.zones[Enriched.ZoneName.TABLE],
       });
     },
     [cardMenu, game, gameId, invertVerticalCoordinate, webClient],
@@ -444,7 +444,7 @@ export function useGameDialogs({
           startZone: menu.sourceZone,
           cardsToMove: { card: [{ cardId: menu.card.id }] },
           targetPlayerId: game.localPlayerId,
-          targetZone: ZoneName.DECK,
+          targetZone: Enriched.ZoneName.DECK,
           x: Math.max(0, Number(value) - 1),
           y: 0,
           isReversed: false,
@@ -482,7 +482,7 @@ export function useGameDialogs({
       onSubmit: (value) => {
         webClient.request.game.dumpZone(gameId, {
           playerId: game!.localPlayerId,
-          zoneName: ZoneName.DECK,
+          zoneName: Enriched.ZoneName.DECK,
           numberCards: Number(value),
           isReversed: false,
         });
@@ -518,7 +518,7 @@ export function useGameDialogs({
         return;
       }
       webClient.request.game.createToken(gameId, {
-        zone: ZoneName.TABLE,
+        zone: Enriched.ZoneName.TABLE,
         cardName: args.name,
         color: args.color,
         pt: args.pt,
@@ -565,8 +565,8 @@ export function useGameDialogs({
     // "relative to current hand size" — doMulligan computes
     // `handSize + number` before dispatching. Seeding with the configured
     // starting hand size (7) matches desktop's default.
-    const handSize = localPlayer?.zones[ZoneName.HAND]?.cardCount ?? 0;
-    const deckSize = localPlayer?.zones[ZoneName.DECK]?.cardCount ?? 0;
+    const handSize = localPlayer?.zones[Enriched.ZoneName.HAND]?.cardCount ?? 0;
+    const deckSize = localPlayer?.zones[Enriched.ZoneName.DECK]?.cardCount ?? 0;
     const min = -handSize;
     const max = handSize + deckSize;
     setPrompt({
@@ -599,13 +599,13 @@ export function useGameDialogs({
     }
     setRevealState({
       title: 'Reveal hand',
-      zoneName: ZoneName.HAND,
+      zoneName: Enriched.ZoneName.HAND,
       zoneLabel: 'Hand',
       showCountInput: false,
       defaultCount: 1,
       onSubmit: ({ targetPlayerId }) => {
         webClient.request.game.revealCards(gameId, {
-          zoneName: ZoneName.HAND,
+          zoneName: Enriched.ZoneName.HAND,
           playerId: targetPlayerId,
           topCards: -1,
         });
@@ -620,7 +620,7 @@ export function useGameDialogs({
     if (game?.localPlayerId == null) {
       return;
     }
-    handleZoneClick(game.localPlayerId, ZoneName.HAND);
+    handleZoneClick(game.localPlayerId, Enriched.ZoneName.HAND);
   }, [game?.localPlayerId, handleZoneClick]);
 
   // Cockatrice's hand_menu.cpp sortHand iterates the local hand and dispatches
@@ -633,7 +633,7 @@ export function useGameDialogs({
         return;
       }
       const localPlayerId = game.localPlayerId;
-      const handZone = localPlayer.zones[ZoneName.HAND];
+      const handZone = localPlayer.zones[Enriched.ZoneName.HAND];
       if (!handZone) {
         return;
       }
@@ -683,10 +683,10 @@ export function useGameDialogs({
           const entry = sorted[i];
           webClient.request.game.moveCard(gameId, {
             startPlayerId: localPlayerId,
-            startZone: ZoneName.HAND,
+            startZone: Enriched.ZoneName.HAND,
             cardsToMove: { card: [{ cardId: entry.card.id }] },
             targetPlayerId: localPlayerId,
-            targetZone: ZoneName.HAND,
+            targetZone: Enriched.ZoneName.HAND,
             x: 0,
             y: 0,
             isReversed: false,
@@ -706,17 +706,17 @@ export function useGameDialogs({
         return;
       }
       const localPlayerId = game.localPlayerId;
-      const handZone = localPlayer.zones[ZoneName.HAND];
+      const handZone = localPlayer.zones[Enriched.ZoneName.HAND];
       if (!handZone) {
         return;
       }
       for (const cardId of handZone.order) {
         webClient.request.game.moveCard(gameId, {
           startPlayerId: localPlayerId,
-          startZone: ZoneName.HAND,
+          startZone: Enriched.ZoneName.HAND,
           cardsToMove: { card: [{ cardId }] },
           targetPlayerId: localPlayerId,
-          targetZone: ZoneName.DECK,
+          targetZone: Enriched.ZoneName.DECK,
           x: top ? 0 : -1,
           y: 0,
           isReversed: false,
@@ -732,14 +732,14 @@ export function useGameDialogs({
         return;
       }
       const localPlayerId = game.localPlayerId;
-      const handZone = localPlayer.zones[ZoneName.HAND];
+      const handZone = localPlayer.zones[Enriched.ZoneName.HAND];
       if (!handZone) {
         return;
       }
       for (const cardId of handZone.order) {
         webClient.request.game.moveCard(gameId, {
           startPlayerId: localPlayerId,
-          startZone: ZoneName.HAND,
+          startZone: Enriched.ZoneName.HAND,
           cardsToMove: { card: [{ cardId }] },
           targetPlayerId: localPlayerId,
           targetZone,
@@ -762,13 +762,13 @@ export function useGameDialogs({
     const RANDOM_CARD_FROM_ZONE = -2;
     setRevealState({
       title: 'Reveal random card',
-      zoneName: ZoneName.HAND,
+      zoneName: Enriched.ZoneName.HAND,
       zoneLabel: 'Hand (random)',
       showCountInput: false,
       defaultCount: 1,
       onSubmit: ({ targetPlayerId }) => {
         webClient.request.game.revealCards(gameId, {
-          zoneName: ZoneName.HAND,
+          zoneName: Enriched.ZoneName.HAND,
           cardId: [RANDOM_CARD_FROM_ZONE],
           playerId: targetPlayerId,
           topCards: -1,
@@ -784,13 +784,13 @@ export function useGameDialogs({
     }
     setRevealState({
       title: 'Reveal top N cards',
-      zoneName: ZoneName.DECK,
+      zoneName: Enriched.ZoneName.DECK,
       zoneLabel: 'Library',
       showCountInput: true,
       defaultCount: 1,
       onSubmit: ({ targetPlayerId, topCards }) => {
         webClient.request.game.revealCards(gameId, {
-          zoneName: ZoneName.DECK,
+          zoneName: Enriched.ZoneName.DECK,
           playerId: targetPlayerId,
           topCards,
         });
@@ -805,8 +805,8 @@ export function useGameDialogs({
     }
     const { zoneName } = zoneMenu;
     const label =
-      zoneName === ZoneName.GRAVE ? 'Graveyard' :
-        zoneName === ZoneName.EXILE ? 'Exile' : zoneName;
+      zoneName === Enriched.ZoneName.GRAVE ? 'Graveyard' :
+        zoneName === Enriched.ZoneName.EXILE ? 'Exile' : zoneName;
     setRevealState({
       title: `Reveal ${label.toLowerCase()}`,
       zoneName,
@@ -855,7 +855,7 @@ export function useGameDialogs({
       return;
     }
     const localPlayerId = game.localPlayerId;
-    const deck = game.players[localPlayerId]?.zones[ZoneName.DECK];
+    const deck = game.players[localPlayerId]?.zones[Enriched.ZoneName.DECK];
     const cardCount = deck?.cardCount ?? 0;
     if (cardCount === 0) {
       return;
@@ -864,10 +864,10 @@ export function useGameDialogs({
     // sets card_id = size-1, then target HAND with x=0, y=0. No is_reversed.
     webClient.request.game.moveCard(gameId, {
       startPlayerId: localPlayerId,
-      startZone: ZoneName.DECK,
+      startZone: Enriched.ZoneName.DECK,
       cardsToMove: { card: [{ cardId: cardCount - 1 }] },
       targetPlayerId: localPlayerId,
-      targetZone: ZoneName.HAND,
+      targetZone: Enriched.ZoneName.HAND,
       x: 0,
       y: 0,
       isReversed: false,
@@ -880,7 +880,7 @@ export function useGameDialogs({
         return;
       }
       const localPlayerId = game.localPlayerId;
-      const deck = game.players[localPlayerId]?.zones[ZoneName.DECK];
+      const deck = game.players[localPlayerId]?.zones[Enriched.ZoneName.DECK];
       if ((deck?.cardCount ?? 0) === 0) {
         return;
       }
@@ -888,7 +888,7 @@ export function useGameDialogs({
       // (card_id = 0) plus a target placement.
       webClient.request.game.moveCard(gameId, {
         startPlayerId: localPlayerId,
-        startZone: ZoneName.DECK,
+        startZone: Enriched.ZoneName.DECK,
         cardsToMove: { card: [{ cardId: 0 }] },
         targetPlayerId: localPlayerId,
         targetZone,
@@ -906,7 +906,7 @@ export function useGameDialogs({
         return;
       }
       const localPlayerId = game.localPlayerId;
-      const deck = game.players[localPlayerId]?.zones[ZoneName.DECK];
+      const deck = game.players[localPlayerId]?.zones[Enriched.ZoneName.DECK];
       if ((deck?.cardCount ?? 0) === 0) {
         return;
       }
@@ -920,10 +920,10 @@ export function useGameDialogs({
       // to the local player (see useGameArrowInteractions.handleCardDoubleClick).
       webClient.request.game.moveCard(gameId, {
         startPlayerId: localPlayerId,
-        startZone: ZoneName.DECK,
+        startZone: Enriched.ZoneName.DECK,
         cardsToMove: { card: [{ cardId: 0, faceDown }] },
         targetPlayerId: localPlayerId,
-        targetZone: faceDown ? ZoneName.TABLE : ZoneName.STACK,
+        targetZone: faceDown ? Enriched.ZoneName.TABLE : Enriched.ZoneName.STACK,
         x: -1,
         y: 0,
         isReversed: false,
@@ -939,8 +939,8 @@ export function useGameDialogs({
       }
       const localPlayerId = game.localPlayerId;
       const zoneLabel =
-        targetZone === ZoneName.GRAVE ? 'graveyard'
-          : targetZone === ZoneName.EXILE ? 'exile' : targetZone;
+        targetZone === Enriched.ZoneName.GRAVE ? 'graveyard'
+          : targetZone === Enriched.ZoneName.EXILE ? 'exile' : targetZone;
       setPrompt({
         title: `Move top N cards to ${zoneLabel}`,
         label: 'Number of cards',
@@ -948,7 +948,7 @@ export function useGameDialogs({
         validate: (v) => (/^[1-9]\d*$/.test(v) ? null : 'Enter a positive integer'),
         onSubmit: (value) => {
           const requested = Number(value);
-          const deck = game.players[localPlayerId]?.zones[ZoneName.DECK];
+          const deck = game.players[localPlayerId]?.zones[Enriched.ZoneName.DECK];
           const cardCount = deck?.cardCount ?? 0;
           if (cardCount === 0) {
             setPrompt(null);
@@ -965,7 +965,7 @@ export function useGameDialogs({
           }
           webClient.request.game.moveCard(gameId, {
             startPlayerId: localPlayerId,
-            startZone: ZoneName.DECK,
+            startZone: Enriched.ZoneName.DECK,
             cardsToMove: { card: cards },
             targetPlayerId: localPlayerId,
             targetZone,
@@ -992,7 +992,7 @@ export function useGameDialogs({
       onSubmit: (value) => {
         const n = Number(value);
         webClient.request.game.shuffle(gameId, {
-          zoneName: ZoneName.DECK,
+          zoneName: Enriched.ZoneName.DECK,
           start: 0,
           end: n - 1,
         });
@@ -1015,7 +1015,7 @@ export function useGameDialogs({
         // Cockatrice player_actions.cpp:272 — negative `start` indexes from
         // the end of the zone; end=-1 means the last card.
         webClient.request.game.shuffle(gameId, {
-          zoneName: ZoneName.DECK,
+          zoneName: Enriched.ZoneName.DECK,
           start: -n,
           end: -1,
         });
@@ -1044,7 +1044,7 @@ export function useGameDialogs({
           startZone: sourceZoneName,
           cardsToMove: { card: [{ cardId }] },
           targetPlayerId: sourcePlayerId,
-          targetZone: ZoneName.DECK,
+          targetZone: Enriched.ZoneName.DECK,
           x: top ? 0 : -1,
           y: 0,
           isReversed: false,
@@ -1097,8 +1097,8 @@ export function useGameDialogs({
     }
     const sourceZoneName = zoneMenu.zoneName;
     const label =
-      sourceZoneName === ZoneName.GRAVE ? 'Graveyard'
-        : sourceZoneName === ZoneName.EXILE ? 'Exile'
+      sourceZoneName === Enriched.ZoneName.GRAVE ? 'Graveyard'
+        : sourceZoneName === Enriched.ZoneName.EXILE ? 'Exile'
           : sourceZoneName;
     // Same RANDOM_CARD_FROM_ZONE sentinel desktop uses for reveal-random
     // (player_actions.cpp:1763 for grave; -2 = "any random card in zone").

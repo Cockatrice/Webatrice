@@ -1,5 +1,5 @@
 import { ServerInfo_Card } from '@cockatrice/sockatrice/generated';
-import { ZoneName } from '@cockatrice/datatrice';
+import { Enriched } from '@cockatrice/datatrice';
 import { games } from '@cockatrice/datatrice';
 
 import CardSlot from '../../ui/CardSlot/CardSlot';
@@ -38,7 +38,7 @@ function AttachmentStack({
   onCardContextMenu,
   onCardDoubleClick,
 }: AttachmentStackProps) {
-  const parentKey = makeCardKey(ownerPlayerId, ZoneName.TABLE, parent.id);
+  const parentKey = makeCardKey(ownerPlayerId, Enriched.ZoneName.TABLE, parent.id);
 
   const N = attachments.length;
   const stackFactor = 1 + N * ATTACH_OFFSET_FRACTION;
@@ -64,17 +64,17 @@ function AttachmentStack({
           card={parent}
           draggable={draggable}
           ownerPlayerId={ownerPlayerId}
-          zone={ZoneName.TABLE}
+          zone={Enriched.ZoneName.TABLE}
           isArrowSource={arrowSourceKey === parentKey}
           onMouseEnter={onCardHover}
-          onClick={(c) => onCardClick?.(ownerPlayerId, ZoneName.TABLE, c)}
+          onClick={(c) => onCardClick?.(ownerPlayerId, Enriched.ZoneName.TABLE, c)}
           onContextMenu={onCardContextMenu}
           onDoubleClick={onCardDoubleClick}
         />
       </div>
       {attachments.map((entry, i) => {
         const { card: child, ownerPlayerId: childOwnerId } = entry;
-        const childKey = makeCardKey(childOwnerId, ZoneName.TABLE, child.id);
+        const childKey = makeCardKey(childOwnerId, Enriched.ZoneName.TABLE, child.id);
         const leftPct = round(((N - 1 - i) * ATTACH_OFFSET_FRACTION * 100) / stackFactor);
         return (
           <div
@@ -91,10 +91,10 @@ function AttachmentStack({
               card={child}
               draggable={draggable}
               ownerPlayerId={childOwnerId}
-              zone={ZoneName.TABLE}
+              zone={Enriched.ZoneName.TABLE}
               isArrowSource={arrowSourceKey === childKey}
               onMouseEnter={onCardHover}
-              onClick={(c) => onCardClick?.(childOwnerId, ZoneName.TABLE, c)}
+              onClick={(c) => onCardClick?.(childOwnerId, Enriched.ZoneName.TABLE, c)}
               onContextMenu={onCardContextMenu}
               onDoubleClick={onCardDoubleClick}
             />

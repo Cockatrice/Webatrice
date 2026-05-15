@@ -8,7 +8,7 @@ import { combineReducers } from '@reduxjs/toolkit';
 import { games, type GamesState } from '@cockatrice/datatrice';
 import { makeCard, makeGameEntry, makePlayerEntry, makePlayerProperties } from '../../../__test-utils__/games-fixtures';
 import { makeReduxWebClientHookWrapper } from '../../../__test-utils__/makeHookWrapper';
-import { ZoneName } from '@cockatrice/datatrice';
+import { Enriched } from '@cockatrice/datatrice';
 import { CardDTO } from '../../../services/dexie/DexieDTOs/CardDTO';
 import { useGameArrowInteractions } from './useGameArrowInteractions';
 
@@ -84,7 +84,7 @@ describe('useGameArrowInteractions', () => {
 
   it('creates an arrow after right-click-drag past the 8px threshold', () => {
     const { result, webClient } = setup();
-    const targetEl = makeCardElement({ playerId: 2, zone: ZoneName.TABLE, cardId: 99 });
+    const targetEl = makeCardElement({ playerId: 2, zone: Enriched.ZoneName.TABLE, cardId: 99 });
     const origElementFromPoint = document.elementFromPoint;
     document.elementFromPoint = () => targetEl;
 
@@ -93,7 +93,7 @@ describe('useGameArrowInteractions', () => {
         button: 2,
         clientX: 10,
         clientY: 10,
-        target: makeCardElement({ playerId: 1, zone: ZoneName.TABLE, cardId: 5 }),
+        target: makeCardElement({ playerId: 1, zone: Enriched.ZoneName.TABLE, cardId: 5 }),
       } as unknown as React.MouseEvent<HTMLDivElement>);
     });
 
@@ -112,7 +112,7 @@ describe('useGameArrowInteractions', () => {
         startCardId: 5,
         targetPlayerId: 2,
         targetCardId: 99,
-        targetZone: ZoneName.TABLE,
+        targetZone: Enriched.ZoneName.TABLE,
       }),
     );
 
@@ -121,7 +121,7 @@ describe('useGameArrowInteractions', () => {
 
   it('plays the card (moveCard) when dragging from HAND to a non-HAND target', () => {
     const { result, webClient } = setup({ localPlayerId: 1 });
-    const targetEl = makeCardElement({ playerId: 2, zone: ZoneName.TABLE, cardId: 99 });
+    const targetEl = makeCardElement({ playerId: 2, zone: Enriched.ZoneName.TABLE, cardId: 99 });
     const origElementFromPoint = document.elementFromPoint;
     document.elementFromPoint = () => targetEl;
 
@@ -130,7 +130,7 @@ describe('useGameArrowInteractions', () => {
         button: 2,
         clientX: 0,
         clientY: 0,
-        target: makeCardElement({ playerId: 1, zone: ZoneName.HAND, cardId: 5 }),
+        target: makeCardElement({ playerId: 1, zone: Enriched.ZoneName.HAND, cardId: 5 }),
       } as unknown as React.MouseEvent<HTMLDivElement>);
     });
     act(() => fireMouseEvent('mousemove', { clientX: 30, clientY: 30 }));
@@ -144,7 +144,7 @@ describe('useGameArrowInteractions', () => {
 
   it('does not send a request when the drop lands on the same card (cancel)', () => {
     const { result, webClient } = setup();
-    const sameEl = makeCardElement({ playerId: 1, zone: ZoneName.TABLE, cardId: 5 });
+    const sameEl = makeCardElement({ playerId: 1, zone: Enriched.ZoneName.TABLE, cardId: 5 });
     const origElementFromPoint = document.elementFromPoint;
     document.elementFromPoint = () => sameEl;
 
@@ -166,7 +166,7 @@ describe('useGameArrowInteractions', () => {
 
   it('does not send a request when mouseup is below the drag threshold', () => {
     const { result, webClient } = setup();
-    const targetEl = makeCardElement({ playerId: 2, zone: ZoneName.TABLE, cardId: 99 });
+    const targetEl = makeCardElement({ playerId: 2, zone: Enriched.ZoneName.TABLE, cardId: 99 });
     const origElementFromPoint = document.elementFromPoint;
     document.elementFromPoint = () => targetEl;
 
@@ -175,7 +175,7 @@ describe('useGameArrowInteractions', () => {
         button: 2,
         clientX: 10,
         clientY: 10,
-        target: makeCardElement({ playerId: 1, zone: ZoneName.TABLE, cardId: 5 }),
+        target: makeCardElement({ playerId: 1, zone: Enriched.ZoneName.TABLE, cardId: 5 }),
       } as unknown as React.MouseEvent<HTMLDivElement>);
     });
     act(() => fireMouseEvent('mouseup', { button: 2, clientX: 12, clientY: 12 }));
@@ -190,7 +190,7 @@ describe('useGameArrowInteractions', () => {
     const { result } = setup();
 
     act(() => {
-      result.current.startPendingArrow({ sourcePlayerId: 1, sourceZone: ZoneName.TABLE, sourceCardId: 5 });
+      result.current.startPendingArrow({ sourcePlayerId: 1, sourceZone: Enriched.ZoneName.TABLE, sourceCardId: 5 });
     });
     expect(result.current.arrowSourceKey).not.toBeNull();
 
@@ -214,24 +214,24 @@ describe('useGameArrowInteractions', () => {
       act(() => {
         result.current.startPendingAttach({
           sourcePlayerId: 1,
-          sourceZone: ZoneName.TABLE,
+          sourceZone: Enriched.ZoneName.TABLE,
           sourceCardId: 5,
         });
       });
       expect(result.current.arrowSourceKey).not.toBeNull();
 
       act(() => {
-        result.current.handleCardClick(2, ZoneName.TABLE, makeCard({ id: 99 }));
+        result.current.handleCardClick(2, Enriched.ZoneName.TABLE, makeCard({ id: 99 }));
       });
 
       expect(webClient.request.game.attachCard).toHaveBeenCalledTimes(1);
       expect(webClient.request.game.attachCard).toHaveBeenCalledWith(
         1,
         expect.objectContaining({
-          startZone: ZoneName.TABLE,
+          startZone: Enriched.ZoneName.TABLE,
           cardId: 5,
           targetPlayerId: 2,
-          targetZone: ZoneName.TABLE,
+          targetZone: Enriched.ZoneName.TABLE,
           targetCardId: 99,
         }),
       );
@@ -246,13 +246,13 @@ describe('useGameArrowInteractions', () => {
       act(() => {
         result.current.startPendingAttach({
           sourcePlayerId: 1,
-          sourceZone: ZoneName.TABLE,
+          sourceZone: Enriched.ZoneName.TABLE,
           sourceCardId: 5,
         });
       });
 
       act(() => {
-        result.current.handleCardClick(1, ZoneName.TABLE, makeCard({ id: 5 }));
+        result.current.handleCardClick(1, Enriched.ZoneName.TABLE, makeCard({ id: 5 }));
       });
 
       expect(webClient.request.game.attachCard).not.toHaveBeenCalled();
@@ -277,7 +277,7 @@ describe('useGameArrowInteractions', () => {
       const { result, webClient } = setup({ localPlayerId: 1 });
 
       act(() => {
-        result.current.handleCardDoubleClick(ZoneName.HAND, makeCard({ id: 7, name: 'Counterspell' }));
+        result.current.handleCardDoubleClick(Enriched.ZoneName.HAND, makeCard({ id: 7, name: 'Counterspell' }));
       });
 
       await waitFor(() => {
@@ -286,8 +286,8 @@ describe('useGameArrowInteractions', () => {
       expect(webClient.request.game.moveCard).toHaveBeenCalledWith(
         1,
         expect.objectContaining({
-          startZone: ZoneName.HAND,
-          targetZone: ZoneName.STACK,
+          startZone: Enriched.ZoneName.HAND,
+          targetZone: Enriched.ZoneName.STACK,
           cardsToMove: { card: [expect.objectContaining({ cardId: 7 })] },
         }),
       );
@@ -298,7 +298,7 @@ describe('useGameArrowInteractions', () => {
       const { result, webClient } = setup({ localPlayerId: 1 });
 
       act(() => {
-        result.current.handleCardDoubleClick(ZoneName.HAND, makeCard({ id: 8, name: 'Bear' }));
+        result.current.handleCardDoubleClick(Enriched.ZoneName.HAND, makeCard({ id: 8, name: 'Bear' }));
       });
 
       await waitFor(() => {
@@ -307,8 +307,8 @@ describe('useGameArrowInteractions', () => {
       expect(webClient.request.game.moveCard).toHaveBeenCalledWith(
         1,
         expect.objectContaining({
-          startZone: ZoneName.HAND,
-          targetZone: ZoneName.TABLE,
+          startZone: Enriched.ZoneName.HAND,
+          targetZone: Enriched.ZoneName.TABLE,
           y: 1,
         }),
       );
@@ -319,7 +319,7 @@ describe('useGameArrowInteractions', () => {
       const { result, webClient } = setup({ localPlayerId: 1 });
 
       act(() => {
-        result.current.handleCardDoubleClick(ZoneName.HAND, makeCard({ id: 9, name: 'Sol Ring' }));
+        result.current.handleCardDoubleClick(Enriched.ZoneName.HAND, makeCard({ id: 9, name: 'Sol Ring' }));
       });
 
       await waitFor(() => {
@@ -328,8 +328,8 @@ describe('useGameArrowInteractions', () => {
       expect(webClient.request.game.moveCard).toHaveBeenCalledWith(
         1,
         expect.objectContaining({
-          startZone: ZoneName.HAND,
-          targetZone: ZoneName.TABLE,
+          startZone: Enriched.ZoneName.HAND,
+          targetZone: Enriched.ZoneName.TABLE,
           y: 0,
         }),
       );
@@ -340,7 +340,7 @@ describe('useGameArrowInteractions', () => {
       const { result, webClient } = setup({ localPlayerId: 1 });
 
       act(() => {
-        result.current.handleCardDoubleClick(ZoneName.HAND, makeCard({ id: 10, name: 'Forest' }));
+        result.current.handleCardDoubleClick(Enriched.ZoneName.HAND, makeCard({ id: 10, name: 'Forest' }));
       });
 
       await waitFor(() => {
@@ -349,8 +349,8 @@ describe('useGameArrowInteractions', () => {
       expect(webClient.request.game.moveCard).toHaveBeenCalledWith(
         1,
         expect.objectContaining({
-          startZone: ZoneName.HAND,
-          targetZone: ZoneName.TABLE,
+          startZone: Enriched.ZoneName.HAND,
+          targetZone: Enriched.ZoneName.TABLE,
           y: 2,
         }),
       );
@@ -361,7 +361,7 @@ describe('useGameArrowInteractions', () => {
       const { result, webClient } = setup({ localPlayerId: 1 });
 
       act(() => {
-        result.current.handleCardDoubleClick(ZoneName.HAND, makeCard({ id: 11, name: 'Mystery Card' }));
+        result.current.handleCardDoubleClick(Enriched.ZoneName.HAND, makeCard({ id: 11, name: 'Mystery Card' }));
       });
 
       await waitFor(() => {
@@ -370,8 +370,8 @@ describe('useGameArrowInteractions', () => {
       expect(webClient.request.game.moveCard).toHaveBeenCalledWith(
         1,
         expect.objectContaining({
-          startZone: ZoneName.HAND,
-          targetZone: ZoneName.TABLE,
+          startZone: Enriched.ZoneName.HAND,
+          targetZone: Enriched.ZoneName.TABLE,
           y: 0,
         }),
       );
@@ -382,7 +382,7 @@ describe('useGameArrowInteractions', () => {
       const { result, webClient } = setup({ localPlayerId: 1 });
 
       act(() => {
-        result.current.handleCardDoubleClick(ZoneName.HAND, makeCard({ id: 12, name: 'Unknown' }));
+        result.current.handleCardDoubleClick(Enriched.ZoneName.HAND, makeCard({ id: 12, name: 'Unknown' }));
       });
 
       await waitFor(() => {
@@ -391,7 +391,7 @@ describe('useGameArrowInteractions', () => {
       expect(webClient.request.game.moveCard).toHaveBeenCalledWith(
         1,
         expect.objectContaining({
-          targetZone: ZoneName.TABLE,
+          targetZone: Enriched.ZoneName.TABLE,
           y: 0,
         }),
       );
@@ -402,7 +402,7 @@ describe('useGameArrowInteractions', () => {
 
       act(() => {
         result.current.handleCardDoubleClick(
-          ZoneName.TABLE,
+          Enriched.ZoneName.TABLE,
           makeCard({ id: 5, tapped: false }),
         );
       });
@@ -421,7 +421,7 @@ describe('useGameArrowInteractions', () => {
     document.body.appendChild(dialog);
 
     act(() => {
-      result.current.startPendingArrow({ sourcePlayerId: 1, sourceZone: ZoneName.TABLE, sourceCardId: 5 });
+      result.current.startPendingArrow({ sourcePlayerId: 1, sourceZone: Enriched.ZoneName.TABLE, sourceCardId: 5 });
     });
     act(() => {
       window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));

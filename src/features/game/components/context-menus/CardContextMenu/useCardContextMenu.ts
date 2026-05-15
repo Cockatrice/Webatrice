@@ -1,6 +1,6 @@
 import { useWebClient } from '@cockatrice/datatrice/react';
 import { CardAttribute, ServerInfo_Card } from '@cockatrice/sockatrice/generated';
-import { ZoneName } from '@cockatrice/datatrice';
+import { Enriched } from '@cockatrice/datatrice';
 interface MoveTarget {
   label: string;
   zone: string;
@@ -14,12 +14,12 @@ interface MoveTarget {
 // "Send to Battlefield" (same wire semantics: zone=table, x=0, y=0); the
 // label diverges but the command is identical.
 export const CARD_MOVE_TARGETS: ReadonlyArray<MoveTarget> = [
-  { label: 'Send to Hand', zone: ZoneName.HAND, x: -1, y: 0 },
-  { label: 'Send to Battlefield', zone: ZoneName.TABLE, x: 0, y: 0 },
-  { label: 'Send to Graveyard', zone: ZoneName.GRAVE, x: 0, y: 0 },
-  { label: 'Send to Exile', zone: ZoneName.EXILE, x: 0, y: 0 },
-  { label: 'Send to Library (top)', zone: ZoneName.DECK, x: 0, y: 0 },
-  { label: 'Send to Library (bottom)', zone: ZoneName.DECK, x: -1, y: 0 },
+  { label: 'Send to Hand', zone: Enriched.ZoneName.HAND, x: -1, y: 0 },
+  { label: 'Send to Battlefield', zone: Enriched.ZoneName.TABLE, x: 0, y: 0 },
+  { label: 'Send to Graveyard', zone: Enriched.ZoneName.GRAVE, x: 0, y: 0 },
+  { label: 'Send to Exile', zone: Enriched.ZoneName.EXILE, x: 0, y: 0 },
+  { label: 'Send to Library (top)', zone: Enriched.ZoneName.DECK, x: 0, y: 0 },
+  { label: 'Send to Library (bottom)', zone: Enriched.ZoneName.DECK, x: -1, y: 0 },
 ];
 
 export interface CardContextMenu {
@@ -92,14 +92,14 @@ export function useCardContextMenu({
   const isAttached = ready && (card!.attachCardId ?? -1) >= 0;
   // Desktop's actAttach is only available from a table card; other zones
   // never expose the attach arrow.
-  const canAttach = ready && sourceZone === ZoneName.TABLE;
+  const canAttach = ready && sourceZone === Enriched.ZoneName.TABLE;
   // Desktop's aPlay / aPlayFacedown are exposed on cards in any non-TABLE
   // zone (hand / grave / exile / stack). See card_menu.cpp:201-303.
-  const canPlay = ready && isOwnedByLocal && sourceZone !== ZoneName.TABLE;
+  const canPlay = ready && isOwnedByLocal && sourceZone !== Enriched.ZoneName.TABLE;
   // Desktop's aPeek is only available on face-down table cards
   // (player_actions.cpp:1822 — Command_RevealCards to self).
   const canPeek =
-    ready && isOwnedByLocal && sourceZone === ZoneName.TABLE && (card!.faceDown ?? false);
+    ready && isOwnedByLocal && sourceZone === Enriched.ZoneName.TABLE && (card!.faceDown ?? false);
 
   const setAttr = (attribute: CardAttribute, value: string) => {
     if (!ready) {

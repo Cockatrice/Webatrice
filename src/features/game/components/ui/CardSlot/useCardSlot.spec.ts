@@ -1,5 +1,5 @@
 import { renderHook } from '@testing-library/react';
-import { ZoneName } from '@cockatrice/datatrice';
+import { Enriched } from '@cockatrice/datatrice';
 vi.mock('@app/hooks', async (orig) => {
   const actual = await orig<typeof import('@app/hooks')>();
   return {
@@ -35,7 +35,7 @@ describe('useCardSlot', () => {
   it('registers a draggable for an unattached TABLE card', () => {
     const card = makeCard({ id: 1 });
     renderHook(() =>
-      useCardSlot({ card, draggable: true, ownerPlayerId: 1, zone: ZoneName.TABLE }),
+      useCardSlot({ card, draggable: true, ownerPlayerId: 1, zone: Enriched.ZoneName.TABLE }),
     );
     expect(useDraggableMock).toHaveBeenCalledTimes(1);
     const dragCall = useDraggableMock.mock.calls[0][0] as { disabled: boolean };
@@ -45,7 +45,7 @@ describe('useCardSlot', () => {
   it('disables the draggable when ownerPlayerId or zone is unknown', () => {
     const card = makeCard({ id: 2 });
     renderHook(() =>
-      useCardSlot({ card, draggable: true, ownerPlayerId: undefined, zone: ZoneName.TABLE }),
+      useCardSlot({ card, draggable: true, ownerPlayerId: undefined, zone: Enriched.ZoneName.TABLE }),
     );
     const dragCall = useDraggableMock.mock.calls[0][0] as { disabled: boolean };
     expect(dragCall.disabled).toBe(true);
@@ -54,7 +54,7 @@ describe('useCardSlot', () => {
   it('disables the draggable when the caller passes draggable=false', () => {
     const card = makeCard({ id: 3 });
     renderHook(() =>
-      useCardSlot({ card, draggable: false, ownerPlayerId: 1, zone: ZoneName.TABLE }),
+      useCardSlot({ card, draggable: false, ownerPlayerId: 1, zone: Enriched.ZoneName.TABLE }),
     );
     const dragCall = useDraggableMock.mock.calls[0][0] as { disabled: boolean };
     expect(dragCall.disabled).toBe(true);

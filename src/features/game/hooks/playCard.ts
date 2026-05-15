@@ -1,6 +1,6 @@
 import type { WebClient } from '@cockatrice/sockatrice';
 import { ServerInfo_Card } from '@cockatrice/sockatrice/generated';
-import { ZoneEntry, ZoneName } from '@cockatrice/datatrice';
+import { Enriched, ZoneEntry } from '@cockatrice/datatrice';
 import { CardDTO } from '../../../services/dexie/DexieDTOs/CardDTO';
 import { MAX_SUBPOS, applyInvertY, clampRow } from '../components/battlefield/Battlefield/gridMath';
 
@@ -51,7 +51,7 @@ export async function playCardViaTableRow({
       // `face_down` is per-card on CardToMove, not on Command_MoveCard.
       cardsToMove: { card: [{ cardId: card.id, faceDown }] },
       targetPlayerId: localPlayerId,
-      targetZone: ZoneName.STACK,
+      targetZone: Enriched.ZoneName.STACK,
       x: 0,
       y: 0,
       isReversed: false,
@@ -88,7 +88,7 @@ export async function playCardViaTableRow({
     startZone: sourceZone,
     cardsToMove: { card: [{ cardId: card.id, faceDown }] },
     targetPlayerId: localPlayerId,
-    targetZone: ZoneName.TABLE,
+    targetZone: Enriched.ZoneName.TABLE,
     x: nextCol * MAX_SUBPOS,
     y: wireY,
     isReversed: false,

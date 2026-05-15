@@ -1,5 +1,5 @@
 import { screen, fireEvent } from '@testing-library/react';
-import { ZoneName } from '@cockatrice/datatrice';
+import { Enriched } from '@cockatrice/datatrice';
 import { createMockWebClient, makeStoreState, renderWithProviders } from '../../../../../__test-utils__';
 import {
   makeGameEntry,
@@ -13,7 +13,7 @@ const defaultProps = {
   anchorPosition: { top: 100, left: 100 },
   gameId: 1,
   playerId: 1,
-  zoneName: ZoneName.DECK,
+  zoneName: Enriched.ZoneName.DECK,
   onClose: () => {},
   onRequestDrawN: () => {},
   onRequestDumpN: () => {},
@@ -35,9 +35,9 @@ const defaultProps = {
 function stateWithDeckZone(overrides: Partial<ReturnType<typeof makeZoneEntry>> = {}) {
   const player = makePlayerEntry({
     zones: {
-      deck: makeZoneEntry({ name: ZoneName.DECK, ...overrides }),
-      grave: makeZoneEntry({ name: ZoneName.GRAVE }),
-      rfg: makeZoneEntry({ name: ZoneName.EXILE }),
+      deck: makeZoneEntry({ name: Enriched.ZoneName.DECK, ...overrides }),
+      grave: makeZoneEntry({ name: Enriched.ZoneName.GRAVE }),
+      rfg: makeZoneEntry({ name: Enriched.ZoneName.EXILE }),
     },
   });
   return makeStoreState({
@@ -59,7 +59,7 @@ describe('ZoneContextMenu', () => {
 
   it('does not render for unsupported zones (e.g. hand, stack)', () => {
     renderWithProviders(
-      <ZoneContextMenu {...defaultProps} zoneName={ZoneName.HAND} />,
+      <ZoneContextMenu {...defaultProps} zoneName={Enriched.ZoneName.HAND} />,
       { preloadedState: stateWithDeckZone() },
     );
     expect(screen.queryByRole('menu')).not.toBeInTheDocument();
@@ -105,7 +105,7 @@ describe('ZoneContextMenu', () => {
       fireEvent.click(screen.getByText('Shuffle'));
 
       expect(webClient.request.game.shuffle).toHaveBeenCalledWith(1, {
-        zoneName: ZoneName.DECK,
+        zoneName: Enriched.ZoneName.DECK,
         start: 0,
         end: -1,
       });
@@ -121,7 +121,7 @@ describe('ZoneContextMenu', () => {
       fireEvent.click(screen.getByText('Reveal top card to all'));
 
       expect(webClient.request.game.revealCards).toHaveBeenCalledWith(1, {
-        zoneName: ZoneName.DECK,
+        zoneName: Enriched.ZoneName.DECK,
         playerId: -1,
         topCards: 1,
       });
@@ -161,7 +161,7 @@ describe('ZoneContextMenu', () => {
       fireEvent.click(screen.getByText('Always reveal top card'));
 
       expect(webClient.request.game.changeZoneProperties).toHaveBeenCalledWith(1, {
-        zoneName: ZoneName.DECK,
+        zoneName: Enriched.ZoneName.DECK,
         alwaysRevealTopCard: true,
       });
     });
@@ -176,7 +176,7 @@ describe('ZoneContextMenu', () => {
       fireEvent.click(screen.getByText('Always look at top card'));
 
       expect(webClient.request.game.changeZoneProperties).toHaveBeenCalledWith(1, {
-        zoneName: ZoneName.DECK,
+        zoneName: Enriched.ZoneName.DECK,
         alwaysLookAtTopCard: false,
       });
     });
@@ -188,7 +188,7 @@ describe('ZoneContextMenu', () => {
       renderWithProviders(
         <ZoneContextMenu
           {...defaultProps}
-          zoneName={ZoneName.GRAVE}
+          zoneName={Enriched.ZoneName.GRAVE}
           onRequestRevealZone={onRequestRevealZone}
         />,
         { preloadedState: stateWithDeckZone() },
@@ -204,7 +204,7 @@ describe('ZoneContextMenu', () => {
       renderWithProviders(
         <ZoneContextMenu
           {...defaultProps}
-          zoneName={ZoneName.EXILE}
+          zoneName={Enriched.ZoneName.EXILE}
           onRequestRevealZone={onRequestRevealZone}
         />,
         { preloadedState: stateWithDeckZone() },

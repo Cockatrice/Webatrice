@@ -1,7 +1,7 @@
 import { screen, fireEvent } from '@testing-library/react';
 import { create } from '@bufbuild/protobuf';
 import { CardAttribute, ServerInfo_CardCounterSchema } from '@cockatrice/sockatrice/generated';
-import { ZoneName } from '@cockatrice/datatrice';
+import { Enriched } from '@cockatrice/datatrice';
 import { createMockWebClient, renderWithProviders } from '../../../../../__test-utils__';
 import { makeCard } from '../../../../../__test-utils__/games-fixtures';
 import CardContextMenu from './CardContextMenu';
@@ -12,7 +12,7 @@ const defaultProps = {
   gameId: 1,
   localPlayerId: 1,
   ownerPlayerId: 1,
-  sourceZone: ZoneName.TABLE,
+  sourceZone: Enriched.ZoneName.TABLE,
   onClose: () => {},
   onRequestSetPT: () => {},
   onRequestSetAnnotation: () => {},
@@ -73,7 +73,7 @@ describe('CardContextMenu', () => {
     fireEvent.click(screen.getByText('Flip'));
 
     expect(webClient.request.game.flipCard).toHaveBeenCalledWith(1, {
-      zone: ZoneName.TABLE,
+      zone: Enriched.ZoneName.TABLE,
       cardId: 10,
       faceDown: true,
     });
@@ -90,7 +90,7 @@ describe('CardContextMenu', () => {
     fireEvent.click(screen.getByText('Tap'));
 
     expect(webClient.request.game.setCardAttr).toHaveBeenCalledWith(1, {
-      zone: ZoneName.TABLE,
+      zone: Enriched.ZoneName.TABLE,
       cardId: 5,
       attribute: CardAttribute.AttrTapped,
       attrValue: '1',
@@ -108,7 +108,7 @@ describe('CardContextMenu', () => {
     fireEvent.click(screen.getByText('Untap'));
 
     expect(webClient.request.game.setCardAttr).toHaveBeenCalledWith(1, {
-      zone: ZoneName.TABLE,
+      zone: Enriched.ZoneName.TABLE,
       cardId: 5,
       attribute: CardAttribute.AttrTapped,
       attrValue: '0',
@@ -126,7 +126,7 @@ describe('CardContextMenu', () => {
     fireEvent.click(screen.getByText('Face Up'));
 
     expect(webClient.request.game.setCardAttr).toHaveBeenCalledWith(1, {
-      zone: ZoneName.TABLE,
+      zone: Enriched.ZoneName.TABLE,
       cardId: 5,
       attribute: CardAttribute.AttrFaceDown,
       attrValue: '0',
@@ -144,7 +144,7 @@ describe('CardContextMenu', () => {
     fireEvent.click(screen.getByText('Allow Untap'));
 
     expect(webClient.request.game.setCardAttr).toHaveBeenCalledWith(1, {
-      zone: ZoneName.TABLE,
+      zone: Enriched.ZoneName.TABLE,
       cardId: 5,
       attribute: CardAttribute.AttrDoesntUntap,
       attrValue: '0',
@@ -195,10 +195,10 @@ describe('CardContextMenu', () => {
 
     expect(webClient.request.game.moveCard).toHaveBeenCalledWith(1, {
       startPlayerId: 1,
-      startZone: ZoneName.TABLE,
+      startZone: Enriched.ZoneName.TABLE,
       cardsToMove: { card: [{ cardId: 7 }] },
       targetPlayerId: 1,
-      targetZone: ZoneName.HAND,
+      targetZone: Enriched.ZoneName.HAND,
       x: -1,
       y: 0,
       isReversed: false,
@@ -256,13 +256,13 @@ describe('CardContextMenu', () => {
 
     fireEvent.click(screen.getByText('Send to Library (top)'));
     expect(webClient.request.game.moveCard).toHaveBeenLastCalledWith(1, expect.objectContaining({
-      targetZone: ZoneName.DECK,
+      targetZone: Enriched.ZoneName.DECK,
       x: 0,
     }));
 
     fireEvent.click(screen.getByText('Send to Library (bottom)'));
     expect(webClient.request.game.moveCard).toHaveBeenLastCalledWith(1, expect.objectContaining({
-      targetZone: ZoneName.DECK,
+      targetZone: Enriched.ZoneName.DECK,
       x: -1,
     }));
   });
@@ -286,7 +286,7 @@ describe('CardContextMenu', () => {
     fireEvent.click(screen.getByText('Add Counter'));
 
     expect(webClient.request.game.incCardCounter).toHaveBeenCalledWith(1, {
-      zone: ZoneName.TABLE,
+      zone: Enriched.ZoneName.TABLE,
       cardId: 9,
       counterId: 0,
       counterDelta: 1,
@@ -304,7 +304,7 @@ describe('CardContextMenu', () => {
     fireEvent.click(screen.getByText('Add Counter'));
 
     expect(webClient.request.game.incCardCounter).toHaveBeenCalledWith(1, {
-      zone: ZoneName.TABLE,
+      zone: Enriched.ZoneName.TABLE,
       cardId: 9,
       counterId: 1,
       counterDelta: 1,
@@ -338,7 +338,7 @@ describe('CardContextMenu', () => {
     fireEvent.click(screen.getByText('Remove Counter'));
 
     expect(webClient.request.game.incCardCounter).toHaveBeenCalledWith(1, {
-      zone: ZoneName.TABLE,
+      zone: Enriched.ZoneName.TABLE,
       cardId: 9,
       counterId: 0,
       counterDelta: -1,
@@ -425,7 +425,7 @@ describe('CardContextMenu', () => {
       // targetPlayerId: -1 would leave presence set and the server would
       // treat the message as an attach with a missing player.
       expect(webClient.request.game.attachCard).toHaveBeenCalledWith(1, {
-        startZone: ZoneName.TABLE,
+        startZone: Enriched.ZoneName.TABLE,
         cardId: 11,
       });
       expect(onClose).toHaveBeenCalled();
@@ -435,7 +435,7 @@ describe('CardContextMenu', () => {
       renderWithProviders(
         <CardContextMenu
           {...defaultProps}
-          sourceZone={ZoneName.HAND}
+          sourceZone={Enriched.ZoneName.HAND}
           card={makeCard({ attachCardId: 99 })}
         />,
       );

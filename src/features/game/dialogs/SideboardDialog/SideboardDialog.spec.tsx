@@ -1,5 +1,5 @@
 import { screen, fireEvent, within } from '@testing-library/react';
-import { ZoneName } from '@cockatrice/datatrice';
+import { Enriched } from '@cockatrice/datatrice';
 import { renderWithProviders } from '../../../../__test-utils__';
 import SideboardDialog, { applyMoves } from './SideboardDialog';
 
@@ -55,8 +55,8 @@ describe('SideboardDialog', () => {
     fireEvent.click(screen.getByRole('button', { name: /apply plan/i }));
 
     expect(onSubmit).toHaveBeenCalledWith([
-      { cardName: 'Island', startZone: ZoneName.DECK, targetZone: ZoneName.SIDEBOARD },
-      { cardName: 'Counterspell', startZone: ZoneName.SIDEBOARD, targetZone: ZoneName.DECK },
+      { cardName: 'Island', startZone: Enriched.ZoneName.DECK, targetZone: Enriched.ZoneName.SIDEBOARD },
+      { cardName: 'Counterspell', startZone: Enriched.ZoneName.SIDEBOARD, targetZone: Enriched.ZoneName.DECK },
     ]);
   });
 
@@ -122,8 +122,8 @@ describe('applyMoves', () => {
     const sb = [{ id: 3, name: 'C' }];
 
     const result = applyMoves(deck, sb, [
-      { cardName: 'A', startZone: ZoneName.DECK, targetZone: ZoneName.SIDEBOARD },
-      { cardName: 'C', startZone: ZoneName.SIDEBOARD, targetZone: ZoneName.DECK },
+      { cardName: 'A', startZone: Enriched.ZoneName.DECK, targetZone: Enriched.ZoneName.SIDEBOARD },
+      { cardName: 'C', startZone: Enriched.ZoneName.SIDEBOARD, targetZone: Enriched.ZoneName.DECK },
     ]);
 
     expect(result.deck.map((c) => c.name).sort()).toEqual(['B', 'C']);
@@ -133,7 +133,7 @@ describe('applyMoves', () => {
   it('drops moves that reference cards not present in the source zone', () => {
     const deck = [{ id: 1, name: 'A' }];
     const result = applyMoves(deck, [], [
-      { cardName: 'Missing', startZone: ZoneName.DECK, targetZone: ZoneName.SIDEBOARD },
+      { cardName: 'Missing', startZone: Enriched.ZoneName.DECK, targetZone: Enriched.ZoneName.SIDEBOARD },
     ]);
 
     expect(result.deck).toHaveLength(1);

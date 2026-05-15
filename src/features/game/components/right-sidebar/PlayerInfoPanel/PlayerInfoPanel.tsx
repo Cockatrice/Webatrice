@@ -1,6 +1,6 @@
 import { cx } from '@app/utils';
 import { ServerInfo_Card, ServerInfo_Counter } from '@cockatrice/sockatrice/generated';
-import { ZoneName } from '@cockatrice/datatrice';
+import { Enriched } from '@cockatrice/datatrice';
 import ZoneStack from '../../ui/ZoneStack/ZoneStack';
 
 import { counterCssColor, usePlayerInfoPanel } from './usePlayerInfoPanel';
@@ -10,10 +10,10 @@ import './PlayerInfoPanel.css';
 // All four zones render as landscape thumbs in the info rail. Hand sits
 // between Deck and Graveyard to match desktop's hand counter placement.
 const ZONE_ROWS: Array<{ name: string; label: string; rotated?: boolean }> = [
-  { name: ZoneName.DECK, label: 'Deck', rotated: true },
-  { name: ZoneName.HAND, label: 'Hand', rotated: true },
-  { name: ZoneName.GRAVE, label: 'Graveyard', rotated: true },
-  { name: ZoneName.EXILE, label: 'Exile', rotated: true },
+  { name: Enriched.ZoneName.DECK, label: 'Deck', rotated: true },
+  { name: Enriched.ZoneName.HAND, label: 'Hand', rotated: true },
+  { name: Enriched.ZoneName.GRAVE, label: 'Graveyard', rotated: true },
+  { name: Enriched.ZoneName.EXILE, label: 'Exile', rotated: true },
 ];
 
 export interface PlayerInfoPanelProps {
@@ -116,7 +116,7 @@ function PlayerInfoPanel({
             // Hand is context-menu only: desktop's hand counter doesn't open
             // a zone view on left-click, and HandZone already renders the cards.
             const clickHandler =
-              onZoneClick && z.name !== ZoneName.HAND
+              onZoneClick && z.name !== Enriched.ZoneName.HAND
                 ? (name: string) => onZoneClick(playerId, name)
                 : undefined;
             return (

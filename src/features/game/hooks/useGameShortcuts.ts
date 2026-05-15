@@ -3,7 +3,7 @@ import { useWebClient } from '@cockatrice/datatrice/react';
 import { games } from '@cockatrice/datatrice';
 import { useAppSelector } from '@app/store';
 import { CardAttribute } from '@cockatrice/sockatrice/generated';
-import { ZoneName } from '@cockatrice/datatrice';
+import { Enriched } from '@cockatrice/datatrice';
 import { useCurrentGame } from './useCurrentGame';
 import { useGameAffordances } from './useGameAffordances';
 
@@ -30,7 +30,7 @@ export function useGameShortcuts({ gameId, onRequestConcede }: UseGameShortcutsA
   const localPlayerId = game?.localPlayerId;
   const tableCards = useAppSelector((state) =>
     gameId != null && localPlayerId != null
-      ? games.Selectors.getCards(state, gameId, localPlayerId, ZoneName.TABLE)
+      ? games.Selectors.getCards(state, gameId, localPlayerId, Enriched.ZoneName.TABLE)
       : undefined,
   );
 
@@ -43,7 +43,7 @@ export function useGameShortcuts({ gameId, onRequestConcede }: UseGameShortcutsA
       for (const card of tableCards) {
         if (card.tapped) {
           webClient.request.game.setCardAttr(gameId, {
-            zone: ZoneName.TABLE,
+            zone: Enriched.ZoneName.TABLE,
             cardId: card.id,
             attribute: CardAttribute.AttrTapped,
             attrValue: '0',

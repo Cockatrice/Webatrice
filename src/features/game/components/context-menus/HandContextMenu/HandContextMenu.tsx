@@ -2,7 +2,7 @@ import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import Divider from '@mui/material/Divider';
 
-import { ZoneName } from '@cockatrice/datatrice';
+import { Enriched } from '@cockatrice/datatrice';
 import NestedMenuItem from '../CardContextMenu/NestedMenuItem';
 
 import { useHandContextMenu } from './useHandContextMenu';
@@ -95,8 +95,8 @@ function HandContextMenu({
       <NestedMenuItem label="Move hand to" parentMenuOpen={isOpen} disabled={handSize === 0}>
         <MenuItem onClick={() => handleMoveToDeck(true)}>Top of library</MenuItem>
         <MenuItem onClick={() => handleMoveToDeck(false)}>Bottom of library</MenuItem>
-        <MenuItem onClick={() => handleMoveToZone(ZoneName.GRAVE)}>Graveyard</MenuItem>
-        <MenuItem onClick={() => handleMoveToZone(ZoneName.EXILE)}>Exile</MenuItem>
+        <MenuItem onClick={() => handleMoveToZone(Enriched.ZoneName.GRAVE)}>Graveyard</MenuItem>
+        <MenuItem onClick={() => handleMoveToZone(Enriched.ZoneName.EXILE)}>Exile</MenuItem>
       </NestedMenuItem>
     </Menu>
   );

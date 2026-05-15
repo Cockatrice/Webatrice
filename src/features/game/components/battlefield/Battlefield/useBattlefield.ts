@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { ServerInfo_Card } from '@cockatrice/sockatrice/generated';
-import { ZoneName } from '@cockatrice/datatrice';
+import { Enriched } from '@cockatrice/datatrice';
 import { games } from '@cockatrice/datatrice';
 import { useAppSelector } from '@app/store';
 import { useSettings } from '@app/hooks';
@@ -39,7 +39,7 @@ function isAttachedChild(card: ServerInfo_Card): boolean {
 
 export function useBattlefield({ gameId, playerId, mirrored }: UseBattlefieldArgs): Battlefield {
   const cards = useAppSelector((state) =>
-    games.Selectors.getCards(state, gameId, playerId, ZoneName.TABLE),
+    games.Selectors.getCards(state, gameId, playerId, Enriched.ZoneName.TABLE),
   );
   const attachmentsByParent = useAppSelector((state) =>
     games.Selectors.getAttachmentsByParent(state, gameId, playerId),

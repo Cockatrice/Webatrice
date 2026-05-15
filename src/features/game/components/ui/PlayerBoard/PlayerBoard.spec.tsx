@@ -1,5 +1,5 @@
 import { screen } from '@testing-library/react';
-import { ZoneName } from '@cockatrice/datatrice';
+import { Enriched } from '@cockatrice/datatrice';
 // Block Battlefield's Dexie-backed useSettings from firing an async settle
 // after mount (would produce an unwrapped React state update).
 vi.mock('../../../../../hooks/useSettings');
@@ -16,24 +16,24 @@ import PlayerBoard from './PlayerBoard';
 
 function buildState() {
   const table = makeZoneEntry({
-    name: ZoneName.TABLE,
+    name: Enriched.ZoneName.TABLE,
     cards: [
       makeCard({ id: 1, name: 'Row0-Card', x: 0, y: 0 }),
       makeCard({ id: 2, name: 'Row2-Card', x: 0, y: 2 }),
     ],
     cardCount: 2,
   });
-  const hand = makeZoneEntry({ name: ZoneName.HAND, cardCount: 0 });
-  const deck = makeZoneEntry({ name: ZoneName.DECK, cardCount: 60 });
+  const hand = makeZoneEntry({ name: Enriched.ZoneName.HAND, cardCount: 0 });
+  const deck = makeZoneEntry({ name: Enriched.ZoneName.DECK, cardCount: 60 });
   const player = makePlayerEntry({
     properties: makePlayerProperties({
       playerId: 1,
       userInfo: makeUser({ name: 'Trajer' }),
     }),
     zones: {
-      [ZoneName.TABLE]: table,
-      [ZoneName.HAND]: hand,
-      [ZoneName.DECK]: deck,
+      [Enriched.ZoneName.TABLE]: table,
+      [Enriched.ZoneName.HAND]: hand,
+      [Enriched.ZoneName.DECK]: deck,
     },
   });
   return makeStoreState({

@@ -3,7 +3,7 @@ import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core';
 
 import { useWebClient } from '@cockatrice/datatrice/react';
 import { ServerInfo_Card } from '@cockatrice/sockatrice/generated';
-import { ZoneName } from '@cockatrice/datatrice';
+import { Enriched } from '@cockatrice/datatrice';
 import {
   CARD_HEIGHT_PX,
   CARD_WIDTH_PX,
@@ -88,14 +88,14 @@ export function useGameDnd({ gameId, onDragStart }: UseGameDndArgs): GameDnd {
         source.sourceZone === target.targetZone;
       // Non-TABLE same-zone drops aren't meaningful (dragging within the hand
       // or library isn't a user-facing reorder on desktop either).
-      if (sameZone && source.sourceZone !== ZoneName.TABLE) {
+      if (sameZone && source.sourceZone !== Enriched.ZoneName.TABLE) {
         return;
       }
 
       const targetRow = target.row ?? 0;
-      const targetIsTable = target.targetZone === ZoneName.TABLE;
+      const targetIsTable = target.targetZone === Enriched.ZoneName.TABLE;
       const sameRowOnTable =
-        sameZone && source.sourceZone === ZoneName.TABLE && (source.card.y ?? 0) === targetRow;
+        sameZone && source.sourceZone === Enriched.ZoneName.TABLE && (source.card.y ?? 0) === targetRow;
 
       // Compute an integer gridX matching desktop's stack-and-subposition
       // packing (table_zone.cpp:mapToGrid + closestGridPoint). Non-TABLE

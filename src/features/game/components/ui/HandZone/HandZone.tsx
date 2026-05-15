@@ -1,5 +1,5 @@
 import { ServerInfo_Card } from '@cockatrice/sockatrice/generated';
-import { ZoneName } from '@cockatrice/datatrice';
+import { Enriched } from '@cockatrice/datatrice';
 import { cx } from '@app/utils';
 
 import CardSlot from '../CardSlot/CardSlot';
@@ -47,17 +47,17 @@ function HandZone({
     >
       <div className="hand-zone__cards">
         {cards.map((card) => {
-          const key = makeCardKey(playerId, ZoneName.HAND, card.id);
+          const key = makeCardKey(playerId, Enriched.ZoneName.HAND, card.id);
           return (
             <CardSlot
               key={card.id}
               card={card}
               draggable={canAct}
               ownerPlayerId={playerId}
-              zone={ZoneName.HAND}
+              zone={Enriched.ZoneName.HAND}
               isArrowSource={arrowSourceKey === key}
               onMouseEnter={onCardHover}
-              onClick={(c) => onCardClick?.(playerId, ZoneName.HAND, c)}
+              onClick={(c) => onCardClick?.(playerId, Enriched.ZoneName.HAND, c)}
               onContextMenu={onCardContextMenu}
               onDoubleClick={onCardDoubleClick}
             />

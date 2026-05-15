@@ -1,5 +1,5 @@
 import { screen, fireEvent } from '@testing-library/react';
-import { ZoneName } from '@cockatrice/datatrice';
+import { Enriched } from '@cockatrice/datatrice';
 import { makeStoreState, renderWithProviders, makeUser } from '../../../../__test-utils__';
 import {
   makeCard,
@@ -40,10 +40,10 @@ describe('ZoneViewDialog', () => {
         isOpen={false}
         gameId={1}
         playerId={1}
-        zoneName={ZoneName.GRAVE}
+        zoneName={Enriched.ZoneName.GRAVE}
         handleClose={() => {}}
       />,
-      { preloadedState: stateWith({ name: ZoneName.GRAVE, cardCount: 0 }) },
+      { preloadedState: stateWith({ name: Enriched.ZoneName.GRAVE, cardCount: 0 }) },
     );
 
     expect(screen.queryByTestId('zone-view-dialog')).not.toBeInTheDocument();
@@ -59,12 +59,12 @@ describe('ZoneViewDialog', () => {
         isOpen
         gameId={1}
         playerId={1}
-        zoneName={ZoneName.GRAVE}
+        zoneName={Enriched.ZoneName.GRAVE}
         handleClose={() => {}}
       />,
       {
         preloadedState: stateWith({
-          name: ZoneName.GRAVE,
+          name: Enriched.ZoneName.GRAVE,
           cards,
           cardCount: 2,
         }),
@@ -81,12 +81,12 @@ describe('ZoneViewDialog', () => {
         isOpen
         gameId={1}
         playerId={1}
-        zoneName={ZoneName.GRAVE}
+        zoneName={Enriched.ZoneName.GRAVE}
         handleClose={() => {}}
       />,
       {
         preloadedState: stateWith({
-          name: ZoneName.GRAVE,
+          name: Enriched.ZoneName.GRAVE,
           cards: [makeCard({ id: 1 })],
           cardCount: 1,
         }),
@@ -102,10 +102,10 @@ describe('ZoneViewDialog', () => {
         isOpen
         gameId={1}
         playerId={1}
-        zoneName={ZoneName.EXILE}
+        zoneName={Enriched.ZoneName.EXILE}
         handleClose={() => {}}
       />,
-      { preloadedState: stateWith({ name: ZoneName.EXILE, cardCount: 0 }) },
+      { preloadedState: stateWith({ name: Enriched.ZoneName.EXILE, cardCount: 0 }) },
     );
 
     expect(screen.getByText(/this zone is empty/i)).toBeInTheDocument();
@@ -117,12 +117,12 @@ describe('ZoneViewDialog', () => {
         isOpen
         gameId={1}
         playerId={1}
-        zoneName={ZoneName.DECK}
+        zoneName={Enriched.ZoneName.DECK}
         handleClose={() => {}}
       />,
       {
         preloadedState: stateWith({
-          name: ZoneName.DECK,
+          name: Enriched.ZoneName.DECK,
           cardCount: 40,
           cards: [],
         }),
@@ -139,12 +139,12 @@ describe('ZoneViewDialog', () => {
         isOpen
         gameId={1}
         playerId={1}
-        zoneName={ZoneName.EXILE}
+        zoneName={Enriched.ZoneName.EXILE}
         handleClose={() => {}}
       />,
       {
         preloadedState: stateWith({
-          name: ZoneName.EXILE,
+          name: Enriched.ZoneName.EXILE,
           cards: [faceDown],
           cardCount: 1,
         }),
@@ -162,10 +162,10 @@ describe('ZoneViewDialog', () => {
         isOpen
         gameId={1}
         playerId={1}
-        zoneName={ZoneName.GRAVE}
+        zoneName={Enriched.ZoneName.GRAVE}
         handleClose={handleClose}
       />,
-      { preloadedState: stateWith({ name: ZoneName.GRAVE, cardCount: 0 }) },
+      { preloadedState: stateWith({ name: Enriched.ZoneName.GRAVE, cardCount: 0 }) },
     );
 
     fireEvent.click(screen.getByRole('button', { name: /close zone view/i }));
@@ -179,11 +179,11 @@ describe('ZoneViewDialog', () => {
         isOpen
         gameId={1}
         playerId={1}
-        zoneName={ZoneName.GRAVE}
+        zoneName={Enriched.ZoneName.GRAVE}
         handleClose={() => {}}
         initialPosition={{ x: 200, y: 150 }}
       />,
-      { preloadedState: stateWith({ name: ZoneName.GRAVE, cardCount: 0 }) },
+      { preloadedState: stateWith({ name: Enriched.ZoneName.GRAVE, cardCount: 0 }) },
     );
 
     const panel = screen.getByTestId('zone-view-dialog');

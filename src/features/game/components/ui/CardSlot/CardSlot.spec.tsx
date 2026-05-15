@@ -3,7 +3,7 @@ import { render as rtlRender, screen, fireEvent } from '@testing-library/react';
 import { create } from '@bufbuild/protobuf';
 import { DndContext } from '@dnd-kit/core';
 import { ServerInfo_CardCounterSchema } from '@cockatrice/sockatrice/generated';
-import { ZoneName } from '@cockatrice/datatrice';
+import { Enriched } from '@cockatrice/datatrice';
 import { makeCard } from '../../../../../__test-utils__/games-fixtures';
 import CardSlot from './CardSlot';
 
@@ -59,19 +59,19 @@ describe('CardSlot', () => {
 
   it('does not render the annotation when zone is not TABLE', () => {
     const card = makeCard({ annotation: 'note' });
-    render(<CardSlot card={card} zone={ZoneName.HAND} />);
+    render(<CardSlot card={card} zone={Enriched.ZoneName.HAND} />);
     expect(screen.queryByText('note')).not.toBeInTheDocument();
   });
 
   it('renders card.annotation as the owner pill on the battlefield', () => {
     const card = makeCard({ annotation: 'Bob' });
-    render(<CardSlot card={card} zone={ZoneName.TABLE} />);
+    render(<CardSlot card={card} zone={Enriched.ZoneName.TABLE} />);
     expect(screen.getByText('Bob')).toBeInTheDocument();
   });
 
   it('does not render any pill when annotation is empty even on battlefield', () => {
     const card = makeCard({ annotation: '' });
-    const { container } = render(<CardSlot card={card} zone={ZoneName.TABLE} />);
+    const { container } = render(<CardSlot card={card} zone={Enriched.ZoneName.TABLE} />);
     expect(container.querySelector('.card-slot__owner')).toBeNull();
   });
 
@@ -79,13 +79,13 @@ describe('CardSlot', () => {
     // The server populates card.annotation whenever the card's owner differs
     // from the controller — including stolen / cloned cards on YOUR table.
     const card = makeCard({ annotation: 'Owner: Bob' });
-    render(<CardSlot card={card} zone={ZoneName.TABLE} />);
+    render(<CardSlot card={card} zone={Enriched.ZoneName.TABLE} />);
     expect(screen.getByText('Bob')).toBeInTheDocument();
   });
 
   it('strips a leading "Owner: " prefix from the annotation pill', () => {
     const card = makeCard({ annotation: 'Owner: Bob' });
-    render(<CardSlot card={card} zone={ZoneName.TABLE} />);
+    render(<CardSlot card={card} zone={Enriched.ZoneName.TABLE} />);
     expect(screen.getByText('Bob')).toBeInTheDocument();
     expect(screen.queryByText('Owner: Bob')).not.toBeInTheDocument();
   });
@@ -105,13 +105,13 @@ describe('CardSlot', () => {
     expect(screen.queryByText('Alice')).not.toBeInTheDocument();
     unmount();
 
-    render(<CardSlot card={card} zone={ZoneName.TABLE} />);
+    render(<CardSlot card={card} zone={Enriched.ZoneName.TABLE} />);
     expect(screen.getByText('Alice')).toBeInTheDocument();
   });
 
   it('suppresses name and annotation overlays when face-down', () => {
     const card = makeCard({ name: 'Hidden', annotation: 'Alice', faceDown: true });
-    render(<CardSlot card={card} zone={ZoneName.TABLE} />);
+    render(<CardSlot card={card} zone={Enriched.ZoneName.TABLE} />);
     expect(screen.queryByText('Hidden')).not.toBeInTheDocument();
     expect(screen.queryByText('Alice')).not.toBeInTheDocument();
   });

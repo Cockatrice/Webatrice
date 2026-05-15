@@ -1,7 +1,7 @@
 import { games } from '@cockatrice/datatrice';
 import { useAppSelector } from '@app/store';
 import { ServerInfo_Card } from '@cockatrice/sockatrice/generated';
-import { ZoneName } from '@cockatrice/datatrice';
+import { Enriched } from '@cockatrice/datatrice';
 import { cx } from '@app/utils';
 
 import { useScryfallCard } from '../../../hooks/useScryfallCard';
@@ -39,7 +39,7 @@ function StackThumb({ card, onHover }: StackThumbProps) {
 
 function StackColumn({ gameId, playerId, mirrored = false, onCardHover }: StackColumnProps) {
   const zone = useAppSelector((state) =>
-    games.Selectors.getZone(state, gameId, playerId, ZoneName.STACK),
+    games.Selectors.getZone(state, gameId, playerId, Enriched.ZoneName.STACK),
   );
   const cards = zone ? zone.order.map((id) => zone.byId[id]).filter(Boolean) : [];
 

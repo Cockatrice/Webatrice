@@ -5,7 +5,7 @@
 // the end-to-end dispatch so a regression that disconnects state from its
 // consumers is caught even when both sides still pass in isolation.
 import { screen, fireEvent, waitFor, cleanup, within } from '@testing-library/react';
-import { ZoneName } from '@cockatrice/datatrice';
+import { Enriched } from '@cockatrice/datatrice';
 import { createMockWebClient, makeStoreState, renderWithProviders, connectedState, makeUser } from '../../__test-utils__';
 import {
   makeCard,
@@ -70,19 +70,19 @@ function buildGame({
         readyStart: pid === localId ? localReadyStart : false,
       }),
       zones: {
-        [ZoneName.TABLE]: makeZoneEntry({
-          name: ZoneName.TABLE,
+        [Enriched.ZoneName.TABLE]: makeZoneEntry({
+          name: Enriched.ZoneName.TABLE,
           cards: pid === localId ? tableCards : [],
           cardCount: pid === localId ? tableCards.length : 0,
         }),
-        [ZoneName.HAND]: makeZoneEntry({ name: ZoneName.HAND }),
-        [ZoneName.DECK]: makeZoneEntry({ name: ZoneName.DECK, cardCount: 40 }),
-        [ZoneName.GRAVE]: makeZoneEntry({
-          name: ZoneName.GRAVE,
+        [Enriched.ZoneName.HAND]: makeZoneEntry({ name: Enriched.ZoneName.HAND }),
+        [Enriched.ZoneName.DECK]: makeZoneEntry({ name: Enriched.ZoneName.DECK, cardCount: 40 }),
+        [Enriched.ZoneName.GRAVE]: makeZoneEntry({
+          name: Enriched.ZoneName.GRAVE,
           cards: pid === localId ? graveCards : [],
           cardCount: pid === localId ? graveCards.length : 0,
         }),
-        [ZoneName.EXILE]: makeZoneEntry({ name: ZoneName.EXILE }),
+        [Enriched.ZoneName.EXILE]: makeZoneEntry({ name: Enriched.ZoneName.EXILE }),
       },
     });
   }
@@ -173,7 +173,7 @@ describe('Game orchestration (M4–M6)', () => {
 
     expect(webClient.request.game.createToken).toHaveBeenCalledWith(
       1,
-      expect.objectContaining({ cardName: 'Goblin', zone: ZoneName.TABLE }),
+      expect.objectContaining({ cardName: 'Goblin', zone: Enriched.ZoneName.TABLE }),
     );
   });
 
@@ -182,8 +182,8 @@ describe('Game orchestration (M4–M6)', () => {
     const state = buildGame({ localId: 1, opponentIds: [2] });
     // Seed the local hand with 5 cards so "same size" sends number: 5.
     const localPlayer = state.games.games[1].players[1];
-    localPlayer.zones[ZoneName.HAND] = makeZoneEntry({
-      name: ZoneName.HAND,
+    localPlayer.zones[Enriched.ZoneName.HAND] = makeZoneEntry({
+      name: Enriched.ZoneName.HAND,
       cards: Array.from({ length: 5 }, (_, i) => makeCard({ id: 100 + i })),
       cardCount: 5,
     });
@@ -202,13 +202,13 @@ describe('Game orchestration (M4–M6)', () => {
     const webClient = createMockWebClient();
     const state = buildGame({ localId: 1, opponentIds: [2] });
     const localPlayer = state.games.games[1].players[1];
-    localPlayer.zones[ZoneName.HAND] = makeZoneEntry({
-      name: ZoneName.HAND,
+    localPlayer.zones[Enriched.ZoneName.HAND] = makeZoneEntry({
+      name: Enriched.ZoneName.HAND,
       cards: Array.from({ length: 7 }, (_, i) => makeCard({ id: 100 + i })),
       cardCount: 7,
     });
-    localPlayer.zones[ZoneName.DECK] = makeZoneEntry({
-      name: ZoneName.DECK, cards: [], cardCount: 53,
+    localPlayer.zones[Enriched.ZoneName.DECK] = makeZoneEntry({
+      name: Enriched.ZoneName.DECK, cards: [], cardCount: 53,
     });
     renderWithProviders(<Game />, { preloadedState: state, webClient });
 
@@ -230,13 +230,13 @@ describe('Game orchestration (M4–M6)', () => {
     const webClient = createMockWebClient();
     const state = buildGame({ localId: 1, opponentIds: [2] });
     const localPlayer = state.games.games[1].players[1];
-    localPlayer.zones[ZoneName.HAND] = makeZoneEntry({
-      name: ZoneName.HAND,
+    localPlayer.zones[Enriched.ZoneName.HAND] = makeZoneEntry({
+      name: Enriched.ZoneName.HAND,
       cards: Array.from({ length: 7 }, (_, i) => makeCard({ id: 100 + i })),
       cardCount: 7,
     });
-    localPlayer.zones[ZoneName.DECK] = makeZoneEntry({
-      name: ZoneName.DECK, cards: [], cardCount: 53,
+    localPlayer.zones[Enriched.ZoneName.DECK] = makeZoneEntry({
+      name: Enriched.ZoneName.DECK, cards: [], cardCount: 53,
     });
     renderWithProviders(<Game />, { preloadedState: state, webClient });
 
@@ -263,8 +263,8 @@ describe('Game orchestration (M4–M6)', () => {
       tableCards: [makeCard({ id: 50, name: 'Bear' })],
     });
     const localPlayer = state.games.games[1].players[1];
-    localPlayer.zones[ZoneName.HAND] = makeZoneEntry({
-      name: ZoneName.HAND,
+    localPlayer.zones[Enriched.ZoneName.HAND] = makeZoneEntry({
+      name: Enriched.ZoneName.HAND,
       cards: [makeCard({ id: 10, name: 'Lightning Bolt' })],
       cardCount: 1,
     });
@@ -284,9 +284,9 @@ describe('Game orchestration (M4–M6)', () => {
         1,
         expect.objectContaining({
           startPlayerId: 1,
-          startZone: ZoneName.HAND,
+          startZone: Enriched.ZoneName.HAND,
           targetPlayerId: 1,
-          targetZone: ZoneName.TABLE,
+          targetZone: Enriched.ZoneName.TABLE,
           cardsToMove: { card: [{ cardId: 10 }] },
         }),
       );
@@ -298,13 +298,13 @@ describe('Game orchestration (M4–M6)', () => {
     const webClient = createMockWebClient();
     const state = buildGame({ localId: 1, opponentIds: [2] });
     const localPlayer = state.games.games[1].players[1];
-    localPlayer.zones[ZoneName.HAND] = makeZoneEntry({
-      name: ZoneName.HAND,
+    localPlayer.zones[Enriched.ZoneName.HAND] = makeZoneEntry({
+      name: Enriched.ZoneName.HAND,
       cards: Array.from({ length: 7 }, (_, i) => makeCard({ id: 100 + i })),
       cardCount: 7,
     });
-    localPlayer.zones[ZoneName.DECK] = makeZoneEntry({
-      name: ZoneName.DECK, cards: [], cardCount: 53,
+    localPlayer.zones[Enriched.ZoneName.DECK] = makeZoneEntry({
+      name: Enriched.ZoneName.DECK, cards: [], cardCount: 53,
     });
     renderWithProviders(<Game />, { preloadedState: state, webClient });
 
@@ -323,13 +323,13 @@ describe('Game orchestration (M4–M6)', () => {
     const webClient = createMockWebClient();
     const state = buildGame({ localId: 1, opponentIds: [2] });
     const localPlayer = state.games.games[1].players[1];
-    localPlayer.zones[ZoneName.DECK] = makeZoneEntry({
-      name: ZoneName.DECK,
+    localPlayer.zones[Enriched.ZoneName.DECK] = makeZoneEntry({
+      name: Enriched.ZoneName.DECK,
       cards: [makeCard({ id: 100, name: 'Island' })],
       cardCount: 1,
     });
-    localPlayer.zones[ZoneName.SIDEBOARD] = makeZoneEntry({
-      name: ZoneName.SIDEBOARD,
+    localPlayer.zones[Enriched.ZoneName.SIDEBOARD] = makeZoneEntry({
+      name: Enriched.ZoneName.SIDEBOARD,
       cards: [makeCard({ id: 200, name: 'Counterspell' })],
       cardCount: 1,
     });
@@ -344,7 +344,7 @@ describe('Game orchestration (M4–M6)', () => {
       1,
       expect.objectContaining({
         moveList: [
-          { cardName: 'Island', startZone: ZoneName.DECK, targetZone: ZoneName.SIDEBOARD },
+          { cardName: 'Island', startZone: Enriched.ZoneName.DECK, targetZone: Enriched.ZoneName.SIDEBOARD },
         ],
       }),
     );
@@ -374,14 +374,14 @@ describe('Game orchestration (M4–M6)', () => {
     fireEvent.contextMenu(
       screen
         .getByTestId('player-board-1')
-        .querySelector(`[data-testid="zone-stack-${ZoneName.DECK}"]`)!,
+        .querySelector(`[data-testid="zone-stack-${Enriched.ZoneName.DECK}"]`)!,
     );
     fireEvent.click(await screen.findByText(/always reveal top card/i));
 
     expect(webClient.request.game.changeZoneProperties).toHaveBeenCalledWith(
       1,
       expect.objectContaining({
-        zoneName: ZoneName.DECK,
+        zoneName: Enriched.ZoneName.DECK,
         alwaysRevealTopCard: true,
       }),
     );

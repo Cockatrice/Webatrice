@@ -3,7 +3,7 @@ import MenuItem from '@mui/material/MenuItem';
 import Divider from '@mui/material/Divider';
 import Check from '@mui/icons-material/Check';
 
-import { ZoneName } from '@cockatrice/datatrice';
+import { Enriched } from '@cockatrice/datatrice';
 import NestedMenuItem from '../CardContextMenu/NestedMenuItem';
 
 import { useZoneContextMenu } from './useZoneContextMenu';
@@ -75,7 +75,7 @@ function ZoneContextMenu(props: ZoneContextMenuProps) {
     return null;
   }
 
-  if (zoneName === ZoneName.DECK) {
+  if (zoneName === Enriched.ZoneName.DECK) {
     return (
       <Menu
         open={isOpen}
@@ -97,21 +97,21 @@ function ZoneContextMenu(props: ZoneContextMenuProps) {
           <MenuItem onClick={runAndClose(() => onRequestPlayTop(true))}>
             Battlefield face down
           </MenuItem>
-          <MenuItem onClick={runAndClose(() => onRequestMoveTopCardToZone(ZoneName.GRAVE))}>
+          <MenuItem onClick={runAndClose(() => onRequestMoveTopCardToZone(Enriched.ZoneName.GRAVE))}>
             Graveyard
           </MenuItem>
-          <MenuItem onClick={runAndClose(() => onRequestMoveTopCardToZone(ZoneName.EXILE))}>
+          <MenuItem onClick={runAndClose(() => onRequestMoveTopCardToZone(Enriched.ZoneName.EXILE))}>
             Exile
           </MenuItem>
-          <MenuItem onClick={runAndClose(() => onRequestMoveTopCardToZone(ZoneName.DECK, { x: -1 }))}>
+          <MenuItem onClick={runAndClose(() => onRequestMoveTopCardToZone(Enriched.ZoneName.DECK, { x: -1 }))}>
             Bottom of library
           </MenuItem>
         </NestedMenuItem>
         <NestedMenuItem label="Move top N cards to" parentMenuOpen={isOpen}>
-          <MenuItem onClick={runAndClose(() => onRequestMoveTopNToZone(ZoneName.GRAVE))}>
+          <MenuItem onClick={runAndClose(() => onRequestMoveTopNToZone(Enriched.ZoneName.GRAVE))}>
             Graveyard…
           </MenuItem>
-          <MenuItem onClick={runAndClose(() => onRequestMoveTopNToZone(ZoneName.EXILE))}>
+          <MenuItem onClick={runAndClose(() => onRequestMoveTopNToZone(Enriched.ZoneName.EXILE))}>
             Exile…
           </MenuItem>
         </NestedMenuItem>
@@ -147,9 +147,9 @@ function ZoneContextMenu(props: ZoneContextMenuProps) {
     );
   }
 
-  if (zoneName === ZoneName.GRAVE || zoneName === ZoneName.EXILE) {
-    const isGrave = zoneName === ZoneName.GRAVE;
-    const otherZone = isGrave ? ZoneName.EXILE : ZoneName.GRAVE;
+  if (zoneName === Enriched.ZoneName.GRAVE || zoneName === Enriched.ZoneName.EXILE) {
+    const isGrave = zoneName === Enriched.ZoneName.GRAVE;
+    const otherZone = isGrave ? Enriched.ZoneName.EXILE : Enriched.ZoneName.GRAVE;
     const otherLabel = isGrave ? 'Exile' : 'Graveyard';
     return (
       <Menu
@@ -171,7 +171,7 @@ function ZoneContextMenu(props: ZoneContextMenuProps) {
           <MenuItem onClick={runAndClose(() => onRequestMoveAllFromZoneToDeck(false))}>
             Bottom of library
           </MenuItem>
-          <MenuItem onClick={runAndClose(() => onRequestMoveAllFromZoneTo(ZoneName.HAND))}>
+          <MenuItem onClick={runAndClose(() => onRequestMoveAllFromZoneTo(Enriched.ZoneName.HAND))}>
             Hand
           </MenuItem>
           <MenuItem onClick={runAndClose(() => onRequestMoveAllFromZoneTo(otherZone))}>
