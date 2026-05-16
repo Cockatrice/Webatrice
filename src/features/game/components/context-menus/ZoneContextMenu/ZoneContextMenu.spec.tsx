@@ -5,7 +5,7 @@ import {
   makeGameEntry,
   makePlayerEntry,
   makeZoneEntry,
-} from '../../../../../__test-utils__/games-fixtures';
+} from '@cockatrice/datatrice/testing';
 import ZoneContextMenu from './ZoneContextMenu';
 
 const defaultProps = {

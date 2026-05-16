@@ -6,7 +6,7 @@ import {
   makeGameEntry,
   makePlayerEntry,
   makeZoneEntry,
-} from '../../../../../__test-utils__/games-fixtures';
+} from '@cockatrice/datatrice/testing';
 import HandZone from './HandZone';
 
 function stateWithHand(cards: ReturnType<typeof makeCard>[]) {

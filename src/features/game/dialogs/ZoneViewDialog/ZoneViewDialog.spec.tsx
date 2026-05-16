@@ -7,7 +7,7 @@ import {
   makePlayerEntry,
   makePlayerProperties,
   makeZoneEntry,
-} from '../../../../__test-utils__/games-fixtures';
+} from '@cockatrice/datatrice/testing';
 import ZoneViewDialog from './ZoneViewDialog';
 
 function stateWith(zone: Parameters<typeof makeZoneEntry>[0]) {

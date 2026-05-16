@@ -86,4 +86,69 @@ describe('Player', () => {
     renderPlayer(state, 'alice');
     expect(screen.getByRole('button', { name: /Player\.action\.removeBuddy/ })).toBeInTheDocument();
   });
+
+  it('labels a registered (non-mod, non-admin) user as Registered', () => {
+    const user = makeUser({ name: 'alice', userLevel: ServerInfo_User_UserLevelFlag.IsRegistered });
+    renderPlayer(stateWithPlayer(user), 'alice');
+    expect(screen.getAllByText(/Player\.level\.registered/).length).toBeGreaterThan(0);
+  });
+
+  it('labels an admin user as Administrator', () => {
+    const user = makeUser({ name: 'alice', userLevel: ServerInfo_User_UserLevelFlag.IsAdmin });
+    renderPlayer(stateWithPlayer(user), 'alice');
+    expect(screen.getAllByText(/Player\.level\.administrator/).length).toBeGreaterThan(0);
+  });
+
+  it('marks a judge user with the Judge label alongside the base level', () => {
+    const user = makeUser({
+      name: 'alice',
+      userLevel:
+        ServerInfo_User_UserLevelFlag.IsRegistered | ServerInfo_User_UserLevelFlag.IsJudge,
+    });
+    renderPlayer(stateWithPlayer(user), 'alice');
+    expect(screen.getAllByText(/Player\.level\.judge/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Player\.level\.registered/).length).toBeGreaterThan(0);
+  });
+
+  it('shows the privlevel suffix on the level badge when it is set and not NONE', () => {
+    const user = makeUser({
+      name: 'alice',
+      userLevel: ServerInfo_User_UserLevelFlag.IsRegistered,
+      privlevel: 'GOLD',
+    });
+    renderPlayer(stateWithPlayer(user), 'alice');
+    expect(screen.getByText(/\|\s*GOLD$/)).toBeInTheDocument();
+  });
+
+  it('renders the Unknown account-age text when accountageSecs is missing on a registered user', () => {
+    const user = makeUser({
+      name: 'alice',
+      userLevel: ServerInfo_User_UserLevelFlag.IsRegistered,
+      accountageSecs: 0n,
+    });
+    renderPlayer(stateWithPlayer(user), 'alice');
+    expect(screen.getByText(/Player\.age\.unknown/)).toBeInTheDocument();
+  });
+
+  it('formats account age with years and days when over one year', () => {
+    const oneYearAndOneDay = BigInt(86400 * (365 + 1));
+    const user = makeUser({
+      name: 'alice',
+      userLevel: ServerInfo_User_UserLevelFlag.IsRegistered,
+      accountageSecs: oneYearAndOneDay,
+    });
+    renderPlayer(stateWithPlayer(user), 'alice');
+    expect(screen.getByText(/Player\.age\.daysWithYears/)).toBeInTheDocument();
+  });
+
+  it('renders an inline avatar img when the user has an avatar bitmap', () => {
+    const user = makeUser({
+      name: 'alice',
+      userLevel: 0,
+      avatarBmp: new Uint8Array([1, 2, 3]),
+    });
+    renderPlayer(stateWithPlayer(user), 'alice');
+    const img = screen.getByAltText('alice') as HTMLImageElement;
+    expect(img.src).toContain('data:image/png;base64,');
+  });
 });

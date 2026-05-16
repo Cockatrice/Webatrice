@@ -1,4 +1,4 @@
-import { makeCard } from '../../../../../__test-utils__/games-fixtures';
+import { makeCard } from '@cockatrice/datatrice/testing';
 import {
   ATTACH_OFFSET_FRACTION,
   CARD_HEIGHT_PX,

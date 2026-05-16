@@ -1,12 +1,12 @@
-import { create, type MessageInitShape } from '@bufbuild/protobuf';
-import { ServerInfo_User, ServerInfo_UserSchema, ServerInfo_RoomSchema } from '@cockatrice/sockatrice/generated';
+import { create } from '@bufbuild/protobuf';
+import { ServerInfo_RoomSchema } from '@cockatrice/sockatrice/generated';
 import { GameSortField, SortDirection, UserSortField } from '@cockatrice/datatrice';
+import { makeUser as makeUpstreamUser } from '@cockatrice/datatrice/testing';
 import { WebsocketTypes } from '@cockatrice/sockatrice/types';
 import type { RootState } from '../store';
 
-function makeUser(overrides: MessageInitShape<typeof ServerInfo_UserSchema> = {}): ServerInfo_User {
-  return create(ServerInfo_UserSchema, { name: 'testUser', ...overrides });
-}
+const makeUser: typeof makeUpstreamUser = (overrides = {}) =>
+  makeUpstreamUser({ name: 'testUser', ...overrides });
 
 export const disconnectedState: Partial<RootState> = {
   server: {

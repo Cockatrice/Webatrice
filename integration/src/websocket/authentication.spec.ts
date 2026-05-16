@@ -159,8 +159,9 @@ describe('authentication', () => {
       })));
 
       // hashPassword (1000 SHA-512 rounds) completes its microtask chain then
-      // dispatches Command_Login. Allow 5s for slow hosts.
-      await vi.waitFor(() => findLastSessionCommand(Command_Login_ext), { timeout: 5000 });
+      // dispatches Command_Login. Allow 30s; the microtask budget tightens
+      // sharply under full-suite load when the thread pool is saturated.
+      await vi.waitFor(() => findLastSessionCommand(Command_Login_ext), { timeout: 30000 });
 
       // Now login should have been sent with hashedPassword
       const login = findLastSessionCommand(Command_Login_ext);

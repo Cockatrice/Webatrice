@@ -6,7 +6,7 @@ import {
   makeGameEntry,
   makePlayerEntry,
   makeZoneEntry,
-} from '../../../../../__test-utils__/games-fixtures';
+} from '@cockatrice/datatrice/testing';
 import ZoneStack from './ZoneStack';
 
 function stateWithZone(zoneName: Enriched.ZoneNameValue, overrides: Parameters<typeof makeZoneEntry>[0]) {

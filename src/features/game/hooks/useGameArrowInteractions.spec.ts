@@ -6,7 +6,7 @@ import { createCardRegistry } from '../utils/CardRegistry/CardRegistryContext';
 import { combineReducers } from '@reduxjs/toolkit';
 
 import { games, type GamesState } from '@cockatrice/datatrice';
-import { makeCard, makeGameEntry, makePlayerEntry, makePlayerProperties } from '../../../__test-utils__/games-fixtures';
+import { makeCard, makeGameEntry, makePlayerEntry, makePlayerProperties } from '@cockatrice/datatrice/testing';
 import { makeReduxWebClientHookWrapper } from '../../../__test-utils__/makeHookWrapper';
 import { Enriched } from '@cockatrice/datatrice';
 import { CardDTO } from '../../../services/dexie/DexieDTOs/CardDTO';
@@ -260,7 +260,7 @@ describe('useGameArrowInteractions', () => {
     });
   });
 
-  describe('handleCardDoubleClick — hand → play', () => {
+  describe('handleCardDoubleClick â€” hand → play', () => {
     function makeCardMeta(tablerow: string | null) {
       if (tablerow == null) {
         return { name: { value: 'Foo' } };

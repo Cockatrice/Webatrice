@@ -2,7 +2,7 @@ import { renderHook } from '@testing-library/react';
 import type { DragEndEvent } from '@dnd-kit/core';
 import { ServerInfo_Card } from '@cockatrice/sockatrice/generated';
 import { Enriched } from '@cockatrice/datatrice';
-import { makeCard } from '../../../__test-utils__/games-fixtures';
+import { makeCard } from '@cockatrice/datatrice/testing';
 import {
   CARD_WIDTH_PX,
   MARGIN_LEFT_PX,
@@ -240,7 +240,7 @@ describe('useGameDnd', () => {
       // (mirrored: [2,1,0]). Visual top of a mirrored opponent yields
       // target.row = 2 which IS the correct server-side y. Re-inverting here
       // would send y=0 and render the card at the bottom of the opponent's
-      // area — the bug this test guards against.
+      // area â€” the bug this test guards against.
       const { webClient, handleDragEnd } = setupHook();
       const dragging = makeCard({ id: 60, x: 0, y: 0 });
       handleDragEnd(
@@ -303,7 +303,7 @@ describe('useGameDnd', () => {
   describe('drag-drop never attaches (Cockatrice parity)', () => {
     it('dispatches moveCard, not attachCard, even when targeting a table row that contains another card', () => {
       // Card slots are no longer drop targets; drops always land on the row
-      // and resolve via grid math. Attach is right-click-menu-only — see
+      // and resolve via grid math. Attach is right-click-menu-only â€” see
       // cockatrice/src/game/board/card_item.cpp `drawAttachArrow`.
       const { webClient, handleDragEnd } = setupHook();
       const source = makeCard({ id: 90, x: 0, y: 0 });

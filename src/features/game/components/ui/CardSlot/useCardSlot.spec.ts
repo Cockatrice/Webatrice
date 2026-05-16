@@ -21,7 +21,7 @@ vi.mock('../CardRegistry/CardRegistryContext', () => ({
   useRegisterCardRef: () => vi.fn(),
 }));
 
-import { makeCard } from '../../../../../__test-utils__/games-fixtures';
+import { makeCard } from '@cockatrice/datatrice/testing';
 import { useCardSlot } from './useCardSlot';
 
 beforeEach(() => {
@@ -29,7 +29,7 @@ beforeEach(() => {
 });
 
 describe('useCardSlot', () => {
-  // Card slots are draggable but never act as drop targets — drag-drop on a
+  // Card slots are draggable but never act as drop targets â€” drag-drop on a
   // card falls through to the BattlefieldRow droppable so it stacks rather
   // than attaches (matches desktop, where attach is right-click-menu only).
   it('registers a draggable for an unattached TABLE card', () => {

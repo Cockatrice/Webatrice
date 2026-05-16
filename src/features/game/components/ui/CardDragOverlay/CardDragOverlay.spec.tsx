@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 
-import { makeCard } from '../../../../../__test-utils__/games-fixtures';
+import { makeCard } from '@cockatrice/datatrice/testing';
 import CardDragOverlay from './CardDragOverlay';
 
 describe('CardDragOverlay', () => {

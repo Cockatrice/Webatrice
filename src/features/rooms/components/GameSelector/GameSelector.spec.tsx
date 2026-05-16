@@ -1,5 +1,5 @@
 import { act, fireEvent, screen } from '@testing-library/react';
-import { create } from '@bufbuild/protobuf';
+import type { MessageInitShape } from '@bufbuild/protobuf';
 import {
   renderWithProviders,
   makeStoreState,
@@ -9,11 +9,11 @@ import {
 import {
   ServerInfo_Game,
   ServerInfo_GameSchema,
-  ServerInfo_RoomSchema,
   ServerInfo_User_UserLevelFlag,
 } from '@cockatrice/sockatrice/generated';
 import { GameSortField, SortDirection, UserSortField } from '@cockatrice/datatrice';
 import { games } from '@cockatrice/datatrice';
+import { makeGameInfo, makeRoom } from '@cockatrice/datatrice/testing';
 import GameSelector from './GameSelector';
 
 const { mockUseWebClient, mockNavigate } = vi.hoisted(() => ({
@@ -30,17 +30,16 @@ vi.mock('react-router-dom', async (importOriginal) => {
 });
 
 function makeRoomEntry(games: ServerInfo_Game[] = [], gametypeMap: Record<number, string> = {}) {
-  return {
-    info: create(ServerInfo_RoomSchema, { roomId: 1, name: 'Main' }),
+  return makeRoom({
+    roomId: 1,
+    name: 'Main',
     gametypeMap,
-    order: 0,
     games: Object.fromEntries(games.map((info) => [info.gameId, { info, gameType: '' }])),
-    users: {},
-  };
+  });
 }
 
-function makeGame(overrides: any = {}): ServerInfo_Game {
-  return create(ServerInfo_GameSchema, {
+function makeGame(overrides: MessageInitShape<typeof ServerInfo_GameSchema> = {}): ServerInfo_Game {
+  return makeGameInfo({
     gameId: 1,
     roomId: 1,
     description: 'Test',

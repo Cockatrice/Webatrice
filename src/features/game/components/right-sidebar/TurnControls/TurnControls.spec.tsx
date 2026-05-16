@@ -10,7 +10,7 @@ import {
   makeGameEntry,
   makePlayerEntry,
   makePlayerProperties,
-} from '../../../../../__test-utils__/games-fixtures';
+} from '@cockatrice/datatrice/testing';
 import TurnControls from './TurnControls';
 
 function stateWith(opts: {
@@ -130,7 +130,7 @@ describe('TurnControls', () => {
 
   it('keeps Pass/Reverse Turn enabled for a non-active participant; disables Next Phase (matches Cockatrice server)', () => {
     // Cockatrice's server_player.cpp::cmdNextTurn / cmdReverseTurn have no
-    // active-player check — any non-conceded participant may pass turn.
+    // active-player check â€” any non-conceded participant may pass turn.
     // cmdSetActivePhase IS gated, so Next Phase stays disabled.
     renderWithProviders(<TurnControls {...DEFAULT_TURN_PROPS} />, {
       preloadedState: stateWith({ localPlayerId: 1, activePlayerId: 2 }),
@@ -315,7 +315,7 @@ describe('TurnControls', () => {
       expect(screen.getByRole('button', { name: /roll die/i })).not.toBeDisabled();
     });
 
-    // Desktop: judges can't concede — they have no local player to concede as.
+    // Desktop: judges can't concede â€” they have no local player to concede as.
     // Our `canConcede = !isSpectator && …` gate already excludes judges who
     // are flagged spectator; this test pins the behavior.
     it('disables Concede for judges flagged as spectators (no local player to concede)', () => {

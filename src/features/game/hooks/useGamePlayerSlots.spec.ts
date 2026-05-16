@@ -4,7 +4,7 @@ import {
   makeGameEntry,
   makePlayerEntry,
   makePlayerProperties,
-} from '../../../__test-utils__/games-fixtures';
+} from '@cockatrice/datatrice/testing';
 
 import { useGamePlayerSlots } from './useGamePlayerSlots';
 

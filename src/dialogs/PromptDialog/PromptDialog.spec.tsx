@@ -1,5 +1,7 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { useState } from 'react';
+import { act, render, screen, fireEvent } from '@testing-library/react';
 
+import { renderWithProviders } from '../../__test-utils__';
 import PromptDialog from './PromptDialog';
 
 describe('PromptDialog', () => {
@@ -201,5 +203,92 @@ describe('PromptDialog', () => {
 
     const input = screen.getByLabelText('V') as HTMLInputElement;
     expect(input.value).toBe('new');
+  });
+
+  it('fires onCancel when Escape is pressed', () => {
+    const onCancel = vi.fn();
+    const onSubmit = vi.fn();
+    renderWithProviders(
+      <PromptDialog
+        isOpen
+        title="T"
+        label="L"
+        onSubmit={onSubmit}
+        onCancel={onCancel}
+      />,
+    );
+
+    fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape', code: 'Escape' });
+    expect(onCancel).toHaveBeenCalled();
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it('autofocuses the text input on open', () => {
+    renderWithProviders(
+      <PromptDialog
+        isOpen
+        title="T"
+        label="Cards"
+        onSubmit={() => {}}
+        onCancel={() => {}}
+      />,
+    );
+
+    expect(screen.getByLabelText('Cards')).toHaveFocus();
+  });
+
+  it('keeps focus inside the dialog rather than on outside controls', () => {
+    renderWithProviders(
+      <>
+        <button type="button">outside</button>
+        <PromptDialog
+          isOpen
+          title="T"
+          label="Cards"
+          onSubmit={() => {}}
+          onCancel={() => {}}
+        />
+      </>,
+    );
+
+    const outside = screen.getByRole('button', { name: /outside/i, hidden: true });
+    expect(document.activeElement).not.toBe(outside);
+    expect(screen.getByLabelText('Cards')).toHaveFocus();
+  });
+
+  it('restores focus to the trigger after the dialog closes via submit', () => {
+    function Host() {
+      const [open, setOpen] = useState(false);
+      return (
+        <>
+          <button type="button" onClick={() => setOpen(true)}>open</button>
+          <PromptDialog
+            isOpen={open}
+            title="T"
+            label="Cards"
+            onSubmit={() => setOpen(false)}
+            onCancel={() => setOpen(false)}
+          />
+        </>
+      );
+    }
+
+    renderWithProviders(<Host />);
+
+    const trigger = screen.getByRole('button', { name: 'open' });
+    trigger.focus();
+
+    act(() => {
+      fireEvent.click(trigger);
+    });
+
+    expect(screen.getByLabelText('Cards')).toHaveFocus();
+
+    act(() => {
+      fireEvent.change(screen.getByLabelText('Cards'), { target: { value: '3' } });
+      fireEvent.click(screen.getByRole('button', { name: /ok/i }));
+    });
+
+    expect(trigger).toHaveFocus();
   });
 });

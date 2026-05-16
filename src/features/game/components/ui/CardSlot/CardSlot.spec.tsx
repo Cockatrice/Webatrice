@@ -4,7 +4,7 @@ import { create } from '@bufbuild/protobuf';
 import { DndContext } from '@dnd-kit/core';
 import { ServerInfo_CardCounterSchema } from '@cockatrice/sockatrice/generated';
 import { Enriched } from '@cockatrice/datatrice';
-import { makeCard } from '../../../../../__test-utils__/games-fixtures';
+import { makeCard } from '@cockatrice/datatrice/testing';
 import CardSlot from './CardSlot';
 
 // useDraggable requires a DndContext ancestor; keep a lightweight wrapper
@@ -77,7 +77,7 @@ describe('CardSlot', () => {
 
   it('renders the annotation pill for an enemy\'s card on the local battlefield', () => {
     // The server populates card.annotation whenever the card's owner differs
-    // from the controller — including stolen / cloned cards on YOUR table.
+    // from the controller â€” including stolen / cloned cards on YOUR table.
     const card = makeCard({ annotation: 'Owner: Bob' });
     render(<CardSlot card={card} zone={Enriched.ZoneName.TABLE} />);
     expect(screen.getByText('Bob')).toBeInTheDocument();

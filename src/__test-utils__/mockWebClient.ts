@@ -11,6 +11,7 @@ export function createMockWebClient() {
         resetPasswordRequest: vi.fn(),
         resetPasswordChallenge: vi.fn(),
         resetPassword: vi.fn(),
+        testConnection: vi.fn(),
       },
       session: {
         addToBuddyList: vi.fn(),

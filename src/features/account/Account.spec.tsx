@@ -88,4 +88,77 @@ describe('Account', () => {
     const img = screen.getByAltText('testUser') as HTMLImageElement;
     expect(img.src).toContain('blob:avatar');
   });
+
+  it('uppercases the country code in the user details panel', () => {
+    const state = {
+      ...connectedState,
+      server: {
+        ...(connectedState.server as any),
+        user: makeUser({ country: 'us', realName: 'Real Person', userLevel: 4 }),
+      },
+    };
+    renderWithProviders(<Account />, { preloadedState: state });
+
+    expect(screen.getByText(/Location:\s*\(US\)/)).toBeInTheDocument();
+    expect(screen.getByText(/Real Name:\s*Real Person/)).toBeInTheDocument();
+    expect(screen.getByText(/User Level:\s*4/)).toBeInTheDocument();
+  });
+
+  it('renders the Edit, Change Password, and Change Avatar action buttons', () => {
+    renderWithProviders(<Account />, { preloadedState: connectedState });
+
+    expect(screen.getByRole('button', { name: /^Edit$/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Change.*Password/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Change.*Avatar/ })).toBeInTheDocument();
+  });
+
+  it('clicking Edit does not invoke accountEdit on the web client (not yet wired)', () => {
+    renderWithProviders(<Account />, { preloadedState: connectedState });
+
+    fireEvent.click(screen.getByRole('button', { name: /^Edit$/ }));
+    expect(hoisted.mockWebClient.request.session.accountEdit).not.toHaveBeenCalled();
+    expect(hoisted.mockWebClient.request.session.accountPassword).not.toHaveBeenCalled();
+  });
+
+  it('clears the buddy input after a successful submission', async () => {
+    renderWithProviders(<Account />, { preloadedState: connectedState });
+
+    hoisted.mockWebClient.request.session.addToBuddyList.mockClear();
+    const addButtons = screen.getAllByRole('button', { name: 'Add' });
+    const [buddyInput] = screen.getAllByRole('textbox');
+    await act(async () => {
+      fireEvent.change(buddyInput, { target: { value: 'tempBuddy' } });
+    });
+    await act(async () => {
+      fireEvent.submit(addButtons[0].closest('form')!);
+    });
+    await flush();
+
+    expect(hoisted.mockWebClient.request.session.addToBuddyList).toHaveBeenCalledWith('tempBuddy');
+    expect((buddyInput as HTMLInputElement).value).toBe('');
+  });
+
+  it('revokes the avatar object url when the component unmounts', () => {
+    const revokeObjectURL = vi.fn();
+    (globalThis.URL as any).createObjectURL = vi.fn(() => 'blob:avatar-2');
+    (globalThis.URL as any).revokeObjectURL = revokeObjectURL;
+
+    const state = {
+      ...connectedState,
+      server: {
+        ...(connectedState.server as any),
+        user: makeUser({ avatarBmp: new Uint8Array([1, 2, 3, 4]) }),
+      },
+    };
+    const { unmount } = renderWithProviders(<Account />, { preloadedState: state });
+    unmount();
+
+    expect(revokeObjectURL).toHaveBeenCalledWith('blob:avatar-2');
+  });
+
+  it('renders the language dropdown in the server details panel', () => {
+    const { container } = renderWithProviders(<Account />, { preloadedState: connectedState });
+
+    expect(container.querySelector('.account-details__lang')).toBeInTheDocument();
+  });
 });

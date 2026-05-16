@@ -7,7 +7,7 @@ import {
   makeGameEntry,
   makePlayerEntry,
   makePlayerProperties,
-} from '../../../../../__test-utils__/games-fixtures';
+} from '@cockatrice/datatrice/testing';
 import { games } from '@cockatrice/datatrice';
 import GameLog from './GameLog';
 
@@ -141,7 +141,7 @@ describe('GameLog', () => {
   describe('event-log rendering (desktop MessageLogWidget parity)', () => {
     // Desktop renders game events (card moves, tap, concede, etc.) in the
     // same log surface as chat, but without a leading speaker label and in a
-    // distinct italic style. Regression guard — GameLog was chat-only before
+    // distinct italic style. Regression guard â€” GameLog was chat-only before
     // this milestone.
     it('renders event messages without a leading author label', () => {
       renderWithProviders(<GameLog gameId={1} />, {

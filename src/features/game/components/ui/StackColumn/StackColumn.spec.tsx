@@ -12,7 +12,7 @@ import {
   makePlayerEntry,
   makePlayerProperties,
   makeZoneEntry,
-} from '../../../../../__test-utils__/games-fixtures';
+} from '@cockatrice/datatrice/testing';
 import StackColumn from './StackColumn';
 
 function stateWithStack(cards: ReturnType<typeof makeCard>[] = []) {

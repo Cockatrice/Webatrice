@@ -1,3 +1,5 @@
+import { CardDTO, FormatDTO, InfoDTO, SetDTO, TokenDTO } from '@app/services';
+
 import { localOracleImportService } from './LocalOracleImportService';
 
 const oracleCardsXml = `<?xml version="1.0" encoding="UTF-8"?>
@@ -105,6 +107,117 @@ describe('LocalOracleImportService', () => {
       expect(result.tokens).toEqual([]);
       expect(result.formats).toEqual([]);
       expect(result.info).toBeUndefined();
+    });
+
+    it('does not dedup cards that appear in both cards.xml and spoiler.xml', async () => {
+      const spoilerCardsXml = `<?xml version="1.0" encoding="UTF-8"?>
+<cockatrice_carddatabase version="4">
+  <info>
+    <author>Spoiler Source</author>
+  </info>
+  <cards>
+    <card>
+      <name>Counterspell</name>
+      <set>STA</set>
+      <token>0</token>
+    </card>
+  </cards>
+</cockatrice_carddatabase>`;
+
+      const result = await localOracleImportService.ingest([
+        fakeFile('cards.xml', oracleCardsXml),
+        fakeFile('spoiler.xml', spoilerCardsXml),
+      ]);
+
+      expect(result.acceptedFiles.sort()).toEqual(['cards.xml', 'spoiler.xml']);
+      expect(result.cards).toHaveLength(2);
+      expect(result.cards.map(c => c.name.value)).toEqual(['Counterspell', 'Counterspell']);
+    });
+
+    it('overwrites info with the last accepted file (last-write-wins)', async () => {
+      const spoilerInfoXml = `<?xml version="1.0" encoding="UTF-8"?>
+<cockatrice_carddatabase version="4">
+  <info>
+    <author>Spoiler Source</author>
+  </info>
+  <cards>
+    <card>
+      <name>Lightning Bolt</name>
+      <set>LEA</set>
+      <token>0</token>
+    </card>
+  </cards>
+</cockatrice_carddatabase>`;
+
+      const result = await localOracleImportService.ingest([
+        fakeFile('cards.xml', oracleCardsXml),
+        fakeFile('spoiler.xml', spoilerInfoXml),
+      ]);
+
+      expect(result.info?.author).toBe('Spoiler Source');
+      expect(result.info?.source).toBe('oracle-local-fs');
+    });
+
+    it('rejects when an accepted file contains malformed XML', async () => {
+      await expect(
+        localOracleImportService.ingest([fakeFile('cards.xml', '<not closed')]),
+      ).rejects.toThrow('Cockatrice XML is malformed');
+    });
+
+    it('accepts a well-formed file that has no card/set/token children', async () => {
+      const emptyDbXml = `<?xml version="1.0" encoding="UTF-8"?>
+<cockatrice_carddatabase version="4">
+  <cards></cards>
+</cockatrice_carddatabase>`;
+
+      const result = await localOracleImportService.ingest([fakeFile('cards.xml', emptyDbXml)]);
+
+      expect(result.acceptedFiles).toEqual(['cards.xml']);
+      expect(result.skippedFiles).toEqual([]);
+      expect(result.cards).toEqual([]);
+      expect(result.sets).toEqual([]);
+      expect(result.tokens).toEqual([]);
+      expect(result.formats).toEqual([]);
+      expect(result.info).toBeUndefined();
+    });
+
+    it('ingests the XML and lists the unrecognized text file as skipped', async () => {
+      const result = await localOracleImportService.ingest([
+        fakeFile('cards.xml', oracleCardsXml),
+        fakeFile('notes.txt', 'reminder: re-export tokens later'),
+      ]);
+
+      expect(result.acceptedFiles).toEqual(['cards.xml']);
+      expect(result.skippedFiles).toEqual(['notes.txt']);
+      expect(result.cards).toHaveLength(1);
+      expect(result.cards[0].name.value).toBe('Counterspell');
+    });
+  });
+
+  describe('persist', () => {
+    it('forwards a large card payload to CardDTO.bulkAdd in a single call without chunking', async () => {
+      const bulkAddSpy = vi.spyOn(CardDTO, 'bulkAdd').mockResolvedValue('cards-key');
+      vi.spyOn(SetDTO, 'bulkAdd').mockResolvedValue('sets-key');
+      vi.spyOn(TokenDTO, 'bulkAdd').mockResolvedValue('tokens-key');
+      vi.spyOn(FormatDTO, 'bulkAdd').mockResolvedValue('formats-key');
+      const infoSave = vi.spyOn(InfoDTO.prototype, 'save').mockResolvedValue('info-key');
+
+      const cards = Array.from({ length: 5000 }, (_, i) => ({
+        name: { value: `Card ${i}` },
+      })) as unknown as Parameters<typeof localOracleImportService.persist>[0]['cards'];
+
+      const result = await localOracleImportService.persist({
+        cards,
+        sets: [],
+        tokens: [],
+        formats: [],
+      });
+
+      expect(bulkAddSpy).toHaveBeenCalledTimes(1);
+      expect(bulkAddSpy.mock.calls[0][0]).toHaveLength(5000);
+      expect(result.cards).toBe(5000);
+      expect(result.info).toBe(false);
+      expect(infoSave).not.toHaveBeenCalled();
     });
   });
 });

@@ -1,4 +1,4 @@
-// Phase 4 G — drag-drop orchestration coverage.
+// Phase 4 G â€” drag-drop orchestration coverage.
 //
 // dnd-kit's PointerSensor doesn't work reliably in jsdom (no layout,
 // getBoundingClientRect returns zeros, elementFromPoint returns null).
@@ -7,7 +7,7 @@
 // cycle end-to-end without a real browser.
 //
 // Full pointer-driven drag-drop coverage (activation distance, pointer
-// collision detection) needs Playwright — documented in the M3 deferrable
+// collision detection) needs Playwright â€” documented in the M3 deferrable
 // as a later-milestone item.
 
 import { screen, fireEvent, waitFor } from '@testing-library/react';
@@ -25,7 +25,7 @@ import {
   makePlayerEntry,
   makePlayerProperties,
   makeZoneEntry,
-} from '../../__test-utils__/games-fixtures';
+} from '@cockatrice/datatrice/testing';
 import Game from './Game';
 
 function buildGame(card: ServerInfo_Card) {
@@ -76,7 +76,7 @@ describe('Game drag-drop (keyboard sensor)', () => {
   // layout for ranking droppables, which jsdom doesn't provide. That makes
   // full keyboard drags flaky here. We keep the shape of the test so the
   // wiring (draggable CardSlot, droppable ZoneStack) is exercised on mount,
-  // and assert on the static prerequisites — the pointer-driven end-to-end
+  // and assert on the static prerequisites â€” the pointer-driven end-to-end
   // path is the Playwright deferrable.
   it('exposes the local battlefield card as a focusable draggable', () => {
     const card = makeCard({ id: 42, name: 'Bolt', x: 0, y: 0 });
@@ -129,9 +129,9 @@ describe('Game drag-drop (keyboard sensor)', () => {
 
     // If jsdom layout isn't enough to resolve the drop target, the handler
     // will no-op. We assert loosely: either moveCard fired, or nothing did
-    // — no other command should leak through a drag-cycle attempt.
+    // â€” no other command should leak through a drag-cycle attempt.
     await waitFor(() => {
-      // Be tolerant — jsdom's lack of layout means dnd-kit may not resolve
+      // Be tolerant â€” jsdom's lack of layout means dnd-kit may not resolve
       // the drop. The primary invariant we pin here is "no unrelated
       // commands fire during an attempted drag cycle."
       expect(webClient.request.game.drawCards).not.toHaveBeenCalled();

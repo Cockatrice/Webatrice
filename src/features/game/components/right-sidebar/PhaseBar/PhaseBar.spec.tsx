@@ -8,7 +8,7 @@ import {
   makePlayerEntry,
   makePlayerProperties,
   makeZoneEntry,
-} from '../../../../../__test-utils__/games-fixtures';
+} from '@cockatrice/datatrice/testing';
 import PhaseBar from './PhaseBar';
 
 function stateWith(opts: {

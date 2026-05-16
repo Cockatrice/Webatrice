@@ -8,7 +8,7 @@ import {
   makePlayerEntry,
   makePlayerProperties,
   makeZoneEntry,
-} from '../../__test-utils__/games-fixtures';
+} from '@cockatrice/datatrice/testing';
 import Game from './Game';
 
 // Layout pulls in LeftNav which is not under test here; stub to a no-op.
@@ -462,7 +462,7 @@ describe('Game container', () => {
     });
   });
 
-  // M4–M6 orchestration tests live in Game.orchestration.spec.tsx — that
+  // M4–M6 orchestration tests live in Game.orchestration.spec.tsx â€” that
   // file pins the end-to-end dispatch flows (dialog/menu → command) that go
   // through Game.tsx state wiring. Splitting them out lets vitest's threads
   // pool run them in parallel with the unit-style tests in this file.

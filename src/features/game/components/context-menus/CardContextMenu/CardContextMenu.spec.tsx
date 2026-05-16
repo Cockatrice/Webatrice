@@ -3,7 +3,7 @@ import { create } from '@bufbuild/protobuf';
 import { CardAttribute, ServerInfo_CardCounterSchema } from '@cockatrice/sockatrice/generated';
 import { Enriched } from '@cockatrice/datatrice';
 import { createMockWebClient, renderWithProviders } from '../../../../../__test-utils__';
-import { makeCard } from '../../../../../__test-utils__/games-fixtures';
+import { makeCard } from '@cockatrice/datatrice/testing';
 import CardContextMenu from './CardContextMenu';
 
 const defaultProps = {
