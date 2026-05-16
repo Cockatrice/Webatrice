@@ -53,4 +53,21 @@ describe('Room', () => {
     expect(screen.getByTestId('messages')).toBeInTheDocument();
     expect(screen.getByTestId('say-message')).toBeInTheDocument();
   });
+
+  it('renders a list item per user in the side pane', () => {
+    hoisted.useRoom.mockReturnValue({
+      ...baseRoom,
+      room: { info: { roomId: 1, name: 'Main Room' } } as never,
+      users: [{ name: 'alice' }, { name: 'bob' }],
+    });
+
+    renderWithProviders(<Room />, {
+      preloadedState: connectedState,
+      route: '/room/1',
+    });
+
+    expect(screen.getByText(/Users in this room: 2/)).toBeInTheDocument();
+    expect(screen.getByText('alice')).toBeInTheDocument();
+    expect(screen.getByText('bob')).toBeInTheDocument();
+  });
 });

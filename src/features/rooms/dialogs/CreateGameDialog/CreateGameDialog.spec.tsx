@@ -90,4 +90,55 @@ describe('CreateGameDialog', () => {
     fireEvent.click(screen.getByRole('button', { name: /Cancel/i }));
     expect(onCancel).toHaveBeenCalledTimes(1);
   });
+
+  it('forwards password and startingLifeTotal text edits', () => {
+    const { onSubmit } = renderDialog();
+    fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'secret' } });
+    fireEvent.change(screen.getByLabelText(/Starting life total/i), { target: { value: '30' } });
+    fireEvent.click(screen.getByRole('button', { name: /^Create$/ }));
+    const params = onSubmit.mock.calls[0][0];
+    expect(params.password).toBe('secret');
+    expect(params.startingLifeTotal).toBe(30);
+  });
+
+  it('forwards the selected game type id when a radio option is picked', () => {
+    const { onSubmit } = renderDialog({ gametypeMap: { 0: 'Constructed', 1: 'Limited' } });
+    fireEvent.click(screen.getByLabelText('Limited'));
+    fireEvent.click(screen.getByRole('button', { name: /^Create$/ }));
+    expect(onSubmit.mock.calls[0][0].gameTypeIds).toEqual([1]);
+  });
+
+  it('toggles onlyBuddies and onlyRegistered permission checkboxes', () => {
+    const { onSubmit } = renderDialog({ isRegistered: true });
+    fireEvent.click(screen.getByLabelText(/Only buddies/i));
+    fireEvent.click(screen.getByLabelText(/Only registered users/i));
+    fireEvent.click(screen.getByRole('button', { name: /^Create$/ }));
+    const params = onSubmit.mock.calls[0][0];
+    expect(params.onlyBuddies).toBe(true);
+    expect(params.onlyRegistered).toBe(false);
+  });
+
+  it('toggles every spectator sub-option and forwards them on Create', () => {
+    const { onSubmit } = renderDialog();
+    fireEvent.click(screen.getByLabelText(/Spectators need password/i));
+    fireEvent.click(screen.getByLabelText(/Spectators can chat/i));
+    fireEvent.click(screen.getByLabelText(/Spectators see everything/i));
+    fireEvent.click(screen.getByLabelText(/Create as spectator/i));
+    fireEvent.click(screen.getByRole('button', { name: /^Create$/ }));
+    const params = onSubmit.mock.calls[0][0];
+    expect(params.spectatorsNeedPassword).toBe(true);
+    expect(params.spectatorsCanTalk).toBe(true);
+    expect(params.spectatorsSeeEverything).toBe(true);
+    expect(params.joinAsSpectator).toBe(true);
+  });
+
+  it('toggles shareDecklistsOnLoad and joinAsJudge (judge-only)', () => {
+    const { onSubmit } = renderDialog({ isJudge: true });
+    fireEvent.click(screen.getByLabelText(/Share decklists on load/i));
+    fireEvent.click(screen.getByLabelText(/Create as judge/i));
+    fireEvent.click(screen.getByRole('button', { name: /^Create$/ }));
+    const params = onSubmit.mock.calls[0][0];
+    expect(params.shareDecklistsOnLoad).toBe(true);
+    expect(params.joinAsJudge).toBe(true);
+  });
 });

@@ -11,7 +11,7 @@ import {
   ServerInfo_GameSchema,
   ServerInfo_User_UserLevelFlag,
 } from '@cockatrice/sockatrice/generated';
-import { GameSortField, SortDirection, UserSortField } from '@cockatrice/datatrice';
+import { GameSortField, SortDirection, UserSortField, rooms } from '@cockatrice/datatrice';
 import { games } from '@cockatrice/datatrice';
 import { makeGameInfo, makeRoom } from '@cockatrice/datatrice/testing';
 import GameSelector from './GameSelector';
@@ -277,5 +277,126 @@ describe('GameSelector', () => {
     fireEvent.click(createButtons[createButtons.length - 1]);
     expect(client.request.rooms.createGame).toHaveBeenCalledTimes(1);
     expect(client.request.rooms.createGame.mock.calls[0][0]).toBe(1);
+  });
+
+  it('opens the filter dialog and applying it dispatches setGameFilters', () => {
+    mockUseWebClient.mockReturnValue(makeWebClient());
+    const room = makeRoomEntry([]);
+    const { store } = renderWithProviders(<GameSelector room={room as any} />, {
+      preloadedState: buildState(room),
+    });
+    fireEvent.click(screen.getByRole('button', { name: /Filter games/i }));
+    expect(screen.getByRole('heading', { name: /Filter games/i })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByLabelText(/Hide full games/i));
+    fireEvent.click(screen.getByRole('button', { name: /Apply/i }));
+
+    const state = store.getState() as any;
+    expect(state.rooms.gameFilters[1]?.hideFullGames).toBe(true);
+  });
+
+  it('Cancel on the filter dialog closes it without dispatching filters', () => {
+    mockUseWebClient.mockReturnValue(makeWebClient());
+    const room = makeRoomEntry([]);
+    const { store } = renderWithProviders(<GameSelector room={room as any} />, {
+      preloadedState: buildState(room),
+    });
+    fireEvent.click(screen.getByRole('button', { name: /Filter games/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Cancel/i }));
+    const state = store.getState() as any;
+    expect(state.rooms.gameFilters[1]).toBeUndefined();
+  });
+
+  it('Clear filter dispatches clearGameFilters', () => {
+    mockUseWebClient.mockReturnValue(makeWebClient());
+    const room = makeRoomEntry([]);
+    const state = buildState(room);
+    (state as any).rooms.gameFilters = { 1: { ...rooms.DEFAULT_GAME_FILTERS, hideFullGames: true } };
+    const { store } = renderWithProviders(<GameSelector room={room as any} />, { preloadedState: state });
+    fireEvent.click(screen.getByRole('button', { name: /Clear filter/i }));
+    const next = store.getState() as any;
+    expect(next.rooms.gameFilters[1]).toEqual(rooms.DEFAULT_GAME_FILTERS);
+  });
+
+  it('Cancel on the create-game dialog closes it without dispatching createGame', () => {
+    const client = makeWebClient();
+    mockUseWebClient.mockReturnValue(client);
+    const room = makeRoomEntry([]);
+    renderWithProviders(<GameSelector room={room as any} />, { preloadedState: buildState(room) });
+    fireEvent.click(screen.getByRole('button', { name: /^Create$/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Cancel/i }));
+    expect(client.request.rooms.createGame).not.toHaveBeenCalled();
+  });
+
+  it('cancelling the password prompt does not send joinGame', () => {
+    const client = makeWebClient();
+    mockUseWebClient.mockReturnValue(client);
+    const game = makeGame({ gameId: 8, withPassword: true });
+    const room = makeRoomEntry([game]);
+    renderWithProviders(<GameSelector room={room as any} />, {
+      preloadedState: buildState(room, makeUser(), 8),
+    });
+    fireEvent.click(screen.getByRole('button', { name: /^Join$/ }));
+    expect(screen.getByText('Password required')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Cancel/i }));
+    expect(client.request.rooms.joinGame).not.toHaveBeenCalled();
+  });
+
+  it('dismissing the join-error AlertDialog clears it from state', () => {
+    mockUseWebClient.mockReturnValue(makeWebClient());
+    const room = makeRoomEntry([]);
+    const { store } = renderWithProviders(<GameSelector room={room as any} />, {
+      preloadedState: buildState(room, makeUser(), undefined, {
+        joinGameError: { code: 10, message: 'boom' },
+      }),
+    });
+    fireEvent.click(screen.getByRole('button', { name: /^ok$/i }));
+    const next = store.getState() as any;
+    expect(next.rooms.joinGameError).toBeNull();
+  });
+
+  it('Join as Judge sends joinGame with joinAsJudge=true for the selected game', () => {
+    const client = makeWebClient();
+    mockUseWebClient.mockReturnValue(client);
+    const game = makeGame({ gameId: 11, withPassword: false });
+    const room = makeRoomEntry([game]);
+    renderWithProviders(<GameSelector room={room as any} />, {
+      preloadedState: buildState(room, makeUser({ userLevel: ServerInfo_User_UserLevelFlag.IsJudge }), 11),
+    });
+    fireEvent.click(screen.getByRole('button', { name: /Join as Judge$/i }));
+    expect(client.request.rooms.joinGame).toHaveBeenCalledWith(
+      1,
+      expect.objectContaining({ gameId: 11, joinAsJudge: true, spectator: false }),
+    );
+  });
+
+  it('Join as Judge Spectator sends joinGame with joinAsJudge and spectator=true', () => {
+    const client = makeWebClient();
+    mockUseWebClient.mockReturnValue(client);
+    const game = makeGame({ gameId: 12, withPassword: false });
+    const room = makeRoomEntry([game]);
+    renderWithProviders(<GameSelector room={room as any} />, {
+      preloadedState: buildState(room, makeUser({ userLevel: ServerInfo_User_UserLevelFlag.IsJudge }), 12),
+    });
+    fireEvent.click(screen.getByRole('button', { name: /Join as Judge Spectator/i }));
+    expect(client.request.rooms.joinGame).toHaveBeenCalledWith(
+      1,
+      expect.objectContaining({ gameId: 12, joinAsJudge: true, spectator: true }),
+    );
+  });
+
+  it('Spectate sends joinGame with spectator=true', () => {
+    const client = makeWebClient();
+    mockUseWebClient.mockReturnValue(client);
+    const game = makeGame({ gameId: 13, withPassword: false, spectatorsAllowed: true });
+    const room = makeRoomEntry([game]);
+    renderWithProviders(<GameSelector room={room as any} />, {
+      preloadedState: buildState(room, makeUser(), 13),
+    });
+    fireEvent.click(screen.getByRole('button', { name: /Join as Spectator/i }));
+    expect(client.request.rooms.joinGame).toHaveBeenCalledWith(
+      1,
+      expect.objectContaining({ gameId: 13, spectator: true, joinAsJudge: false }),
+    );
   });
 });

@@ -81,4 +81,60 @@ describe('FilterGamesDialog', () => {
     fireEvent.click(screen.getByRole('button', { name: /Cancel/i }));
     expect(onCancel).toHaveBeenCalledTimes(1);
   });
+
+  it('forwards the gameNameFilter typed into "Game description contains"', () => {
+    const { onSubmit } = renderDialog();
+    fireEvent.change(screen.getByLabelText(/Game description contains/i), { target: { value: 'casual' } });
+    fireEvent.click(screen.getByRole('button', { name: /Apply/i }));
+    expect(onSubmit.mock.calls[0][0].gameNameFilter).toBe('casual');
+  });
+
+  it('forwards min and max player numeric filters', () => {
+    const { onSubmit } = renderDialog();
+    fireEvent.change(screen.getByLabelText(/Min players/i), { target: { value: '2' } });
+    fireEvent.change(screen.getByLabelText(/Max players/i), { target: { value: '6' } });
+    fireEvent.click(screen.getByRole('button', { name: /Apply/i }));
+    expect(onSubmit.mock.calls[0][0].maxPlayersFilterMin).toBe(2);
+    expect(onSubmit.mock.calls[0][0].maxPlayersFilterMax).toBe(6);
+  });
+
+  it('forwards the maxGameAgeSeconds when a Max age option is picked', () => {
+    const { onSubmit } = renderDialog();
+    fireEvent.mouseDown(screen.getByLabelText(/Max age/i));
+    fireEvent.click(screen.getByRole('option', { name: /10 minutes/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Apply/i }));
+    expect(onSubmit.mock.calls[0][0].maxGameAgeSeconds).toBe(600);
+  });
+
+  it('toggles every hide-* checkbox and forwards them on Apply', () => {
+    const { onSubmit } = renderDialog();
+    fireEvent.click(screen.getByLabelText(/Hide games that started/i));
+    fireEvent.click(screen.getByLabelText(/Hide password-protected games/i));
+    fireEvent.click(screen.getByLabelText(/Hide buddies-only games/i));
+    fireEvent.click(screen.getByLabelText(/Hide games created by ignored users/i));
+    fireEvent.click(screen.getByLabelText(/Hide games not created by buddies/i));
+    fireEvent.click(screen.getByLabelText(/Hide open-decklist games/i));
+    fireEvent.click(screen.getByRole('button', { name: /Apply/i }));
+    const params = onSubmit.mock.calls[0][0];
+    expect(params.hideGamesThatStarted).toBe(true);
+    expect(params.hidePasswordProtectedGames).toBe(true);
+    expect(params.hideBuddiesOnlyGames).toBe(true);
+    expect(params.hideIgnoredUserGames).toBe(true);
+    expect(params.hideNotBuddyCreatedGames).toBe(true);
+    expect(params.hideOpenDecklistGames).toBe(true);
+  });
+
+  it('toggles every spectator-* sub-filter after enabling "spectators can watch"', () => {
+    const { onSubmit } = renderDialog();
+    fireEvent.click(screen.getByLabelText(/Show only games where spectators can watch/i));
+    fireEvent.click(screen.getByLabelText(/spectators need a password/i));
+    fireEvent.click(screen.getByLabelText(/spectators can chat/i));
+    fireEvent.click(screen.getByLabelText(/spectators see hands/i));
+    fireEvent.click(screen.getByRole('button', { name: /Apply/i }));
+    const params = onSubmit.mock.calls[0][0];
+    expect(params.showOnlyIfSpectatorsCanWatch).toBe(true);
+    expect(params.showSpectatorPasswordProtected).toBe(true);
+    expect(params.showOnlyIfSpectatorsCanChat).toBe(true);
+    expect(params.showOnlyIfSpectatorsCanSeeHands).toBe(true);
+  });
 });
