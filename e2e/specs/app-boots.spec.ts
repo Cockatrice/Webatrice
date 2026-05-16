@@ -12,7 +12,9 @@ test('the app boots and mounts the root', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (err) => errors.push(`pageerror: ${err.message}`));
   page.on('console', (msg) => {
-    if (msg.type() === 'error') errors.push(`console.error: ${msg.text()}`);
+    if (msg.type() === 'error') {
+      errors.push(`console.error: ${msg.text()}`);
+    }
   });
 
   await page.goto('/');

@@ -1,5 +1,8 @@
 import { expect, test } from '@playwright/test';
 
+import { LoginPage, RoomsPage } from '../pages';
+import { randomUser } from '../fixtures/users';
+
 // Test 2: login → join room.
 //
 // What this spec is REALLY for: prove that the real browser WebSocket can
@@ -8,19 +11,14 @@ import { expect, test } from '@playwright/test';
 // covers the *browser* WebSocket impl + page-lifecycle integration that
 // Sockatrice's suite cannot.
 //
-// Coverage today: navigates the app, waits for the login screen to render,
-// and asserts an interactive control (the "Add Host" dialog opener) exists
-// and can open the dialog. That confirms the bundle loaded, the React tree
-// is interactive, and dialog routing works in a real browser.
-//
-// TODO (extending): drive a real registration → login → join-room flow:
-//   1. Open Add Host dialog, enter `localhost`, port `4748`, save.
-//   2. Pick that host. Click Register, fill the registration form with
-//      `e2e_<rand>`, submit.
-//   3. Wait for the post-login redirect to the rooms list (`/server`).
-//   4. Click into a room, assert the Room view renders.
-// The first iteration of this spec is selector-tolerant on purpose; flesh
-// out steps 1–4 once the harness has run green at least once in CI.
+// Two checks are bundled:
+//   - mount-and-open: the login screen renders and the Add-Host dialog
+//     opens (cheap, broad regression net).
+//   - register → login → known-host persistence → re-login: drives the
+//     full flow once the broader page-object stack has been exercised at
+//     least once in CI.
+
+const E2E_HOST_LABEL = 'e2e';
 
 test('login screen mounts and exposes the add-host dialog opener', async ({ page }) => {
   await page.goto('/login');
@@ -47,4 +45,29 @@ test('login screen mounts and exposes the add-host dialog opener', async ({ page
   // up (the menu's portal uses role=listbox/presentation, not dialog, so
   // this matches the dialog uniquely).
   await expect(page.getByRole('dialog')).toBeVisible();
+});
+
+test('register, login, known-host persisted, re-login', async ({ page }) => {
+  const login = new LoginPage(page);
+  const rooms = new RoomsPage(page);
+  const user = randomUser();
+
+  await login.goto();
+  await login.addHost(E2E_HOST_LABEL, 'localhost', 4748);
+  await login.selectHost(E2E_HOST_LABEL);
+  await login.register(user.username, user.password);
+  await login.waitForRoomsView();
+  await rooms.waitForRoomList();
+
+  // Reload to confirm the known-host entry persisted to IndexedDB. After
+  // reload we land on /login again because the connection drops; the host
+  // picker must already have our label, so `selectHost` (which waits on
+  // the test-connection probe re-succeeding) suffices.
+  await page.reload();
+  await expect(login.hostPicker).toBeVisible();
+  await login.selectHost(E2E_HOST_LABEL);
+
+  await login.login(user.username, user.password);
+  await login.waitForRoomsView();
+  await rooms.waitForRoomList();
 });
