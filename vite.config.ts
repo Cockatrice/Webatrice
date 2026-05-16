@@ -95,8 +95,8 @@ export default defineConfig({
     include: ['src/**/*.spec.{ts,tsx}'],
     exclude: ['node_modules', 'build', 'integration', 'coverage'],
     isolate: true,
-    pool: 'forks',
-    maxWorkers: 4,
+    pool: 'vmThreads',
+    maxWorkers: '75%',
     testTimeout: 15000,
     coverage: {
       provider: 'v8',
