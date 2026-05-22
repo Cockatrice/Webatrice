@@ -1,9 +1,10 @@
 import { resolve } from 'node:path';
 
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 
-import { LoginPage, RoomsPage, GamePage } from '../pages';
-import { randomUser, randomSuffix } from '../fixtures/users';
+import { GamePage } from '../pages';
+import { registerAndJoinFirstRoom } from '../fixtures/flows';
+import { randomSuffix } from '../fixtures/users';
 
 // Heavy two-context flow: host creates a game, joiner joins, both load
 // the same minimal deck, both ready up, host draws + plays a card + ends
@@ -14,28 +15,7 @@ import { randomUser, randomSuffix } from '../fixtures/users';
 // Per-test timeout override (180s); do NOT raise the global timeout —
 // fast specs must keep failing fast.
 
-const E2E_HOST_LABEL = 'e2e';
 const DECK_PATH = resolve(__dirname, '..', 'fixtures', 'decks', 'forest-60.cod');
-
-async function registerAndJoinFirstRoom(page: Page): Promise<{ login: LoginPage; rooms: RoomsPage; user: ReturnType<typeof randomUser> }> {
-  const login = new LoginPage(page);
-  const rooms = new RoomsPage(page);
-  const user = randomUser();
-
-  await login.goto();
-  await login.addHost(E2E_HOST_LABEL, 'localhost', 4748);
-  await login.selectHost(E2E_HOST_LABEL);
-  await login.register(user.username, user.password);
-  await login.waitForRoomsView();
-  await rooms.waitForRoomList();
-
-  const firstRoom = page.getByRole('button', { name: /^join$/i }).first();
-  await expect(firstRoom).toBeVisible({ timeout: 15_000 });
-  await firstRoom.click();
-  await rooms.waitForGameList();
-
-  return { login, rooms, user };
-}
 
 test('two clients create+join, load decks, draw, play, end turn', async ({ browser }) => {
   test.setTimeout(180_000);

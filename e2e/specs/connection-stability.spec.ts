@@ -1,7 +1,7 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 
-import { ConnectionStatus, LoginPage, RoomsPage } from '../pages';
-import { randomUser } from '../fixtures/users';
+import { ConnectionStatus, RoomsPage } from '../pages';
+import { registerAndReachRooms } from '../fixtures/flows';
 
 // Browser-environment connection-stability suite.
 //
@@ -19,6 +19,11 @@ import { randomUser } from '../fixtures/users';
 // `selectIsConnected` is true. There is no dedicated reconnect banner —
 // indicator hidden == not LOGGED_IN.
 //
+// The SPA-navigation test also subsumes the standalone room-join/leave
+// flow (it joins the first seeded room, waits for the game list, and
+// leaves) with stronger assertions — the ConnectionStatus indicator must
+// stay green across both transitions.
+//
 // Deferred: a *backgrounded-tab* soak (real OS-level tab-away keepalive).
 // Playwright's `bringToFront()` is a no-op for `document.visibilityState`
 // in headless Chromium (microsoft/playwright#2286, #22634); switching
@@ -32,18 +37,6 @@ import { randomUser } from '../fixtures/users';
 //     the keep-alive Web Worker too, defeating any such test.
 //   - BFCache restore, `beforeunload` cleanup — need product surface that
 //     doesn't exist yet.
-
-const E2E_HOST_LABEL = 'e2e';
-
-async function registerAndReachRooms(page: Page): Promise<void> {
-  const login = new LoginPage(page);
-  const user = randomUser();
-  await login.goto();
-  await login.addHost(E2E_HOST_LABEL, 'localhost', 4748);
-  await login.selectHost(E2E_HOST_LABEL);
-  await login.register(user.username, user.password);
-  await login.waitForRoomsView();
-}
 
 test('connection holds for 60 s in the foreground', async ({ page }) => {
   test.setTimeout(120_000);

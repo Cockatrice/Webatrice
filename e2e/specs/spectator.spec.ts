@@ -1,9 +1,10 @@
 import { resolve } from 'node:path';
 
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 
-import { LoginPage, RoomsPage, GamePage } from '../pages';
-import { randomUser, randomSuffix } from '../fixtures/users';
+import { GamePage } from '../pages';
+import { registerAndJoinFirstRoom } from '../fixtures/flows';
+import { randomSuffix } from '../fixtures/users';
 
 // Three clients: host + joiner start a game, spectator joins as a
 // third context. Assertions:
@@ -12,28 +13,7 @@ import { randomUser, randomSuffix } from '../fixtures/users';
 //     `!isSpectator` in `useGame.ts`'s `deckSelectOpen` predicate).
 //   - spectator can leave; the host/joiner game stays alive.
 
-const E2E_HOST_LABEL = 'e2e';
 const DECK_PATH = resolve(__dirname, '..', 'fixtures', 'decks', 'forest-60.cod');
-
-async function registerAndJoinFirstRoom(page: Page): Promise<{ login: LoginPage; rooms: RoomsPage }> {
-  const login = new LoginPage(page);
-  const rooms = new RoomsPage(page);
-  const user = randomUser();
-
-  await login.goto();
-  await login.addHost(E2E_HOST_LABEL, 'localhost', 4748);
-  await login.selectHost(E2E_HOST_LABEL);
-  await login.register(user.username, user.password);
-  await login.waitForRoomsView();
-  await rooms.waitForRoomList();
-
-  const firstRoom = page.getByRole('button', { name: /^join$/i }).first();
-  await expect(firstRoom).toBeVisible({ timeout: 15_000 });
-  await firstRoom.click();
-  await rooms.waitForGameList();
-
-  return { login, rooms };
-}
 
 test('third client spectates a game in progress', async ({ browser }) => {
   test.setTimeout(180_000);
