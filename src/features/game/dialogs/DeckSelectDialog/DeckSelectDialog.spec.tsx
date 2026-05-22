@@ -44,7 +44,7 @@ describe('DeckSelectDialog', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
-  it('renders textarea, file picker, Submit Deck, and Ready controls when open', () => {
+  it('renders textarea, file picker, Submit Deck, Ready, and Leave Game controls when open', () => {
     renderWithProviders(
       <DeckSelectDialog isOpen gameId={1} />,
       { preloadedState: stateWith() },
@@ -55,6 +55,19 @@ describe('DeckSelectDialog', () => {
     expect(screen.getByRole('button', { name: /choose \.cod file/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /submit deck/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /^ready$/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /leave game/i })).toBeInTheDocument();
+  });
+
+  it('leaves the game when Leave Game is clicked', () => {
+    const webClient = createMockWebClient();
+    renderWithProviders(
+      <DeckSelectDialog isOpen gameId={1} />,
+      { preloadedState: stateWith(), webClient },
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /leave game/i }));
+
+    expect(webClient.request.game.leaveGame).toHaveBeenCalledWith(1);
   });
 
   it('disables Submit Deck until the textarea has non-whitespace content', () => {

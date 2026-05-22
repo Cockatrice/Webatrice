@@ -83,7 +83,13 @@ test('third client spectates a game in progress', async ({ browser }) => {
     await expect(joinerGame.container).toBeVisible();
 
     await hostGame.leaveGame();
-    await joinerGame.leaveGame();
+
+    // See game-create-and-play.spec.ts: host leaving reverts the game to
+    // lobby state and the joiner's DeckSelectDialog re-opens. The joiner
+    // leaves via that dialog's Leave Game button.
+    await joinerGame.deckSelect.waitForOpen();
+    await joinerGame.deckSelect.leaveGame();
+    await expect(joinerGame.container).toBeHidden({ timeout: 30_000 });
   } finally {
     await hostCtx.close();
     await joinerCtx.close();

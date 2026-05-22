@@ -75,3 +75,7 @@
   padding-top: 16px;
   border-top: 1px solid #e3e6eb;
 }
+
+.deck-select-dialog__leave {
+  margin-right: auto;
+}

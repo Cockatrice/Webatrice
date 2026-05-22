@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useWebClient } from '@cockatrice/datatrice/react';
 import { games } from '@cockatrice/datatrice';
 import { useAppSelector } from '@app/store';
+import { useLeaveGame } from '@app/hooks';
 
 export interface DeckSelectDialog {
   deckText: string;
@@ -16,6 +17,7 @@ export interface DeckSelectDialog {
   canToggleReady: boolean;
   handleSubmitDeck: () => void;
   handleToggleReady: () => void;
+  handleLeave: () => void;
 }
 
 const INVALID_COD_MESSAGE = 'Not a valid Cockatrice deck (.cod) file';
@@ -33,6 +35,7 @@ function validateCodXml(xml: string): boolean {
 
 export function useDeckSelectDialog(gameId: number | undefined): DeckSelectDialog {
   const webClient = useWebClient();
+  const leaveGame = useLeaveGame();
   const localPlayer = useAppSelector((state) =>
     gameId != null ? games.Selectors.getLocalPlayer(state, gameId) : undefined,
   );
@@ -103,6 +106,17 @@ export function useDeckSelectDialog(gameId: number | undefined): DeckSelectDialo
     webClient.request.game.readyStart(gameId, { ready: !isReady });
   };
 
+  // Leaving must always be possible: while this modal is open the rest of the
+  // app (LeftNav, turn-controls) is behind the MUI backdrop, so the dialog
+  // owns the only reachable exit from a game that has not yet started — or
+  // one that reverted to lobby after an opponent left.
+  const handleLeave = () => {
+    if (gameId == null) {
+      return;
+    }
+    leaveGame(gameId);
+  };
+
   return {
     deckText,
     setDeckText,
@@ -115,5 +129,6 @@ export function useDeckSelectDialog(gameId: number | undefined): DeckSelectDialo
     canToggleReady,
     handleSubmitDeck,
     handleToggleReady,
+    handleLeave,
   };
 }

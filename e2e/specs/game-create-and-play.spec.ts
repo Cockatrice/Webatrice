@@ -74,7 +74,13 @@ test('two clients create+join, load decks, draw, play, end turn', async ({ brows
     await hostGame.endTurn();
 
     await hostGame.leaveGame();
-    await joinerGame.leaveGame();
+
+    // Host leaving drops the game to one player; Servatrice reverts it to
+    // lobby state and the joiner's DeckSelectDialog re-opens (expected —
+    // mirrors desktop). The joiner leaves via that dialog's Leave Game button.
+    await joinerGame.deckSelect.waitForOpen();
+    await joinerGame.deckSelect.leaveGame();
+    await expect(joinerGame.container).toBeHidden({ timeout: 30_000 });
   } finally {
     await hostCtx.close();
     await joinerCtx.close();

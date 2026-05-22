@@ -43,6 +43,7 @@ function DeckSelectDialog({ isOpen, gameId, handleClose }: DeckSelectDialogProps
     canToggleReady,
     handleSubmitDeck,
     handleToggleReady,
+    handleLeave,
   } = useDeckSelectDialog(gameId);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -114,6 +115,14 @@ function DeckSelectDialog({ isOpen, gameId, handleClose }: DeckSelectDialogProps
         </div>
 
         <div className="deck-select-dialog__actions">
+          <Button
+            className="deck-select-dialog__leave"
+            variant="text"
+            color="error"
+            onClick={handleLeave}
+          >
+            Leave Game
+          </Button>
           <Button
             variant="outlined"
             onClick={handleSubmitDeck}

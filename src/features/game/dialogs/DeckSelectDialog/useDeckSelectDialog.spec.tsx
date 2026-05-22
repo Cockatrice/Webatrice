@@ -78,6 +78,15 @@ describe('useDeckSelectDialog', () => {
     expect(webClient.request.game.readyStart).toHaveBeenCalledWith(1, { ready: true });
   });
 
+  it('leaves the game via handleLeave', () => {
+    const { Wrapper, webClient } = setup();
+    const { result } = renderHook(() => useDeckSelectDialog(1), { wrapper: Wrapper });
+
+    act(() => result.current.handleLeave());
+
+    expect(webClient.request.game.leaveGame).toHaveBeenCalledWith(1);
+  });
+
   it('does not dispatch when gameId is undefined (no current game)', () => {
     const { Wrapper, webClient } = setup({ deckHash: 'abc123' });
     const { result } = renderHook(() => useDeckSelectDialog(undefined), { wrapper: Wrapper });
@@ -85,8 +94,10 @@ describe('useDeckSelectDialog', () => {
     act(() => result.current.setDeckText(VALID_COD_XML));
     act(() => result.current.handleSubmitDeck());
     act(() => result.current.handleToggleReady());
+    act(() => result.current.handleLeave());
 
     expect(webClient.request.game.deckSelect).not.toHaveBeenCalled();
     expect(webClient.request.game.readyStart).not.toHaveBeenCalled();
+    expect(webClient.request.game.leaveGame).not.toHaveBeenCalled();
   });
 });

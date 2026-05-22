@@ -49,11 +49,10 @@ export class GamePage {
     await expect(this.container).toBeVisible({ timeout: 30_000 });
     await expect(this.rightPanel).toBeVisible();
     await expect(this.page.locator('.game__board-inner')).toBeVisible({ timeout: 30_000 });
-    // MUI Dialog renders above the board and aria-hides its siblings, so
-    // role-based locators inside turn-controls would return nothing while
-    // DeckSelectDialog is still up. Gate on dialog dismissal (= game.started
-    // && local readyStart per useGame.ts:85-91) before allowing callers to
-    // drive endTurn/leaveGame/etc.
+    // DeckSelectDialog (a MUI modal) aria-hides its siblings while open, so
+    // locators inside turn-controls match nothing until it is dismissed. Gate
+    // on dismissal (= game.started && local readyStart, per useGame.ts
+    // deckSelectOpen) before callers drive endTurn/leaveGame.
     await expect(this.deckSelect.dialog).toBeHidden({ timeout: 30_000 });
   }
 
@@ -97,22 +96,20 @@ export class GamePage {
   }
 
   async endTurn(): Promise<void> {
-    // CSS locator + force click: DeckSelectDialog can reopen mid-game
-    // (suspected webclient state-reset) and its aria-hidden subtree masks
-    // role-based queries. CSS searches the DOM directly; force bypasses
-    // the modal backdrop's pointer-events block.
+    // Runs after waitForBoard: game started, DeckSelectDialog closed.
     const passTurn = this.turnControls.locator('button', { hasText: /pass turn/i });
     await expect(passTurn).toBeEnabled({ timeout: 10_000 });
-    await passTurn.click({ force: true });
+    await passTurn.click();
   }
 
   async leaveGame(): Promise<void> {
-    // Same CSS-locator + force-click rationale as endTurn — the in-game
-    // Leave Game button must remain clickable even if DeckSelectDialog
-    // reopens between endTurn and here.
+    // In-game leave via the turn-controls panel. Valid only while the game is
+    // still started (DeckSelectDialog closed). Once a started game drops to
+    // one player it reverts to lobby state and DeckSelectDialog re-opens over
+    // the board — the last remaining player must leave via LeftNavPage.
     const leave = this.turnControls.locator('button', { hasText: /leave game/i });
     await expect(leave).toBeEnabled({ timeout: 10_000 });
-    await leave.click({ force: true });
+    await leave.click();
     await expect(this.container).toBeHidden({ timeout: 30_000 });
   }
 

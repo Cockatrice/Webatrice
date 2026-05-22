@@ -55,4 +55,13 @@ export class DeckSelectPage {
     await expect(unready).toBeEnabled();
     await unready.click();
   }
+
+  // Leave the game from the deck-select state. The dialog's own "Leave Game"
+  // button is the only reachable exit while it is open — the LeftNav and the
+  // in-game turn-controls are behind the MUI modal backdrop.
+  async leaveGame(): Promise<void> {
+    const leave = this.dialog.getByRole('button', { name: /leave game/i });
+    await expect(leave).toBeEnabled({ timeout: 10_000 });
+    await leave.click();
+  }
 }
