@@ -28,7 +28,16 @@ jobs:
           RELEASE_TAG: ${{ inputs.tag }}
         run: |
           if [ -z "$RELEASE_TAG" ]; then
-            RELEASE_TAG="$(gh release view --json tagName --jq .tagName)"
+            # Find the most-recent @cockatrice/webatrice@<version> tag. After
+            # the monorepo migration, the registry also produces tags for
+            # @cockatrice/sockatrice@<version> + @cockatrice/datatrice@<version>;
+            # filter to webatrice-only so a sibling library release doesn't
+            # divert the deploy.
+            RELEASE_TAG="$(gh release list --limit 50 --json tagName --jq '[.[].tagName | select(startswith("@cockatrice/webatrice@"))][0]')"
+            if [ -z "$RELEASE_TAG" ] || [ "$RELEASE_TAG" = "null" ]; then
+              echo "No @cockatrice/webatrice@ release found" >&2
+              exit 1
+            fi
           fi
           echo "Deploying release \`$RELEASE_TAG\`" >> "$GITHUB_STEP_SUMMARY"
           gh release download "$RELEASE_TAG" --pattern 'webatrice-*.tar.gz' --dir .

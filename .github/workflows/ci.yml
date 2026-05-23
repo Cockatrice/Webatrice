@@ -22,6 +22,7 @@ jobs:
     outputs:
       sockatrice: ${{ steps.filter.outputs.sockatrice }}
       datatrice: ${{ steps.filter.outputs.datatrice }}
+      webatrice: ${{ steps.filter.outputs.webatrice }}
       proto: ${{ steps.filter.outputs.proto }}
       root: ${{ steps.filter.outputs.root }}
       # The path-filter step outputs literal strings "true"/"false"; both are
@@ -42,6 +43,9 @@ jobs:
             datatrice:
               - 'packages/datatrice/**'
               - '!packages/datatrice/.github/instructions/**'
+            webatrice:
+              - 'packages/webatrice/**'
+              - '!packages/webatrice/.github/instructions/**'
             proto:
               - 'vendor/cockatrice/libcockatrice_protocol/**'
               - 'packages/sockatrice/buf.gen.yaml'
@@ -84,7 +88,7 @@ jobs:
         run: npx tsc -b packages/sockatrice/tsconfig.build.json packages/datatrice/tsconfig.build.json
 
       - name: tsc --noEmit (app)
-        run: npx tsc --noEmit
+        run: npx tsc --noEmit -p packages/webatrice/tsconfig.json
 
   # One lint pass per package. Each package keeps its own ESLint config and
   # boundaries graph; we just invoke them serially. The library dist/ outputs
@@ -122,7 +126,7 @@ jobs:
         run: npm run -w @cockatrice/datatrice lint
 
       - name: Lint app
-        run: npm run lint
+        run: npm run -w @cockatrice/webatrice lint
 
   # Downstream-aware unit tests: a sockatrice change runs all three suites,
   # a datatrice change runs datatrice + app, an app-only change runs just app.
@@ -160,7 +164,7 @@ jobs:
         run: npm run -w @cockatrice/datatrice test:coverage
 
       - name: App unit tests
-        run: npm run test:coverage
+        run: npm run -w @cockatrice/webatrice test:coverage
 
   # Same downstream-aware gating for integration suites.
   integration:
@@ -197,7 +201,7 @@ jobs:
         run: npm run -w @cockatrice/datatrice test:integration:coverage
 
       - name: App integration
-        run: npm run test:integration:coverage
+        run: npm run -w @cockatrice/webatrice test:integration:coverage
 
   # Library tsup builds + vite app build. Single node version (build is slow
   # and the matrix would mostly catch the same issues as typecheck).
@@ -230,7 +234,7 @@ jobs:
         run: |
           [ -d packages/sockatrice/dist ] || npm run -w @cockatrice/sockatrice build
           [ -d packages/datatrice/dist ] || npm run -w @cockatrice/datatrice build
-          npm run build
+          npm run -w @cockatrice/webatrice build
 
   # Sockatrice's WebSocket-level Docker e2e — only when sockatrice or the
   # proto schema changed (expensive).
@@ -297,7 +301,7 @@ jobs:
         run: npm clean-install
 
       - name: Install Playwright browsers
-        run: npm run test:e2e:install-browsers:linux
+        run: npm run -w @cockatrice/webatrice test:e2e:install-browsers:linux
 
       - name: Build libraries (vite resolves @cockatrice/* via dist/)
         run: |
@@ -305,17 +309,17 @@ jobs:
           npm run -w @cockatrice/datatrice build
 
       - name: Build app
-        run: npm run build
+        run: npm run -w @cockatrice/webatrice build
 
       - name: Start Servatrice (pulls ghcr.io/cockatrice/servatrice)
-        run: npm run test:e2e:up
+        run: npm run -w @cockatrice/webatrice test:e2e:up
 
       - name: Run Playwright tests
-        run: npm run test:e2e:run
+        run: npm run -w @cockatrice/webatrice test:e2e:run
 
       - name: Tear down
         if: always()
-        run: npm run test:e2e:down
+        run: npm run -w @cockatrice/webatrice test:e2e:down
 
       - name: Dump container logs on failure
         if: failure()

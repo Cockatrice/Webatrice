@@ -1,14 +1,20 @@
 name: Release
 
-# Two release flows in one workflow:
-#   - libraries: Changesets-driven publishing of @cockatrice/sockatrice +
-#     @cockatrice/datatrice to GitHub Packages. Runs automatically on every
-#     push to master (opens/updates a "Version Packages" PR when changesets
-#     are pending; publishes when that PR is merged). Can also be invoked
-#     manually with `target=libraries`.
-#   - app: manual Webatrice app release. Bumps the root package.json,
-#     builds, packages the build/ directory as a tarball, and creates a
-#     GitHub Release that deploy.yml then consumes.
+# Two release flows in one workflow, both Changesets-driven:
+#
+#   - libraries: Publishes @cockatrice/sockatrice + @cockatrice/datatrice to
+#     GitHub Packages. Runs automatically on every push to master (opens or
+#     updates a "Version Packages" PR when changesets are pending; publishes
+#     when that PR is merged). Can also be invoked manually with
+#     `target=libraries` for a re-run.
+#
+#   - app: Builds + tarballs @cockatrice/webatrice and creates a GitHub
+#     Release that deploy.yml then consumes. Webatrice is private (not
+#     published to a registry), but Changesets versions its package.json via
+#     `privatePackages.version: true` and tags it via `privatePackages.tag:
+#     true`. This job reads that version, checks if the matching tag/release
+#     already exists, and builds + releases when fresh. Runs on push to
+#     master (idempotent — exits early when nothing to release) or manually.
 
 on:
   push:
@@ -23,15 +29,6 @@ on:
         options:
           - libraries
           - app
-      bump:
-        description: 'App version bump (only used when target=app)'
-        required: false
-        default: 'patch'
-        type: choice
-        options:
-          - patch
-          - minor
-          - major
 
 permissions:
   contents: read
@@ -75,7 +72,10 @@ jobs:
 
   app:
     name: Build & release Webatrice app
-    if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.target == 'app' && github.ref == 'refs/heads/master' }}
+    needs: [libraries]
+    if: |
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.target == 'app') ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/master')
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -87,7 +87,30 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
+      # Read the Webatrice version from its package.json (Changesets sets it
+      # via the Version Packages PR merge). Check whether a release at that
+      # tag already exists — if so, skip; this keeps the push-trigger
+      # idempotent across master pushes that don't bump Webatrice.
+      - name: Check if Webatrice needs release
+        id: check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION=$(node -p "require('./packages/webatrice/package.json').version")
+          TAG="@cockatrice/webatrice@${VERSION}"
+          echo "Webatrice version is ${VERSION}; checking for existing release ${TAG}"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release already exists; skipping"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Release needed"
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+            echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+            echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Setup Node
+        if: steps.check.outputs.skip != 'true'
         uses: actions/setup-node@v6
         with:
           node-version: 24
@@ -95,54 +118,36 @@ jobs:
           cache-dependency-path: package-lock.json
 
       - name: Install dependencies
+        if: steps.check.outputs.skip != 'true'
         run: npm clean-install
 
-      - name: Configure git identity
+      - name: Build libraries (vite resolves @cockatrice/* via dist/)
+        if: steps.check.outputs.skip != 'true'
         run: |
-          git config user.name  "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-      # Bump before prebuild: prebuild regenerates the tracked src/i18n-default.json
-      # (OS-dependent key order), which would otherwise leave npm version a dirty tree.
-      - name: Bump version
-        id: bump
-        run: |
-          NEW_VERSION=$(npm version ${{ inputs.bump }} -m "chore(release): %s")
-          echo "version=${NEW_VERSION}" >> "$GITHUB_OUTPUT"
-
-      - name: Prebuild
-        run: npm run prebuild
-
-      - name: Lint
-        run: npm run lint
-
-      - name: Test with coverage
-        run: npm run test:coverage
-
-      - name: Integration test with coverage
-        run: npm run test:integration:coverage
+          npm run -w @cockatrice/sockatrice build
+          npm run -w @cockatrice/datatrice build
 
       - name: Build app
-        run: npm run build
+        if: steps.check.outputs.skip != 'true'
+        run: npm run -w @cockatrice/webatrice build
 
       - name: Stamp commit SHA into build
-        run: echo "$GITHUB_SHA" > build/.deploy-sha
+        if: steps.check.outputs.skip != 'true'
+        run: echo "$GITHUB_SHA" > packages/webatrice/build/.deploy-sha
 
       - name: Package build directory
+        if: steps.check.outputs.skip != 'true'
         id: package
         run: |
-          VERSION="${{ steps.bump.outputs.version }}"      # e.g. v1.0.1
-          ARCHIVE="webatrice-${VERSION#v}.tar.gz"          # e.g. webatrice-1.0.1.tar.gz
-          tar -czf "$ARCHIVE" build
+          ARCHIVE="webatrice-${{ steps.check.outputs.version }}.tar.gz"
+          tar -czf "$ARCHIVE" -C packages/webatrice build
           echo "archive=${ARCHIVE}" >> "$GITHUB_OUTPUT"
 
-      - name: Push commit and tag
-        run: git push --follow-tags
-
       - name: Create GitHub Release
+        if: steps.check.outputs.skip != 'true'
         uses: softprops/action-gh-release@v3
         with:
-          tag_name: ${{ steps.bump.outputs.version }}
-          name: ${{ steps.bump.outputs.version }}
+          tag_name: ${{ steps.check.outputs.tag }}
+          name: ${{ steps.check.outputs.tag }}
           generate_release_notes: true
           files: ${{ steps.package.outputs.archive }}

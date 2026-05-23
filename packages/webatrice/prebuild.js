@@ -10,7 +10,7 @@ const i18nDefaultFile = `${ROOT_DIR}/i18n-default.json`;
 const serverPropsFile = `${ROOT_DIR}/server-props.json`;
 
 const sharedFiles = [
-  ['vendor/cockatrice/cockatrice/resources/countries', `${ROOT_DIR}/images/countries`],
+  ['../../vendor/cockatrice/cockatrice/resources/countries', `${ROOT_DIR}/images/countries`],
 ];
 
 const i18nFileRegex = /\.i18n\.json$/;

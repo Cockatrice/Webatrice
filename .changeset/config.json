@@ -7,9 +7,10 @@
   "access": "public",
   "baseBranch": "master",
   "updateInternalDependencies": "minor",
+  "linked": [["@cockatrice/sockatrice", "@cockatrice/datatrice", "@cockatrice/webatrice"]],
   "ignore": [],
   "privatePackages": {
-    "version": false,
-    "tag": false
+    "version": true,
+    "tag": true
   }
 }
