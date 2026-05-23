@@ -42,16 +42,19 @@ jobs:
       contents: write
       pull-requests: write
       packages: write
+      id-token: write
     steps:
       - name: Checkout (with submodules)
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
         with:
           fetch-depth: 0
           submodules: true
-          token: ${{ secrets.GITHUB_TOKEN }}
+          # CHANGESETS_TOKEN (PAT) lets the "Version Packages" PR trigger CI on
+          # itself; default GITHUB_TOKEN cannot. See workflows-audit.md (release-1).
+          token: ${{ secrets.CHANGESETS_TOKEN }}
 
       - name: Setup Node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e  # v6.4.0
         with:
           node-version: 24
           cache: npm
@@ -63,12 +66,16 @@ jobs:
         run: npm clean-install
 
       - name: Create Release PR or publish to GitHub Packages
-        uses: changesets/action@v1
+        uses: changesets/action@63a615b9cd06ba9a3e6d13796c7fbcb080a60a0b  # v1.8.0
         with:
           publish: npx changeset publish
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # CHANGESETS_TOKEN for opening/updating the Version Packages PR.
+          GITHUB_TOKEN: ${{ secrets.CHANGESETS_TOKEN }}
+          # Repo-scoped GITHUB_TOKEN for publishing to GH Packages.
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Sigstore provenance attestation on the published tarballs.
+          NPM_CONFIG_PROVENANCE: true
 
   app:
     name: Build & release Webatrice app
@@ -77,11 +84,14 @@ jobs:
       (github.event_name == 'workflow_dispatch' && github.event.inputs.target == 'app') ||
       (github.event_name == 'push' && github.ref == 'refs/heads/master')
     runs-on: ubuntu-latest
+    concurrency:
+      group: release-app
+      cancel-in-progress: false
     permissions:
       contents: write
     steps:
       - name: Checkout (with submodules)
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
         with:
           submodules: recursive
           fetch-depth: 0
@@ -111,7 +121,7 @@ jobs:
 
       - name: Setup Node
         if: steps.check.outputs.skip != 'true'
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e  # v6.4.0
         with:
           node-version: 24
           cache: npm
@@ -145,7 +155,7 @@ jobs:
 
       - name: Create GitHub Release
         if: steps.check.outputs.skip != 'true'
-        uses: softprops/action-gh-release@v3
+        uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda  # v3.0.0
         with:
           tag_name: ${{ steps.check.outputs.tag }}
           name: ${{ steps.check.outputs.tag }}

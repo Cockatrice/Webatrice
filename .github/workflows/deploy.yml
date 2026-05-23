@@ -53,7 +53,7 @@ jobs:
           echo "Deploying commit \`$sha\` to webatrice.cockatrice.us" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Set up SSH
-        uses: shimataro/ssh-key-action@v2
+        uses: shimataro/ssh-key-action@87a8f067114a8ce263df83e9ed5c849953548bc3  # v2.8.1
         with:
           key: ${{ secrets.RR_BETA_SERVER_PRIVATE_SSH_KEY }}
           known_hosts: ${{ secrets.RR_BETA_SERVER_KNOWN_HOSTS }}

@@ -10,6 +10,10 @@ on:
       - '.tx/**'
       - '.github/workflows/translations-pull.yml'
 
+permissions:
+  contents: write
+  pull-requests: write
+
 jobs:
   translations:
     # Do not run the scheduled workflow on forks
@@ -25,10 +29,11 @@ jobs:
       - name: Pull translated strings from Transifex
         uses: transifex/cli-action@v2
         with:
-          # used config file: https://github.com/Cockatrice/Webatrice/blob/master/.tx/config
+          # used config file: https://github.com/Cockatrice/Webatrice/blob/master/packages/webatrice/.tx/config
           # https://github.com/transifex/cli#pulling-files-from-transifex
+          # --root-dir points tx at packages/webatrice/.tx/config (the action runs from repo root)
           token: ${{ secrets.TX_TOKEN }}
-          args: pull --force --all
+          args: --root-dir packages/webatrice pull --force --all
 
       - name: Create pull request
         if: github.event_name != 'pull_request'
@@ -36,7 +41,7 @@ jobs:
         uses: peter-evans/create-pull-request@v8
         with:
           add-paths: |
-            public/locales/*/translation.json
+            packages/webatrice/public/locales/*/translation.json
           commit-message: Update translation files
           # author is the owner of the commit
           author: github-actions <github-actions@github.com>
