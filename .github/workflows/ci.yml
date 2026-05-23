@@ -336,5 +336,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: playwright-report
-          path: playwright-report/
+          path: |
+            packages/webatrice/playwright-report/
+            packages/webatrice/test-results/
           retention-days: 7

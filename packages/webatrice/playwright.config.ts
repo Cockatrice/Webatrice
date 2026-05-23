@@ -27,7 +27,7 @@ export default defineConfig({
   fullyParallel: false, // share one Servatrice instance
   retries: process.env.CI ? 1 : 0,
   workers: 1,
-  reporter: process.env.CI ? [['github'], ['list']] : 'list',
+  reporter: process.env.CI ? [['github'], ['list'], ['html', { open: 'never' }]] : 'list',
   globalSetup: './e2e/global-setup.ts',
   use: {
     baseURL: BASE_URL,
