@@ -20,7 +20,8 @@ export function registerRoomsListeners(mw: ListenerMiddlewareInstance<unknown>):
         const rawGametypeList = rawRoom.gametypeList ?? [];
 
         if (existing) {
-          // Sparse mergeSetFields outside the reducer (Immer doesn't draft protobuf-es). See .github/instructions/datatrice-store.instructions.md#reducer-author-hazards.
+          // Sparse mergeSetFields outside the reducer (Immer doesn't draft protobuf-es).
+          // See .github/instructions/datatrice-store.instructions.md#reducer-author-hazards.
           const nextInfo = { ...existing.info } as ServerInfo_Room;
           mergeSetFields(ServerInfo_RoomSchema, nextInfo, rawRoom);
           const nextGametypeMap = rawGametypeList.length > 0

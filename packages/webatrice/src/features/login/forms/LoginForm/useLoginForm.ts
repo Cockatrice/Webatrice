@@ -37,7 +37,8 @@ export function useLoginFormBody({ setValue, getValues }: UseLoginFormBodyArgs):
 
   const togglePasswordLabel = (on: boolean) => setUseStoredPasswordLabel(on);
 
-  // @critical Host-sync touches persisted autoConnect ONLY when switching to a proven-naked host (supportsHashedPassword === false). `undefined` capability leaves the preference alone.
+  // @critical Host-sync touches persisted autoConnect ONLY when switching to a proven-naked host
+  // (supportsHashedPassword === false). `undefined` capability leaves the preference alone.
   const onSelectedHostChange = (host: HostDTO | undefined) => {
     if (!host) {
       return;

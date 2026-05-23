@@ -32,11 +32,17 @@ export class WebSocketService {
   private lastProtocol: string | null = null;
 
   private intentionalDisconnect = false;
-  /** True while `connect()` cycles a prior socket out. See .github/instructions/sockatrice-transport.instructions.md#websocket-lifecycle. */
+  /**
+   * True while `connect()` cycles a prior socket out.
+   * See .github/instructions/sockatrice-transport.instructions.md#websocket-lifecycle.
+   */
   private retiringForReconnect = false;
   private reconnectAttempts = 0;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
-  /** True after first successful `onopen`; gates reconnect. See .github/instructions/sockatrice-transport.instructions.md#websocket-lifecycle. */
+  /**
+   * True after first successful `onopen`; gates reconnect.
+   * See .github/instructions/sockatrice-transport.instructions.md#websocket-lifecycle.
+   */
   private hasEverOpened = false;
 
   constructor(config: WebSocketServiceConfig) {
@@ -57,7 +63,8 @@ export class WebSocketService {
       protocol = 'ws';
     }
 
-    // Retire prior socket; retiringForReconnect suppresses orphan reconnect+DISCONNECTED. See .github/instructions/sockatrice-transport.instructions.md#websocket-lifecycle.
+    // Retire prior socket; retiringForReconnect suppresses orphan reconnect+DISCONNECTED.
+    // See .github/instructions/sockatrice-transport.instructions.md#websocket-lifecycle.
     this.retiringForReconnect = true;
     this.clearReconnectTimer();
     this.closeActiveSocket();
@@ -124,7 +131,8 @@ export class WebSocketService {
         return;
       }
 
-      // Orphan socket retired by fresh connect(); skip status emission. See .github/instructions/sockatrice-transport.instructions.md#websocket-lifecycle.
+      // Orphan socket retired by fresh connect(); skip status emission.
+      // See .github/instructions/sockatrice-transport.instructions.md#websocket-lifecycle.
       if (this.retiringForReconnect) {
         this.hasReportedError = false;
         return;
@@ -205,7 +213,8 @@ export class WebSocketService {
 
   private closeActiveSocket(): void {
     if (this.socket) {
-      // Detach onmessage only; keep onopen/onclose/onerror. See .github/instructions/sockatrice-transport.instructions.md#websocket-lifecycle.
+      // Detach onmessage only; keep onopen/onclose/onerror.
+      // See .github/instructions/sockatrice-transport.instructions.md#websocket-lifecycle.
       this.socket.onmessage = null;
       this.socket.close();
       this.socket = null;

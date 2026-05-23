@@ -78,7 +78,8 @@ export const primitiveReducers = {
     card: ServerInfo_Card;
   }>>,
 
-  // Cross-player TABLE→TABLE gap-fill; rewrites child parent pointers. See .github/instructions/datatrice-game.instructions.md#servatrice-game-event-quirks.
+  // Cross-player TABLE→TABLE gap-fill; rewrites child parent pointers.
+  // See .github/instructions/datatrice-game.instructions.md#servatrice-game-event-quirks.
   cardAttachmentReparented: ((state, action) => {
     const { gameId, fromPlayerId, fromCardId, toPlayerId, toCardId } = action.payload;
     const game = state.games[gameId];
@@ -116,7 +117,8 @@ export const primitiveReducers = {
     toCardId: number;
   }>>,
 
-  // Reassign byId[cardId] to a fresh object; Immer doesn't draft protobuf-es. See .github/instructions/datatrice-store.instructions.md#reducer-author-hazards.
+  // Reassign byId[cardId] to a fresh object; Immer doesn't draft protobuf-es.
+  // See .github/instructions/datatrice-store.instructions.md#reducer-author-hazards.
   cardFieldsUpdated: ((state, action) => {
     const { gameId, playerId, zoneName, cardId, fields } = action.payload;
     const zone = state.games[gameId]?.players[playerId]?.zones[zoneName];

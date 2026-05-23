@@ -31,7 +31,8 @@ export async function serverIdentification(info: Event_ServerIdentification): Pr
       SessionCommands.updateStatus(StatusEnum.LOGGING_IN, 'Logging In...');
       if (getPasswordSalt) {
         SessionCommands.requestPasswordSalt(rest,
-          // Empty salt → fall through to plain password. See .github/instructions/sockatrice.instructions.md#protocol-version-and-feature-flags.
+          // Empty salt → fall through to plain password.
+          // See .github/instructions/sockatrice.instructions.md#protocol-version-and-feature-flags.
           async (salt) => {
             if (salt) {
               const hashedPassword = rest.hashedPassword || await hashPassword(salt, password);

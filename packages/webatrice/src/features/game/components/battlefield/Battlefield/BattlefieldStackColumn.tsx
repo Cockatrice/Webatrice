@@ -17,7 +17,8 @@ const EMPTY_ATTACHMENTS: games.AttachedChild[] = [];
 
 const round = (n: number): number => Math.round(n * 100) / 100;
 
-// Footprint of a stack column in nominal pixels. See .github/instructions/webatrice-game.instructions.md#attachment-stack for the N>0 parent shift rule.
+// Footprint of a stack column in nominal pixels.
+// See .github/instructions/webatrice-game.instructions.md#attachment-stack for the N>0 parent shift rule.
 function computeStackFootprint(
   cards: ServerInfo_Card[],
   attachmentsByParent: ReadonlyMap<number, games.AttachedChild[]>,

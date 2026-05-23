@@ -4,7 +4,8 @@ import { Enriched, ZoneEntry } from '@cockatrice/datatrice';
 import { CardDTO } from '../../../services/dexie/DexieDTOs/CardDTO';
 import { MAX_SUBPOS, applyInvertY, clampRow } from '../components/battlefield/Battlefield/gridMath';
 
-// tableRow=3 → stack; 0/1/2 → battlefield with per-row default. tableZone picks fresh column (undefined → col 0). isInverted = useBattlefield's flag.
+// tableRow=3 → stack; 0/1/2 → battlefield with per-row default.
+// tableZone picks fresh column (undefined → col 0). isInverted = useBattlefield's flag.
 export async function playCardViaTableRow({
   webClient,
   gameId,

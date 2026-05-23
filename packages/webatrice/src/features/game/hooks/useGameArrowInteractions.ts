@@ -173,7 +173,8 @@ export function useGameArrowInteractions({
       ) {
         return;
       }
-      // Local-hand arrow → non-hand auto-plays the card. See .github/instructions/webatrice-game.instructions.md#servatrice-game-event-quirks.
+      // Local-hand arrow → non-hand auto-plays the card.
+      // See .github/instructions/webatrice-game.instructions.md#servatrice-game-event-quirks.
       if (
         drag.sourceZone === Enriched.ZoneName.HAND &&
         drag.sourcePlayerId === game?.localPlayerId &&
@@ -317,7 +318,8 @@ export function useGameArrowInteractions({
         setPendingArrow(null);
         return;
       }
-      // Local-hand arrow → non-hand auto-plays the card. See .github/instructions/webatrice-game.instructions.md#servatrice-game-event-quirks.
+      // Local-hand arrow → non-hand auto-plays the card.
+      // See .github/instructions/webatrice-game.instructions.md#servatrice-game-event-quirks.
       if (
         pendingArrow.sourceZone === Enriched.ZoneName.HAND &&
         pendingArrow.sourcePlayerId === game?.localPlayerId &&

@@ -119,7 +119,8 @@ export function useGameDnd({ gameId, onDragStart }: UseGameDndArgs): GameDnd {
         gridX = resolved;
       }
 
-      // targetRow is already the logical wire y; no re-inversion here. See .github/instructions/webatrice-game.instructions.md#battlefield-grid.
+      // targetRow is already the logical wire y; no re-inversion here.
+      // See .github/instructions/webatrice-game.instructions.md#battlefield-grid.
       webClient.request.game.moveCard(gameId, {
         startPlayerId: source.sourcePlayerId,
         startZone: source.sourceZone,

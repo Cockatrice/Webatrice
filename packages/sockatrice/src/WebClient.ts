@@ -40,7 +40,8 @@ export class WebClient {
     return WebClient._instance;
   }
 
-  // Sanctioned reset path: tests, SPA hot-reload, explicit logout. See .github/instructions/sockatrice-transport.instructions.md#webclient-lifecycle.
+  // Sanctioned reset path: tests, SPA hot-reload, explicit logout.
+  // See .github/instructions/sockatrice-transport.instructions.md#webclient-lifecycle.
   public static dispose(): void {
     if (!WebClient._instance) {
       return;
@@ -122,7 +123,8 @@ export class WebClient {
     socket.binaryType = 'arraybuffer';
     this.testSocket = socket;
 
-    // Wait for Event_ServerIdentification; resolve bitmask to a boolean. See .github/instructions/sockatrice-transport.instructions.md#webclient-lifecycle.
+    // Wait for Event_ServerIdentification; resolve bitmask to a boolean.
+    // See .github/instructions/sockatrice-transport.instructions.md#webclient-lifecycle.
     let resolved = false;
     const resolve = (ok: boolean, supportsHashedPassword = false): void => {
       if (resolved) {

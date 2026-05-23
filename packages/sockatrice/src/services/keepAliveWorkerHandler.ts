@@ -1,4 +1,5 @@
-// Pure handler factory; bootstrap stays in keepAliveWorker.ts. See .github/instructions/sockatrice-transport.instructions.md#keep-alive-worker.
+// Pure handler factory; bootstrap stays in keepAliveWorker.ts.
+// See .github/instructions/sockatrice-transport.instructions.md#keep-alive-worker.
 
 export type WorkerMessage =
   | { type: 'start'; interval: number }

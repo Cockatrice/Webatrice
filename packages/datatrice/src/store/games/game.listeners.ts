@@ -131,7 +131,8 @@ export function registerGameListeners(mw: ListenerMiddlewareInstance<unknown>): 
       const wasStarted = game.started;
 
       if (data.playerList?.length > 0) {
-      // gameStateChanged resync: carry prior userInfo forward. See .github/instructions/datatrice-game.instructions.md#servatrice-game-event-quirks.
+      // gameStateChanged resync: carry prior userInfo forward.
+      // See .github/instructions/datatrice-game.instructions.md#servatrice-game-event-quirks.
         const previous = game.players;
         const next = normalizePlayers(data.playerList);
         for (const idStr of Object.keys(next)) {
@@ -281,7 +282,8 @@ export function registerGameListeners(mw: ListenerMiddlewareInstance<unknown>): 
       }
       const sourceCardName = card.name;
 
-      // Unattach detected via empty targetZone; explicit sentinels. See .github/instructions/datatrice-game.instructions.md#servatrice-game-event-quirks.
+      // Unattach detected via empty targetZone; explicit sentinels.
+      // See .github/instructions/datatrice-game.instructions.md#servatrice-game-event-quirks.
       const isUnattach = !targetZone;
       const fields: Partial<ServerInfo_Card> = isUnattach
         ? { attachPlayerId: -1, attachZone: '', attachCardId: -1 }
@@ -322,7 +324,8 @@ export function registerGameListeners(mw: ListenerMiddlewareInstance<unknown>): 
         }));
       }
 
-      // Opponent draws: bump cardCount for hidden slots. See .github/instructions/datatrice-game.instructions.md#servatrice-game-event-quirks.
+      // Opponent draws: bump cardCount for hidden slots.
+      // See .github/instructions/datatrice-game.instructions.md#servatrice-game-event-quirks.
       if (drawCount > cards.length) {
         api.dispatch(Actions.zoneCardCountAdjusted({
           gameId, playerId, zoneName: Enriched.ZoneName.HAND,

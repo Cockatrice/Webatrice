@@ -43,7 +43,8 @@ export function useGame(): Game {
 
   const boardRef = useRef<HTMLDivElement>(null);
   const cardRegistry = useMemo(() => createCardRegistry(), []);
-  // 8px activation distance; must match ARROW_DRAG_THRESHOLD_PX. See .github/instructions/webatrice-game.instructions.md#pointer--click-vs-drag.
+  // 8px activation distance; must match ARROW_DRAG_THRESHOLD_PX.
+  // See .github/instructions/webatrice-game.instructions.md#pointer--click-vs-drag.
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
     useSensor(KeyboardSensor),
@@ -81,7 +82,8 @@ export function useGame(): Game {
     !current.isJudge &&
     !localPlayer.properties.readyStart;
 
-  // Spectator hand visibility gated on spectators_omniscient. See .github/instructions/webatrice-game.instructions.md#servatrice-game-event-quirks.
+  // Spectator hand visibility gated on spectators_omniscient.
+  // See .github/instructions/webatrice-game.instructions.md#servatrice-game-event-quirks.
   const showHandZone =
     game != null &&
     slots.slotAPlayerId != null &&

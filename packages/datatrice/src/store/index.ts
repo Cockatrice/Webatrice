@@ -12,7 +12,8 @@ export * as server from './server';
 export * as rooms from './rooms';
 export * as games from './games';
 
-// Flat type re-exports — sidestep tsup's namespace-of-types limitation. See .github/instructions/datatrice-store.instructions.md#slice-authoring.
+// Flat type re-exports — sidestep tsup's namespace-of-types limitation.
+// See .github/instructions/datatrice-store.instructions.md#slice-authoring.
 export type { GamesState } from './games/game.interfaces';
 export type { RoomsState, GameFilters, JoinGameError } from './rooms/rooms.interfaces';
 export type {
