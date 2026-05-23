@@ -23,7 +23,7 @@ npm install
 npm start
 ```
 
-`npm install` initializes the `vendor/cockatrice` git submodule (sparse-checked-out to country-flag SVGs) via the `prepare` hook. `npm start` boots the Vite dev server and opens a browser tab at [http://localhost:5173](http://localhost:5173) automatically (configured via `server.open` in `vite.config.ts`). The first start runs `prebuild.js` via the `prestart` hook to copy country flags and merge i18n catalogs, so give it a moment.
+`npm install` initializes the `vendor/cockatrice` git submodule (sparse-checked-out to `libcockatrice_protocol/` for Sockatrice's proto generation) via the `prepare` hook. `servatrice.sql` no longer lives in the submodule — the e2e stack extracts it from the pinned `ghcr.io/cockatrice/servatrice` image at compose time. `npm start` boots the Vite dev server and opens a browser tab at [http://localhost:5173](http://localhost:5173) automatically (configured via `server.open` in `vite.config.ts`). The first start runs `prebuild.js` via the `prestart` hook to merge i18n catalogs, so give it a moment.
 
 ## Scripts
 

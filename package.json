@@ -1,5 +1,5 @@
 {
-  "name": "cockatrice-web-stack",
+  "name": "webatrice-mono-repo",
   "version": "0.0.0",
   "private": true,
   "workspaces": [
@@ -12,12 +12,13 @@
     "lint": "npm run lint --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
     "test:integration": "npm run test:integration --workspaces --if-present",
+    "test:e2e": "npm run test:e2e --workspaces --if-present",
     "golden": "npm run golden --workspaces --if-present",
     "diagram": "npm run diagram:simple && npm run diagram:detailed && npm run diagram:flow",
     "diagram:simple": "npx -y -p @mermaid-js/mermaid-cli -p puppeteer mmdc -i architecture/simple.mmd -o architecture/simple.png -b white -s 2",
     "diagram:detailed": "npx -y -p @mermaid-js/mermaid-cli -p puppeteer mmdc -i architecture/detailed.mmd -o architecture/detailed.png -b white -s 2",
     "diagram:flow": "npx -y -p @mermaid-js/mermaid-cli -p puppeteer mmdc -i architecture/flow.mmd -o architecture/flow.png -b white -s 2",
-    "assets:submodule": "git submodule update --init && git -C vendor/cockatrice sparse-checkout set --no-cone libcockatrice_protocol/ servatrice/servatrice.sql",
+    "assets:submodule": "git submodule update --init && git -C vendor/cockatrice sparse-checkout set --no-cone libcockatrice_protocol/",
     "prepare": "npm run assets:submodule && npm run -w @cockatrice/sockatrice proto:generate && npm run -w @cockatrice/webatrice prebuild && husky"
   },
   "devDependencies": {

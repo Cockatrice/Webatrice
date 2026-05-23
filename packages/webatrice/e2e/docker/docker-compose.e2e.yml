@@ -6,14 +6,15 @@
 #
 # Servatrice is consumed as the published `ghcr.io/cockatrice/servatrice`
 # image (built and pushed by Cockatrice's docker-release.yml on every
-# tagged release). No C++ source build, no Cockatrice submodule materialization
-# beyond the narrow sparse-checkout below.
+# tagged release). No C++ source build, no submodule dependency for the
+# e2e stack.
 #
-# `servatrice.sql` is sourced from the vendored Cockatrice submodule at
-# vendor/cockatrice/servatrice/servatrice.sql, narrow-materialized via
-# sparse-checkout by `npm run assets:submodule` (invoked at install time
-# through the `prepare` hook). The submodule's gitlink is pinned to the
-# same Cockatrice release tag as the servatrice image below.
+# `servatrice.sql` is sourced from the servatrice image itself: `make install`
+# in Cockatrice's Dockerfile places it at /usr/local/share/servatrice/
+# servatrice.sql. The `servatrice-sql` sidecar below copies it into a
+# named volume that MySQL mounts at /docker-entrypoint-initdb.d/ so the
+# schema is loaded on first start. The image tag is the single source of
+# truth for the SQL schema version — binary and schema can't drift.
 #
 # `name:` namespaces the Compose project so that Webatrice's e2e stack
 # does not collide with Sockatrice's (which uses the same default project
@@ -22,6 +23,15 @@
 name: webatrice-e2e
 
 services:
+  servatrice-sql:
+    image: ghcr.io/cockatrice/servatrice:2026-05-08-Release-3.0.0
+    pull_policy: always
+    entrypoint: ["/bin/sh", "-c"]
+    command: ["cp /usr/local/share/servatrice/servatrice.sql /init/servatrice.sql"]
+    volumes:
+      - servatrice_sql:/init
+    restart: "no"
+
   mysql:
     image: mysql:8
     command: --sql_mode=
@@ -30,8 +40,11 @@ services:
       MYSQL_DATABASE: servatrice
       MYSQL_USER: servatrice
       MYSQL_PASSWORD: password
+    depends_on:
+      servatrice-sql:
+        condition: service_completed_successfully
     volumes:
-      - ../../vendor/cockatrice/servatrice/servatrice.sql:/docker-entrypoint-initdb.d/servatrice.sql:ro
+      - servatrice_sql:/docker-entrypoint-initdb.d:ro
       - webatrice_e2e_mysql:/var/lib/mysql
 
   servatrice:
@@ -54,3 +67,4 @@ services:
 
 volumes:
   webatrice_e2e_mysql:
+  servatrice_sql:
