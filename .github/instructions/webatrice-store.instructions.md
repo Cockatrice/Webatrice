@@ -1,12 +1,12 @@
 ---
-applyTo: "src/store/**"
+applyTo: "packages/webatrice/src/store/**"
 ---
 
 # Store-layer instructions
 
-Applies in addition to [root.instructions.md](root.instructions.md) when editing `src/store/`.
+Applies in addition to [webatrice.instructions.md](webatrice.instructions.md) when editing `packages/webatrice/src/store/`.
 
-Webatrice's `src/store/` holds exactly two host-level extension slices: `action` and `shortcuts`. They mount on Datatrice's root reducer via `<DatatriceProvider extensions={extensions}>` from [src/store/index.ts](../../src/store/index.ts). The `server`, `rooms`, and `games` slices live in **Datatrice** — consume via `import { server, rooms, games } from '@cockatrice/datatrice'`.
+Webatrice's `src/store/` holds exactly two host-level extension slices: `action` and `shortcuts`. They mount on Datatrice's root reducer via `<DatatriceProvider extensions={extensions}>` from [src/store/index.ts](../../packages/webatrice/src/store/index.ts). The `server`, `rooms`, and `games` slices live in **Datatrice** — consume via `import { server, rooms, games } from '@cockatrice/datatrice'`.
 
 ## Slices owned by Webatrice
 
@@ -21,4 +21,4 @@ Reducer-author hazards (proto3 unset, Immer doesn't draft protobuf-es messages, 
 
 ## Public store types
 
-`RootState`, `AppDispatch`, and the typed `useAppSelector` / `useAppDispatch` hooks come from the `@app/store` barrel. Don't deep-import from `src/store/<slice>/*` — add the symbol to the barrel's [index.ts](../../src/store/index.ts) instead.
+`RootState`, `AppDispatch`, and the typed `useAppSelector` / `useAppDispatch` hooks come from the `@app/store` barrel. Don't deep-import from `src/store/<slice>/*` — add the symbol to the barrel's [index.ts](../../packages/webatrice/src/store/index.ts) instead.

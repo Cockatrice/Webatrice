@@ -1,5 +1,5 @@
 ---
-applyTo: "src/store/games/**"
+applyTo: "packages/datatrice/src/store/games/**"
 ---
 
 # Game-slice instructions

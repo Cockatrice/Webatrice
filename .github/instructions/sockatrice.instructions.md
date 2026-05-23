@@ -1,3 +1,7 @@
+---
+applyTo: "packages/sockatrice/**"
+---
+
 # Sockatrice instructions
 
 Sockatrice is the **WebSocket transport layer** for [Cockatrice](https://github.com/Cockatrice/Cockatrice) — protobuf-over-WebSocket against a Servatrice host, command/response correlation, keep-alive, and reconnect policy. Extracted from the webclient; shipped as a standalone tarball release.

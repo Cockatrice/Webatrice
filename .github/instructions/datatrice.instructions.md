@@ -1,3 +1,7 @@
+---
+applyTo: "packages/datatrice/**"
+---
+
 # Datatrice instructions
 
 Datatrice is the **Redux state package** for the Cockatrice ecosystem — slice definitions (`server`, `rooms`, `games`), the listener middleware, and the protobuf-message-to-action translation layer. Extracted from Webatrice and shipped as the `@cockatrice/datatrice` npm package.
@@ -10,7 +14,7 @@ Desktop Cockatrice is the reference implementation. When porting reducer behavio
 
 ## Public API surface
 
-Four entry points (see [package.json](../../package.json) `exports`):
+Four entry points (see [package.json](../../packages/datatrice/package.json) `exports`):
 
 | Subpath | Contents |
 |---|---|
@@ -19,17 +23,17 @@ Four entry points (see [package.json](../../package.json) `exports`):
 | `@cockatrice/datatrice/types` | Type-only entry |
 | `@cockatrice/datatrice/testing` | Redux state-shape fixture builders |
 
-**Internal-only:** the per-scope `*ResponseImpl` classes (session / room / game / admin / moderator) in [src/api/](../../src/api/). Sockatrice fires response callbacks into the `IWebClientResponse` instance built by `attachResponseHandlers(store)`; consumers use `attachResponseHandlers` and never import the impl classes directly.
+**Internal-only:** the per-scope `*ResponseImpl` classes (session / room / game / admin / moderator) in [src/api/](../../packages/datatrice/src/api/). Sockatrice fires response callbacks into the `IWebClientResponse` instance built by `attachResponseHandlers(store)`; consumers use `attachResponseHandlers` and never import the impl classes directly.
 
 ## Initialization order
 
-**Listener-middleware singleton.** The `listenerMiddleware` exported from [src/store/listenerMiddleware.ts](../../src/store/listenerMiddleware.ts) is a module-scoped singleton, not a per-store instance. `createStore()` registers slice listeners against it via a `listenersRegistered` latch — without that guard, calling `createStore()` twice in the same process (test harnesses, hot reload) attaches every listener again and every matching action fires twice.
+**Listener-middleware singleton.** The `listenerMiddleware` exported from [src/store/listenerMiddleware.ts](../../packages/datatrice/src/store/listenerMiddleware.ts) is a module-scoped singleton, not a per-store instance. `createStore()` registers slice listeners against it via a `listenersRegistered` latch — without that guard, calling `createStore()` twice in the same process (test harnesses, hot reload) attaches every listener again and every matching action fires twice.
 
-**Protobuf-aware serializable check.** Protobuf-es v2 messages are plain JS objects decorated with `$typeName` / `$unknown` siblings; their `bytes` fields surface as `Uint8Array` and `int64`/`uint64` as `BigInt`. The RTK `serializableCheck` rejects all four by default. [src/store/isSerializable.ts](../../src/store/isSerializable.ts) widens the predicate to accept proto messages, `Uint8Array`, and `BigInt` so wire payloads can travel through actions and live in state without warnings. Used by `createStore()` and re-exported for test harnesses that build their own store.
+**Protobuf-aware serializable check.** Protobuf-es v2 messages are plain JS objects decorated with `$typeName` / `$unknown` siblings; their `bytes` fields surface as `Uint8Array` and `int64`/`uint64` as `BigInt`. The RTK `serializableCheck` rejects all four by default. [src/store/isSerializable.ts](../../packages/datatrice/src/store/isSerializable.ts) widens the predicate to accept proto messages, `Uint8Array`, and `BigInt` so wire payloads can travel through actions and live in state without warnings. Used by `createStore()` and re-exported for test harnesses that build their own store.
 
 ## Layer boundaries
 
-Enforced by [eslint.boundaries.mjs](../../eslint.boundaries.mjs):
+Enforced by [eslint.boundaries.mjs](../../packages/datatrice/eslint.boundaries.mjs):
 
 - `slice → {common, types, slice}` — reducers and selectors are leaf layers
 - `api → {common, types, slice, api, root}` — response impls dispatch into slices

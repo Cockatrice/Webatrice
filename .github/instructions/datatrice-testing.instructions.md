@@ -1,5 +1,5 @@
 ---
-applyTo: "**/*.spec.ts,**/*.spec.tsx,integration/**"
+applyTo: "packages/datatrice/**/*.spec.ts,packages/datatrice/**/*.spec.tsx,packages/datatrice/integration/**"
 ---
 
 # Testing instructions

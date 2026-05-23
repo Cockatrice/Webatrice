@@ -1,5 +1,5 @@
 ---
-applyTo: "src/services/**,src/WebClient.ts,src/utils/buildWebSocketUrl.ts"
+applyTo: "packages/sockatrice/src/services/**,packages/sockatrice/src/WebClient.ts,packages/sockatrice/src/utils/buildWebSocketUrl.ts"
 ---
 
 # Transport instructions
@@ -19,7 +19,7 @@ Reconnect and status-emission rules in `WebSocketService` are interlocked.
 
 The keepalive ping runs in a dedicated `Worker` because backgrounded tabs clamp main-thread `setInterval` to ~1 minute, which exceeds the Servatrice idle threshold; dedicated worker timers aren't clamped. The worker only runs the interval and posts ticks back — every connection-state decision (`lastPingPending`, `isOpen`, ping send) stays on the main thread in `KeepAliveService`.
 
-The worker URL is resolved relative to whichever chunk `KeepAliveService` ends up bundled into; [tsup.config.ts](../../tsup.config.ts) therefore emits `keepAliveWorker` as a top-level `dist/` entry so the URL resolves regardless of how splitting groups other modules. If you change the entry list, validate the URL still resolves at runtime; if `Worker` is unavailable (jsdom, SSR), `KeepAliveService` falls back to a main-thread `setInterval`.
+The worker URL is resolved relative to whichever chunk `KeepAliveService` ends up bundled into; [tsup.config.ts](../../packages/sockatrice/tsup.config.ts) therefore emits `keepAliveWorker` as a top-level `dist/` entry so the URL resolves regardless of how splitting groups other modules. If you change the entry list, validate the URL still resolves at runtime; if `Worker` is unavailable (jsdom, SSR), `KeepAliveService` falls back to a main-thread `setInterval`.
 
 ## WebSocket URL construction
 

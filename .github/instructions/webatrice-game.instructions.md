@@ -1,10 +1,10 @@
 ---
-applyTo: "src/features/game/**"
+applyTo: "packages/webatrice/src/features/game/**"
 ---
 
 # Game-feature instructions
 
-Applies in addition to [root.instructions.md](root.instructions.md) when editing `src/features/game/`.
+Applies in addition to [webatrice.instructions.md](webatrice.instructions.md) when editing `packages/webatrice/src/features/game/`.
 
 This is the most parity-sensitive feature in the webclient — desktop and webclient players sit side-by-side in the same Servatrice room. Desktop reference at `../cockatrice/src/game/`. Read it before changing layout math, phase wiring, dialog defaults, or event handling.
 
@@ -18,7 +18,7 @@ Port of `cockatrice/src/game/zones/table_zone.cpp`.
 - `y ∈ {0, 1, 2}` (pre-inversion)
 - `MAX_SUBPOS = 3`: desktop packs up to three cards into a single stack column before overflowing. A card at desktop `x=9` is at visual column 3, not column 0 — render empty columns as placeholders so the encoding stays positional.
 
-Constants in [gridMath.ts](../../src/features/game/components/battlefield/Battlefield/gridMath.ts) preserve desktop's geometry at 2× nominal size. The one deliberate divergence: `STACKED_CARD_OFFSET_Y_PX = 12` (~6%) vs desktop's `PADDING_Y/3 = 10` (~10%) — tuned for a readable diagonal at typical browser zoom.
+Constants in [gridMath.ts](../../packages/webatrice/src/features/game/components/battlefield/Battlefield/gridMath.ts) preserve desktop's geometry at 2× nominal size. The one deliberate divergence: `STACKED_CARD_OFFSET_Y_PX = 12` (~6%) vs desktop's `PADDING_Y/3 = 10` (~10%) — tuned for a readable diagonal at typical browser zoom.
 
 **Drop-point math** (ports of `table_zone.cpp`):
 
@@ -46,7 +46,7 @@ Port of `table_zone.cpp:153-185`.
 
 ## Lifecycle
 
-**`useLeaveGame` optimistic dispatch** ([src/hooks/useLeaveGame.ts](../../src/hooks/useLeaveGame.ts)): send `Command_LeaveGame` **and** immediately dispatch `gameLeft` locally. Servatrice strips the leaver from the broadcast list before sending `Event_Leave`, so the leaver never sees the confirmation — without the local dispatch, lifecycle hooks never fire and the tab stays stuck on `/game/:gameId`. The one documented exception to "store mutation flows from server response" (see [root.instructions.md](root.instructions.md)).
+**`useLeaveGame` optimistic dispatch** ([src/hooks/useLeaveGame.ts](../../packages/webatrice/src/hooks/useLeaveGame.ts)): send `Command_LeaveGame` **and** immediately dispatch `gameLeft` locally. Servatrice strips the leaver from the broadcast list before sending `Event_Leave`, so the leaver never sees the confirmation — without the local dispatch, lifecycle hooks never fire and the tab stays stuck on `/game/:gameId`. The one documented exception to "store mutation flows from server response" (see [webatrice.instructions.md](webatrice.instructions.md)).
 
 ## Dialog parity
 
@@ -64,12 +64,12 @@ Port of `table_zone.cpp:153-185`.
 
 ## Servatrice game-event quirks
 
-Affecting [src/store/game/game.listeners.ts](../../src/store/game/game.listeners.ts) and [src/store/game/messageLog.ts](../../src/store/game/messageLog.ts).
+Affecting [src/store/game/game.listeners.ts](../../packages/webatrice/src/store/game/game.listeners.ts) and [src/store/game/messageLog.ts](../../packages/webatrice/src/store/game/messageLog.ts).
 
 - **`target_zone` omitted on intra-zone moves.** Servatrice strips it when it equals `start_zone` (proto3 default elision). Fall back to `start_zone || target_zone` — without it, intra-zone moves silently bail at the zone lookup.
 - **Zone-exit zeroing is client-side.** Servatrice doesn't reliably emit `cardCounterChanged` events when a card leaves the battlefield, so the reducer clears `counterList` on `TABLE → non-TABLE`. Mirrors desktop's `CardItem::resetState()`.
 - **`card.annotation` carries owner name on enemy battlefield.** Servatrice populates it server-side; render the owner pill by reading `annotation` directly — do not build a parallel overlay.
-- **Attach unset surfaces as `-1` / `""`.** Treat `attachCardId < 0 || !attachZone` as "unattached". Same proto3/proto2 trap as in [store.instructions.md](store.instructions.md).
+- **Attach unset surfaces as `-1` / `""`.** Treat `attachCardId < 0 || !attachZone` as "unattached". Same proto3/proto2 trap as in [webatrice-store.instructions.md](webatrice-store.instructions.md).
 - **`-1` is the proto2 "no actor" sentinel** for `GameEvent.player_id`. Webclient speaks proto3 (unset → `0`, a valid player id). Detect absent explicitly before writing `-1`.
 - **Hidden zones**: `zone.cardCount` is authoritative; `zone.order.length` only reflects what the local client knows. Render hand/library counts off `cardCount`.
 - **Hidden-zone command addressing is positional.** `Command_MoveCard` / `Command_SetTopCard` / `Command_SetBottomCard` use `card_id = 0` for top, `card_id = size - 1` for bottom — Servatrice resolves these against its own zone ordering. The local enriched `deck.order` reflects insertion history, not deck position, and must not be used to compute these indices.
@@ -85,4 +85,4 @@ Affecting [src/store/game/game.listeners.ts](../../src/store/game/game.listeners
 
 ## Message log
 
-Formatters in [messageLog.ts](../../src/store/game/messageLog.ts) mirror desktop `message_log_widget.cpp` — each `format*` function corresponds to a `log*` slot. Returning `null` means "desktop doesn't log this case" (e.g. same-zone table reorders). Preserve the null semantics when adding new formatters; callers rely on it to suppress lines.
+Formatters in [messageLog.ts](../../packages/webatrice/src/store/game/messageLog.ts) mirror desktop `message_log_widget.cpp` — each `format*` function corresponds to a `log*` slot. Returning `null` means "desktop doesn't log this case" (e.g. same-zone table reorders). Preserve the null semantics when adding new formatters; callers rely on it to suppress lines.
