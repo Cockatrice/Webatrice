@@ -7,7 +7,7 @@ on:
     - cron: '0 0 15 1,4,7,10 *'
   pull_request:
     paths:
-      - '.tx/**'
+      - 'packages/webatrice/.tx/**'
       - '.github/workflows/translations-pull.yml'
 
 permissions:
