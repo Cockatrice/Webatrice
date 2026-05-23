@@ -9,10 +9,6 @@ const PUBLIC_DIR = './public';
 const i18nDefaultFile = `${ROOT_DIR}/i18n-default.json`;
 const serverPropsFile = `${ROOT_DIR}/server-props.json`;
 
-const sharedFiles = [
-  ['../../vendor/cockatrice/cockatrice/resources/countries', `${ROOT_DIR}/images/countries`],
-];
-
 const i18nFileRegex = /\.i18n\.json$/;
 
 const i18nOnly = process.argv.indexOf('-i18nOnly') > -1;
@@ -23,20 +19,9 @@ const i18nOnly = process.argv.indexOf('-i18nOnly') > -1;
     return;
   }
 
-  await copySharedFiles();
-
   await createServerProps();
   await createI18NDefault();
 })();
-
-async function copySharedFiles() {
-  try {
-    return await Promise.all(sharedFiles.map(([src, dest]) => fse.copy(src, dest, { overwrite: true })));
-  } catch (e) {
-    console.error(e);
-    process.exitCode = 1;
-  }
-}
 
 async function createServerProps() {
   try {

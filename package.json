@@ -17,7 +17,7 @@
     "diagram:simple": "npx -y -p @mermaid-js/mermaid-cli -p puppeteer mmdc -i architecture/simple.mmd -o architecture/simple.png -b white -s 2",
     "diagram:detailed": "npx -y -p @mermaid-js/mermaid-cli -p puppeteer mmdc -i architecture/detailed.mmd -o architecture/detailed.png -b white -s 2",
     "diagram:flow": "npx -y -p @mermaid-js/mermaid-cli -p puppeteer mmdc -i architecture/flow.mmd -o architecture/flow.png -b white -s 2",
-    "assets:submodule": "git submodule update --init && git -C vendor/cockatrice sparse-checkout set --no-cone cockatrice/resources/countries/ libcockatrice_protocol/ servatrice/servatrice.sql",
+    "assets:submodule": "git submodule update --init && git -C vendor/cockatrice sparse-checkout set --no-cone libcockatrice_protocol/ servatrice/servatrice.sql",
     "prepare": "npm run assets:submodule && npm run -w @cockatrice/sockatrice proto:generate && npm run -w @cockatrice/webatrice prebuild && husky"
   },
   "devDependencies": {
