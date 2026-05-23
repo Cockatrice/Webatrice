@@ -31,6 +31,6 @@ export const generateSalt = (): string => {
 };
 
 export const passwordSaltSupported = (serverOptions: number): boolean => {
-  // Servatrice ServerOptions is a bitmask. See .github/instructions/root.instructions.md#protocol-version-and-feature-flags.
+  // Servatrice ServerOptions is a bitmask. See .github/instructions/sockatrice.instructions.md#protocol-version-and-feature-flags.
   return (serverOptions & Event_ServerIdentification_ServerOptions.SupportsPasswordHash) !== 0;
 };

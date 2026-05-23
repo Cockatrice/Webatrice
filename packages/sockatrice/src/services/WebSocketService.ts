@@ -32,16 +32,11 @@ export class WebSocketService {
   private lastProtocol: string | null = null;
 
   private intentionalDisconnect = false;
-  /**
-   * True while `connect()` is cycling a prior socket out to bring a fresh one up.
-   * Suppresses the `DISCONNECTED` status emission the orphan socket's onclose
-   * would otherwise fire — that would clobber the `connectionAttempted()` we
-   * just dispatched at the WebClient layer.
-   */
+  /** True while `connect()` cycles a prior socket out. See .github/instructions/sockatrice-transport.instructions.md#websocket-lifecycle. */
   private retiringForReconnect = false;
   private reconnectAttempts = 0;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
-  /** Flips true on the first successful `onopen`. Gates reconnect — we never retry a connection that never established. */
+  /** True after first successful `onopen`; gates reconnect. See .github/instructions/sockatrice-transport.instructions.md#websocket-lifecycle. */
   private hasEverOpened = false;
 
   constructor(config: WebSocketServiceConfig) {
@@ -62,10 +57,7 @@ export class WebSocketService {
       protocol = 'ws';
     }
 
-    // Retire any prior socket cleanly. The `retiringForReconnect` flag both
-    // suppresses reconnect scheduling for the orphan socket AND suppresses the
-    // DISCONNECTED status emission that would otherwise reset
-    // `connectionAttemptMade` set by the caller a moment ago.
+    // Retire prior socket; retiringForReconnect suppresses orphan reconnect+DISCONNECTED. See .github/instructions/sockatrice-transport.instructions.md#websocket-lifecycle.
     this.retiringForReconnect = true;
     this.clearReconnectTimer();
     this.closeActiveSocket();
@@ -97,8 +89,7 @@ export class WebSocketService {
       return;
     }
     if (this.socket.readyState !== WebSocket.OPEN) {
-      // Match desktop's TCP-queued semantics conservatively: drop with a warn rather
-      // than throw. Upstream code treats send as fire-and-forget under these states.
+      // See .github/instructions/sockatrice-transport.instructions.md#send-semantics.
       console.warn('[WebSocketService] send() skipped: socket not OPEN', this.socket.readyState);
       return;
     }
@@ -133,16 +124,14 @@ export class WebSocketService {
         return;
       }
 
-      // Orphan socket retired by a fresh connect() call — the new socket is
-      // already being wired up; don't fire a DISCONNECTED status that would
-      // race the just-dispatched connectionAttempted.
+      // Orphan socket retired by fresh connect(); skip status emission. See .github/instructions/sockatrice-transport.instructions.md#websocket-lifecycle.
       if (this.retiringForReconnect) {
         this.hasReportedError = false;
         return;
       }
 
       // @critical onerror + onclose both fire on failed connects; don't overwrite the richer error status.
-      // See .github/instructions/transport.instructions.md#websocket-lifecycle.
+      // See .github/instructions/sockatrice-transport.instructions.md#websocket-lifecycle.
       if (!this.hasReportedError) {
         this.config.onStatusChange(StatusEnum.DISCONNECTED, 'Connection Closed');
       }
@@ -164,19 +153,16 @@ export class WebSocketService {
   }
 
   private shouldAttemptReconnect(): boolean {
+    // Gates: see .github/instructions/sockatrice-transport.instructions.md#websocket-lifecycle.
     if (this.intentionalDisconnect) {
       return false;
     }
     if (this.retiringForReconnect) {
       return false;
     }
-    // Suppress reconnect when the connection never established — onerror already
-    // reported DISCONNECTED and we don't want to thrash against a dead endpoint.
     if (this.hasReportedError) {
       return false;
     }
-    // Only retry once we have proof the endpoint was reachable at least once.
-    // The initial connect path falls through to DISCONNECTED on failure.
     if (!this.hasEverOpened) {
       return false;
     }
@@ -219,13 +205,7 @@ export class WebSocketService {
 
   private closeActiveSocket(): void {
     if (this.socket) {
-      // Detach the message listener before closing. socket.close() is async —
-      // without this, the underlying WebSocket may still fire `onmessage` for
-      // buffered frames after higher-layer singletons (WebClient._instance,
-      // etc.) have been torn down, surfacing as `Processing failed: WebClient
-      // has not been initialized` noise in e2e teardown. We deliberately
-      // leave onopen/onclose/onerror attached: callers and tests rely on the
-      // resulting DISCONNECTED status emission from the orphan socket's close.
+      // Detach onmessage only; keep onopen/onclose/onerror. See .github/instructions/sockatrice-transport.instructions.md#websocket-lifecycle.
       this.socket.onmessage = null;
       this.socket.close();
       this.socket = null;

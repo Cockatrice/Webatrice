@@ -1,7 +1,6 @@
 export const PROTOCOL_VERSION = 14;
 
-// Features whose support is determined by sockatrice's command/event handlers.
-// Consumers spread this and add identity + policy declarations on top.
+// See .github/instructions/sockatrice.instructions.md#protocol-version-and-feature-flags.
 export const SOCKATRICE_FEATURES = [
   'client_id',
   'client_ver',

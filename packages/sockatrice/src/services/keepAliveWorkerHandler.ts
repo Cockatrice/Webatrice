@@ -1,19 +1,4 @@
-/*
- * Worker handler factory — pure function, no side effects.
- *
- * Split out of `keepAliveWorker.ts` so that the worker entry file contains
- * ONLY the bootstrap (`self.onmessage = ...`) at the top level. With
- * Sockatrice's `package.json` `"sideEffects": false`, any worker-entry file
- * that defines a function AND immediately calls it gets tsup-split, and
- * Vite then tree-shakes the resulting chunk — producing a 0-byte worker
- * file in consumer builds (the keepalive silently never pings). Keeping
- * the bootstrap as the sole top-level statement of `keepAliveWorker.ts`
- * makes the side effect part of the worker entry itself, which Vite's
- * worker bundler always preserves.
- *
- * See `keepAliveWorker.ts` for the bootstrap; tests / harnesses that want
- * the pure handler should import from THIS file.
- */
+// Pure handler factory; bootstrap stays in keepAliveWorker.ts. See .github/instructions/sockatrice-transport.instructions.md#keep-alive-worker.
 
 export type WorkerMessage =
   | { type: 'start'; interval: number }

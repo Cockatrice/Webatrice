@@ -1,6 +1,4 @@
-// Tests within a file share the module graph (vitest.config.ts sets isolate: true
-// between files, not within them). Never add vi.resetAllMocks() — it resets
-// vi.fn() instances created inside vi.mock(...) factories at file load.
+// See .github/instructions/sockatrice.instructions.md#public-testing-surface.
 afterEach(() => {
   vi.clearAllMocks();
   vi.restoreAllMocks();

@@ -31,9 +31,7 @@ export async function serverIdentification(info: Event_ServerIdentification): Pr
       SessionCommands.updateStatus(StatusEnum.LOGGING_IN, 'Logging In...');
       if (getPasswordSalt) {
         SessionCommands.requestPasswordSalt(rest,
-          // Empty salt means the server advertised SupportsPasswordHash but
-          // can't actually produce one. Treat it as effectively unsupported —
-          // fall through to a plain-password login rather than failing.
+          // Empty salt → fall through to plain password. See .github/instructions/sockatrice.instructions.md#protocol-version-and-feature-flags.
           async (salt) => {
             if (salt) {
               const hashedPassword = rest.hashedPassword || await hashPassword(salt, password);

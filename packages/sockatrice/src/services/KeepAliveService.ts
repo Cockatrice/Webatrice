@@ -51,12 +51,7 @@ export class KeepAliveService {
       return null;
     }
     try {
-      // `./keepAliveWorker.js` resolves relative to whichever chunk this
-      // method ends up in at build time. Sockatrice's tsup.config.ts emits
-      // the worker as a top-level dist/ entry (`keepAliveWorker`) so the
-      // URL resolves regardless of how splitting groups other modules —
-      // see the matching comment in tsup.config.ts. If you refactor the
-      // entry list, validate this URL still resolves at runtime.
+      // See .github/instructions/sockatrice-transport.instructions.md#keep-alive-worker.
       return new Worker(
         new URL('./keepAliveWorker.js', import.meta.url),
         { type: 'module' },

@@ -40,10 +40,7 @@ export class WebClient {
     return WebClient._instance;
   }
 
-  // Teardown hook for callers that need to re-init the singleton — test
-  // harnesses between cases, SPA hot-reload, explicit logout-and-reset
-  // flows. Closes any open socket then nulls the static instance so the
-  // next `new WebClient(...)` succeeds. No-op when no instance exists.
+  // Sanctioned reset path: tests, SPA hot-reload, explicit logout. See .github/instructions/sockatrice-transport.instructions.md#webclient-lifecycle.
   public static dispose(): void {
     if (!WebClient._instance) {
       return;
@@ -114,8 +111,7 @@ export class WebClient {
   }
 
   public testConnect(target: ConnectTarget): void {
-    // A prior test connection still in flight when the user re-clicks would
-    // otherwise leak the socket until its keepalive timeout. Close eagerly.
+    // Close any in-flight test socket eagerly. See .github/instructions/sockatrice-transport.instructions.md#webclient-lifecycle.
     if (this.testSocket) {
       this.testSocket.close();
       this.testSocket = null;
@@ -126,11 +122,7 @@ export class WebClient {
     socket.binaryType = 'arraybuffer';
     this.testSocket = socket;
 
-    // "Green" means reachable AND speaking a compatible Cockatrice protocol.
-    // Waiting for Event_ServerIdentification lets us read the hashed-password
-    // capability before the user ever logs in. The bitmask is resolved here
-    // (the websocket layer owns protocol details) so downstream consumers
-    // receive a domain-level boolean instead of a raw integer.
+    // Wait for Event_ServerIdentification; resolve bitmask to a boolean. See .github/instructions/sockatrice-transport.instructions.md#webclient-lifecycle.
     let resolved = false;
     const resolve = (ok: boolean, supportsHashedPassword = false): void => {
       if (resolved) {
