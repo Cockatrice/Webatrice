@@ -1,5 +1,5 @@
 import { create } from '@bufbuild/protobuf';
-import { Data } from '../types';
+import { ServerInfo_UserSchema } from '@cockatrice/sockatrice/generated';
 import { isSerializable } from './isSerializable';
 
 describe('isSerializable', () => {
@@ -12,7 +12,7 @@ describe('isSerializable', () => {
   });
 
   it('accepts protobuf-es messages', () => {
-    const message = create(Data.ServerInfo_UserSchema, { name: 'Alice' });
+    const message = create(ServerInfo_UserSchema, { name: 'Alice' });
     expect(isSerializable(message)).toBe(true);
   });
 

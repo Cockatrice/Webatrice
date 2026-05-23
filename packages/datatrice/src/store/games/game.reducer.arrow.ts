@@ -1,5 +1,5 @@
 import { CaseReducer, PayloadAction } from '@reduxjs/toolkit';
-import { Data } from '../../types';
+import { Event_CreateArrow, Event_DeleteArrow } from '@cockatrice/sockatrice/generated';
 import { GamesState } from './game.interfaces';
 
 export const arrowReducers = {
@@ -11,7 +11,7 @@ export const arrowReducers = {
       return;
     }
     player.arrows[data.arrowInfo.id] = { ...data.arrowInfo };
-  }) as CaseReducer<GamesState, PayloadAction<{ gameId: number; playerId: number; data: Data.Event_CreateArrow }>>,
+  }) as CaseReducer<GamesState, PayloadAction<{ gameId: number; playerId: number; data: Event_CreateArrow }>>,
 
   arrowDeleted: ((state, action) => {
     const { gameId, playerId, data } = action.payload;
@@ -19,5 +19,5 @@ export const arrowReducers = {
     if (player) {
       delete player.arrows[data.arrowId];
     }
-  }) as CaseReducer<GamesState, PayloadAction<{ gameId: number; playerId: number; data: Data.Event_DeleteArrow }>>,
+  }) as CaseReducer<GamesState, PayloadAction<{ gameId: number; playerId: number; data: Event_DeleteArrow }>>,
 };

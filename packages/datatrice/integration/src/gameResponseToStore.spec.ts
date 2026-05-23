@@ -1,7 +1,38 @@
 import { create } from '@bufbuild/protobuf';
 import { WebsocketTypes } from '@cockatrice/sockatrice/types';
 
-import { attachResponseHandlers, createStore, Data, games } from '../../src';
+import { attachResponseHandlers, createStore, games } from '../../src';
+import {
+  CardAttribute,
+  Event_AttachCardSchema,
+  Event_ChangeZonePropertiesSchema,
+  Event_CreateArrowSchema,
+  Event_CreateCounterSchema,
+  Event_CreateTokenSchema,
+  Event_DelCounterSchema,
+  Event_DeleteArrowSchema,
+  Event_DestroyCardSchema,
+  Event_DrawCardsSchema,
+  Event_DumpZoneSchema,
+  Event_FlipCardSchema,
+  Event_GameJoinedSchema,
+  Event_GameStateChangedSchema,
+  Event_MoveCardSchema,
+  Event_RevealCardsSchema,
+  Event_RollDieSchema,
+  Event_SetCardAttrSchema,
+  Event_SetCardCounterSchema,
+  Event_SetCounterSchema,
+  Event_ShuffleSchema,
+  ServerInfo_ArrowSchema,
+  ServerInfo_Card,
+  ServerInfo_CardSchema,
+  ServerInfo_CounterSchema,
+  ServerInfo_GameSchema,
+  ServerInfo_Player,
+  ServerInfo_PlayerPropertiesSchema,
+  ServerInfo_PlayerSchema,
+} from '@cockatrice/sockatrice/generated';
 
 // Integration: drives every GameResponseImpl handler method through the real
 // store. Game lifecycle (join / playerJoined / gameStateChanged / close), all
@@ -17,8 +48,8 @@ const GAME_ID = 42;
 // --- helpers -------------------------------------------------------------
 
 function makeJoinedData() {
-  return create(Data.Event_GameJoinedSchema, {
-    gameInfo: create(Data.ServerInfo_GameSchema, {
+  return create(Event_GameJoinedSchema, {
+    gameInfo: create(ServerInfo_GameSchema, {
       gameId: GAME_ID,
       roomId: 1,
       description: 'integration game',
@@ -32,9 +63,9 @@ function makeJoinedData() {
   });
 }
 
-function playerWithZones(playerId: number, name: string): Data.ServerInfo_Player {
-  return create(Data.ServerInfo_PlayerSchema, {
-    properties: create(Data.ServerInfo_PlayerPropertiesSchema, {
+function playerWithZones(playerId: number, name: string): ServerInfo_Player {
+  return create(ServerInfo_PlayerSchema, {
+    properties: create(ServerInfo_PlayerPropertiesSchema, {
       playerId,
       userInfo: { name },
     }),
@@ -59,11 +90,11 @@ function seedGame(): { store: Store; response: WebsocketTypes.IWebClientResponse
   const response = attachResponseHandlers(store);
 
   response.session.gameJoined(makeJoinedData());
-  response.game.gameStateChanged(GAME_ID, create(Data.Event_GameStateChangedSchema, {
+  response.game.gameStateChanged(GAME_ID, create(Event_GameStateChangedSchema, {
     playerList: [playerWithZones(1, 'Alice'), playerWithZones(2, 'Bob')],
   }));
   // Starts the game (drives the wasStarted→started edge + game-start log).
-  response.game.gameStateChanged(GAME_ID, create(Data.Event_GameStateChangedSchema, {
+  response.game.gameStateChanged(GAME_ID, create(Event_GameStateChangedSchema, {
     gameStarted: true,
     activePlayerId: 1,
     activePhase: 0,
@@ -72,8 +103,8 @@ function seedGame(): { store: Store; response: WebsocketTypes.IWebClientResponse
   return { store, response };
 }
 
-function tableCard(id: number, name: string, overrides: Partial<Data.ServerInfo_Card> = {}): Data.ServerInfo_Card {
-  return create(Data.ServerInfo_CardSchema, {
+function tableCard(id: number, name: string, overrides: Partial<ServerInfo_Card> = {}): ServerInfo_Card {
+  return create(ServerInfo_CardSchema, {
     id, name, x: 0, y: 0, faceDown: false, tapped: false, attacking: false,
     color: '', pt: '', annotation: '', destroyOnZoneChange: false, doesntUntap: false,
     counterList: [], attachPlayerId: -1, attachZone: '', attachCardId: -1, providerId: '',
@@ -117,7 +148,7 @@ describe('integration: game lifecycle', () => {
 
   it('playerJoined adds a new player and logs the join', () => {
     const { store, response } = seedGame();
-    response.game.playerJoined(GAME_ID, create(Data.ServerInfo_PlayerPropertiesSchema, {
+    response.game.playerJoined(GAME_ID, create(ServerInfo_PlayerPropertiesSchema, {
       playerId: 3,
       userInfo: { name: 'Carol' },
     }));
@@ -140,7 +171,7 @@ describe('integration: game lifecycle', () => {
 
   it('playerPropertiesChanged merges set fields and logs the diff', () => {
     const { store, response } = seedGame();
-    response.game.playerPropertiesChanged(GAME_ID, 1, create(Data.ServerInfo_PlayerPropertiesSchema, {
+    response.game.playerPropertiesChanged(GAME_ID, 1, create(ServerInfo_PlayerPropertiesSchema, {
       playerId: 1,
       conceded: true,
     }));
@@ -190,7 +221,7 @@ describe('integration: game chat and table events', () => {
 
   it('dieRolled logs the roll', () => {
     const { store, response } = seedGame();
-    response.game.dieRolled(GAME_ID, 1, create(Data.Event_RollDieSchema, {
+    response.game.dieRolled(GAME_ID, 1, create(Event_RollDieSchema, {
       sides: 20, value: 17, values: [17],
     }));
     const messages = games.Selectors.getMessages(store.getState(), GAME_ID);
@@ -199,14 +230,14 @@ describe('integration: game chat and table events', () => {
 
   it('zoneShuffled logs the shuffle', () => {
     const { store, response } = seedGame();
-    response.game.zoneShuffled(GAME_ID, 1, create(Data.Event_ShuffleSchema, { zoneName: 'deck' }));
+    response.game.zoneShuffled(GAME_ID, 1, create(Event_ShuffleSchema, { zoneName: 'deck' }));
     const messages = games.Selectors.getMessages(store.getState(), GAME_ID);
     expect(messages.some(m => m.message === 'Alice shuffles their library.')).toBe(true);
   });
 
   it('zoneDumped logs the dump', () => {
     const { store, response } = seedGame();
-    response.game.zoneDumped(GAME_ID, 1, create(Data.Event_DumpZoneSchema, {
+    response.game.zoneDumped(GAME_ID, 1, create(Event_DumpZoneSchema, {
       zoneOwnerId: 1, zoneName: 'deck', numberCards: 4,
     }));
     const messages = games.Selectors.getMessages(store.getState(), GAME_ID);
@@ -215,7 +246,7 @@ describe('integration: game chat and table events', () => {
 
   it('zonePropertiesChanged flips alwaysRevealTopCard and logs it', () => {
     const { store, response } = seedGame();
-    response.game.zonePropertiesChanged(GAME_ID, 1, create(Data.Event_ChangeZonePropertiesSchema, {
+    response.game.zonePropertiesChanged(GAME_ID, 1, create(Event_ChangeZonePropertiesSchema, {
       zoneName: 'deck', alwaysRevealTopCard: true,
     }));
     const state = store.getState();
@@ -230,7 +261,7 @@ describe('integration: game chat and table events', () => {
 describe('integration: card events', () => {
   it('cardsDrawn moves cards from deck into hand and logs the draw', () => {
     const { store, response } = seedGame();
-    response.game.cardsDrawn(GAME_ID, 1, create(Data.Event_DrawCardsSchema, {
+    response.game.cardsDrawn(GAME_ID, 1, create(Event_DrawCardsSchema, {
       number: 2,
       cards: [tableCard(100, 'Island'), tableCard(101, 'Forest')],
     }));
@@ -245,7 +276,7 @@ describe('integration: card events', () => {
 
   it('cardsRevealed inserts revealed cards into the target zone', () => {
     const { store, response } = seedGame();
-    response.game.cardsRevealed(GAME_ID, 1, create(Data.Event_RevealCardsSchema, {
+    response.game.cardsRevealed(GAME_ID, 1, create(Event_RevealCardsSchema, {
       zoneName: 'hand',
       cards: [tableCard(200, 'Mountain')],
     }));
@@ -256,10 +287,10 @@ describe('integration: card events', () => {
   it('cardMoved relocates a card between zones and logs the play', () => {
     const { store, response } = seedGame();
     // Put a card in hand first.
-    response.game.cardsDrawn(GAME_ID, 1, create(Data.Event_DrawCardsSchema, {
+    response.game.cardsDrawn(GAME_ID, 1, create(Event_DrawCardsSchema, {
       number: 1, cards: [tableCard(300, 'Llanowar Elves')],
     }));
-    response.game.cardMoved(GAME_ID, 1, create(Data.Event_MoveCardSchema, {
+    response.game.cardMoved(GAME_ID, 1, create(Event_MoveCardSchema, {
       cardId: 300, cardName: 'Llanowar Elves',
       startPlayerId: 1, startZone: 'hand',
       targetPlayerId: 1, targetZone: 'table',
@@ -277,20 +308,20 @@ describe('integration: card events', () => {
   it('cardMoved cross-player table-to-table reparents attachments', () => {
     const { store, response } = seedGame();
     // Parent on Alice's table, child attached to parent.
-    response.game.tokenCreated(GAME_ID, 1, create(Data.Event_CreateTokenSchema, {
+    response.game.tokenCreated(GAME_ID, 1, create(Event_CreateTokenSchema, {
       zoneName: 'table', cardId: 400, cardName: 'Bear', color: 'g', pt: '2/2',
       annotation: '', destroyOnZoneChange: false, x: 0, y: 0, cardProviderId: '', faceDown: false,
     }));
-    response.game.tokenCreated(GAME_ID, 1, create(Data.Event_CreateTokenSchema, {
+    response.game.tokenCreated(GAME_ID, 1, create(Event_CreateTokenSchema, {
       zoneName: 'table', cardId: 401, cardName: 'Aura', color: '', pt: '',
       annotation: '', destroyOnZoneChange: false, x: 0, y: 0, cardProviderId: '', faceDown: false,
     }));
-    response.game.cardAttached(GAME_ID, 1, create(Data.Event_AttachCardSchema, {
+    response.game.cardAttached(GAME_ID, 1, create(Event_AttachCardSchema, {
       startZone: 'table', cardId: 401,
       targetPlayerId: 1, targetZone: 'table', targetCardId: 400,
     }));
     // Move the parent to Bob's table.
-    response.game.cardMoved(GAME_ID, 1, create(Data.Event_MoveCardSchema, {
+    response.game.cardMoved(GAME_ID, 1, create(Event_MoveCardSchema, {
       cardId: 400, cardName: 'Bear',
       startPlayerId: 1, startZone: 'table',
       targetPlayerId: 2, targetZone: 'table',
@@ -307,10 +338,10 @@ describe('integration: card events', () => {
 
   it('cardFlipped updates faceDown and logs the flip', () => {
     const { store, response } = seedGame();
-    response.game.cardsDrawn(GAME_ID, 1, create(Data.Event_DrawCardsSchema, {
+    response.game.cardsDrawn(GAME_ID, 1, create(Event_DrawCardsSchema, {
       number: 1, cards: [tableCard(500, 'Secret')],
     }));
-    response.game.cardFlipped(GAME_ID, 1, create(Data.Event_FlipCardSchema, {
+    response.game.cardFlipped(GAME_ID, 1, create(Event_FlipCardSchema, {
       zoneName: 'hand', cardId: 500, cardName: 'Secret', faceDown: true, cardProviderId: '',
     }));
     const state = store.getState();
@@ -321,11 +352,11 @@ describe('integration: card events', () => {
 
   it('cardDestroyed removes the card and logs destruction', () => {
     const { store, response } = seedGame();
-    response.game.tokenCreated(GAME_ID, 1, create(Data.Event_CreateTokenSchema, {
+    response.game.tokenCreated(GAME_ID, 1, create(Event_CreateTokenSchema, {
       zoneName: 'table', cardId: 600, cardName: 'Goblin', color: 'r', pt: '1/1',
       annotation: '', destroyOnZoneChange: true, x: 0, y: 0, cardProviderId: '', faceDown: false,
     }));
-    response.game.cardDestroyed(GAME_ID, 1, create(Data.Event_DestroyCardSchema, {
+    response.game.cardDestroyed(GAME_ID, 1, create(Event_DestroyCardSchema, {
       zoneName: 'table', cardId: 600,
     }));
     const state = store.getState();
@@ -336,7 +367,7 @@ describe('integration: card events', () => {
 
   it('tokenCreated inserts a token onto the table and logs it', () => {
     const { store, response } = seedGame();
-    response.game.tokenCreated(GAME_ID, 1, create(Data.Event_CreateTokenSchema, {
+    response.game.tokenCreated(GAME_ID, 1, create(Event_CreateTokenSchema, {
       zoneName: 'table', cardId: 700, cardName: 'Soldier', color: 'w', pt: '1/1',
       annotation: '', destroyOnZoneChange: true, x: 3, y: 4, cardProviderId: '', faceDown: false,
     }));
@@ -350,13 +381,13 @@ describe('integration: card events', () => {
 
   it('cardAttrChanged taps a card and logs it', () => {
     const { store, response } = seedGame();
-    response.game.tokenCreated(GAME_ID, 1, create(Data.Event_CreateTokenSchema, {
+    response.game.tokenCreated(GAME_ID, 1, create(Event_CreateTokenSchema, {
       zoneName: 'table', cardId: 800, cardName: 'Knight', color: 'w', pt: '2/2',
       annotation: '', destroyOnZoneChange: false, x: 0, y: 0, cardProviderId: '', faceDown: false,
     }));
-    response.game.cardAttrChanged(GAME_ID, 1, create(Data.Event_SetCardAttrSchema, {
+    response.game.cardAttrChanged(GAME_ID, 1, create(Event_SetCardAttrSchema, {
       zoneName: 'table', cardId: 800,
-      attribute: Data.CardAttribute.AttrTapped, attrValue: '1',
+      attribute: CardAttribute.AttrTapped, attrValue: '1',
     }));
     const state = store.getState();
     expect(games.Selectors.getZone(state, GAME_ID, 1, 'table')?.byId[800]?.tapped).toBe(true);
@@ -366,11 +397,11 @@ describe('integration: card events', () => {
 
   it('cardCounterChanged adds counters to a card and logs the delta', () => {
     const { store, response } = seedGame();
-    response.game.tokenCreated(GAME_ID, 1, create(Data.Event_CreateTokenSchema, {
+    response.game.tokenCreated(GAME_ID, 1, create(Event_CreateTokenSchema, {
       zoneName: 'table', cardId: 900, cardName: 'Hydra', color: 'g', pt: '0/0',
       annotation: '', destroyOnZoneChange: false, x: 0, y: 0, cardProviderId: '', faceDown: false,
     }));
-    response.game.cardCounterChanged(GAME_ID, 1, create(Data.Event_SetCardCounterSchema, {
+    response.game.cardCounterChanged(GAME_ID, 1, create(Event_SetCardCounterSchema, {
       zoneName: 'table', cardId: 900, counterId: 1, counterValue: 3,
     }));
     const state = store.getState();
@@ -382,22 +413,22 @@ describe('integration: card events', () => {
 
   it('cardAttached then unattach updates attach fields and logs both', () => {
     const { store, response } = seedGame();
-    response.game.tokenCreated(GAME_ID, 1, create(Data.Event_CreateTokenSchema, {
+    response.game.tokenCreated(GAME_ID, 1, create(Event_CreateTokenSchema, {
       zoneName: 'table', cardId: 1000, cardName: 'Creature', color: 'g', pt: '3/3',
       annotation: '', destroyOnZoneChange: false, x: 0, y: 0, cardProviderId: '', faceDown: false,
     }));
-    response.game.tokenCreated(GAME_ID, 1, create(Data.Event_CreateTokenSchema, {
+    response.game.tokenCreated(GAME_ID, 1, create(Event_CreateTokenSchema, {
       zoneName: 'table', cardId: 1001, cardName: 'Equipment', color: '', pt: '',
       annotation: '', destroyOnZoneChange: false, x: 0, y: 0, cardProviderId: '', faceDown: false,
     }));
-    response.game.cardAttached(GAME_ID, 1, create(Data.Event_AttachCardSchema, {
+    response.game.cardAttached(GAME_ID, 1, create(Event_AttachCardSchema, {
       startZone: 'table', cardId: 1001,
       targetPlayerId: 1, targetZone: 'table', targetCardId: 1000,
     }));
     let card = games.Selectors.getZone(store.getState(), GAME_ID, 1, 'table')?.byId[1001];
     expect(card?.attachCardId).toBe(1000);
 
-    response.game.cardAttached(GAME_ID, 1, create(Data.Event_AttachCardSchema, {
+    response.game.cardAttached(GAME_ID, 1, create(Event_AttachCardSchema, {
       startZone: 'table', cardId: 1001,
       targetPlayerId: -1, targetZone: '', targetCardId: -1,
     }));
@@ -412,12 +443,12 @@ describe('integration: card events', () => {
 describe('integration: counters, arrows, turn state', () => {
   it('counterCreated / counterSet / counterDeleted manage player counters', () => {
     const { store, response } = seedGame();
-    response.game.counterCreated(GAME_ID, 1, create(Data.Event_CreateCounterSchema, {
-      counterInfo: create(Data.ServerInfo_CounterSchema, { id: 1, name: 'Life', count: 20, radius: 1 }),
+    response.game.counterCreated(GAME_ID, 1, create(Event_CreateCounterSchema, {
+      counterInfo: create(ServerInfo_CounterSchema, { id: 1, name: 'Life', count: 20, radius: 1 }),
     }));
     expect(games.Selectors.getCounters(store.getState(), GAME_ID, 1)[1]?.count).toBe(20);
 
-    response.game.counterSet(GAME_ID, 1, create(Data.Event_SetCounterSchema, {
+    response.game.counterSet(GAME_ID, 1, create(Event_SetCounterSchema, {
       counterId: 1, value: 17,
     }));
     const state = store.getState();
@@ -425,23 +456,23 @@ describe('integration: counters, arrows, turn state', () => {
     const messages = games.Selectors.getMessages(state, GAME_ID);
     expect(messages.some(m => m.message === 'Alice decreases their Life to 17.')).toBe(true);
 
-    response.game.counterDeleted(GAME_ID, 1, create(Data.Event_DelCounterSchema, { counterId: 1 }));
+    response.game.counterDeleted(GAME_ID, 1, create(Event_DelCounterSchema, { counterId: 1 }));
     expect(games.Selectors.getCounters(store.getState(), GAME_ID, 1)[1]).toBeUndefined();
   });
 
   it('arrowCreated / arrowDeleted manage player arrows and log creation', () => {
     const { store, response } = seedGame();
     // Two table cards to point between.
-    response.game.tokenCreated(GAME_ID, 1, create(Data.Event_CreateTokenSchema, {
+    response.game.tokenCreated(GAME_ID, 1, create(Event_CreateTokenSchema, {
       zoneName: 'table', cardId: 10, cardName: 'Attacker', color: 'r', pt: '2/2',
       annotation: '', destroyOnZoneChange: false, x: 0, y: 0, cardProviderId: '', faceDown: false,
     }));
-    response.game.tokenCreated(GAME_ID, 2, create(Data.Event_CreateTokenSchema, {
+    response.game.tokenCreated(GAME_ID, 2, create(Event_CreateTokenSchema, {
       zoneName: 'table', cardId: 20, cardName: 'Blocker', color: 'w', pt: '0/4',
       annotation: '', destroyOnZoneChange: false, x: 0, y: 0, cardProviderId: '', faceDown: false,
     }));
-    response.game.arrowCreated(GAME_ID, 1, create(Data.Event_CreateArrowSchema, {
-      arrowInfo: create(Data.ServerInfo_ArrowSchema, {
+    response.game.arrowCreated(GAME_ID, 1, create(Event_CreateArrowSchema, {
+      arrowInfo: create(ServerInfo_ArrowSchema, {
         id: 1, startPlayerId: 1, startZone: 'table', startCardId: 10,
         targetPlayerId: 2, targetZone: 'table', targetCardId: 20,
       }),
@@ -451,7 +482,7 @@ describe('integration: counters, arrows, turn state', () => {
     const messages = games.Selectors.getMessages(state, GAME_ID);
     expect(messages.some(m => m.message === 'Alice points from Attacker to Blocker.')).toBe(true);
 
-    response.game.arrowDeleted(GAME_ID, 1, create(Data.Event_DeleteArrowSchema, { arrowId: 1 }));
+    response.game.arrowDeleted(GAME_ID, 1, create(Event_DeleteArrowSchema, { arrowId: 1 }));
     expect(games.Selectors.getArrows(store.getState(), GAME_ID, 1)[1]).toBeUndefined();
   });
 
@@ -485,7 +516,7 @@ describe('integration: counters, arrows, turn state', () => {
   it('ignores events for unknown games without throwing', () => {
     const { response } = seedGame();
     expect(() => response.game.activePlayerSet(9999, 1)).not.toThrow();
-    expect(() => response.game.cardMoved(9999, 1, create(Data.Event_MoveCardSchema, {
+    expect(() => response.game.cardMoved(9999, 1, create(Event_MoveCardSchema, {
       cardId: 1, cardName: '', startPlayerId: 1, startZone: 'hand',
       targetPlayerId: 1, targetZone: 'table', position: -1, x: 0, y: 0,
       newCardId: -1, faceDown: false, newCardProviderId: '',

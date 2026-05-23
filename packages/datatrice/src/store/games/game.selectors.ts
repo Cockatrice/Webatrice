@@ -1,21 +1,22 @@
 import { createSelector } from '@reduxjs/toolkit';
-import { Enriched, type Data } from '../../types';
+import { Enriched } from '../../types';
+import { ServerInfo_Card } from '@cockatrice/sockatrice/generated';
 import { GamesState } from './game.interfaces';
 
 type State = { games: GamesState };
 
-const EMPTY_ARRAY: Data.ServerInfo_Card[] = [];
+const EMPTY_ARRAY: ServerInfo_Card[] = [];
 const EMPTY_OBJECT = {} as Record<string, never>;
 const EMPTY_ATTACHMENTS: ReadonlyMap<number, AttachedChild[]> = new Map();
 
 export interface AttachedChild {
-  card: Data.ServerInfo_Card;
+  card: ServerInfo_Card;
   ownerPlayerId: number;
 }
 
-const zoneCardsCache = new WeakMap<Enriched.ZoneEntry, Data.ServerInfo_Card[]>();
+const zoneCardsCache = new WeakMap<Enriched.ZoneEntry, ServerInfo_Card[]>();
 
-function materializeZoneCards(zone: Enriched.ZoneEntry): Data.ServerInfo_Card[] {
+function materializeZoneCards(zone: Enriched.ZoneEntry): ServerInfo_Card[] {
   const cached = zoneCardsCache.get(zone);
   if (cached) {
     return cached;
@@ -105,7 +106,7 @@ export const Selectors = {
     zoneName: string
   ): Enriched.ZoneEntry | undefined => games.games[gameId]?.players[playerId]?.zones[zoneName],
 
-  getCards: ({ games }: State, gameId: number, playerId: number, zoneName: string): Data.ServerInfo_Card[] => {
+  getCards: ({ games }: State, gameId: number, playerId: number, zoneName: string): ServerInfo_Card[] => {
     const zone = games.games[gameId]?.players[playerId]?.zones[zoneName];
     return zone ? materializeZoneCards(zone) : EMPTY_ARRAY;
   },

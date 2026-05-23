@@ -1,5 +1,5 @@
 import type { Store } from '@reduxjs/toolkit';
-import { Data } from '../types';
+import { ServerInfo_Game, ServerInfo_Room, ServerInfo_User } from '@cockatrice/sockatrice/generated';
 import type { WebsocketTypes } from '@cockatrice/sockatrice/types';
 
 import { Actions as RoomsActions } from '../store/rooms/rooms.actions';
@@ -13,7 +13,7 @@ export class RoomResponseImpl implements WebsocketTypes.IRoomResponse<WebsocketT
     this.store.dispatch(RoomsActions.clearStore());
   }
 
-  joinRoom(roomInfo: Data.ServerInfo_Room): void {
+  joinRoom(roomInfo: ServerInfo_Room): void {
     this.store.dispatch(RoomsActions.joinRoom({ roomInfo }));
   }
 
@@ -21,11 +21,11 @@ export class RoomResponseImpl implements WebsocketTypes.IRoomResponse<WebsocketT
     this.store.dispatch(RoomsActions.leaveRoom({ roomId }));
   }
 
-  updateRooms(rooms: Data.ServerInfo_Room[]): void {
+  updateRooms(rooms: ServerInfo_Room[]): void {
     this.store.dispatch(RoomsActions.updateRooms({ rooms }));
   }
 
-  updateGames(roomId: number, gameList: Data.ServerInfo_Game[]): void {
+  updateGames(roomId: number, gameList: ServerInfo_Game[]): void {
     this.store.dispatch(RoomsActions.updateGames({ roomId, games: gameList }));
   }
 
@@ -33,7 +33,7 @@ export class RoomResponseImpl implements WebsocketTypes.IRoomResponse<WebsocketT
     this.store.dispatch(RoomsActions.addMessage({ roomId, message }));
   }
 
-  userJoined(roomId: number, user: Data.ServerInfo_User): void {
+  userJoined(roomId: number, user: ServerInfo_User): void {
     this.store.dispatch(RoomsActions.userJoined({ roomId, user }));
   }
 

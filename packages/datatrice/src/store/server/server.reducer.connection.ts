@@ -1,5 +1,6 @@
 import { CaseReducer, PayloadAction } from '@reduxjs/toolkit';
-import { App, Data } from '../../types';
+import { App } from '../../types';
+import { Event_ServerShutdown } from '@cockatrice/sockatrice/generated';
 import { WebsocketTypes } from '@cockatrice/sockatrice/types';
 import { ServerState, ServerStateStatus } from './server.interfaces';
 
@@ -106,5 +107,5 @@ export const connectionReducers = {
 
   serverShutdown: ((state, action) => {
     state.serverShutdown = action.payload.data;
-  }) as CaseReducer<ServerState, PayloadAction<{ data: Data.Event_ServerShutdown }>>,
+  }) as CaseReducer<ServerState, PayloadAction<{ data: Event_ServerShutdown }>>,
 };

@@ -1,4 +1,19 @@
-import { App, Data, Enriched } from '../../types';
+import { App, Enriched } from '../../types';
+import {
+  CardAttribute,
+  Event_AttachCard,
+  Event_ChangeZoneProperties,
+  Event_CreateToken,
+  Event_DumpZone,
+  Event_FlipCard,
+  Event_MoveCard,
+  Event_RollDie,
+  Event_SetCardAttr,
+  Event_SetCardCounter,
+  Event_SetCounter,
+  ServerInfo_Arrow,
+  ServerInfo_PlayerProperties,
+} from '@cockatrice/sockatrice/generated';
 
 // @critical proto2 wire default for GameEvent.player_id — must be -1, not 0. 0 is a valid player id.
 // See .github/instructions/datatrice-game.instructions.md#servatrice-game-event-quirks.
@@ -67,7 +82,7 @@ export interface CardMovedContext {
 export function formatCardMoved(
   game: Enriched.GameEntry,
   actingPlayerId: number,
-  data: Data.Event_MoveCard,
+  data: Event_MoveCard,
   ctx: CardMovedContext,
 ): string | null {
   const sameOwner = data.startPlayerId === data.targetPlayerId;
@@ -99,7 +114,7 @@ export function formatCardMoved(
 export function formatCardFlipped(
   game: Enriched.GameEntry,
   playerId: number,
-  data: Data.Event_FlipCard,
+  data: Event_FlipCard,
   previousName: string | undefined,
 ): string {
   const actor = nameOf(game, playerId);
@@ -120,7 +135,7 @@ export function formatCardDestroyed(
 export function formatCardAttached(
   game: Enriched.GameEntry,
   playerId: number,
-  data: Data.Event_AttachCard,
+  data: Event_AttachCard,
   sourceCardName: string | undefined,
 ): string {
   const actor = nameOf(game, playerId);
@@ -138,7 +153,7 @@ export function formatCardAttached(
 export function formatTokenCreated(
   game: Enriched.GameEntry,
   playerId: number,
-  data: Data.Event_CreateToken,
+  data: Event_CreateToken,
 ): string {
   const actor = nameOf(game, playerId);
   if (data.faceDown) {
@@ -151,29 +166,29 @@ export function formatTokenCreated(
 export function formatCardAttrChanged(
   game: Enriched.GameEntry,
   playerId: number,
-  data: Data.Event_SetCardAttr,
+  data: Event_SetCardAttr,
   cardName: string | undefined,
 ): string | null {
   const actor = nameOf(game, playerId);
   const card = cardDescriptor(cardName);
-  switch (data.attribute as Data.CardAttribute) {
-    case Data.CardAttribute.AttrTapped:
+  switch (data.attribute as CardAttribute) {
+    case CardAttribute.AttrTapped:
       return data.attrValue === '1' ? `${actor} taps ${card}.` : `${actor} untaps ${card}.`;
-    case Data.CardAttribute.AttrAttacking:
+    case CardAttribute.AttrAttacking:
       return data.attrValue === '1' ? `${actor} declares ${card} as an attacker.` : null;
-    case Data.CardAttribute.AttrFaceDown:
+    case CardAttribute.AttrFaceDown:
       return null;
-    case Data.CardAttribute.AttrColor:
+    case CardAttribute.AttrColor:
       return null;
-    case Data.CardAttribute.AttrPT:
+    case CardAttribute.AttrPT:
       return data.attrValue
         ? `${actor} sets PT of ${card} to ${data.attrValue}.`
         : `${actor} clears the PT of ${card}.`;
-    case Data.CardAttribute.AttrAnnotation:
+    case CardAttribute.AttrAnnotation:
       return data.attrValue
         ? `${actor} sets annotation of ${card} to "${data.attrValue}".`
         : `${actor} clears the annotation on ${card}.`;
-    case Data.CardAttribute.AttrDoesntUntap:
+    case CardAttribute.AttrDoesntUntap:
       return data.attrValue === '1'
         ? `${actor} sets ${card} to not untap normally.`
         : `${actor} sets ${card} to untap normally.`;
@@ -185,7 +200,7 @@ export function formatCardAttrChanged(
 export function formatCardCounterChanged(
   game: Enriched.GameEntry,
   playerId: number,
-  data: Data.Event_SetCardCounter,
+  data: Event_SetCardCounter,
   cardName: string | undefined,
   previousValue: number,
 ): string {
@@ -204,7 +219,7 @@ export function formatCardCounterChanged(
 export function formatCounterSet(
   game: Enriched.GameEntry,
   playerId: number,
-  data: Data.Event_SetCounter,
+  data: Event_SetCounter,
   counterName: string | undefined,
   previousValue: number,
 ): string {
@@ -236,7 +251,7 @@ export function formatZoneShuffled(game: Enriched.GameEntry, playerId: number): 
 export function formatZoneDumped(
   game: Enriched.GameEntry,
   playerId: number,
-  data: Data.Event_DumpZone,
+  data: Event_DumpZone,
 ): string {
   const actor = nameOf(game, playerId);
   const count = data.numberCards;
@@ -250,7 +265,7 @@ export function formatZoneDumped(
 export function formatZonePropertiesChanged(
   game: Enriched.GameEntry,
   playerId: number,
-  data: Data.Event_ChangeZoneProperties,
+  data: Event_ChangeZoneProperties,
 ): string | null {
   const actor = nameOf(game, playerId);
   const zone = zoneLabel(data.zoneName);
@@ -281,7 +296,7 @@ export function formatTurnReversed(game: Enriched.GameEntry, playerId: number, r
 export function formatDieRolled(
   game: Enriched.GameEntry,
   playerId: number,
-  data: Data.Event_RollDie,
+  data: Event_RollDie,
 ): string {
   const actor = nameOf(game, playerId);
   const rolls = (data.values && data.values.length > 0) ? data.values : (data.value ? [data.value] : []);
@@ -305,7 +320,7 @@ export function formatGameStart(): string {
 export function formatArrowCreated(
   game: Enriched.GameEntry,
   playerId: number,
-  arrow: Data.ServerInfo_Arrow,
+  arrow: ServerInfo_Arrow,
 ): string {
   const actor = nameOf(game, playerId);
   const sourceCard = cardDescriptor(
@@ -332,8 +347,8 @@ interface PropertyDiff {
 }
 
 export function diffPlayerProperties(
-  previous: Data.ServerInfo_PlayerProperties,
-  next: Data.ServerInfo_PlayerProperties,
+  previous: ServerInfo_PlayerProperties,
+  next: ServerInfo_PlayerProperties,
 ): PropertyDiff {
   const diff: PropertyDiff = {};
   if (!previous.conceded && next.conceded) {

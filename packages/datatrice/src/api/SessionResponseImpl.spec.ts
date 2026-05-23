@@ -2,7 +2,21 @@ import { create } from '@bufbuild/protobuf';
 import { WebsocketTypes } from '@cockatrice/sockatrice/types';
 
 import { createStore } from '../store/createStore';
-import { Data } from '../types';
+import {
+  Event_GameJoinedSchema,
+  Event_NotifyUserSchema,
+  Event_PlayerPropertiesChangedSchema,
+  Event_ServerShutdownSchema,
+  Event_UserMessageSchema,
+  Response_DeckDownloadSchema,
+  Response_DeckListSchema,
+  Response_GetGamesOfUserSchema,
+  Response_ReplayDownloadSchema,
+  ServerInfo_DeckStorage_TreeItemSchema,
+  ServerInfo_PlayerPropertiesSchema,
+  ServerInfo_ReplayMatchSchema,
+  ServerInfo_UserSchema,
+} from '@cockatrice/sockatrice/generated';
 import { Actions as ServerActions } from '../store/server/server.actions';
 import { Actions as GameActions } from '../store/games/game.actions';
 import { SessionResponseImpl } from './SessionResponseImpl';
@@ -98,14 +112,14 @@ describe('SessionResponseImpl forwards', () => {
 
   it('updateBuddyList', () => {
     const { impl, dispatch } = setup();
-    const buddyList = [create(Data.ServerInfo_UserSchema, { name: 'alice' })];
+    const buddyList = [create(ServerInfo_UserSchema, { name: 'alice' })];
     impl.updateBuddyList(buddyList);
     expect(dispatch).toHaveBeenCalledWith(ServerActions.updateBuddyList({ buddyList }));
   });
 
   it('addToBuddyList', () => {
     const { impl, dispatch } = setup();
-    const user = create(Data.ServerInfo_UserSchema, { name: 'alice' });
+    const user = create(ServerInfo_UserSchema, { name: 'alice' });
     impl.addToBuddyList(user);
     expect(dispatch).toHaveBeenCalledWith(ServerActions.addToBuddyList({ user }));
   });
@@ -118,14 +132,14 @@ describe('SessionResponseImpl forwards', () => {
 
   it('updateIgnoreList', () => {
     const { impl, dispatch } = setup();
-    const ignoreList = [create(Data.ServerInfo_UserSchema, { name: 'bob' })];
+    const ignoreList = [create(ServerInfo_UserSchema, { name: 'bob' })];
     impl.updateIgnoreList(ignoreList);
     expect(dispatch).toHaveBeenCalledWith(ServerActions.updateIgnoreList({ ignoreList }));
   });
 
   it('addToIgnoreList', () => {
     const { impl, dispatch } = setup();
-    const user = create(Data.ServerInfo_UserSchema, { name: 'bob' });
+    const user = create(ServerInfo_UserSchema, { name: 'bob' });
     impl.addToIgnoreList(user);
     expect(dispatch).toHaveBeenCalledWith(ServerActions.addToIgnoreList({ user }));
   });
@@ -144,21 +158,21 @@ describe('SessionResponseImpl forwards', () => {
 
   it('updateUser', () => {
     const { impl, dispatch } = setup();
-    const user = create(Data.ServerInfo_UserSchema, { name: 'alice' });
+    const user = create(ServerInfo_UserSchema, { name: 'alice' });
     impl.updateUser(user);
     expect(dispatch).toHaveBeenCalledWith(ServerActions.updateUser({ user }));
   });
 
   it('updateUsers', () => {
     const { impl, dispatch } = setup();
-    const users = [create(Data.ServerInfo_UserSchema, { name: 'alice' })];
+    const users = [create(ServerInfo_UserSchema, { name: 'alice' })];
     impl.updateUsers(users);
     expect(dispatch).toHaveBeenCalledWith(ServerActions.updateUsers({ users }));
   });
 
   it('userJoined', () => {
     const { impl, dispatch } = setup();
-    const user = create(Data.ServerInfo_UserSchema, { name: 'alice' });
+    const user = create(ServerInfo_UserSchema, { name: 'alice' });
     impl.userJoined(user);
     expect(dispatch).toHaveBeenCalledWith(ServerActions.userJoined({ user }));
   });
@@ -291,36 +305,36 @@ describe('SessionResponseImpl forwards', () => {
 
   it('getUserInfo', () => {
     const { impl, dispatch } = setup();
-    const userInfo = create(Data.ServerInfo_UserSchema, { name: 'alice' });
+    const userInfo = create(ServerInfo_UserSchema, { name: 'alice' });
     impl.getUserInfo(userInfo);
     expect(dispatch).toHaveBeenCalledWith(ServerActions.getUserInfo({ userInfo }));
   });
 
   it('getGamesOfUser maps method name to gamesOfUser action', () => {
     const { impl, dispatch } = setup();
-    const response = create(Data.Response_GetGamesOfUserSchema, {});
+    const response = create(Response_GetGamesOfUserSchema, {});
     impl.getGamesOfUser('alice', response);
     expect(dispatch).toHaveBeenCalledWith(ServerActions.gamesOfUser({ userName: 'alice', response }));
   });
 
   it('gameJoined dispatches a GameActions action with the data', () => {
     const { impl, dispatch } = setup();
-    const data = create(Data.Event_GameJoinedSchema, { gameId: 7 });
+    const data = create(Event_GameJoinedSchema, { gameId: 7 });
     impl.gameJoined(data);
     expect(dispatch).toHaveBeenCalledWith(GameActions.gameJoined({ data }));
   });
 
   it('notifyUser', () => {
     const { impl, dispatch } = setup();
-    const notification = create(Data.Event_NotifyUserSchema, {});
+    const notification = create(Event_NotifyUserSchema, {});
     impl.notifyUser(notification);
     expect(dispatch).toHaveBeenCalledWith(ServerActions.notifyUser({ notification }));
   });
 
   it('playerPropertiesChanged dispatches a GameActions action when playerProperties is set', () => {
     const { impl, dispatch } = setup();
-    const playerProperties = create(Data.ServerInfo_PlayerPropertiesSchema, { playerId: 3 });
-    const payload = create(Data.Event_PlayerPropertiesChangedSchema, { playerProperties });
+    const playerProperties = create(ServerInfo_PlayerPropertiesSchema, { playerId: 3 });
+    const payload = create(Event_PlayerPropertiesChangedSchema, { playerProperties });
     impl.playerPropertiesChanged(7, 3, payload);
     expect(dispatch).toHaveBeenCalledWith(
       GameActions.playerPropertiesChanged({ gameId: 7, playerId: 3, properties: playerProperties }),
@@ -329,21 +343,21 @@ describe('SessionResponseImpl forwards', () => {
 
   it('playerPropertiesChanged dispatches nothing when payload.playerProperties is unset', () => {
     const { impl, dispatch } = setup();
-    const payload = create(Data.Event_PlayerPropertiesChangedSchema, {});
+    const payload = create(Event_PlayerPropertiesChangedSchema, {});
     impl.playerPropertiesChanged(7, 3, payload);
     expect(dispatch).not.toHaveBeenCalled();
   });
 
   it('serverShutdown', () => {
     const { impl, dispatch } = setup();
-    const data = create(Data.Event_ServerShutdownSchema, {});
+    const data = create(Event_ServerShutdownSchema, {});
     impl.serverShutdown(data);
     expect(dispatch).toHaveBeenCalledWith(ServerActions.serverShutdown({ data }));
   });
 
   it('userMessage', () => {
     const { impl, dispatch } = setup();
-    const messageData = create(Data.Event_UserMessageSchema, {});
+    const messageData = create(Event_UserMessageSchema, {});
     impl.userMessage(messageData);
     expect(dispatch).toHaveBeenCalledWith(ServerActions.userMessage({ messageData }));
   });
@@ -368,14 +382,14 @@ describe('SessionResponseImpl forwards', () => {
 
   it('updateServerDecks maps method name to backendDecks action', () => {
     const { impl, dispatch } = setup();
-    const deckList = create(Data.Response_DeckListSchema, {});
+    const deckList = create(Response_DeckListSchema, {});
     impl.updateServerDecks(deckList);
     expect(dispatch).toHaveBeenCalledWith(ServerActions.backendDecks({ deckList }));
   });
 
   it('uploadServerDeck maps method name to deckUpload action', () => {
     const { impl, dispatch } = setup();
-    const treeItem = create(Data.ServerInfo_DeckStorage_TreeItemSchema, { name: 'deck1' });
+    const treeItem = create(ServerInfo_DeckStorage_TreeItemSchema, { name: 'deck1' });
     impl.uploadServerDeck('/folder', treeItem);
     expect(dispatch).toHaveBeenCalledWith(ServerActions.deckUpload({ path: '/folder', treeItem }));
   });
@@ -394,14 +408,14 @@ describe('SessionResponseImpl forwards', () => {
 
   it('replayList', () => {
     const { impl, dispatch } = setup();
-    const matchList = [create(Data.ServerInfo_ReplayMatchSchema, { gameId: 1 })];
+    const matchList = [create(ServerInfo_ReplayMatchSchema, { gameId: 1 })];
     impl.replayList(matchList);
     expect(dispatch).toHaveBeenCalledWith(ServerActions.replayList({ matchList }));
   });
 
   it('replayAdded', () => {
     const { impl, dispatch } = setup();
-    const matchInfo = create(Data.ServerInfo_ReplayMatchSchema, { gameId: 1 });
+    const matchInfo = create(ServerInfo_ReplayMatchSchema, { gameId: 1 });
     impl.replayAdded(matchInfo);
     expect(dispatch).toHaveBeenCalledWith(ServerActions.replayAdded({ matchInfo }));
   });
@@ -421,7 +435,7 @@ describe('SessionResponseImpl forwards', () => {
   it('downloadServerDeck unwraps response.deck into the deckDownloaded payload', () => {
     const { impl, dispatch } = setup();
     const deck = 'parsed deck content';
-    const response = create(Data.Response_DeckDownloadSchema, { deck });
+    const response = create(Response_DeckDownloadSchema, { deck });
     impl.downloadServerDeck(42, response);
     expect(dispatch).toHaveBeenCalledWith(ServerActions.deckDownloaded({ deckId: 42, deck }));
   });
@@ -429,7 +443,7 @@ describe('SessionResponseImpl forwards', () => {
   it('replayDownloaded unwraps response.replayData into the replayDownloaded payload', () => {
     const { impl, dispatch } = setup();
     const replayData = new Uint8Array([4, 5, 6]);
-    const response = create(Data.Response_ReplayDownloadSchema, { replayData });
+    const response = create(Response_ReplayDownloadSchema, { replayData });
     impl.replayDownloaded(1, response);
     expect(dispatch).toHaveBeenCalledWith(ServerActions.replayDownloaded({ replayId: 1, replayData }));
   });

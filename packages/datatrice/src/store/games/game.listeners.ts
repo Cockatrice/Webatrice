@@ -1,7 +1,15 @@
 import { create, isFieldSet } from '@bufbuild/protobuf';
 import type { ListenerMiddlewareInstance } from '@reduxjs/toolkit';
 
-import { Data, Enriched } from '../../types';
+import { Enriched } from '../../types';
+import {
+  CardAttribute,
+  Event_GameStateChangedSchema,
+  ServerInfo_Card,
+  ServerInfo_CardCounter,
+  ServerInfo_CardCounterSchema,
+  ServerInfo_CardSchema,
+} from '@cockatrice/sockatrice/generated';
 import { GamesState } from './game.interfaces';
 import { Actions } from './game.actions';
 import { buildEmptyCard, formatLeaveMessage, normalizePlayers } from './game.reducer.helpers';
@@ -57,7 +65,7 @@ export function registerGameListeners(mw: ListenerMiddlewareInstance<unknown>): 
         return;
       }
 
-      const removedCard: Data.ServerInfo_Card | undefined =
+      const removedCard: ServerInfo_Card | undefined =
       resolvedCardId >= 0 ? sourceZone.byId[resolvedCardId] : undefined;
       const effectiveNewId =
       newCardId >= 0 ? newCardId : (removedCard?.id ?? resolvedCardId);
@@ -65,7 +73,7 @@ export function registerGameListeners(mw: ListenerMiddlewareInstance<unknown>): 
       const isLeavingBattlefield =
       startZone === Enriched.ZoneName.TABLE && effectiveTargetZone !== Enriched.ZoneName.TABLE;
 
-      const movedCard: Data.ServerInfo_Card = removedCard
+      const movedCard: ServerInfo_Card = removedCard
         ? {
           ...removedCard,
           id: effectiveNewId,
@@ -146,20 +154,20 @@ export function registerGameListeners(mw: ListenerMiddlewareInstance<unknown>): 
       secondsElapsed?: number;
     } = { gameId };
       let hasUpdate = false;
-      if (isFieldSet(data, Data.Event_GameStateChangedSchema.field.gameStarted)) {
+      if (isFieldSet(data, Event_GameStateChangedSchema.field.gameStarted)) {
         update.gameStarted = data.gameStarted;
         nextStarted = data.gameStarted;
         hasUpdate = true;
       }
-      if (isFieldSet(data, Data.Event_GameStateChangedSchema.field.activePlayerId)) {
+      if (isFieldSet(data, Event_GameStateChangedSchema.field.activePlayerId)) {
         update.activePlayerId = data.activePlayerId;
         hasUpdate = true;
       }
-      if (isFieldSet(data, Data.Event_GameStateChangedSchema.field.activePhase)) {
+      if (isFieldSet(data, Event_GameStateChangedSchema.field.activePhase)) {
         update.activePhase = data.activePhase;
         hasUpdate = true;
       }
-      if (isFieldSet(data, Data.Event_GameStateChangedSchema.field.secondsElapsed)) {
+      if (isFieldSet(data, Event_GameStateChangedSchema.field.secondsElapsed)) {
         update.secondsElapsed = data.secondsElapsed;
         hasUpdate = true;
       }
@@ -191,21 +199,21 @@ export function registerGameListeners(mw: ListenerMiddlewareInstance<unknown>): 
       }
       const cardName = card.name;
 
-      let fields: Partial<Data.ServerInfo_Card> | undefined;
-      switch (attribute as Data.CardAttribute) {
-        case Data.CardAttribute.AttrTapped:
+      let fields: Partial<ServerInfo_Card> | undefined;
+      switch (attribute as CardAttribute) {
+        case CardAttribute.AttrTapped:
           fields = { tapped: attrValue === '1' }; break;
-        case Data.CardAttribute.AttrAttacking:
+        case CardAttribute.AttrAttacking:
           fields = { attacking: attrValue === '1' }; break;
-        case Data.CardAttribute.AttrFaceDown:
+        case CardAttribute.AttrFaceDown:
           fields = { faceDown: attrValue === '1' }; break;
-        case Data.CardAttribute.AttrColor:
+        case CardAttribute.AttrColor:
           fields = { color: attrValue }; break;
-        case Data.CardAttribute.AttrPT:
+        case CardAttribute.AttrPT:
           fields = { pt: attrValue }; break;
-        case Data.CardAttribute.AttrAnnotation:
+        case CardAttribute.AttrAnnotation:
           fields = { annotation: attrValue }; break;
-        case Data.CardAttribute.AttrDoesntUntap:
+        case CardAttribute.AttrDoesntUntap:
           fields = { doesntUntap: attrValue === '1' }; break;
       }
       if (fields) {
@@ -233,7 +241,7 @@ export function registerGameListeners(mw: ListenerMiddlewareInstance<unknown>): 
       const cardName = card.name;
       const previousValue = card.counterList.find(c => c.id === counterId)?.value ?? 0;
 
-      let nextCounterList: Data.ServerInfo_CardCounter[];
+      let nextCounterList: ServerInfo_CardCounter[];
       if (counterValue <= 0) {
         nextCounterList = card.counterList.filter(c => c.id !== counterId);
       } else {
@@ -245,7 +253,7 @@ export function registerGameListeners(mw: ListenerMiddlewareInstance<unknown>): 
         } else {
           nextCounterList = [
             ...card.counterList,
-            create(Data.ServerInfo_CardCounterSchema, { id: counterId, value: counterValue }),
+            create(ServerInfo_CardCounterSchema, { id: counterId, value: counterValue }),
           ];
         }
       }
@@ -275,7 +283,7 @@ export function registerGameListeners(mw: ListenerMiddlewareInstance<unknown>): 
 
       // Unattach detected via empty targetZone; explicit sentinels. See .github/instructions/datatrice-game.instructions.md#servatrice-game-event-quirks.
       const isUnattach = !targetZone;
-      const fields: Partial<Data.ServerInfo_Card> = isUnattach
+      const fields: Partial<ServerInfo_Card> = isUnattach
         ? { attachPlayerId: -1, attachZone: '', attachCardId: -1 }
         : { attachPlayerId: targetPlayerId, attachZone: targetZone, attachCardId: targetCardId };
       api.dispatch(Actions.cardFieldsUpdated({
@@ -397,7 +405,7 @@ export function registerGameListeners(mw: ListenerMiddlewareInstance<unknown>): 
       // rather than proto3's zero/empty surfacing. The attach* fields are
       // written as -1 / '' / -1 so downstream `isAttachedChild` recognises
       // the token as detached the moment it lands on the table.
-      const newCard = create(Data.ServerInfo_CardSchema, {
+      const newCard = create(ServerInfo_CardSchema, {
         id: cardId, name: cardName, x, y, faceDown,
         tapped: false, attacking: false, color, pt, annotation, destroyOnZoneChange,
         doesntUntap: false, counterList: [],

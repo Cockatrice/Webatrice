@@ -5,8 +5,7 @@ import { Provider } from 'react-redux';
 import { MemoryRouter } from 'react-router-dom';
 import { createStore } from '@cockatrice/datatrice';
 import { WebClientContext } from '@cockatrice/datatrice/react';
-
-import { Data } from '@cockatrice/datatrice';
+import { ServerInfo_User_UserLevelFlag } from '@cockatrice/sockatrice/generated';
 
 import { rootReducerMap, type RootState } from '../../store';
 import {
@@ -61,7 +60,7 @@ describe('useLeftNav', () => {
   });
 
   it('adds Administration and Logs options when the user is a moderator', () => {
-    const IsModerator = Data.ServerInfo_User_UserLevelFlag.IsModerator;
+    const IsModerator = ServerInfo_User_UserLevelFlag.IsModerator;
     const state = {
       ...connectedState,
       server: {

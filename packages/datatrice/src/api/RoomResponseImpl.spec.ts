@@ -1,7 +1,7 @@
 import { create } from '@bufbuild/protobuf';
 
 import { createStore } from '../store/createStore';
-import { Data } from '../types';
+import { ServerInfo_GameSchema, ServerInfo_RoomSchema, ServerInfo_UserSchema } from '@cockatrice/sockatrice/generated';
 import { Actions as RoomsActions } from '../store/rooms/rooms.actions';
 import { RoomResponseImpl } from './RoomResponseImpl';
 
@@ -20,7 +20,7 @@ describe('RoomResponseImpl', () => {
 
   it('joinRoom dispatches the joinRoom action with the room info', () => {
     const { impl, dispatch } = setup();
-    const roomInfo = create(Data.ServerInfo_RoomSchema, { roomId: 1, name: 'Main' });
+    const roomInfo = create(ServerInfo_RoomSchema, { roomId: 1, name: 'Main' });
     impl.joinRoom(roomInfo);
     expect(dispatch).toHaveBeenCalledWith(RoomsActions.joinRoom({ roomInfo }));
   });
@@ -33,14 +33,14 @@ describe('RoomResponseImpl', () => {
 
   it('updateRooms dispatches the updateRooms action with the list', () => {
     const { impl, dispatch } = setup();
-    const rooms = [create(Data.ServerInfo_RoomSchema, { roomId: 1, name: 'Main' })];
+    const rooms = [create(ServerInfo_RoomSchema, { roomId: 1, name: 'Main' })];
     impl.updateRooms(rooms);
     expect(dispatch).toHaveBeenCalledWith(RoomsActions.updateRooms({ rooms }));
   });
 
   it('updateGames dispatches the updateGames action with the list', () => {
     const { impl, dispatch } = setup();
-    const games = [create(Data.ServerInfo_GameSchema, { gameId: 9, description: 'g9' })];
+    const games = [create(ServerInfo_GameSchema, { gameId: 9, description: 'g9' })];
     impl.updateGames(2, games);
     expect(dispatch).toHaveBeenCalledWith(RoomsActions.updateGames({ roomId: 2, games }));
   });
@@ -54,7 +54,7 @@ describe('RoomResponseImpl', () => {
 
   it('userJoined dispatches the userJoined action', () => {
     const { impl, dispatch } = setup();
-    const user = create(Data.ServerInfo_UserSchema, { name: 'alice' });
+    const user = create(ServerInfo_UserSchema, { name: 'alice' });
     impl.userJoined(3, user);
     expect(dispatch).toHaveBeenCalledWith(RoomsActions.userJoined({ roomId: 3, user }));
   });

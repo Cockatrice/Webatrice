@@ -1,5 +1,5 @@
 import { CaseReducer, PayloadAction } from '@reduxjs/toolkit';
-import { Data } from '../../types';
+import { Event_CreateCounter, Event_DelCounter, Event_SetCounter } from '@cockatrice/sockatrice/generated';
 import { GamesState } from './game.interfaces';
 
 export const counterReducers = {
@@ -9,7 +9,7 @@ export const counterReducers = {
     if (player && data.counterInfo) {
       player.counters[data.counterInfo.id] = { ...data.counterInfo };
     }
-  }) as CaseReducer<GamesState, PayloadAction<{ gameId: number; playerId: number; data: Data.Event_CreateCounter }>>,
+  }) as CaseReducer<GamesState, PayloadAction<{ gameId: number; playerId: number; data: Event_CreateCounter }>>,
 
   counterSet: ((state, action) => {
     const { gameId, playerId, data } = action.payload;
@@ -19,7 +19,7 @@ export const counterReducers = {
       return;
     }
     counter.count = data.value;
-  }) as CaseReducer<GamesState, PayloadAction<{ gameId: number; playerId: number; data: Data.Event_SetCounter }>>,
+  }) as CaseReducer<GamesState, PayloadAction<{ gameId: number; playerId: number; data: Event_SetCounter }>>,
 
   counterDeleted: ((state, action) => {
     const { gameId, playerId, data } = action.payload;
@@ -27,5 +27,5 @@ export const counterReducers = {
     if (player) {
       delete player.counters[data.counterId];
     }
-  }) as CaseReducer<GamesState, PayloadAction<{ gameId: number; playerId: number; data: Data.Event_DelCounter }>>,
+  }) as CaseReducer<GamesState, PayloadAction<{ gameId: number; playerId: number; data: Event_DelCounter }>>,
 };

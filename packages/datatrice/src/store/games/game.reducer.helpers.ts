@@ -1,5 +1,12 @@
 import { create } from '@bufbuild/protobuf';
-import { Data, Enriched } from '../../types';
+import { Enriched } from '../../types';
+import {
+  ServerInfo_Arrow,
+  ServerInfo_Card,
+  ServerInfo_CardSchema,
+  ServerInfo_Counter,
+  ServerInfo_Player,
+} from '@cockatrice/sockatrice/generated';
 
 export const MAX_GAME_MESSAGES = 1000;
 
@@ -38,7 +45,7 @@ export function pushEventMessage(
   });
 }
 
-export function normalizePlayers(playerList: Data.ServerInfo_Player[]): { [playerId: number]: Enriched.PlayerEntry } {
+export function normalizePlayers(playerList: ServerInfo_Player[]): { [playerId: number]: Enriched.PlayerEntry } {
   const players: { [playerId: number]: Enriched.PlayerEntry } = {};
   for (const player of playerList) {
     const playerId = player.properties.playerId;
@@ -46,7 +53,7 @@ export function normalizePlayers(playerList: Data.ServerInfo_Player[]): { [playe
     const zones: { [zoneName: string]: Enriched.ZoneEntry } = {};
     for (const zone of player.zoneList) {
       const order: number[] = [];
-      const byId: { [id: number]: Data.ServerInfo_Card } = {};
+      const byId: { [id: number]: ServerInfo_Card } = {};
       for (const card of zone.cardList) {
         order.push(card.id);
         byId[card.id] = card;
@@ -63,12 +70,12 @@ export function normalizePlayers(playerList: Data.ServerInfo_Player[]): { [playe
       };
     }
 
-    const counters: { [counterId: number]: Data.ServerInfo_Counter } = {};
+    const counters: { [counterId: number]: ServerInfo_Counter } = {};
     for (const counter of player.counterList) {
       counters[counter.id] = counter;
     }
 
-    const arrows: { [arrowId: number]: Data.ServerInfo_Arrow } = {};
+    const arrows: { [arrowId: number]: ServerInfo_Arrow } = {};
     for (const arrow of player.arrowList) {
       arrows[arrow.id] = arrow;
     }
@@ -91,8 +98,8 @@ export function buildEmptyCard(
   y: number,
   faceDown: boolean,
   providerId: string
-): Data.ServerInfo_Card {
-  return create(Data.ServerInfo_CardSchema, {
+): ServerInfo_Card {
+  return create(ServerInfo_CardSchema, {
     id, name, x, y, faceDown,
     tapped: false, attacking: false, color: '', pt: '', annotation: '',
     destroyOnZoneChange: false, doesntUntap: false, counterList: [],

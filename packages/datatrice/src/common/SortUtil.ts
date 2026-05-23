@@ -1,4 +1,5 @@
-import { App, Data } from '../types';
+import { App } from '../types';
+import { ServerInfo_User } from '@cockatrice/sockatrice/generated';
 
 export default class SortUtil {
   static sortByField<T extends object>(arr: T[], sortBy: App.SortBy): void {
@@ -51,7 +52,7 @@ export default class SortUtil {
     }
   }
 
-  static sortUsersByField(users: Data.ServerInfo_User[], sortBy: App.SortBy) {
+  static sortUsersByField(users: ServerInfo_User[], sortBy: App.SortBy) {
     if (users.length) {
       users.sort((a, b) => SortUtil.userComparator(a, b, sortBy));
     }
@@ -63,7 +64,7 @@ export default class SortUtil {
     return copy;
   }
 
-  static sortedUsersByField(users: readonly Data.ServerInfo_User[], sortBy: App.SortBy): Data.ServerInfo_User[] {
+  static sortedUsersByField(users: readonly ServerInfo_User[], sortBy: App.SortBy): ServerInfo_User[] {
     const copy = [...users];
     SortUtil.sortUsersByField(copy, sortBy);
     return copy;
@@ -87,7 +88,7 @@ export default class SortUtil {
     arr.sort((a, b) => SortUtil.stringComparator(a, b, sortBy));
   }
 
-  private static userComparator(a: Data.ServerInfo_User, b: Data.ServerInfo_User, sortBy: App.SortBy) {
+  private static userComparator(a: ServerInfo_User, b: ServerInfo_User, sortBy: App.SortBy) {
     const adminSortBy = {
       field: 'userLevel',
       order: App.SortDirection.DESC

@@ -1,6 +1,7 @@
 import type { ListenerMiddlewareInstance } from '@reduxjs/toolkit';
 
-import { Data, Enriched } from '../../types';
+import { Enriched } from '../../types';
+import { ServerInfo_Game, ServerInfo_Room, ServerInfo_RoomSchema } from '@cockatrice/sockatrice/generated';
 import { mergeSetFields, normalizeGameObject, normalizeGametypeMap } from '../../common';
 
 import { Actions } from './rooms.actions';
@@ -20,8 +21,8 @@ export function registerRoomsListeners(mw: ListenerMiddlewareInstance<unknown>):
 
         if (existing) {
           // Sparse mergeSetFields outside the reducer (Immer doesn't draft protobuf-es). See .github/instructions/datatrice-store.instructions.md#reducer-author-hazards.
-          const nextInfo = { ...existing.info } as Data.ServerInfo_Room;
-          mergeSetFields(Data.ServerInfo_RoomSchema, nextInfo, rawRoom);
+          const nextInfo = { ...existing.info } as ServerInfo_Room;
+          mergeSetFields(ServerInfo_RoomSchema, nextInfo, rawRoom);
           const nextGametypeMap = rawGametypeList.length > 0
             ? normalizeGametypeMap(rawGametypeList)
             : existing.gametypeMap;
@@ -69,7 +70,7 @@ export function registerRoomsListeners(mw: ListenerMiddlewareInstance<unknown>):
 
         const existing = room.games[rawGame.gameId];
         if (existing) {
-          const merged: Data.ServerInfo_Game = { ...existing.info, ...rawGame };
+          const merged: ServerInfo_Game = { ...existing.info, ...rawGame };
           const game: Enriched.Game = {
             info: merged,
             gameType: merged.gameTypes?.length

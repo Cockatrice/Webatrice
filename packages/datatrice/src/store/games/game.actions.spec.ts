@@ -1,5 +1,26 @@
 ﻿import { create } from '@bufbuild/protobuf';
-import { Data } from '../../types';
+import {
+  Event_AttachCardSchema,
+  Event_ChangeZonePropertiesSchema,
+  Event_CreateArrowSchema,
+  Event_CreateCounterSchema,
+  Event_CreateTokenSchema,
+  Event_DelCounterSchema,
+  Event_DeleteArrowSchema,
+  Event_DestroyCardSchema,
+  Event_DrawCardsSchema,
+  Event_DumpZoneSchema,
+  Event_FlipCardSchema,
+  Event_GameJoinedSchema,
+  Event_GameStateChangedSchema,
+  Event_MoveCardSchema,
+  Event_RevealCardsSchema,
+  Event_RollDieSchema,
+  Event_SetCardAttrSchema,
+  Event_SetCardCounterSchema,
+  Event_SetCounterSchema,
+  Event_ShuffleSchema,
+} from '@cockatrice/sockatrice/generated';
 import { Actions } from './game.actions';
 import {
   makeArrow,
@@ -15,7 +36,7 @@ describe('Actions', () => {
   });
 
   it('gameJoined', () => {
-    const data = create(Data.Event_GameJoinedSchema, { hostId: 1, playerId: 2 });
+    const data = create(Event_GameJoinedSchema, { hostId: 1, playerId: 2 });
     const action = Actions.gameJoined({ data });
     expect(action.payload.data).toBe(data);
   });
@@ -36,7 +57,7 @@ describe('Actions', () => {
   });
 
   it('gameStateChanged', () => {
-    const data = create(Data.Event_GameStateChangedSchema, {
+    const data = create(Event_GameStateChangedSchema, {
       playerList: [], gameStarted: true, activePlayerId: 1, activePhase: 0, secondsElapsed: 0
     });
     const action = Actions.gameStateChanged({ gameId: 1, data });
@@ -66,100 +87,100 @@ describe('Actions', () => {
   });
 
   it('cardMoved', () => {
-    const data = create(Data.Event_MoveCardSchema, { cardId: 1 });
+    const data = create(Event_MoveCardSchema, { cardId: 1 });
     const action = Actions.cardMoved({ gameId: 1, playerId: 2, data });
     expect(action.payload).toEqual({ gameId: 1, playerId: 2, data });
   });
 
   it('cardFlipped', () => {
-    const data = create(Data.Event_FlipCardSchema, { cardId: 1 });
+    const data = create(Event_FlipCardSchema, { cardId: 1 });
     const action = Actions.cardFlipped({ gameId: 1, playerId: 2, data });
     expect(action.payload.data).toBe(data);
   });
 
   it('cardDestroyed', () => {
-    const data = create(Data.Event_DestroyCardSchema, { cardId: 1 });
+    const data = create(Event_DestroyCardSchema, { cardId: 1 });
     const action = Actions.cardDestroyed({ gameId: 1, playerId: 2, data });
     expect(action.payload.data).toBe(data);
   });
 
   it('cardAttached', () => {
-    const data = create(Data.Event_AttachCardSchema, { cardId: 1 });
+    const data = create(Event_AttachCardSchema, { cardId: 1 });
     const action = Actions.cardAttached({ gameId: 1, playerId: 2, data });
     expect(action.payload.data).toBe(data);
   });
 
   it('tokenCreated', () => {
-    const data = create(Data.Event_CreateTokenSchema, { cardId: 1 });
+    const data = create(Event_CreateTokenSchema, { cardId: 1 });
     const action = Actions.tokenCreated({ gameId: 1, playerId: 2, data });
     expect(action.payload.data).toBe(data);
   });
 
   it('cardAttrChanged', () => {
-    const data = create(Data.Event_SetCardAttrSchema, { cardId: 1 });
+    const data = create(Event_SetCardAttrSchema, { cardId: 1 });
     const action = Actions.cardAttrChanged({ gameId: 1, playerId: 2, data });
     expect(action.payload.data).toBe(data);
   });
 
   it('cardCounterChanged', () => {
-    const data = create(Data.Event_SetCardCounterSchema, { cardId: 1 });
+    const data = create(Event_SetCardCounterSchema, { cardId: 1 });
     const action = Actions.cardCounterChanged({ gameId: 1, playerId: 2, data });
     expect(action.payload.data).toBe(data);
   });
 
   it('arrowCreated', () => {
     const arrow = makeArrow();
-    const data = create(Data.Event_CreateArrowSchema, { arrowInfo: arrow });
+    const data = create(Event_CreateArrowSchema, { arrowInfo: arrow });
     const action = Actions.arrowCreated({ gameId: 1, playerId: 2, data });
     expect(action.payload.data).toBe(data);
   });
 
   it('arrowDeleted', () => {
-    const data = create(Data.Event_DeleteArrowSchema, { arrowId: 3 });
+    const data = create(Event_DeleteArrowSchema, { arrowId: 3 });
     const action = Actions.arrowDeleted({ gameId: 1, playerId: 2, data });
     expect(action.payload.data).toBe(data);
   });
 
   it('counterCreated', () => {
     const counter = makeCounter();
-    const data = create(Data.Event_CreateCounterSchema, { counterInfo: counter });
+    const data = create(Event_CreateCounterSchema, { counterInfo: counter });
     const action = Actions.counterCreated({ gameId: 1, playerId: 2, data });
     expect(action.payload.data).toBe(data);
   });
 
   it('counterSet', () => {
-    const data = create(Data.Event_SetCounterSchema, { counterId: 1, value: 10 });
+    const data = create(Event_SetCounterSchema, { counterId: 1, value: 10 });
     const action = Actions.counterSet({ gameId: 1, playerId: 2, data });
     expect(action.payload.data).toBe(data);
   });
 
   it('counterDeleted', () => {
-    const data = create(Data.Event_DelCounterSchema, { counterId: 1 });
+    const data = create(Event_DelCounterSchema, { counterId: 1 });
     const action = Actions.counterDeleted({ gameId: 1, playerId: 2, data });
     expect(action.payload.data).toBe(data);
   });
 
   it('cardsDrawn', () => {
     const card = makeCard();
-    const data = create(Data.Event_DrawCardsSchema, { number: 2, cards: [card] });
+    const data = create(Event_DrawCardsSchema, { number: 2, cards: [card] });
     const action = Actions.cardsDrawn({ gameId: 1, playerId: 2, data });
     expect(action.payload.data).toBe(data);
   });
 
   it('cardsRevealed', () => {
-    const data = create(Data.Event_RevealCardsSchema, { zoneName: 'hand', cards: [] });
+    const data = create(Event_RevealCardsSchema, { zoneName: 'hand', cards: [] });
     const action = Actions.cardsRevealed({ gameId: 1, playerId: 2, data });
     expect(action.payload.data).toBe(data);
   });
 
   it('zoneShuffled', () => {
-    const data = create(Data.Event_ShuffleSchema, { zoneName: 'deck', start: 0, end: 39 });
+    const data = create(Event_ShuffleSchema, { zoneName: 'deck', start: 0, end: 39 });
     const action = Actions.zoneShuffled({ gameId: 1, playerId: 2, data });
     expect(action.payload.data).toBe(data);
   });
 
   it('dieRolled', () => {
-    const data = create(Data.Event_RollDieSchema, { sides: 6, value: 4, values: [4] });
+    const data = create(Event_RollDieSchema, { sides: 6, value: 4, values: [4] });
     const action = Actions.dieRolled({ gameId: 1, playerId: 2, data });
     expect(action.payload.data).toBe(data);
   });
@@ -180,13 +201,13 @@ describe('Actions', () => {
   });
 
   it('zoneDumped', () => {
-    const data = create(Data.Event_DumpZoneSchema, { zoneOwnerId: 1, zoneName: 'hand', numberCards: 3, isReversed: false });
+    const data = create(Event_DumpZoneSchema, { zoneOwnerId: 1, zoneName: 'hand', numberCards: 3, isReversed: false });
     const action = Actions.zoneDumped({ gameId: 1, playerId: 2, data });
     expect(action.payload.data).toBe(data);
   });
 
   it('zonePropertiesChanged', () => {
-    const data = create(Data.Event_ChangeZonePropertiesSchema, { zoneName: 'deck', alwaysRevealTopCard: true, alwaysLookAtTopCard: false });
+    const data = create(Event_ChangeZonePropertiesSchema, { zoneName: 'deck', alwaysRevealTopCard: true, alwaysLookAtTopCard: false });
     const action = Actions.zonePropertiesChanged({ gameId: 1, playerId: 2, data });
     expect(action.payload.data).toBe(data);
   });

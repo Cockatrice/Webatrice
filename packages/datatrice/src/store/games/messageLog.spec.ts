@@ -1,5 +1,5 @@
 ﻿import { create } from '@bufbuild/protobuf';
-import { Data } from '../../types';
+import { CardAttribute, Event_ChangeZonePropertiesSchema } from '@cockatrice/sockatrice/generated';
 
 import {
   diffPlayerProperties,
@@ -265,11 +265,11 @@ describe('formatTokenCreated', () => {
 describe('formatCardAttrChanged', () => {
   const game = gameWithTwoPlayers();
   it.each([
-    [Data.CardAttribute.AttrTapped, '1', 'Alice taps Bolt.'],
-    [Data.CardAttribute.AttrTapped, '0', 'Alice untaps Bolt.'],
-    [Data.CardAttribute.AttrPT, '2/3', 'Alice sets PT of Bolt to 2/3.'],
-    [Data.CardAttribute.AttrAnnotation, 'note', 'Alice sets annotation of Bolt to "note".'],
-    [Data.CardAttribute.AttrDoesntUntap, '1', 'Alice sets Bolt to not untap normally.'],
+    [CardAttribute.AttrTapped, '1', 'Alice taps Bolt.'],
+    [CardAttribute.AttrTapped, '0', 'Alice untaps Bolt.'],
+    [CardAttribute.AttrPT, '2/3', 'Alice sets PT of Bolt to 2/3.'],
+    [CardAttribute.AttrAnnotation, 'note', 'Alice sets annotation of Bolt to "note".'],
+    [CardAttribute.AttrDoesntUntap, '1', 'Alice sets Bolt to not untap normally.'],
   ])('attr=%i, val=%s → %s', (attribute, attrValue, expected) => {
     const msg = formatCardAttrChanged(game, 1, {
       zoneName: 'table', cardId: 10, attribute, attrValue,
@@ -279,56 +279,56 @@ describe('formatCardAttrChanged', () => {
 
   it('returns null for AttrFaceDown (flip path owns that message)', () => {
     const msg = formatCardAttrChanged(game, 1, {
-      zoneName: 'table', cardId: 10, attribute: Data.CardAttribute.AttrFaceDown, attrValue: '1',
+      zoneName: 'table', cardId: 10, attribute: CardAttribute.AttrFaceDown, attrValue: '1',
     }, 'Bolt');
     expect(msg).toBeNull();
   });
 
   it('logs declaring an attacker for AttrAttacking="1"', () => {
     const msg = formatCardAttrChanged(game, 1, {
-      zoneName: 'table', cardId: 10, attribute: Data.CardAttribute.AttrAttacking, attrValue: '1',
+      zoneName: 'table', cardId: 10, attribute: CardAttribute.AttrAttacking, attrValue: '1',
     }, 'Bolt');
     expect(msg).toBe('Alice declares Bolt as an attacker.');
   });
 
   it('returns null for AttrAttacking="0" (removing attacker has no message)', () => {
     const msg = formatCardAttrChanged(game, 1, {
-      zoneName: 'table', cardId: 10, attribute: Data.CardAttribute.AttrAttacking, attrValue: '0',
+      zoneName: 'table', cardId: 10, attribute: CardAttribute.AttrAttacking, attrValue: '0',
     }, 'Bolt');
     expect(msg).toBeNull();
   });
 
   it('returns null for AttrColor', () => {
     const msg = formatCardAttrChanged(game, 1, {
-      zoneName: 'table', cardId: 10, attribute: Data.CardAttribute.AttrColor, attrValue: 'r',
+      zoneName: 'table', cardId: 10, attribute: CardAttribute.AttrColor, attrValue: 'r',
     }, 'Bolt');
     expect(msg).toBeNull();
   });
 
   it('logs clearing the PT when AttrPT value is empty', () => {
     const msg = formatCardAttrChanged(game, 1, {
-      zoneName: 'table', cardId: 10, attribute: Data.CardAttribute.AttrPT, attrValue: '',
+      zoneName: 'table', cardId: 10, attribute: CardAttribute.AttrPT, attrValue: '',
     }, 'Bolt');
     expect(msg).toBe('Alice clears the PT of Bolt.');
   });
 
   it('logs clearing the annotation when AttrAnnotation value is empty', () => {
     const msg = formatCardAttrChanged(game, 1, {
-      zoneName: 'table', cardId: 10, attribute: Data.CardAttribute.AttrAnnotation, attrValue: '',
+      zoneName: 'table', cardId: 10, attribute: CardAttribute.AttrAnnotation, attrValue: '',
     }, 'Bolt');
     expect(msg).toBe('Alice clears the annotation on Bolt.');
   });
 
   it('logs untap-normally restored when AttrDoesntUntap="0"', () => {
     const msg = formatCardAttrChanged(game, 1, {
-      zoneName: 'table', cardId: 10, attribute: Data.CardAttribute.AttrDoesntUntap, attrValue: '0',
+      zoneName: 'table', cardId: 10, attribute: CardAttribute.AttrDoesntUntap, attrValue: '0',
     }, 'Bolt');
     expect(msg).toBe('Alice sets Bolt to untap normally.');
   });
 
   it('returns null for an unrecognized attribute (default case)', () => {
     const msg = formatCardAttrChanged(game, 1, {
-      zoneName: 'table', cardId: 10, attribute: 9999 as Data.CardAttribute, attrValue: '1',
+      zoneName: 'table', cardId: 10, attribute: 9999 as CardAttribute, attrValue: '1',
     }, 'Bolt');
     expect(msg).toBeNull();
   });
@@ -406,35 +406,35 @@ describe('formatZoneShuffled / formatZoneDumped / formatZonePropertiesChanged', 
   });
 
   it('zone alwaysRevealTopCard', () => {
-    expect(formatZonePropertiesChanged(game, 1, create(Data.Event_ChangeZonePropertiesSchema, {
+    expect(formatZonePropertiesChanged(game, 1, create(Event_ChangeZonePropertiesSchema, {
       zoneName: 'deck', alwaysRevealTopCard: true, alwaysLookAtTopCard: false,
     }))).toBe('Alice is now revealing the top card of their library.');
   });
 
   it('zone alwaysLookAtTopCard', () => {
-    expect(formatZonePropertiesChanged(game, 1, create(Data.Event_ChangeZonePropertiesSchema, {
+    expect(formatZonePropertiesChanged(game, 1, create(Event_ChangeZonePropertiesSchema, {
       zoneName: 'deck', alwaysRevealTopCard: false, alwaysLookAtTopCard: true,
     }))).toBe('Alice can now look at the top card of their library.');
   });
 
   it('zone stops revealing/looking when both flags are off', () => {
-    expect(formatZonePropertiesChanged(game, 1, create(Data.Event_ChangeZonePropertiesSchema, {
+    expect(formatZonePropertiesChanged(game, 1, create(Event_ChangeZonePropertiesSchema, {
       zoneName: 'deck', alwaysRevealTopCard: false, alwaysLookAtTopCard: false,
     }))).toBe('Alice stops revealing/looking at the top card of their library.');
   });
 
   it('zoneLabel covers exile / sideboard / stack and custom zone names', () => {
     // exercises the remaining zoneLabel switch arms through formatZonePropertiesChanged
-    expect(formatZonePropertiesChanged(game, 1, create(Data.Event_ChangeZonePropertiesSchema, {
+    expect(formatZonePropertiesChanged(game, 1, create(Event_ChangeZonePropertiesSchema, {
       zoneName: 'rfg', alwaysRevealTopCard: true,
     }))).toBe('Alice is now revealing the top card of exile.');
-    expect(formatZonePropertiesChanged(game, 1, create(Data.Event_ChangeZonePropertiesSchema, {
+    expect(formatZonePropertiesChanged(game, 1, create(Event_ChangeZonePropertiesSchema, {
       zoneName: 'sb', alwaysRevealTopCard: true,
     }))).toBe('Alice is now revealing the top card of their sideboard.');
-    expect(formatZonePropertiesChanged(game, 1, create(Data.Event_ChangeZonePropertiesSchema, {
+    expect(formatZonePropertiesChanged(game, 1, create(Event_ChangeZonePropertiesSchema, {
       zoneName: 'stack', alwaysRevealTopCard: true,
     }))).toBe('Alice is now revealing the top card of the stack.');
-    expect(formatZonePropertiesChanged(game, 1, create(Data.Event_ChangeZonePropertiesSchema, {
+    expect(formatZonePropertiesChanged(game, 1, create(Event_ChangeZonePropertiesSchema, {
       zoneName: 'weird', alwaysRevealTopCard: true,
     }))).toBe('Alice is now revealing the top card of custom zone \'weird\'.');
   });

@@ -1,6 +1,18 @@
 ﻿import { create } from '@bufbuild/protobuf';
 import { configureStore, PayloadAction } from '@reduxjs/toolkit';
-import { Data } from '../../types';
+import {
+  CardAttribute,
+  Event_ChangeZonePropertiesSchema,
+  Event_GameJoinedSchema,
+  Event_GameStateChangedSchema,
+  Event_MoveCard,
+  ServerInfo_Card,
+  ServerInfo_CardCounterSchema,
+  ServerInfo_GameSchema,
+  ServerInfo_Player,
+  ServerInfo_PlayerPropertiesSchema,
+  ServerInfo_PlayerSchema,
+} from '@cockatrice/sockatrice/generated';
 import { listenerMiddleware } from '../listenerMiddleware';
 import { gamesReducer } from './game.reducer';
 import { GamesState } from './game.interfaces';
@@ -20,7 +32,7 @@ import {
   makeZoneEntry,
 } from '../../testing/fixtures/games';
 
-function cardsIn(state: GamesState, gameId: number, playerId: number, zoneName: string): Data.ServerInfo_Card[] {
+function cardsIn(state: GamesState, gameId: number, playerId: number, zoneName: string): ServerInfo_Card[] {
   const zone = state.games[gameId]?.players[playerId]?.zones[zoneName];
   return zone ? zone.order.map(id => zone.byId[id]) : [];
 }
@@ -41,7 +53,7 @@ function dispatchThroughStore<P>(
 
 function dispatchCardMoved(
   state: GamesState,
-  action: PayloadAction<{ gameId: number; playerId: number; data: Data.Event_MoveCard }>
+  action: PayloadAction<{ gameId: number; playerId: number; data: Event_MoveCard }>
 ): GamesState {
   return dispatchThroughStore(state, action);
 }
@@ -60,8 +72,8 @@ describe('2A: Initialisation & lifecycle', () => {
   });
 
   it('GAME_JOINED → inserts gameEntry keyed by gameId', () => {
-    const data = create(Data.Event_GameJoinedSchema, {
-      gameInfo: create(Data.ServerInfo_GameSchema, { gameId: 42, roomId: 1, description: 'test' }),
+    const data = create(Event_GameJoinedSchema, {
+      gameInfo: create(ServerInfo_GameSchema, { gameId: 42, roomId: 1, description: 'test' }),
       hostId: 5,
       playerId: 2,
       spectator: false,
@@ -109,8 +121,8 @@ describe('2B: Game state & player management', () => {
     const card = makeCard({ id: 5 });
     const counter = makeCounter({ id: 2 });
     const arrow = makeArrow({ id: 3 });
-    const playerList: Data.ServerInfo_Player[] = [
-      create(Data.ServerInfo_PlayerSchema, {
+    const playerList: ServerInfo_Player[] = [
+      create(ServerInfo_PlayerSchema, {
         properties: makePlayerProperties({ playerId: 7 }),
         deckList: 'some deck',
         zoneList: [
@@ -157,8 +169,8 @@ describe('2B: Game state & player management', () => {
         }),
       },
     });
-    const playerList: Data.ServerInfo_Player[] = [
-      create(Data.ServerInfo_PlayerSchema, {
+    const playerList: ServerInfo_Player[] = [
+      create(ServerInfo_PlayerSchema, {
         properties: makePlayerProperties({ playerId: 1 }),
         deckList: 'some deck',
         zoneList: [],
@@ -179,7 +191,7 @@ describe('2B: Game state & player management', () => {
     const state = makeState();
     const result = dispatchThroughStore(state, Actions.gameStateChanged({
       gameId: 1,
-      data: create(Data.Event_GameStateChangedSchema, {
+      data: create(Event_GameStateChangedSchema, {
         gameStarted: true,
         activePlayerId: 3,
         activePhase: 2,
@@ -282,7 +294,7 @@ describe('2B: Game state & player management', () => {
         }),
       },
     });
-    const pingOnly = create(Data.ServerInfo_PlayerPropertiesSchema, { pingSeconds: 42 });
+    const pingOnly = create(ServerInfo_PlayerPropertiesSchema, { pingSeconds: 42 });
     const result = dispatchThroughStore(state, Actions.playerPropertiesChanged({
       gameId: 1,
       playerId: 1,
@@ -306,7 +318,7 @@ describe('2B: Game state & player management', () => {
         }),
       },
     });
-    const readyOnly = create(Data.ServerInfo_PlayerPropertiesSchema, { readyStart: true });
+    const readyOnly = create(ServerInfo_PlayerPropertiesSchema, { readyStart: true });
     const result = dispatchThroughStore(state, Actions.playerPropertiesChanged({
       gameId: 1,
       playerId: 1,
@@ -601,7 +613,7 @@ describe('2C: CARD_MOVED', () => {
   });
 
   it('CARD_MOVED → deep-clones counterList so moved card is independent', () => {
-    const cardCounter = create(Data.ServerInfo_CardCounterSchema, { id: 1, value: 3 });
+    const cardCounter = create(ServerInfo_CardCounterSchema, { id: 1, value: 3 });
     const card = makeCard({ id: 10, counterList: [cardCounter] });
     const state = makeState({
       games: {
@@ -634,7 +646,7 @@ describe('2C: CARD_MOVED', () => {
   });
 
   it('CARD_MOVED table → grave: counters are cleared (Cockatrice resetState parity)', () => {
-    const cardCounter = create(Data.ServerInfo_CardCounterSchema, { id: 1, value: 3 });
+    const cardCounter = create(ServerInfo_CardCounterSchema, { id: 1, value: 3 });
     const card = makeCard({ id: 10, counterList: [cardCounter] });
     const state = makeState({
       games: {
@@ -666,7 +678,7 @@ describe('2C: CARD_MOVED', () => {
   });
 
   it('CARD_MOVED intra-table reorder preserves counters', () => {
-    const cardCounter = create(Data.ServerInfo_CardCounterSchema, { id: 1, value: 3 });
+    const cardCounter = create(ServerInfo_CardCounterSchema, { id: 1, value: 3 });
     const card = makeCard({ id: 10, counterList: [cardCounter] });
     const state = makeState({
       games: {
@@ -1232,7 +1244,7 @@ describe('2D: Card mutations', () => {
       const before = state.games[1].players[1].zones['table'];
       const result = dispatchThroughStore(state, Actions.cardAttrChanged({
         gameId: 1, playerId: 1,
-        data: { zoneName: 'table', cardId: 1, attribute: Data.CardAttribute.AttrTapped, attrValue: '1' },
+        data: { zoneName: 'table', cardId: 1, attribute: CardAttribute.AttrTapped, attrValue: '1' },
       }));
       expect(result.games[1].players[1].zones['table']).not.toBe(before);
     });
@@ -1277,7 +1289,7 @@ describe('2E: CARD_ATTR_CHANGED', () => {
     });
   }
 
-  function dispatchAttr(state: ReturnType<typeof makeState>, attribute: Data.CardAttribute, attrValue: string) {
+  function dispatchAttr(state: ReturnType<typeof makeState>, attribute: CardAttribute, attrValue: string) {
     return dispatchThroughStore(state, Actions.cardAttrChanged({
       gameId: 1,
       playerId: 1,
@@ -1286,37 +1298,37 @@ describe('2E: CARD_ATTR_CHANGED', () => {
   }
 
   it('AttrTapped (1) → card.tapped = true when attrValue is "1"', () => {
-    const result = dispatchAttr(stateWithCard(), Data.CardAttribute.AttrTapped, '1');
+    const result = dispatchAttr(stateWithCard(), CardAttribute.AttrTapped, '1');
     expect(cardsIn(result, 1, 1, 'table')[0].tapped).toBe(true);
   });
 
   it('AttrAttacking (2) → card.attacking = true when attrValue is "1"', () => {
-    const result = dispatchAttr(stateWithCard(), Data.CardAttribute.AttrAttacking, '1');
+    const result = dispatchAttr(stateWithCard(), CardAttribute.AttrAttacking, '1');
     expect(cardsIn(result, 1, 1, 'table')[0].attacking).toBe(true);
   });
 
   it('AttrFaceDown (3) → card.faceDown = true when attrValue is "1"', () => {
-    const result = dispatchAttr(stateWithCard(), Data.CardAttribute.AttrFaceDown, '1');
+    const result = dispatchAttr(stateWithCard(), CardAttribute.AttrFaceDown, '1');
     expect(cardsIn(result, 1, 1, 'table')[0].faceDown).toBe(true);
   });
 
   it('AttrColor (4) → card.color = attrValue', () => {
-    const result = dispatchAttr(stateWithCard(), Data.CardAttribute.AttrColor, 'red');
+    const result = dispatchAttr(stateWithCard(), CardAttribute.AttrColor, 'red');
     expect(cardsIn(result, 1, 1, 'table')[0].color).toBe('red');
   });
 
   it('AttrPT (5) → card.pt = attrValue', () => {
-    const result = dispatchAttr(stateWithCard(), Data.CardAttribute.AttrPT, '2/3');
+    const result = dispatchAttr(stateWithCard(), CardAttribute.AttrPT, '2/3');
     expect(cardsIn(result, 1, 1, 'table')[0].pt).toBe('2/3');
   });
 
   it('AttrAnnotation (6) → card.annotation = attrValue', () => {
-    const result = dispatchAttr(stateWithCard(), Data.CardAttribute.AttrAnnotation, 'enchanted');
+    const result = dispatchAttr(stateWithCard(), CardAttribute.AttrAnnotation, 'enchanted');
     expect(cardsIn(result, 1, 1, 'table')[0].annotation).toBe('enchanted');
   });
 
   it('AttrDoesntUntap (7) → card.doesntUntap = true when attrValue is "1"', () => {
-    const result = dispatchAttr(stateWithCard(), Data.CardAttribute.AttrDoesntUntap, '1');
+    const result = dispatchAttr(stateWithCard(), CardAttribute.AttrDoesntUntap, '1');
     expect(cardsIn(result, 1, 1, 'table')[0].doesntUntap).toBe(true);
   });
 });
@@ -1577,7 +1589,7 @@ describe('2I: Zone operations', () => {
   });
 
   it('CARDS_REVEALED → clones counterList to prevent shared references', () => {
-    const cardCounter = create(Data.ServerInfo_CardCounterSchema, { id: 1, value: 5 });
+    const cardCounter = create(ServerInfo_CardCounterSchema, { id: 1, value: 5 });
     const revealedCard = makeCard({ id: 3, counterList: [cardCounter] });
     const state = makeState({
       games: {
@@ -1609,7 +1621,7 @@ describe('2I: Zone operations', () => {
     const result = gamesReducer(state, Actions.zonePropertiesChanged({
       gameId: 1,
       playerId: 1,
-      data: create(Data.Event_ChangeZonePropertiesSchema, {
+      data: create(Event_ChangeZonePropertiesSchema, {
         zoneName: 'hand', alwaysRevealTopCard: true, alwaysLookAtTopCard: true,
       }),
     }));
@@ -1625,7 +1637,7 @@ describe('2I: Zone operations', () => {
     const result = gamesReducer(state, Actions.zonePropertiesChanged({
       gameId: 1,
       playerId: 1,
-      data: create(Data.Event_ChangeZonePropertiesSchema, {
+      data: create(Event_ChangeZonePropertiesSchema, {
         zoneName: 'hand', alwaysRevealTopCard: true,
       }),
     }));
@@ -1641,7 +1653,7 @@ describe('2I: Zone operations', () => {
     const result = gamesReducer(state, Actions.zonePropertiesChanged({
       gameId: 1,
       playerId: 1,
-      data: create(Data.Event_ChangeZonePropertiesSchema, {
+      data: create(Event_ChangeZonePropertiesSchema, {
         zoneName: 'hand', alwaysLookAtTopCard: true,
       }),
     }));

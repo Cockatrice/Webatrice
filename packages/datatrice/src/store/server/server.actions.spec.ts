@@ -1,5 +1,11 @@
 ﻿import { Actions } from './server.actions';
-import { Data } from '../../types';
+import {
+  Event_NotifyUserSchema,
+  Event_ServerShutdownSchema,
+  Event_UserMessageSchema,
+  Response_GetGamesOfUserSchema,
+  ServerInfo_ChatMessageSchema,
+} from '@cockatrice/sockatrice/generated';
 import { WebsocketTypes } from '@cockatrice/sockatrice/types';
 import { Types } from './server.types';
 import { create } from '@bufbuild/protobuf';
@@ -116,7 +122,7 @@ describe('Actions', () => {
   });
 
   it('viewLogs', () => {
-    const logs = [create(Data.ServerInfo_ChatMessageSchema, { targetType: 'room' })];
+    const logs = [create(ServerInfo_ChatMessageSchema, { targetType: 'room' })];
     expect(Actions.viewLogs({ logs })).toEqual({ type: Types.VIEW_LOGS, payload: { logs } });
   });
 
@@ -225,17 +231,17 @@ describe('Actions', () => {
   });
 
   it('notifyUser', () => {
-    const notification = create(Data.Event_NotifyUserSchema, { type: 1, warningReason: '', customTitle: '', customContent: '' });
+    const notification = create(Event_NotifyUserSchema, { type: 1, warningReason: '', customTitle: '', customContent: '' });
     expect(Actions.notifyUser({ notification })).toEqual({ type: Types.NOTIFY_USER, payload: { notification } });
   });
 
   it('serverShutdown', () => {
-    const data = create(Data.Event_ServerShutdownSchema, { reason: 'maintenance', minutes: 5 });
+    const data = create(Event_ServerShutdownSchema, { reason: 'maintenance', minutes: 5 });
     expect(Actions.serverShutdown({ data })).toEqual({ type: Types.SERVER_SHUTDOWN, payload: { data } });
   });
 
   it('userMessage', () => {
-    const messageData = create(Data.Event_UserMessageSchema, { senderName: 'Alice', receiverName: 'Bob', message: 'hey' });
+    const messageData = create(Event_UserMessageSchema, { senderName: 'Alice', receiverName: 'Bob', message: 'hey' });
     expect(Actions.userMessage({ messageData })).toEqual({ type: Types.USER_MESSAGE, payload: { messageData } });
   });
 
@@ -371,7 +377,7 @@ describe('Actions', () => {
   });
 
   it('gamesOfUser', () => {
-    const response = create(Data.Response_GetGamesOfUserSchema, { roomList: [], gameList: [] });
+    const response = create(Response_GetGamesOfUserSchema, { roomList: [], gameList: [] });
     const action = Actions.gamesOfUser({ userName: 'alice', response });
     expect(action.payload).toEqual({ userName: 'alice', response });
   });

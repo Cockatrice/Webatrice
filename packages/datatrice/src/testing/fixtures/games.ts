@@ -1,10 +1,23 @@
 import type { MessageInitShape } from '@bufbuild/protobuf';
-import { Data, Enriched } from '../../types';
+import { Enriched } from '../../types';
+import {
+  ServerInfo_Arrow,
+  ServerInfo_ArrowSchema,
+  ServerInfo_Card,
+  ServerInfo_CardSchema,
+  ServerInfo_Counter,
+  ServerInfo_CounterSchema,
+  ServerInfo_Game,
+  ServerInfo_GameSchema,
+  ServerInfo_PlayerProperties,
+  ServerInfo_PlayerPropertiesSchema,
+  colorSchema,
+} from '@cockatrice/sockatrice/generated';
 import { create } from '@bufbuild/protobuf';
 import { GamesState } from '../../store/games/game.interfaces';
 
-export function makeCard(overrides: MessageInitShape<typeof Data.ServerInfo_CardSchema> = {}): Data.ServerInfo_Card {
-  return create(Data.ServerInfo_CardSchema, {
+export function makeCard(overrides: MessageInitShape<typeof ServerInfo_CardSchema> = {}): ServerInfo_Card {
+  return create(ServerInfo_CardSchema, {
     id: 1,
     name: 'Test Card',
     x: 0,
@@ -26,39 +39,39 @@ export function makeCard(overrides: MessageInitShape<typeof Data.ServerInfo_Card
   });
 }
 
-export function makeCounter(overrides: MessageInitShape<typeof Data.ServerInfo_CounterSchema> = {}): Data.ServerInfo_Counter {
-  return create(Data.ServerInfo_CounterSchema, {
+export function makeCounter(overrides: MessageInitShape<typeof ServerInfo_CounterSchema> = {}): ServerInfo_Counter {
+  return create(ServerInfo_CounterSchema, {
     id: 1,
     name: 'Life',
-    counterColor: create(Data.colorSchema, { r: 0, g: 0, b: 0, a: 255 }),
+    counterColor: create(colorSchema, { r: 0, g: 0, b: 0, a: 255 }),
     radius: 1,
     count: 20,
     ...overrides,
   });
 }
 
-export function makeArrow(overrides: MessageInitShape<typeof Data.ServerInfo_ArrowSchema> = {}): Data.ServerInfo_Arrow {
-  return create(Data.ServerInfo_ArrowSchema, {
+export function makeArrow(overrides: MessageInitShape<typeof ServerInfo_ArrowSchema> = {}): ServerInfo_Arrow {
+  return create(ServerInfo_ArrowSchema, {
     id: 1,
     startPlayerId: 1,
     startZone: 'table',
     startCardId: 1,
     targetPlayerId: 1,
     targetZone: 'table',
-    arrowColor: create(Data.colorSchema, { r: 255, g: 0, b: 0, a: 255 }),
+    arrowColor: create(colorSchema, { r: 255, g: 0, b: 0, a: 255 }),
     targetCardId: 2,
     ...overrides,
   });
 }
 
 type ZoneEntryOverrides = Partial<Enriched.ZoneEntry> & {
-  cards?: Data.ServerInfo_Card[];
+  cards?: ServerInfo_Card[];
 };
 
 export function makeZoneEntry(overrides: ZoneEntryOverrides = {}): Enriched.ZoneEntry {
   const { cards, order, byId, ...rest } = overrides;
   let resolvedOrder: number[] = order ?? [];
-  let resolvedById: { [id: number]: Data.ServerInfo_Card } = byId ?? {};
+  let resolvedById: { [id: number]: ServerInfo_Card } = byId ?? {};
   if (cards !== undefined) {
     resolvedOrder = cards.map(c => c.id);
     resolvedById = {};
@@ -80,9 +93,9 @@ export function makeZoneEntry(overrides: ZoneEntryOverrides = {}): Enriched.Zone
 }
 
 export function makePlayerProperties(
-  overrides: MessageInitShape<typeof Data.ServerInfo_PlayerPropertiesSchema> = {},
-): Data.ServerInfo_PlayerProperties {
-  return create(Data.ServerInfo_PlayerPropertiesSchema, {
+  overrides: MessageInitShape<typeof ServerInfo_PlayerPropertiesSchema> = {},
+): ServerInfo_PlayerProperties {
+  return create(ServerInfo_PlayerPropertiesSchema, {
     playerId: 1,
     spectator: false,
     conceded: false,
@@ -110,9 +123,9 @@ export function makePlayerEntry(overrides: Partial<Enriched.PlayerEntry> = {}): 
 }
 
 export function makeGameInfo(
-  overrides: MessageInitShape<typeof Data.ServerInfo_GameSchema> = {},
-): Data.ServerInfo_Game {
-  return create(Data.ServerInfo_GameSchema, {
+  overrides: MessageInitShape<typeof ServerInfo_GameSchema> = {},
+): ServerInfo_Game {
+  return create(ServerInfo_GameSchema, {
     gameId: 1,
     roomId: 1,
     description: 'Test Game',

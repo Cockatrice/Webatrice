@@ -1,5 +1,5 @@
 ﻿import { create } from '@bufbuild/protobuf';
-import { Data } from '../../types';
+import { ServerInfo_PlayerSchema } from '@cockatrice/sockatrice/generated';
 import {
   formatLeaveMessage,
   MAX_GAME_MESSAGES,
@@ -60,7 +60,7 @@ describe('normalizePlayers', () => {
   });
 
   it('normalizes a player with empty zone/counter/arrow lists', () => {
-    const player = create(Data.ServerInfo_PlayerSchema, {
+    const player = create(ServerInfo_PlayerSchema, {
       properties: makePlayerProperties({ playerId: 5 }),
       deckList: '',
       zoneList: [],
@@ -75,7 +75,7 @@ describe('normalizePlayers', () => {
   });
 
   it('normalizes a populated zone with an empty card list', () => {
-    const player = create(Data.ServerInfo_PlayerSchema, {
+    const player = create(ServerInfo_PlayerSchema, {
       properties: makePlayerProperties({ playerId: 2 }),
       deckList: '',
       zoneList: [
@@ -98,7 +98,7 @@ describe('normalizePlayers', () => {
   });
 
   it('normalizes a zone with cards into order + byId maps', () => {
-    const player = create(Data.ServerInfo_PlayerSchema, {
+    const player = create(ServerInfo_PlayerSchema, {
       properties: makePlayerProperties({ playerId: 1 }),
       deckList: '',
       zoneList: [

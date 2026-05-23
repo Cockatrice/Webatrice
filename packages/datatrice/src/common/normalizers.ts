@@ -1,13 +1,20 @@
-import { Data, Enriched } from '../types';
+import { Enriched } from '../types';
+import {
+  ServerInfo_ChatMessage,
+  ServerInfo_Game,
+  ServerInfo_GameType,
+  ServerInfo_Room,
+  ServerInfo_User,
+} from '@cockatrice/sockatrice/generated';
 
-export function normalizeGametypeMap(gametypeList: Data.ServerInfo_GameType[]): Enriched.GametypeMap {
+export function normalizeGametypeMap(gametypeList: ServerInfo_GameType[]): Enriched.GametypeMap {
   return gametypeList.reduce<Enriched.GametypeMap>((map, type) => {
     map[type.gameTypeId] = type.description;
     return map;
   }, {});
 }
 
-export function normalizeRoomInfo(roomInfo: Data.ServerInfo_Room): Enriched.Room {
+export function normalizeRoomInfo(roomInfo: ServerInfo_Room): Enriched.Room {
   const gametypeMap = normalizeGametypeMap(roomInfo.gametypeList);
 
   const games: { [gameId: number]: Enriched.Game } = {};
@@ -16,7 +23,7 @@ export function normalizeRoomInfo(roomInfo: Data.ServerInfo_Room): Enriched.Room
     games[normalized.info.gameId] = normalized;
   }
 
-  const users: { [userName: string]: Data.ServerInfo_User } = {};
+  const users: { [userName: string]: ServerInfo_User } = {};
   for (const user of roomInfo.userList) {
     users[user.name] = user;
   }
@@ -30,7 +37,7 @@ export function normalizeRoomInfo(roomInfo: Data.ServerInfo_Room): Enriched.Room
   };
 }
 
-export function normalizeGameObject(game: Data.ServerInfo_Game, gametypeMap: Enriched.GametypeMap): Enriched.Game {
+export function normalizeGameObject(game: ServerInfo_Game, gametypeMap: Enriched.GametypeMap): Enriched.Game {
   const { gameTypes } = game;
   const hasType = gameTypes && gameTypes.length;
   return {
@@ -39,7 +46,7 @@ export function normalizeGameObject(game: Data.ServerInfo_Game, gametypeMap: Enr
   };
 }
 
-export function normalizeLogs(logs: Data.ServerInfo_ChatMessage[]): Enriched.LogGroups {
+export function normalizeLogs(logs: ServerInfo_ChatMessage[]): Enriched.LogGroups {
   return logs.reduce<Enriched.LogGroups>((obj, log) => {
     const type = log.targetType as keyof Enriched.LogGroups;
     if (obj[type]) {

@@ -1,4 +1,17 @@
-﻿import { Data } from '../../types';
+﻿import {
+  Event_NotifyUser,
+  Event_ServerShutdown,
+  Event_UserMessage,
+  Event_UserMessageSchema,
+  Response_GetGamesOfUser,
+  Response_GetGamesOfUserSchema,
+  ServerInfo_DeckStorage_FolderSchema,
+  ServerInfo_DeckStorage_TreeItemSchema,
+  ServerInfo_GameSchema,
+  ServerInfo_Room,
+  ServerInfo_RoomSchema,
+  ServerInfo_User_UserLevelFlag,
+} from '@cockatrice/sockatrice/generated';
 import { WebsocketTypes } from '@cockatrice/sockatrice/types';
 import { create } from '@bufbuild/protobuf';
 import { serverReducer, MAX_USER_MESSAGES } from './server.reducer';
@@ -16,7 +29,7 @@ import {
   makeWarnListItem,
 } from '../../testing/fixtures/server';
 
-const UserLevelFlag = Data.ServerInfo_User_UserLevelFlag;
+const UserLevelFlag = ServerInfo_User_UserLevelFlag;
 
 
 describe('Initialisation', () => {
@@ -261,7 +274,7 @@ describe('Logs', () => {
 describe('Messaging', () => {
   it('USER_MESSAGE → uses receiverName as key when current user is sender', () => {
     const state = makeServerState({ user: makeUser({ name: 'Alice' }), messages: {} });
-    const messageData = { senderName: 'Alice', receiverName: 'Bob', message: 'hi' } as Data.Event_UserMessage;
+    const messageData = { senderName: 'Alice', receiverName: 'Bob', message: 'hi' } as Event_UserMessage;
     const result = serverReducer(state, Actions.userMessage({ messageData }));
     expect(result.messages['Bob']).toHaveLength(1);
     expect(result.messages['Bob'][0]).toEqual(messageData);
@@ -269,7 +282,7 @@ describe('Messaging', () => {
 
   it('USER_MESSAGE → uses senderName as key when current user is receiver', () => {
     const state = makeServerState({ user: makeUser({ name: 'Bob' }), messages: {} });
-    const messageData = { senderName: 'Alice', receiverName: 'Bob', message: 'yo' } as Data.Event_UserMessage;
+    const messageData = { senderName: 'Alice', receiverName: 'Bob', message: 'yo' } as Event_UserMessage;
     const result = serverReducer(state, Actions.userMessage({ messageData }));
     expect(result.messages['Alice']).toHaveLength(1);
     expect(result.messages['Alice'][0]).toEqual(messageData);
@@ -277,31 +290,31 @@ describe('Messaging', () => {
 
   it('USER_MESSAGE → no-ops when user is null (not yet logged in)', () => {
     const state = makeServerState({ user: null, messages: {} });
-    const messageData = { senderName: 'Alice', receiverName: 'Bob', message: 'hi' } as Data.Event_UserMessage;
+    const messageData = { senderName: 'Alice', receiverName: 'Bob', message: 'hi' } as Event_UserMessage;
     const result = serverReducer(state, Actions.userMessage({ messageData }));
     expect(result.messages).toEqual({});
   });
 
   it('USER_MESSAGE → appends to existing messages for that user', () => {
-    const existingMsg = create(Data.Event_UserMessageSchema, { senderName: 'Alice', receiverName: 'Bob', message: 'first' });
+    const existingMsg = create(Event_UserMessageSchema, { senderName: 'Alice', receiverName: 'Bob', message: 'first' });
     const state = makeServerState({
       user: makeUser({ name: 'Bob' }),
       messages: { Alice: [existingMsg] },
     });
-    const newMsg = create(Data.Event_UserMessageSchema, { senderName: 'Alice', receiverName: 'Bob', message: 'second' });
+    const newMsg = create(Event_UserMessageSchema, { senderName: 'Alice', receiverName: 'Bob', message: 'second' });
     const result = serverReducer(state, Actions.userMessage({ messageData: newMsg }));
     expect(result.messages['Alice']).toHaveLength(2);
   });
 
   it(`USER_MESSAGE → caps messages at MAX_USER_MESSAGES (${MAX_USER_MESSAGES})`, () => {
     const messages = Array.from({ length: MAX_USER_MESSAGES }, (_, i) =>
-      create(Data.Event_UserMessageSchema, { senderName: 'Alice', receiverName: 'Bob', message: `msg-${i}` })
+      create(Event_UserMessageSchema, { senderName: 'Alice', receiverName: 'Bob', message: `msg-${i}` })
     );
     const state = makeServerState({
       user: makeUser({ name: 'Bob' }),
       messages: { Alice: messages },
     });
-    const newMsg = create(Data.Event_UserMessageSchema, { senderName: 'Alice', receiverName: 'Bob', message: 'overflow' });
+    const newMsg = create(Event_UserMessageSchema, { senderName: 'Alice', receiverName: 'Bob', message: 'overflow' });
     const result = serverReducer(state, Actions.userMessage({ messageData: newMsg }));
     expect(result.messages['Alice']).toHaveLength(MAX_USER_MESSAGES);
     expect(result.messages['Alice'][MAX_USER_MESSAGES - 1]).toEqual(newMsg);
@@ -313,18 +326,18 @@ describe('Messaging', () => {
 describe('Games Of User', () => {
   it('GAMES_OF_USER → stores an empty games map when roomList/gameList are empty', () => {
     const state = makeServerState();
-    const response = create(Data.Response_GetGamesOfUserSchema, { roomList: [], gameList: [] });
+    const response = create(Response_GetGamesOfUserSchema, { roomList: [], gameList: [] });
     const result = serverReducer(state, Actions.gamesOfUser({ userName: 'alice', response }));
     expect(result.gamesOfUser['alice']).toEqual({});
   });
 
   it('GAMES_OF_USER → normalizes populated gameList keyed by gameId', () => {
     const state = makeServerState();
-    const response = create(Data.Response_GetGamesOfUserSchema, {
-      roomList: [create(Data.ServerInfo_RoomSchema, { roomId: 1, gametypeList: [] })],
+    const response = create(Response_GetGamesOfUserSchema, {
+      roomList: [create(ServerInfo_RoomSchema, { roomId: 1, gametypeList: [] })],
       gameList: [
-        create(Data.ServerInfo_GameSchema, { gameId: 7, description: 'a' }),
-        create(Data.ServerInfo_GameSchema, { gameId: 9, description: 'b' }),
+        create(ServerInfo_GameSchema, { gameId: 7, description: 'a' }),
+        create(ServerInfo_GameSchema, { gameId: 9, description: 'b' }),
       ],
     });
     const result = serverReducer(state, Actions.gamesOfUser({ userName: 'bob', response }));
@@ -341,10 +354,10 @@ describe('Games Of User', () => {
   it('GAMES_OF_USER → tolerates a response with no roomList field', () => {
     const state = makeServerState();
     const response = {
-      ...create(Data.Response_GetGamesOfUserSchema),
+      ...create(Response_GetGamesOfUserSchema),
       roomList: undefined,
-      gameList: [create(Data.ServerInfo_GameSchema, { gameId: 1 })],
-    } as unknown as Data.Response_GetGamesOfUser;
+      gameList: [create(ServerInfo_GameSchema, { gameId: 1 })],
+    } as unknown as Response_GetGamesOfUser;
     const result = serverReducer(state, Actions.gamesOfUser({ userName: 'alice', response }));
     expect(Object.keys(result.gamesOfUser['alice'])).toEqual(['1']);
   });
@@ -352,10 +365,10 @@ describe('Games Of User', () => {
   it('GAMES_OF_USER → tolerates a response with no gameList field', () => {
     const state = makeServerState();
     const response = {
-      ...create(Data.Response_GetGamesOfUserSchema),
-      roomList: [create(Data.ServerInfo_RoomSchema, { roomId: 1, gametypeList: [] })],
+      ...create(Response_GetGamesOfUserSchema),
+      roomList: [create(ServerInfo_RoomSchema, { roomId: 1, gametypeList: [] })],
       gameList: undefined,
-    } as unknown as Data.Response_GetGamesOfUser;
+    } as unknown as Response_GetGamesOfUser;
     const result = serverReducer(state, Actions.gamesOfUser({ userName: 'alice', response }));
     expect(result.gamesOfUser['alice']).toEqual({});
   });
@@ -363,13 +376,13 @@ describe('Games Of User', () => {
   it('GAMES_OF_USER → tolerates a room missing its gametypeList field', () => {
     const state = makeServerState();
     const malformedRoom = {
-      ...create(Data.ServerInfo_RoomSchema, { roomId: 1 }),
+      ...create(ServerInfo_RoomSchema, { roomId: 1 }),
       gametypeList: undefined,
-    } as unknown as Data.ServerInfo_Room;
-    const response = create(Data.Response_GetGamesOfUserSchema, {
-      gameList: [create(Data.ServerInfo_GameSchema, { gameId: 1 })],
+    } as unknown as ServerInfo_Room;
+    const response = create(Response_GetGamesOfUserSchema, {
+      gameList: [create(ServerInfo_GameSchema, { gameId: 1 })],
     });
-    (response as unknown as { roomList: Data.ServerInfo_Room[] }).roomList = [malformedRoom];
+    (response as unknown as { roomList: ServerInfo_Room[] }).roomList = [malformedRoom];
     const result = serverReducer(state, Actions.gamesOfUser({ userName: 'alice', response }));
     expect(Object.keys(result.gamesOfUser['alice'])).toEqual(['1']);
   });
@@ -386,14 +399,14 @@ describe('User Info & Notifications', () => {
 
   it('NOTIFY_USER → appends notification to list', () => {
     const state = makeServerState({ notifications: [] });
-    const notification = { type: 1, warningReason: '', customTitle: '', customContent: '' } as unknown as Data.Event_NotifyUser;
+    const notification = { type: 1, warningReason: '', customTitle: '', customContent: '' } as unknown as Event_NotifyUser;
     const result = serverReducer(state, Actions.notifyUser({ notification }));
     expect(result.notifications).toHaveLength(1);
     expect(result.notifications[0]).toEqual(notification);
   });
 
   it('SERVER_SHUTDOWN → sets serverShutdown to action.payload.data', () => {
-    const data = { reason: 'maintenance', minutes: 10 } as unknown as Data.Event_ServerShutdown;
+    const data = { reason: 'maintenance', minutes: 10 } as unknown as Event_ServerShutdown;
     const state = makeServerState();
     const result = serverReducer(state, Actions.serverShutdown({ data }));
     expect(result.serverShutdown).toEqual(data);
@@ -581,11 +594,11 @@ describe('Deck Storage', () => {
   });
 
   it('DECK_UPLOAD with nested path → inserts into matching subfolder', () => {
-    const subfolder = create(Data.ServerInfo_DeckStorage_TreeItemSchema, {
-      id: 0, name: 'myDecks', folder: create(Data.ServerInfo_DeckStorage_FolderSchema, { items: [] })
+    const subfolder = create(ServerInfo_DeckStorage_TreeItemSchema, {
+      id: 0, name: 'myDecks', folder: create(ServerInfo_DeckStorage_FolderSchema, { items: [] })
     });
     const state = makeServerState({
-      backendDecks: makeDeckList({ root: create(Data.ServerInfo_DeckStorage_FolderSchema, { items: [subfolder] }) })
+      backendDecks: makeDeckList({ root: create(ServerInfo_DeckStorage_FolderSchema, { items: [subfolder] }) })
     });
     const item = makeDeckTreeItem({ name: 'new.cod' });
     const result = serverReducer(state, Actions.deckUpload({ path: 'myDecks', treeItem: item }));
@@ -612,7 +625,7 @@ describe('Deck Storage', () => {
   it('DECK_DELETE → removes item by id from tree', () => {
     const item = makeDeckTreeItem({ id: 7 });
     const state = makeServerState({
-      backendDecks: makeDeckList({ root: create(Data.ServerInfo_DeckStorage_FolderSchema, { items: [item] }) }),
+      backendDecks: makeDeckList({ root: create(ServerInfo_DeckStorage_FolderSchema, { items: [item] }) }),
     });
     const result = serverReducer(state, Actions.deckDelete({ deckId: 7 }));
     expect(result.backendDecks!.root!.items).toHaveLength(0);
@@ -620,11 +633,11 @@ describe('Deck Storage', () => {
 
   it('DECK_DELETE → recursively removes item nested inside a subfolder', () => {
     const nested = makeDeckTreeItem({ id: 9, name: 'nested.cod' });
-    const subfolder = create(Data.ServerInfo_DeckStorage_TreeItemSchema, {
-      id: 0, name: 'sub', folder: create(Data.ServerInfo_DeckStorage_FolderSchema, { items: [nested] })
+    const subfolder = create(ServerInfo_DeckStorage_TreeItemSchema, {
+      id: 0, name: 'sub', folder: create(ServerInfo_DeckStorage_FolderSchema, { items: [nested] })
     });
     const state = makeServerState({
-      backendDecks: makeDeckList({ root: create(Data.ServerInfo_DeckStorage_FolderSchema, { items: [subfolder] }) })
+      backendDecks: makeDeckList({ root: create(ServerInfo_DeckStorage_FolderSchema, { items: [subfolder] }) })
     });
     const result = serverReducer(state, Actions.deckDelete({ deckId: 9 }));
     expect(result.backendDecks!.root!.items[0].folder!.items).toHaveLength(0);
@@ -645,11 +658,11 @@ describe('Deck Storage', () => {
   });
 
   it('DECK_NEW_DIR nested → inserts folder inside matching subfolder', () => {
-    const subfolder = create(Data.ServerInfo_DeckStorage_TreeItemSchema, {
-      id: 0, name: 'parent', folder: create(Data.ServerInfo_DeckStorage_FolderSchema, { items: [] })
+    const subfolder = create(ServerInfo_DeckStorage_TreeItemSchema, {
+      id: 0, name: 'parent', folder: create(ServerInfo_DeckStorage_FolderSchema, { items: [] })
     });
     const state = makeServerState({
-      backendDecks: makeDeckList({ root: create(Data.ServerInfo_DeckStorage_FolderSchema, { items: [subfolder] }) })
+      backendDecks: makeDeckList({ root: create(ServerInfo_DeckStorage_FolderSchema, { items: [subfolder] }) })
     });
     const result = serverReducer(state, Actions.deckNewDir({ path: 'parent', dirName: 'child' }));
     const parent = result.backendDecks!.root!.items.find(i => i.name === 'parent');
@@ -664,36 +677,36 @@ describe('Deck Storage', () => {
   });
 
   it('DECK_DEL_DIR → removes folder from root by name', () => {
-    const subfolder = create(Data.ServerInfo_DeckStorage_TreeItemSchema, {
-      id: 0, name: 'myDir', folder: create(Data.ServerInfo_DeckStorage_FolderSchema, { items: [] })
+    const subfolder = create(ServerInfo_DeckStorage_TreeItemSchema, {
+      id: 0, name: 'myDir', folder: create(ServerInfo_DeckStorage_FolderSchema, { items: [] })
     });
     const state = makeServerState({
-      backendDecks: makeDeckList({ root: create(Data.ServerInfo_DeckStorage_FolderSchema, { items: [subfolder] }) })
+      backendDecks: makeDeckList({ root: create(ServerInfo_DeckStorage_FolderSchema, { items: [subfolder] }) })
     });
     const result = serverReducer(state, Actions.deckDelDir({ path: 'myDir' }));
     expect(result.backendDecks!.root!.items).toHaveLength(0);
   });
 
   it('DECK_DEL_DIR → returns deck tree unchanged when path is empty', () => {
-    const subfolder = create(Data.ServerInfo_DeckStorage_TreeItemSchema, {
-      id: 0, name: 'keep', folder: create(Data.ServerInfo_DeckStorage_FolderSchema, { items: [] })
+    const subfolder = create(ServerInfo_DeckStorage_TreeItemSchema, {
+      id: 0, name: 'keep', folder: create(ServerInfo_DeckStorage_FolderSchema, { items: [] })
     });
     const state = makeServerState({
-      backendDecks: makeDeckList({ root: create(Data.ServerInfo_DeckStorage_FolderSchema, { items: [subfolder] }) })
+      backendDecks: makeDeckList({ root: create(ServerInfo_DeckStorage_FolderSchema, { items: [subfolder] }) })
     });
     const result = serverReducer(state, Actions.deckDelDir({ path: '' }));
     expect(result.backendDecks!.root!.items).toHaveLength(1);
   });
 
   it('DECK_DEL_DIR → recursively removes nested subfolder via multi-segment path', () => {
-    const child = create(Data.ServerInfo_DeckStorage_TreeItemSchema, {
-      id: 0, name: 'child', folder: create(Data.ServerInfo_DeckStorage_FolderSchema, { items: [] })
+    const child = create(ServerInfo_DeckStorage_TreeItemSchema, {
+      id: 0, name: 'child', folder: create(ServerInfo_DeckStorage_FolderSchema, { items: [] })
     });
-    const parent = create(Data.ServerInfo_DeckStorage_TreeItemSchema, {
-      id: 0, name: 'parent', folder: create(Data.ServerInfo_DeckStorage_FolderSchema, { items: [child] })
+    const parent = create(ServerInfo_DeckStorage_TreeItemSchema, {
+      id: 0, name: 'parent', folder: create(ServerInfo_DeckStorage_FolderSchema, { items: [child] })
     });
     const state = makeServerState({
-      backendDecks: makeDeckList({ root: create(Data.ServerInfo_DeckStorage_FolderSchema, { items: [parent] }) })
+      backendDecks: makeDeckList({ root: create(ServerInfo_DeckStorage_FolderSchema, { items: [parent] }) })
     });
     const result = serverReducer(state, Actions.deckDelDir({ path: 'parent/child' }));
     expect(result.backendDecks!.root!.items[0].folder!.items).toHaveLength(0);
@@ -722,8 +735,8 @@ describe('Deck Storage', () => {
 
 describe('GAMES_OF_USER', () => {
   it('stores normalized games keyed by userName and gameId', () => {
-    const response = create(Data.Response_GetGamesOfUserSchema, {
-      gameList: [create(Data.ServerInfo_GameSchema, { gameId: 5, description: '' })],
+    const response = create(Response_GetGamesOfUserSchema, {
+      gameList: [create(ServerInfo_GameSchema, { gameId: 5, description: '' })],
       roomList: [],
     });
     const state = makeServerState();
@@ -733,8 +746,8 @@ describe('GAMES_OF_USER', () => {
 
   it('overwrites previous games for same user', () => {
     const old = { 1: makeGame({ gameId: 1 }) };
-    const response = create(Data.Response_GetGamesOfUserSchema, {
-      gameList: [create(Data.ServerInfo_GameSchema, { gameId: 2, description: '' })],
+    const response = create(Response_GetGamesOfUserSchema, {
+      gameList: [create(ServerInfo_GameSchema, { gameId: 2, description: '' })],
       roomList: [],
     });
     const state = makeServerState({ gamesOfUser: { alice: old } });
@@ -744,7 +757,7 @@ describe('GAMES_OF_USER', () => {
 
   it('does not affect other users\' entries', () => {
     const bobGames = { 3: makeGame({ gameId: 3 }) };
-    const response = create(Data.Response_GetGamesOfUserSchema, { gameList: [], roomList: [] });
+    const response = create(Response_GetGamesOfUserSchema, { gameList: [], roomList: [] });
     const state = makeServerState({ gamesOfUser: { bob: bobGames } });
     const result = serverReducer(state, Actions.gamesOfUser({ userName: 'alice', response }));
     expect(result.gamesOfUser['bob']).toEqual(bobGames);
@@ -772,7 +785,7 @@ describe('malformed input', () => {
   });
 
   it('USER_MESSAGE with no current state.user → messages map unchanged', () => {
-    const msg = create(Data.Event_UserMessageSchema, {
+    const msg = create(Event_UserMessageSchema, {
       senderName: 'Alice', receiverName: 'Bob', message: 'lost-in-the-mail',
     });
     const state = makeServerState({ user: null });

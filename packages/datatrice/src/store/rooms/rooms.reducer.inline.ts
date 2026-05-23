@@ -1,5 +1,6 @@
 import type { CaseReducer, PayloadAction } from '@reduxjs/toolkit';
-import { App, Data, Enriched } from '../../types';
+import { App, Enriched } from '../../types';
+import { ServerInfo_Game, ServerInfo_Room, ServerInfo_User } from '@cockatrice/sockatrice/generated';
 
 import { normalizeRoomInfo, normalizeUserMessage } from '../../common';
 
@@ -42,9 +43,9 @@ export function removeGameFromRooms(state: RoomsState, gameId: number): void {
 
 export const clearStore: CaseReducer<RoomsState> = () => initialState;
 
-export const updateRooms: CaseReducer<RoomsState, PayloadAction<{ rooms: Data.ServerInfo_Room[] }>> = () => {};
+export const updateRooms: CaseReducer<RoomsState, PayloadAction<{ rooms: ServerInfo_Room[] }>> = () => {};
 
-export const joinRoom: CaseReducer<RoomsState, PayloadAction<{ roomInfo: Data.ServerInfo_Room }>> = (state, action) => {
+export const joinRoom: CaseReducer<RoomsState, PayloadAction<{ roomInfo: ServerInfo_Room }>> = (state, action) => {
   const { roomInfo: rawRoomInfo } = action.payload;
 
   const roomEntry = normalizeRoomInfo(rawRoomInfo);
@@ -88,12 +89,12 @@ export const addMessage: CaseReducer<
 
 export const updateGames: CaseReducer<
   RoomsState,
-  PayloadAction<{ roomId: number; games: Data.ServerInfo_Game[] }>
+  PayloadAction<{ roomId: number; games: ServerInfo_Game[] }>
 > = () => {};
 
 export const userJoined: CaseReducer<
   RoomsState,
-  PayloadAction<{ roomId: number; user: Data.ServerInfo_User }>
+  PayloadAction<{ roomId: number; user: ServerInfo_User }>
 > = (state, action) => {
   const { roomId, user } = action.payload;
   const room = state.rooms[roomId];

@@ -1,5 +1,5 @@
 ﻿import { create } from '@bufbuild/protobuf';
-import { Data } from '../../types';
+import { ServerInfo_Card, ServerInfo_PlayerPropertiesSchema } from '@cockatrice/sockatrice/generated';
 import { gamesReducer } from './game.reducer';
 import { GamesState } from './game.interfaces';
 import { Actions } from './game.actions';
@@ -13,7 +13,7 @@ import {
   makeZoneEntry,
 } from '../../testing/fixtures/games';
 
-function cardsIn(state: GamesState, gameId: number, playerId: number, zoneName: string): Data.ServerInfo_Card[] {
+function cardsIn(state: GamesState, gameId: number, playerId: number, zoneName: string): ServerInfo_Card[] {
   const zone = state.games[gameId]?.players[playerId]?.zones[zoneName];
   return zone ? zone.order.map(id => zone.byId[id]) : [];
 }
@@ -361,7 +361,7 @@ describe('gameInfoUpdated', () => {
 });
 
 describe('cardFieldsUpdated', () => {
-  function stateWithCard(card: Data.ServerInfo_Card) {
+  function stateWithCard(card: ServerInfo_Card) {
     return makeState({
       games: {
         1: makeGameEntry({
@@ -626,7 +626,7 @@ describe('playerPropertiesUpdated', () => {
         }),
       },
     });
-    const pingOnly = create(Data.ServerInfo_PlayerPropertiesSchema, { pingSeconds: 42 });
+    const pingOnly = create(ServerInfo_PlayerPropertiesSchema, { pingSeconds: 42 });
     const result = gamesReducer(state, Actions.playerPropertiesUpdated({
       gameId: 1, playerId: 1, properties: pingOnly,
     }));

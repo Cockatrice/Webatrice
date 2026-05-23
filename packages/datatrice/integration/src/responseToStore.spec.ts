@@ -1,7 +1,8 @@
 import { create } from '@bufbuild/protobuf';
 import { WebsocketTypes } from '@cockatrice/sockatrice/types';
 
-import { attachResponseHandlers, createStore, Data } from '../../src';
+import { attachResponseHandlers, createStore } from '../../src';
+import { ServerInfo_GameSchema, ServerInfo_RoomSchema, ServerInfo_UserSchema } from '@cockatrice/sockatrice/generated';
 
 // Integration: realistic protocol sequences spanning ≥2 slices. Each `it`
 // walks the bridge through a multi-step user journey and asserts the
@@ -17,10 +18,10 @@ describe('integration: end-to-end protocol sequences', () => {
     response.session.loginSuccessful({ userName: 'alice' } as WebsocketTypes.LoginSuccessContext);
     response.session.updateStatus(WebsocketTypes.StatusEnum.LOGGED_IN, 'in');
 
-    const alice = create(Data.ServerInfo_UserSchema, { name: 'alice' });
+    const alice = create(ServerInfo_UserSchema, { name: 'alice' });
     response.session.updateUsers([alice]);
 
-    const roomInfo = create(Data.ServerInfo_RoomSchema, { roomId: 1, name: 'Main' });
+    const roomInfo = create(ServerInfo_RoomSchema, { roomId: 1, name: 'Main' });
     response.room.joinRoom(roomInfo);
 
     const state = store.getState();
@@ -49,10 +50,10 @@ describe('integration: end-to-end protocol sequences', () => {
     const store = createStore();
     const response = attachResponseHandlers(store);
 
-    const roomInfo = create(Data.ServerInfo_RoomSchema, { roomId: 1, name: 'Main' });
+    const roomInfo = create(ServerInfo_RoomSchema, { roomId: 1, name: 'Main' });
     response.room.joinRoom(roomInfo);
 
-    const game = create(Data.ServerInfo_GameSchema, { gameId: 42, description: 'casual' });
+    const game = create(ServerInfo_GameSchema, { gameId: 42, description: 'casual' });
     response.room.updateGames(1, [game]);
 
     const state = store.getState();
@@ -65,7 +66,7 @@ describe('integration: end-to-end protocol sequences', () => {
     const store = createStore();
     const response = attachResponseHandlers(store);
 
-    const roomInfo = create(Data.ServerInfo_RoomSchema, { roomId: 1, name: 'Main' });
+    const roomInfo = create(ServerInfo_RoomSchema, { roomId: 1, name: 'Main' });
     response.room.joinRoom(roomInfo);
 
     response.room.addMessage(1, { senderName: 'alice', message: 'hi', timeReceived: 123 });
@@ -80,7 +81,7 @@ describe('integration: end-to-end protocol sequences', () => {
     const response = attachResponseHandlers(store);
 
     response.session.loginSuccessful({ userName: 'alice' } as WebsocketTypes.LoginSuccessContext);
-    const roomInfo = create(Data.ServerInfo_RoomSchema, { roomId: 1, name: 'Main' });
+    const roomInfo = create(ServerInfo_RoomSchema, { roomId: 1, name: 'Main' });
     response.room.joinRoom(roomInfo);
 
     response.room.clearStore();

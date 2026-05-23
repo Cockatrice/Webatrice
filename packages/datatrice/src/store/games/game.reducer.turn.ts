@@ -1,5 +1,5 @@
 import { CaseReducer, PayloadAction } from '@reduxjs/toolkit';
-import { Data } from '../../types';
+import { Event_GameStateChanged } from '@cockatrice/sockatrice/generated';
 import { GamesState } from './game.interfaces';
 
 export const turnReducers = {
@@ -11,7 +11,7 @@ export const turnReducers = {
     }
   }) as CaseReducer<GamesState, PayloadAction<{ gameId: number; hostId: number }>>,
 
-  gameStateChanged: (() => {}) as CaseReducer<GamesState, PayloadAction<{ gameId: number; data: Data.Event_GameStateChanged }>>,
+  gameStateChanged: (() => {}) as CaseReducer<GamesState, PayloadAction<{ gameId: number; data: Event_GameStateChanged }>>,
 
   activePlayerSet: ((state, action) => {
     const game = state.games[action.payload.gameId];

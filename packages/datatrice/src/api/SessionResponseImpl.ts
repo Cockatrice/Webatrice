@@ -1,5 +1,18 @@
 import type { Store } from '@reduxjs/toolkit';
-import { Data } from '../types';
+import {
+  Event_GameJoined,
+  Event_NotifyUser,
+  Event_PlayerPropertiesChanged,
+  Event_ServerShutdown,
+  Event_UserMessage,
+  Response_DeckDownload,
+  Response_DeckList,
+  Response_GetGamesOfUser,
+  Response_ReplayDownload,
+  ServerInfo_DeckStorage_TreeItem,
+  ServerInfo_ReplayMatch,
+  ServerInfo_User,
+} from '@cockatrice/sockatrice/generated';
 import type { WebsocketTypes } from '@cockatrice/sockatrice/types';
 
 import { Actions as ServerActions } from '../store/server/server.actions';
@@ -43,11 +56,11 @@ export class SessionResponseImpl implements WebsocketTypes.ISessionResponse {
     this.store.dispatch(ServerActions.testConnectionFailed());
   }
 
-  updateBuddyList(buddyList: Data.ServerInfo_User[]): void {
+  updateBuddyList(buddyList: ServerInfo_User[]): void {
     this.store.dispatch(ServerActions.updateBuddyList({ buddyList }));
   }
 
-  addToBuddyList(user: Data.ServerInfo_User): void {
+  addToBuddyList(user: ServerInfo_User): void {
     this.store.dispatch(ServerActions.addToBuddyList({ user }));
   }
 
@@ -55,11 +68,11 @@ export class SessionResponseImpl implements WebsocketTypes.ISessionResponse {
     this.store.dispatch(ServerActions.removeFromBuddyList({ userName }));
   }
 
-  updateIgnoreList(ignoreList: Data.ServerInfo_User[]): void {
+  updateIgnoreList(ignoreList: ServerInfo_User[]): void {
     this.store.dispatch(ServerActions.updateIgnoreList({ ignoreList }));
   }
 
-  addToIgnoreList(user: Data.ServerInfo_User): void {
+  addToIgnoreList(user: ServerInfo_User): void {
     this.store.dispatch(ServerActions.addToIgnoreList({ user }));
   }
 
@@ -75,15 +88,15 @@ export class SessionResponseImpl implements WebsocketTypes.ISessionResponse {
     this.store.dispatch(ServerActions.updateStatus({ status: { state, description } }));
   }
 
-  updateUser(user: Data.ServerInfo_User): void {
+  updateUser(user: ServerInfo_User): void {
     this.store.dispatch(ServerActions.updateUser({ user }));
   }
 
-  updateUsers(users: Data.ServerInfo_User[]): void {
+  updateUsers(users: ServerInfo_User[]): void {
     this.store.dispatch(ServerActions.updateUsers({ users }));
   }
 
-  userJoined(user: Data.ServerInfo_User): void {
+  userJoined(user: ServerInfo_User): void {
     this.store.dispatch(ServerActions.userJoined({ user }));
   }
 
@@ -159,33 +172,33 @@ export class SessionResponseImpl implements WebsocketTypes.ISessionResponse {
     this.store.dispatch(ServerActions.accountImageChanged({ user: { avatarBmp } }));
   }
 
-  getUserInfo(userInfo: Data.ServerInfo_User): void {
+  getUserInfo(userInfo: ServerInfo_User): void {
     this.store.dispatch(ServerActions.getUserInfo({ userInfo }));
   }
 
-  getGamesOfUser(userName: string, response: Data.Response_GetGamesOfUser): void {
+  getGamesOfUser(userName: string, response: Response_GetGamesOfUser): void {
     this.store.dispatch(ServerActions.gamesOfUser({ userName, response }));
   }
 
-  gameJoined(gameJoinedData: Data.Event_GameJoined): void {
+  gameJoined(gameJoinedData: Event_GameJoined): void {
     this.store.dispatch(GameActions.gameJoined({ data: gameJoinedData }));
   }
 
-  notifyUser(notification: Data.Event_NotifyUser): void {
+  notifyUser(notification: Event_NotifyUser): void {
     this.store.dispatch(ServerActions.notifyUser({ notification }));
   }
 
-  playerPropertiesChanged(gameId: number, playerId: number, payload: Data.Event_PlayerPropertiesChanged): void {
+  playerPropertiesChanged(gameId: number, playerId: number, payload: Event_PlayerPropertiesChanged): void {
     if (payload.playerProperties) {
       this.store.dispatch(GameActions.playerPropertiesChanged({ gameId, playerId, properties: payload.playerProperties }));
     }
   }
 
-  serverShutdown(data: Data.Event_ServerShutdown): void {
+  serverShutdown(data: Event_ServerShutdown): void {
     this.store.dispatch(ServerActions.serverShutdown({ data }));
   }
 
-  userMessage(messageData: Data.Event_UserMessage): void {
+  userMessage(messageData: Event_UserMessage): void {
     this.store.dispatch(ServerActions.userMessage({ messageData }));
   }
 
@@ -201,11 +214,11 @@ export class SessionResponseImpl implements WebsocketTypes.ISessionResponse {
     this.store.dispatch(ServerActions.deckDelete({ deckId }));
   }
 
-  updateServerDecks(deckList: Data.Response_DeckList): void {
+  updateServerDecks(deckList: Response_DeckList): void {
     this.store.dispatch(ServerActions.backendDecks({ deckList }));
   }
 
-  uploadServerDeck(path: string, treeItem: Data.ServerInfo_DeckStorage_TreeItem): void {
+  uploadServerDeck(path: string, treeItem: ServerInfo_DeckStorage_TreeItem): void {
     this.store.dispatch(ServerActions.deckUpload({ path, treeItem }));
   }
 
@@ -217,11 +230,11 @@ export class SessionResponseImpl implements WebsocketTypes.ISessionResponse {
     this.store.dispatch(ServerActions.deckDelDir({ path }));
   }
 
-  replayList(matchList: Data.ServerInfo_ReplayMatch[]): void {
+  replayList(matchList: ServerInfo_ReplayMatch[]): void {
     this.store.dispatch(ServerActions.replayList({ matchList }));
   }
 
-  replayAdded(matchInfo: Data.ServerInfo_ReplayMatch): void {
+  replayAdded(matchInfo: ServerInfo_ReplayMatch): void {
     this.store.dispatch(ServerActions.replayAdded({ matchInfo }));
   }
 
@@ -233,11 +246,11 @@ export class SessionResponseImpl implements WebsocketTypes.ISessionResponse {
     this.store.dispatch(ServerActions.replayDeleteMatch({ gameId }));
   }
 
-  downloadServerDeck(deckId: number, response: Data.Response_DeckDownload): void {
+  downloadServerDeck(deckId: number, response: Response_DeckDownload): void {
     this.store.dispatch(ServerActions.deckDownloaded({ deckId, deck: response.deck }));
   }
 
-  replayDownloaded(replayId: number, response: Data.Response_ReplayDownload): void {
+  replayDownloaded(replayId: number, response: Response_ReplayDownload): void {
     this.store.dispatch(ServerActions.replayDownloaded({ replayId, replayData: response.replayData }));
   }
 }

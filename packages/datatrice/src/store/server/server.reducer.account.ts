@@ -1,6 +1,6 @@
 import { CaseReducer, PayloadAction } from '@reduxjs/toolkit';
 import { create } from '@bufbuild/protobuf';
-import { Data } from '../../types';
+import { ServerInfo_User, ServerInfo_UserSchema } from '@cockatrice/sockatrice/generated';
 import { normalizeBannedUserError } from '../../common';
 import { ServerState } from './server.interfaces';
 
@@ -19,13 +19,13 @@ export const accountReducers = {
 
   accountEditChanged: ((state, action) => {
     if (state.user) {
-      state.user = create(Data.ServerInfo_UserSchema, { ...state.user, ...action.payload.user });
+      state.user = create(ServerInfo_UserSchema, { ...state.user, ...action.payload.user });
     }
-  }) as CaseReducer<ServerState, PayloadAction<{ user: Partial<Data.ServerInfo_User> }>>,
+  }) as CaseReducer<ServerState, PayloadAction<{ user: Partial<ServerInfo_User> }>>,
 
   accountImageChanged: ((state, action) => {
     if (state.user) {
-      state.user = create(Data.ServerInfo_UserSchema, { ...state.user, ...action.payload.user });
+      state.user = create(ServerInfo_UserSchema, { ...state.user, ...action.payload.user });
     }
-  }) as CaseReducer<ServerState, PayloadAction<{ user: Partial<Data.ServerInfo_User> }>>,
+  }) as CaseReducer<ServerState, PayloadAction<{ user: Partial<ServerInfo_User> }>>,
 };

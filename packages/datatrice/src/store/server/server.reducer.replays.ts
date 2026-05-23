@@ -1,20 +1,20 @@
 import { CaseReducer, PayloadAction } from '@reduxjs/toolkit';
-import { Data } from '../../types';
+import { ServerInfo_ReplayMatch } from '@cockatrice/sockatrice/generated';
 import { ServerState } from './server.interfaces';
 
 export const replayReducers = {
   replayList: ((state, action) => {
-    const replays: { [gameId: number]: Data.ServerInfo_ReplayMatch } = {};
+    const replays: { [gameId: number]: ServerInfo_ReplayMatch } = {};
     for (const match of action.payload.matchList) {
       replays[match.gameId] = match;
     }
     state.replays = replays;
-  }) as CaseReducer<ServerState, PayloadAction<{ matchList: Data.ServerInfo_ReplayMatch[] }>>,
+  }) as CaseReducer<ServerState, PayloadAction<{ matchList: ServerInfo_ReplayMatch[] }>>,
 
   replayAdded: ((state, action) => {
     const { matchInfo } = action.payload;
     state.replays[matchInfo.gameId] = matchInfo;
-  }) as CaseReducer<ServerState, PayloadAction<{ matchInfo: Data.ServerInfo_ReplayMatch }>>,
+  }) as CaseReducer<ServerState, PayloadAction<{ matchInfo: ServerInfo_ReplayMatch }>>,
 
   replayModifyMatch: ((state, action) => {
     const { gameId, doNotHide } = action.payload;

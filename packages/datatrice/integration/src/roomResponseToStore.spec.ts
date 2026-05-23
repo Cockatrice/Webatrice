@@ -1,6 +1,15 @@
 import { create } from '@bufbuild/protobuf';
 
-import { attachResponseHandlers, createStore, Data, rooms } from '../../src';
+import { attachResponseHandlers, createStore, rooms } from '../../src';
+import {
+  ServerInfo_Game,
+  ServerInfo_GameSchema,
+  ServerInfo_GameTypeSchema,
+  ServerInfo_Room,
+  ServerInfo_RoomSchema,
+  ServerInfo_User,
+  ServerInfo_UserSchema,
+} from '@cockatrice/sockatrice/generated';
 
 // Integration: drives every RoomResponseImpl handler method through the real
 // store — room join/leave/update lifecycle, the updateGames listener path,
@@ -9,25 +18,25 @@ import { attachResponseHandlers, createStore, Data, rooms } from '../../src';
 // selector layer is exercised. The filter/select-game selectors are seeded
 // via the slice actions they belong to (no bridge handler exposes them yet).
 
-function makeRoom(roomId: number, name: string): Data.ServerInfo_Room {
-  return create(Data.ServerInfo_RoomSchema, {
+function makeRoom(roomId: number, name: string): ServerInfo_Room {
+  return create(ServerInfo_RoomSchema, {
     roomId, name, description: `${name} room`,
     gameCount: 0, playerCount: 0, permissionlevel: 'none',
-    gametypeList: [create(Data.ServerInfo_GameTypeSchema, { gameTypeId: 1, description: 'Standard' })],
+    gametypeList: [create(ServerInfo_GameTypeSchema, { gameTypeId: 1, description: 'Standard' })],
     gameList: [], userList: [],
   });
 }
 
-function makeGame(gameId: number, overrides: Partial<Data.ServerInfo_Game> = {}): Data.ServerInfo_Game {
-  return create(Data.ServerInfo_GameSchema, {
+function makeGame(gameId: number, overrides: Partial<ServerInfo_Game> = {}): ServerInfo_Game {
+  return create(ServerInfo_GameSchema, {
     gameId, roomId: 1, description: `game ${gameId}`,
     gameTypes: [1], playerCount: 1, maxPlayers: 4, started: false,
     ...overrides,
   });
 }
 
-function makeRoomUser(name: string): Data.ServerInfo_User {
-  return create(Data.ServerInfo_UserSchema, { name, accountageSecs: 0n });
+function makeRoomUser(name: string): ServerInfo_User {
+  return create(ServerInfo_UserSchema, { name, accountageSecs: 0n });
 }
 
 // --- room lifecycle ------------------------------------------------------
@@ -51,7 +60,7 @@ describe('integration: room lifecycle', () => {
     response.room.joinRoom(makeRoom(1, 'Main'));
     // updateRooms emits only changed fields for an existing room.
     response.room.updateRooms([
-      create(Data.ServerInfo_RoomSchema, { roomId: 1, playerCount: 12 }),
+      create(ServerInfo_RoomSchema, { roomId: 1, playerCount: 12 }),
       makeRoom(2, 'Secondary'),
     ]);
 

@@ -1,5 +1,5 @@
 import { CaseReducer, PayloadAction } from '@reduxjs/toolkit';
-import { Data } from '../../types';
+import { Event_DumpZone, Event_RollDie, Event_Shuffle } from '@cockatrice/sockatrice/generated';
 import { GamesState } from './game.interfaces';
 import { MAX_GAME_MESSAGES, pushEventMessage } from './game.reducer.helpers';
 import {
@@ -29,7 +29,7 @@ export const chatReducers = {
       return;
     }
     pushEventMessage(game, playerId, formatZoneShuffled(game, playerId));
-  }) as CaseReducer<GamesState, PayloadAction<{ gameId: number; playerId: number; data: Data.Event_Shuffle }>>,
+  }) as CaseReducer<GamesState, PayloadAction<{ gameId: number; playerId: number; data: Event_Shuffle }>>,
 
   zoneDumped: ((state, action) => {
     const { gameId, playerId, data } = action.payload;
@@ -38,7 +38,7 @@ export const chatReducers = {
       return;
     }
     pushEventMessage(game, playerId, formatZoneDumped(game, playerId, data));
-  }) as CaseReducer<GamesState, PayloadAction<{ gameId: number; playerId: number; data: Data.Event_DumpZone }>>,
+  }) as CaseReducer<GamesState, PayloadAction<{ gameId: number; playerId: number; data: Event_DumpZone }>>,
 
   dieRolled: ((state, action) => {
     const { gameId, playerId, data } = action.payload;
@@ -47,5 +47,5 @@ export const chatReducers = {
       return;
     }
     pushEventMessage(game, playerId, formatDieRolled(game, playerId, data));
-  }) as CaseReducer<GamesState, PayloadAction<{ gameId: number; playerId: number; data: Data.Event_RollDie }>>,
+  }) as CaseReducer<GamesState, PayloadAction<{ gameId: number; playerId: number; data: Event_RollDie }>>,
 };

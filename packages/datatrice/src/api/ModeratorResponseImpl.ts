@@ -1,5 +1,5 @@
 import type { Store } from '@reduxjs/toolkit';
-import { Data } from '../types';
+import { Response_WarnList, ServerInfo_Ban, ServerInfo_ChatMessage, ServerInfo_Warning } from '@cockatrice/sockatrice/generated';
 import type { WebsocketTypes } from '@cockatrice/sockatrice/types';
 
 import { Actions as ServerActions } from '../store/server/server.actions';
@@ -11,19 +11,19 @@ export class ModeratorResponseImpl implements WebsocketTypes.IModeratorResponse 
     this.store.dispatch(ServerActions.banFromServer({ userName }));
   }
 
-  banHistory(userName: string, banHistory: Data.ServerInfo_Ban[]): void {
+  banHistory(userName: string, banHistory: ServerInfo_Ban[]): void {
     this.store.dispatch(ServerActions.banHistory({ userName, banHistory }));
   }
 
-  viewLogs(logs: Data.ServerInfo_ChatMessage[]): void {
+  viewLogs(logs: ServerInfo_ChatMessage[]): void {
     this.store.dispatch(ServerActions.viewLogs({ logs }));
   }
 
-  warnHistory(userName: string, warnHistory: Data.ServerInfo_Warning[]): void {
+  warnHistory(userName: string, warnHistory: ServerInfo_Warning[]): void {
     this.store.dispatch(ServerActions.warnHistory({ userName, warnHistory }));
   }
 
-  warnListOptions(warnList: Data.Response_WarnList[]): void {
+  warnListOptions(warnList: Response_WarnList[]): void {
     this.store.dispatch(ServerActions.warnListOptions({ warnList }));
   }
 

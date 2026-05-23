@@ -1,5 +1,6 @@
 import { createSelector } from '@reduxjs/toolkit';
-import { Data, Enriched } from '../../types';
+import { Enriched } from '../../types';
+import { ServerInfo_User, ServerInfo_User_UserLevelFlag } from '@cockatrice/sockatrice/generated';
 import { SortUtil } from '../../common';
 import { GameFilters, RoomsState } from './rooms.interfaces';
 import { ServerState } from '../server/server.interfaces';
@@ -16,9 +17,9 @@ type State = {
 };
 
 const EMPTY_GAMES: Enriched.Game[] = [];
-const EMPTY_USERS: Data.ServerInfo_User[] = [];
+const EMPTY_USERS: ServerInfo_User[] = [];
 const EMPTY_GAMES_MAP: { [id: number]: Enriched.Game } = {};
-const EMPTY_USERS_MAP: { [name: string]: Data.ServerInfo_User } = {};
+const EMPTY_USERS_MAP: { [name: string]: ServerInfo_User } = {};
 
 const ZERO_COUNTS = { visible: 0, total: 0 };
 
@@ -73,7 +74,7 @@ export const Selectors = {
       (state: State, roomId: number) => state.rooms.rooms[roomId]?.users,
       (state: State) => state.rooms.sortUsersBy,
     ],
-    (users, sortBy): Data.ServerInfo_User[] => {
+    (users, sortBy): ServerInfo_User[] => {
       if (!users) {
         return EMPTY_USERS;
       }
@@ -117,8 +118,8 @@ export const Selectors = {
       }
       const ctx: GameFilterContext = {
         isOwnUserRegistered: user
-          ? (user.userLevel & Data.ServerInfo_User_UserLevelFlag.IsRegistered) ===
-            Data.ServerInfo_User_UserLevelFlag.IsRegistered
+          ? (user.userLevel & ServerInfo_User_UserLevelFlag.IsRegistered) ===
+            ServerInfo_User_UserLevelFlag.IsRegistered
           : false,
         isUserBuddy: (name) => Boolean(buddyList?.[name]),
         isUserIgnored: (name) => Boolean(ignoreList?.[name]),
@@ -147,8 +148,8 @@ export const Selectors = {
       }
       const ctx: GameFilterContext = {
         isOwnUserRegistered: user
-          ? (user.userLevel & Data.ServerInfo_User_UserLevelFlag.IsRegistered) ===
-            Data.ServerInfo_User_UserLevelFlag.IsRegistered
+          ? (user.userLevel & ServerInfo_User_UserLevelFlag.IsRegistered) ===
+            ServerInfo_User_UserLevelFlag.IsRegistered
           : false,
         isUserBuddy: (name) => Boolean(buddyList?.[name]),
         isUserIgnored: (name) => Boolean(ignoreList?.[name]),

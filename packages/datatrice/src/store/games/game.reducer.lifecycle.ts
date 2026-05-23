@@ -1,5 +1,5 @@
 import { CaseReducer, PayloadAction } from '@reduxjs/toolkit';
-import { Data } from '../../types';
+import { Event_GameJoined } from '@cockatrice/sockatrice/generated';
 import { GamesState } from './game.interfaces';
 
 const initialState: GamesState = { games: {} };
@@ -28,7 +28,7 @@ export const lifecycleReducers = {
       players: {},
       messages: [],
     };
-  }) as CaseReducer<GamesState, PayloadAction<{ data: Data.Event_GameJoined }>>,
+  }) as CaseReducer<GamesState, PayloadAction<{ data: Event_GameJoined }>>,
 
   gameLeft: ((state, action) => {
     delete state.games[action.payload.gameId];

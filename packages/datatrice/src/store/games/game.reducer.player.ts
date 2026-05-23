@@ -1,5 +1,5 @@
 import { CaseReducer, PayloadAction } from '@reduxjs/toolkit';
-import { Data } from '../../types';
+import { ServerInfo_PlayerProperties } from '@cockatrice/sockatrice/generated';
 import { GamesState } from './game.interfaces';
 
 export const playerReducers = {
@@ -16,7 +16,7 @@ export const playerReducers = {
       counters: {},
       arrows: {},
     };
-  }) as CaseReducer<GamesState, PayloadAction<{ gameId: number; playerProperties: Data.ServerInfo_PlayerProperties }>>,
+  }) as CaseReducer<GamesState, PayloadAction<{ gameId: number; playerProperties: ServerInfo_PlayerProperties }>>,
 
   playerLeft: ((state, action) => {
     const { gameId, playerId } = action.payload;
@@ -30,6 +30,6 @@ export const playerReducers = {
   playerPropertiesChanged: (() => {}) as CaseReducer<GamesState, PayloadAction<{
     gameId: number;
     playerId: number;
-    properties: Data.ServerInfo_PlayerProperties;
+    properties: ServerInfo_PlayerProperties;
   }>>,
 };

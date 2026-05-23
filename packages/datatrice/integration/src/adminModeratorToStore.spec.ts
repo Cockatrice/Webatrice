@@ -1,6 +1,15 @@
 import { create } from '@bufbuild/protobuf';
 
-import { attachResponseHandlers, createStore, Data, server } from '../../src';
+import { attachResponseHandlers, createStore, server } from '../../src';
+import {
+  Response_WarnListSchema,
+  ServerInfo_BanSchema,
+  ServerInfo_ChatMessageSchema,
+  ServerInfo_User,
+  ServerInfo_UserSchema,
+  ServerInfo_User_UserLevelFlag,
+  ServerInfo_WarningSchema,
+} from '@cockatrice/sockatrice/generated';
 
 // Integration: drives every AdminResponseImpl and ModeratorResponseImpl
 // handler method through the real store. Admin: mod adjustment + the
@@ -8,8 +17,8 @@ import { attachResponseHandlers, createStore, Data, server } from '../../src';
 // history/options, log viewing, admin notes, replay access and forced
 // activation. Assertions read through server.selectors where one exists.
 
-function makeUser(name: string, userLevel = 0): Data.ServerInfo_User {
-  return create(Data.ServerInfo_UserSchema, { name, userLevel, accountageSecs: 0n });
+function makeUser(name: string, userLevel = 0): ServerInfo_User {
+  return create(ServerInfo_UserSchema, { name, userLevel, accountageSecs: 0n });
 }
 
 // --- admin ---------------------------------------------------------------
@@ -22,11 +31,11 @@ describe('integration: admin handlers', () => {
 
     response.admin.adjustMod('alice', true, false);
     let user = server.Selectors.getUsers(store.getState())['alice'];
-    expect(user.userLevel & Data.ServerInfo_User_UserLevelFlag.IsModerator).toBeTruthy();
+    expect(user.userLevel & ServerInfo_User_UserLevelFlag.IsModerator).toBeTruthy();
 
     response.admin.adjustMod('alice', false, false);
     user = server.Selectors.getUsers(store.getState())['alice'];
-    expect(user.userLevel & Data.ServerInfo_User_UserLevelFlag.IsModerator).toBeFalsy();
+    expect(user.userLevel & ServerInfo_User_UserLevelFlag.IsModerator).toBeFalsy();
   });
 
   it('adjustMod grants the judge flag', () => {
@@ -36,7 +45,7 @@ describe('integration: admin handlers', () => {
 
     response.admin.adjustMod('bob', false, true);
     const user = server.Selectors.getUsers(store.getState())['bob'];
-    expect(user.userLevel & Data.ServerInfo_User_UserLevelFlag.IsJudge).toBeTruthy();
+    expect(user.userLevel & ServerInfo_User_UserLevelFlag.IsJudge).toBeTruthy();
   });
 
   it('adjustMod on an unknown user is a no-op', () => {
@@ -77,7 +86,7 @@ describe('integration: moderator handlers', () => {
   it('banHistory stores ban records keyed by username', () => {
     const store = createStore();
     const response = attachResponseHandlers(store);
-    const bans = [create(Data.ServerInfo_BanSchema, {
+    const bans = [create(ServerInfo_BanSchema, {
       adminName: 'mod', banReason: 'cheating', banTime: '2024', banLength: '7',
     })];
     response.moderator.banHistory('troll', bans);
@@ -87,7 +96,7 @@ describe('integration: moderator handlers', () => {
   it('warnHistory stores warning records keyed by username', () => {
     const store = createStore();
     const response = attachResponseHandlers(store);
-    const warnings = [create(Data.ServerInfo_WarningSchema, {
+    const warnings = [create(ServerInfo_WarningSchema, {
       userName: 'troll', adminName: 'mod', reason: 'rude', timeOf: '2024',
     })];
     response.moderator.warnHistory('troll', warnings);
@@ -97,7 +106,7 @@ describe('integration: moderator handlers', () => {
   it('warnListOptions replaces the available warn list', () => {
     const store = createStore();
     const response = attachResponseHandlers(store);
-    const list = [create(Data.Response_WarnListSchema, { userName: 'troll', warning: ['Spam'] })];
+    const list = [create(Response_WarnListSchema, { userName: 'troll', warning: ['Spam'] })];
     response.moderator.warnListOptions(list);
     expect(store.getState().server.warnListOptions).toEqual(list);
   });
@@ -106,8 +115,8 @@ describe('integration: moderator handlers', () => {
     const store = createStore();
     const response = attachResponseHandlers(store);
     response.moderator.viewLogs([
-      create(Data.ServerInfo_ChatMessageSchema, { message: 'hi', targetType: 'room', senderName: 'alice' }),
-      create(Data.ServerInfo_ChatMessageSchema, { message: 'gg', targetType: 'game', senderName: 'bob' }),
+      create(ServerInfo_ChatMessageSchema, { message: 'hi', targetType: 'room', senderName: 'alice' }),
+      create(ServerInfo_ChatMessageSchema, { message: 'gg', targetType: 'game', senderName: 'bob' }),
     ]);
     const logs = server.Selectors.getLogs(store.getState());
     expect(logs.room).toHaveLength(1);

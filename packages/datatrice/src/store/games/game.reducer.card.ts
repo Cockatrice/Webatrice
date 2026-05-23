@@ -1,6 +1,18 @@
 import { CaseReducer, PayloadAction } from '@reduxjs/toolkit';
 import { isFieldSet } from '@bufbuild/protobuf';
-import { Data } from '../../types';
+import {
+  Event_AttachCard,
+  Event_ChangeZoneProperties,
+  Event_ChangeZonePropertiesSchema,
+  Event_CreateToken,
+  Event_DestroyCard,
+  Event_DrawCards,
+  Event_FlipCard,
+  Event_MoveCard,
+  Event_RevealCards,
+  Event_SetCardAttr,
+  Event_SetCardCounter,
+} from '@cockatrice/sockatrice/generated';
 import { GamesState } from './game.interfaces';
 import { pushEventMessage } from './game.reducer.helpers';
 import { formatZonePropertiesChanged } from './messageLog';
@@ -8,7 +20,7 @@ import { formatZonePropertiesChanged } from './messageLog';
 export const cardReducers = {
   cardMoved: (() => {}) as CaseReducer<
     GamesState,
-    PayloadAction<{ gameId: number; playerId: number; data: Data.Event_MoveCard }>
+    PayloadAction<{ gameId: number; playerId: number; data: Event_MoveCard }>
   >,
 
   cardFlipped: ((state, action) => {
@@ -26,33 +38,33 @@ export const cardReducers = {
       name: cardName || card.name,
       providerId: cardProviderId || card.providerId,
     };
-  }) as CaseReducer<GamesState, PayloadAction<{ gameId: number; playerId: number; data: Data.Event_FlipCard }>>,
+  }) as CaseReducer<GamesState, PayloadAction<{ gameId: number; playerId: number; data: Event_FlipCard }>>,
 
   cardDestroyed: (() => {}) as CaseReducer<
     GamesState,
-    PayloadAction<{ gameId: number; playerId: number; data: Data.Event_DestroyCard }>
+    PayloadAction<{ gameId: number; playerId: number; data: Event_DestroyCard }>
   >,
 
   cardAttached: (() => {}) as CaseReducer<
     GamesState,
-    PayloadAction<{ gameId: number; playerId: number; data: Data.Event_AttachCard }>
+    PayloadAction<{ gameId: number; playerId: number; data: Event_AttachCard }>
   >,
 
   tokenCreated: (() => {}) as CaseReducer<
     GamesState,
-    PayloadAction<{ gameId: number; playerId: number; data: Data.Event_CreateToken }>
+    PayloadAction<{ gameId: number; playerId: number; data: Event_CreateToken }>
   >,
 
-  cardAttrChanged: (() => {}) as CaseReducer<GamesState, PayloadAction<{ gameId: number; playerId: number; data: Data.Event_SetCardAttr }>>,
+  cardAttrChanged: (() => {}) as CaseReducer<GamesState, PayloadAction<{ gameId: number; playerId: number; data: Event_SetCardAttr }>>,
 
   cardCounterChanged: (() => {}) as CaseReducer<
     GamesState,
-    PayloadAction<{ gameId: number; playerId: number; data: Data.Event_SetCardCounter }>
+    PayloadAction<{ gameId: number; playerId: number; data: Event_SetCardCounter }>
   >,
 
   cardsDrawn: (() => {}) as CaseReducer<
     GamesState,
-    PayloadAction<{ gameId: number; playerId: number; data: Data.Event_DrawCards }>
+    PayloadAction<{ gameId: number; playerId: number; data: Event_DrawCards }>
   >,
 
   cardsRevealed: ((state, action) => {
@@ -69,7 +81,7 @@ export const cardReducers = {
       }
       zone.byId[revealedCard.id] = { ...revealedCard, counterList: [...revealedCard.counterList] };
     }
-  }) as CaseReducer<GamesState, PayloadAction<{ gameId: number; playerId: number; data: Data.Event_RevealCards }>>,
+  }) as CaseReducer<GamesState, PayloadAction<{ gameId: number; playerId: number; data: Event_RevealCards }>>,
 
   zonePropertiesChanged: ((state, action) => {
     const { gameId, playerId, data } = action.payload;
@@ -78,12 +90,12 @@ export const cardReducers = {
     if (!game || !zone) {
       return;
     }
-    if (isFieldSet(data, Data.Event_ChangeZonePropertiesSchema.field.alwaysRevealTopCard)) {
+    if (isFieldSet(data, Event_ChangeZonePropertiesSchema.field.alwaysRevealTopCard)) {
       zone.alwaysRevealTopCard = data.alwaysRevealTopCard;
     }
-    if (isFieldSet(data, Data.Event_ChangeZonePropertiesSchema.field.alwaysLookAtTopCard)) {
+    if (isFieldSet(data, Event_ChangeZonePropertiesSchema.field.alwaysLookAtTopCard)) {
       zone.alwaysLookAtTopCard = data.alwaysLookAtTopCard;
     }
     pushEventMessage(game, playerId, formatZonePropertiesChanged(game, playerId, data));
-  }) as CaseReducer<GamesState, PayloadAction<{ gameId: number; playerId: number; data: Data.Event_ChangeZoneProperties }>>,
+  }) as CaseReducer<GamesState, PayloadAction<{ gameId: number; playerId: number; data: Event_ChangeZoneProperties }>>,
 };

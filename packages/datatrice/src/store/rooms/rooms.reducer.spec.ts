@@ -1,6 +1,7 @@
 ﻿import { create } from '@bufbuild/protobuf';
 import { configureStore, PayloadAction } from '@reduxjs/toolkit';
-import { App, Data } from '../../types';
+import { App } from '../../types';
+import { ServerInfo_Game, ServerInfo_GameTypeSchema, ServerInfo_RoomSchema } from '@cockatrice/sockatrice/generated';
 import { roomsReducer } from './rooms.reducer';
 import { Actions } from './rooms.actions';
 import { Actions as GameActions } from '../games/game.actions';
@@ -105,9 +106,9 @@ describe('UPDATE_ROOMS', () => {
     });
     const state = makeRoomsState({ rooms: { 1: existingRoom } });
 
-    const update = create(Data.ServerInfo_RoomSchema, {
+    const update = create(ServerInfo_RoomSchema, {
       roomId: 1,
-      gametypeList: [create(Data.ServerInfo_GameTypeSchema, { gameTypeId: 5, description: 'Commander' })],
+      gametypeList: [create(ServerInfo_GameTypeSchema, { gameTypeId: 5, description: 'Commander' })],
     });
     const result = dispatchThroughStore(state, Actions.updateRooms({ rooms: [update] }));
     expect(result.rooms[1].gametypeMap).toEqual({ 5: 'Commander' });
@@ -128,7 +129,7 @@ describe('UPDATE_ROOMS', () => {
     });
     const state = makeRoomsState({ rooms: { 1: existingRoom } });
 
-    const partial = create(Data.ServerInfo_RoomSchema, {
+    const partial = create(ServerInfo_RoomSchema, {
       roomId: 1,
       playerCount: 42,
       gameCount: 3,
@@ -228,7 +229,7 @@ describe('UPDATE_GAMES', () => {
     const state = makeRoomsState({ rooms: { 1: room } });
     const result = dispatchThroughStore(state, Actions.updateGames({
       roomId: 1,
-      games: [{ gameId: 1, closed: true } as Data.ServerInfo_Game],
+      games: [{ gameId: 1, closed: true } as ServerInfo_Game],
     }));
     expect(result.rooms[1].games[1]).toBeUndefined();
   });
@@ -239,7 +240,7 @@ describe('UPDATE_GAMES', () => {
     const state = makeRoomsState({ rooms: { 1: room } });
     const result = dispatchThroughStore(state, Actions.updateGames({
       roomId: 1,
-      games: [{ gameId: 1, description: 'new' } as Data.ServerInfo_Game],
+      games: [{ gameId: 1, description: 'new' } as ServerInfo_Game],
     }));
     expect(result.rooms[1].games[1].info.description).toBe('new');
   });
@@ -261,7 +262,7 @@ describe('UPDATE_GAMES', () => {
     const state = makeRoomsState({ rooms: { 1: room } });
     const result = dispatchThroughStore(state, Actions.updateGames({
       roomId: 1,
-      games: [{ gameId: 2, description: 'new' } as Data.ServerInfo_Game],
+      games: [{ gameId: 2, description: 'new' } as ServerInfo_Game],
     }));
     expect(result.rooms[1].games[1].info.description).toBe('untouched');
     expect(result.rooms[1].games[2].info.description).toBe('new');
@@ -293,7 +294,7 @@ describe('UPDATE_GAMES', () => {
     const state = makeRoomsState({ rooms: { 1: room } });
     const result = dispatchThroughStore(state, Actions.updateGames({
       roomId: 1,
-      games: [{ gameId: 1, gameTypes: [4] } as Data.ServerInfo_Game],
+      games: [{ gameId: 1, gameTypes: [4] } as ServerInfo_Game],
     }));
     expect(result.rooms[1].games[1].gameType).toBe('Modern');
   });

@@ -6,7 +6,7 @@ import {
   makeServerState,
   makeUser,
 } from '../../testing/fixtures/server';
-import { Data } from '../../types';
+import { ServerInfo_User_UserLevelFlag } from '@cockatrice/sockatrice/generated';
 import { WebsocketTypes } from '@cockatrice/sockatrice/types';
 
 function rootState(server: ServerState) {
@@ -180,14 +180,14 @@ describe('Selectors', () => {
   });
 
   it('getIsUserModerator → true when user has IsModerator flag', () => {
-    const Flag = Data.ServerInfo_User_UserLevelFlag;
+    const Flag = ServerInfo_User_UserLevelFlag;
     const user = makeUser({ userLevel: Flag.IsUser | Flag.IsModerator });
     const state = makeServerState({ user });
     expect(Selectors.getIsUserModerator(rootState(state))).toBe(true);
   });
 
   it('getIsUserModerator → false when user lacks IsModerator flag', () => {
-    const Flag = Data.ServerInfo_User_UserLevelFlag;
+    const Flag = ServerInfo_User_UserLevelFlag;
     const user = makeUser({ userLevel: Flag.IsUser | Flag.IsRegistered });
     const state = makeServerState({ user });
     expect(Selectors.getIsUserModerator(rootState(state))).toBe(false);
@@ -199,14 +199,14 @@ describe('Selectors', () => {
   });
 
   it('getIsUserJudge → true when user has IsJudge flag', () => {
-    const Flag = Data.ServerInfo_User_UserLevelFlag;
+    const Flag = ServerInfo_User_UserLevelFlag;
     const user = makeUser({ userLevel: Flag.IsUser | Flag.IsJudge });
     const state = makeServerState({ user });
     expect(Selectors.getIsUserJudge(rootState(state))).toBe(true);
   });
 
   it('getIsUserJudge → false when user lacks IsJudge flag', () => {
-    const Flag = Data.ServerInfo_User_UserLevelFlag;
+    const Flag = ServerInfo_User_UserLevelFlag;
     const user = makeUser({ userLevel: Flag.IsUser });
     const state = makeServerState({ user });
     expect(Selectors.getIsUserJudge(rootState(state))).toBe(false);
@@ -218,14 +218,14 @@ describe('Selectors', () => {
   });
 
   it('getIsUserRegistered → true when user has IsRegistered flag', () => {
-    const Flag = Data.ServerInfo_User_UserLevelFlag;
+    const Flag = ServerInfo_User_UserLevelFlag;
     const user = makeUser({ userLevel: Flag.IsUser | Flag.IsRegistered });
     const state = makeServerState({ user });
     expect(Selectors.getIsUserRegistered(rootState(state))).toBe(true);
   });
 
   it('getIsUserRegistered → false when user lacks IsRegistered flag', () => {
-    const Flag = Data.ServerInfo_User_UserLevelFlag;
+    const Flag = ServerInfo_User_UserLevelFlag;
     const user = makeUser({ userLevel: Flag.IsUser });
     const state = makeServerState({ user });
     expect(Selectors.getIsUserRegistered(rootState(state))).toBe(false);

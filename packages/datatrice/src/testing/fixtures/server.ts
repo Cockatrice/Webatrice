@@ -1,4 +1,24 @@
-import { App, Data, Enriched } from '../../types';
+import { App, Enriched } from '../../types';
+import {
+  Response_DeckList,
+  Response_DeckListSchema,
+  Response_WarnList,
+  Response_WarnListSchema,
+  ServerInfo_Ban,
+  ServerInfo_BanSchema,
+  ServerInfo_ChatMessage,
+  ServerInfo_ChatMessageSchema,
+  ServerInfo_DeckStorage_FolderSchema,
+  ServerInfo_DeckStorage_TreeItem,
+  ServerInfo_DeckStorage_TreeItemSchema,
+  ServerInfo_GameSchema,
+  ServerInfo_ReplayMatch,
+  ServerInfo_ReplayMatchSchema,
+  ServerInfo_User,
+  ServerInfo_UserSchema,
+  ServerInfo_Warning,
+  ServerInfo_WarningSchema,
+} from '@cockatrice/sockatrice/generated';
 import { WebsocketTypes } from '@cockatrice/sockatrice/types';
 import type { MessageInitShape } from '@bufbuild/protobuf';
 
@@ -6,9 +26,9 @@ import { create } from '@bufbuild/protobuf';
 import { ServerState } from '../../store/server/server.interfaces';
 
 export function makeUser(
-  overrides: MessageInitShape<typeof Data.ServerInfo_UserSchema> = {}
-): Data.ServerInfo_User {
-  return create(Data.ServerInfo_UserSchema, {
+  overrides: MessageInitShape<typeof ServerInfo_UserSchema> = {}
+): ServerInfo_User {
+  return create(ServerInfo_UserSchema, {
     name: 'TestUser',
     accountageSecs: 0n,
     privlevel: '',
@@ -18,9 +38,9 @@ export function makeUser(
 }
 
 export function makeLogItem(
-  overrides: MessageInitShape<typeof Data.ServerInfo_ChatMessageSchema> = {}
-): Data.ServerInfo_ChatMessage {
-  return create(Data.ServerInfo_ChatMessageSchema, {
+  overrides: MessageInitShape<typeof ServerInfo_ChatMessageSchema> = {}
+): ServerInfo_ChatMessage {
+  return create(ServerInfo_ChatMessageSchema, {
     message: '',
     senderId: '',
     senderIp: '',
@@ -34,9 +54,9 @@ export function makeLogItem(
 }
 
 export function makeBanHistoryItem(
-  overrides: MessageInitShape<typeof Data.ServerInfo_BanSchema> = {}
-): Data.ServerInfo_Ban {
-  return create(Data.ServerInfo_BanSchema, {
+  overrides: MessageInitShape<typeof ServerInfo_BanSchema> = {}
+): ServerInfo_Ban {
+  return create(ServerInfo_BanSchema, {
     adminId: '',
     adminName: '',
     banTime: '',
@@ -48,9 +68,9 @@ export function makeBanHistoryItem(
 }
 
 export function makeWarnHistoryItem(
-  overrides: MessageInitShape<typeof Data.ServerInfo_WarningSchema> = {}
-): Data.ServerInfo_Warning {
-  return create(Data.ServerInfo_WarningSchema, {
+  overrides: MessageInitShape<typeof ServerInfo_WarningSchema> = {}
+): ServerInfo_Warning {
+  return create(ServerInfo_WarningSchema, {
     userName: '',
     adminName: '',
     reason: '',
@@ -60,9 +80,9 @@ export function makeWarnHistoryItem(
 }
 
 export function makeWarnListItem(
-  overrides: MessageInitShape<typeof Data.Response_WarnListSchema> = {}
-): Data.Response_WarnList {
-  return create(Data.Response_WarnListSchema, {
+  overrides: MessageInitShape<typeof Response_WarnListSchema> = {}
+): Response_WarnList {
+  return create(Response_WarnListSchema, {
     warning: [],
     userName: '',
     userClientid: '',
@@ -71,9 +91,9 @@ export function makeWarnListItem(
 }
 
 export function makeDeckTreeItem(
-  overrides: MessageInitShape<typeof Data.ServerInfo_DeckStorage_TreeItemSchema> = {},
-): Data.ServerInfo_DeckStorage_TreeItem {
-  return create(Data.ServerInfo_DeckStorage_TreeItemSchema, {
+  overrides: MessageInitShape<typeof ServerInfo_DeckStorage_TreeItemSchema> = {},
+): ServerInfo_DeckStorage_TreeItem {
+  return create(ServerInfo_DeckStorage_TreeItemSchema, {
     id: 1,
     name: 'item',
     ...overrides,
@@ -81,18 +101,18 @@ export function makeDeckTreeItem(
 }
 
 export function makeDeckList(
-  overrides: MessageInitShape<typeof Data.Response_DeckListSchema> = {}
-): Data.Response_DeckList {
-  return create(Data.Response_DeckListSchema, {
-    root: create(Data.ServerInfo_DeckStorage_FolderSchema, { items: [] }),
+  overrides: MessageInitShape<typeof Response_DeckListSchema> = {}
+): Response_DeckList {
+  return create(Response_DeckListSchema, {
+    root: create(ServerInfo_DeckStorage_FolderSchema, { items: [] }),
     ...overrides,
   });
 }
 
 export function makeReplayMatch(
-  overrides: MessageInitShape<typeof Data.ServerInfo_ReplayMatchSchema> = {}
-): Data.ServerInfo_ReplayMatch {
-  return create(Data.ServerInfo_ReplayMatchSchema, {
+  overrides: MessageInitShape<typeof ServerInfo_ReplayMatchSchema> = {}
+): ServerInfo_ReplayMatch {
+  return create(ServerInfo_ReplayMatchSchema, {
     gameId: 1,
     roomName: 'Test Room',
     timeStarted: 0,
@@ -105,14 +125,14 @@ export function makeReplayMatch(
   });
 }
 
-type MakeGameOverrides = MessageInitShape<typeof Data.ServerInfo_GameSchema> & {
+type MakeGameOverrides = MessageInitShape<typeof ServerInfo_GameSchema> & {
   gameType?: string;
 };
 
 export function makeGame(overrides: MakeGameOverrides = {}): Enriched.Game {
   const { gameType = '', ...protoFields } = overrides;
   return {
-    info: create(Data.ServerInfo_GameSchema, { description: '', ...protoFields }),
+    info: create(ServerInfo_GameSchema, { description: '', ...protoFields }),
     gameType,
   };
 }

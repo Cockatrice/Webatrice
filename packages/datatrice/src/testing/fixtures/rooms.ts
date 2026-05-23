@@ -1,13 +1,20 @@
-import { App, Data, Enriched } from '../../types';
+import { App, Enriched } from '../../types';
+import {
+  Event_RoomSaySchema,
+  ServerInfo_GameSchema,
+  ServerInfo_RoomSchema,
+  ServerInfo_User,
+  ServerInfo_UserSchema,
+} from '@cockatrice/sockatrice/generated';
 import type { MessageInitShape } from '@bufbuild/protobuf';
 
 import { create } from '@bufbuild/protobuf';
 import { RoomsState } from '../../store/rooms/rooms.interfaces';
 
 export function makeUser(
-  overrides: MessageInitShape<typeof Data.ServerInfo_UserSchema> = {}
-): Data.ServerInfo_User {
-  return create(Data.ServerInfo_UserSchema, {
+  overrides: MessageInitShape<typeof ServerInfo_UserSchema> = {}
+): ServerInfo_User {
+  return create(ServerInfo_UserSchema, {
     name: 'TestUser',
     accountageSecs: 0n,
     privlevel: '',
@@ -16,14 +23,14 @@ export function makeUser(
   });
 }
 
-type MakeGameOverrides = MessageInitShape<typeof Data.ServerInfo_GameSchema> & {
+type MakeGameOverrides = MessageInitShape<typeof ServerInfo_GameSchema> & {
   gameType?: string;
 };
 
 export function makeGame(overrides: MakeGameOverrides = {}): Enriched.Game {
   const { gameType = '', ...protoFields } = overrides;
   return {
-    info: create(Data.ServerInfo_GameSchema, {
+    info: create(ServerInfo_GameSchema, {
       gameId: 1,
       roomId: 1,
       description: 'Test Game',
@@ -35,17 +42,17 @@ export function makeGame(overrides: MakeGameOverrides = {}): Enriched.Game {
   };
 }
 
-type MakeRoomOverrides = MessageInitShape<typeof Data.ServerInfo_RoomSchema> & {
+type MakeRoomOverrides = MessageInitShape<typeof ServerInfo_RoomSchema> & {
   gametypeMap?: Enriched.GametypeMap;
   order?: number;
   games?: { [gameId: number]: Enriched.Game };
-  users?: { [userName: string]: Data.ServerInfo_User };
+  users?: { [userName: string]: ServerInfo_User };
 };
 
 export function makeRoom(overrides: MakeRoomOverrides = {}): Enriched.Room {
   const { gametypeMap = {}, order = 0, games = {}, users = {}, ...protoFields } = overrides;
   return {
-    info: create(Data.ServerInfo_RoomSchema, {
+    info: create(ServerInfo_RoomSchema, {
       roomId: 1,
       name: 'Test Room',
       description: '',
@@ -67,7 +74,7 @@ export function makeRoom(overrides: MakeRoomOverrides = {}): Enriched.Room {
 export function makeMessage(overrides: Partial<Omit<Enriched.Message, '$typeName' | '$unknown'>> = {}): Enriched.Message {
   const { timeReceived = 0, ...protoOverrides } = overrides;
   return {
-    ...create(Data.Event_RoomSaySchema, {
+    ...create(Event_RoomSaySchema, {
       message: 'hello',
       messageType: 0,
       ...protoOverrides,

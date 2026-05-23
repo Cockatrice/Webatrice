@@ -1,5 +1,6 @@
 import { CaseReducer, PayloadAction } from '@reduxjs/toolkit';
-import { Data, Enriched } from '../../types';
+import { Enriched } from '../../types';
+import { ServerInfo_Card, ServerInfo_PlayerProperties, ServerInfo_PlayerPropertiesSchema } from '@cockatrice/sockatrice/generated';
 import { mergeSetFields } from '../../common';
 import { GamesState } from './game.interfaces';
 import { pushEventMessage } from './game.reducer.helpers';
@@ -74,7 +75,7 @@ export const primitiveReducers = {
     fromCardId: number;
     toPlayerId: number;
     toZone: string;
-    card: Data.ServerInfo_Card;
+    card: ServerInfo_Card;
   }>>,
 
   // Cross-player TABLE→TABLE gap-fill; rewrites child parent pointers. See .github/instructions/datatrice-game.instructions.md#servatrice-game-event-quirks.
@@ -129,7 +130,7 @@ export const primitiveReducers = {
     playerId: number;
     zoneName: string;
     cardId: number;
-    fields: Partial<Data.ServerInfo_Card>;
+    fields: Partial<ServerInfo_Card>;
   }>>,
 
   cardInsertedIntoZone: ((state, action) => {
@@ -145,7 +146,7 @@ export const primitiveReducers = {
     gameId: number;
     playerId: number;
     zoneName: string;
-    card: Data.ServerInfo_Card;
+    card: ServerInfo_Card;
   }>>,
 
   cardRemovedFromZone: ((state, action) => {
@@ -187,11 +188,11 @@ export const primitiveReducers = {
     if (!player) {
       return;
     }
-    mergeSetFields(Data.ServerInfo_PlayerPropertiesSchema, player.properties, properties);
+    mergeSetFields(ServerInfo_PlayerPropertiesSchema, player.properties, properties);
   }) as CaseReducer<GamesState, PayloadAction<{
     gameId: number;
     playerId: number;
-    properties: Data.ServerInfo_PlayerProperties;
+    properties: ServerInfo_PlayerProperties;
   }>>,
 
   gameMessageAppended: ((state, action) => {

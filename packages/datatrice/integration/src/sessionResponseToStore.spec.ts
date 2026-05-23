@@ -1,7 +1,27 @@
 import { create } from '@bufbuild/protobuf';
 import { WebsocketTypes } from '@cockatrice/sockatrice/types';
 
-import { attachResponseHandlers, createStore, Data, server } from '../../src';
+import { attachResponseHandlers, createStore, server } from '../../src';
+import {
+  Event_GameJoinedSchema,
+  Event_NotifyUser,
+  Event_PlayerPropertiesChangedSchema,
+  Event_ServerShutdown,
+  Event_UserMessageSchema,
+  Response_DeckDownloadSchema,
+  Response_DeckListSchema,
+  Response_GetGamesOfUserSchema,
+  Response_ReplayDownloadSchema,
+  ServerInfo_DeckStorage_FolderSchema,
+  ServerInfo_DeckStorage_TreeItemSchema,
+  ServerInfo_GameSchema,
+  ServerInfo_PlayerPropertiesSchema,
+  ServerInfo_ReplayMatch,
+  ServerInfo_ReplayMatchSchema,
+  ServerInfo_User,
+  ServerInfo_UserSchema,
+  ServerInfo_User_UserLevelFlag,
+} from '@cockatrice/sockatrice/generated';
 
 // Integration: drives every SessionResponseImpl handler method through the
 // real store — connection/auth lifecycle, server info, the user list,
@@ -9,8 +29,8 @@ import { attachResponseHandlers, createStore, Data, server } from '../../src';
 // notifications and getGamesOfUser. Assertions go through server.selectors so
 // the SortUtil-backed selector layer is exercised too.
 
-function makeUser(name: string, userLevel = 0): Data.ServerInfo_User {
-  return create(Data.ServerInfo_UserSchema, { name, userLevel, accountageSecs: 0n });
+function makeUser(name: string, userLevel = 0): ServerInfo_User {
+  return create(ServerInfo_UserSchema, { name, userLevel, accountageSecs: 0n });
 }
 
 // --- connection + auth lifecycle ----------------------------------------
@@ -106,7 +126,7 @@ describe('integration: session connection lifecycle', () => {
   it('serverShutdown stores the shutdown payload', () => {
     const store = createStore();
     const response = attachResponseHandlers(store);
-    const data = { reason: 'maintenance', minutes: 5 } as unknown as Data.Event_ServerShutdown;
+    const data = { reason: 'maintenance', minutes: 5 } as unknown as Event_ServerShutdown;
     response.session.serverShutdown(data);
     expect(store.getState().server.serverShutdown).toEqual(data);
   });
@@ -145,7 +165,7 @@ describe('integration: session user lists', () => {
   it('sorted user list ranks moderators above regular users', () => {
     const store = createStore();
     const response = attachResponseHandlers(store);
-    const mod = makeUser('zelda', Data.ServerInfo_User_UserLevelFlag.IsModerator);
+    const mod = makeUser('zelda', ServerInfo_User_UserLevelFlag.IsModerator);
     response.session.updateUsers([makeUser('alice'), mod]);
 
     const sorted = server.Selectors.getSortedUsers(store.getState());
@@ -227,7 +247,7 @@ describe('integration: session messaging and notifications', () => {
     const response = attachResponseHandlers(store);
     response.session.updateUser(makeUser('alice'));
 
-    response.session.userMessage(create(Data.Event_UserMessageSchema, {
+    response.session.userMessage(create(Event_UserMessageSchema, {
       senderName: 'alice', receiverName: 'bob', message: 'hi bob',
     }));
     expect(store.getState().server.messages['bob']).toHaveLength(1);
@@ -236,7 +256,7 @@ describe('integration: session messaging and notifications', () => {
   it('notifyUser appends a notification', () => {
     const store = createStore();
     const response = attachResponseHandlers(store);
-    response.session.notifyUser({ type: 1 } as unknown as Data.Event_NotifyUser);
+    response.session.notifyUser({ type: 1 } as unknown as Event_NotifyUser);
     expect(store.getState().server.notifications).toHaveLength(1);
   });
 
@@ -245,30 +265,30 @@ describe('integration: session messaging and notifications', () => {
     const response = attachResponseHandlers(store);
 
     // Seed a game with a player so the game listener has something to merge.
-    response.session.gameJoined(create(Data.Event_GameJoinedSchema, {
-      gameInfo: create(Data.ServerInfo_GameSchema, { gameId: 99, roomId: 1, description: 'g' }),
+    response.session.gameJoined(create(Event_GameJoinedSchema, {
+      gameInfo: create(ServerInfo_GameSchema, { gameId: 99, roomId: 1, description: 'g' }),
       hostId: 1, playerId: 1, spectator: false, judge: false, resuming: false,
     }));
-    response.game.playerJoined(99, create(Data.ServerInfo_PlayerPropertiesSchema, {
+    response.game.playerJoined(99, create(ServerInfo_PlayerPropertiesSchema, {
       playerId: 1, userInfo: { name: 'Alice' },
     }));
 
-    response.session.playerPropertiesChanged(99, 1, create(Data.Event_PlayerPropertiesChangedSchema, {
-      playerProperties: create(Data.ServerInfo_PlayerPropertiesSchema, { playerId: 1, readyStart: true }),
+    response.session.playerPropertiesChanged(99, 1, create(Event_PlayerPropertiesChangedSchema, {
+      playerProperties: create(ServerInfo_PlayerPropertiesSchema, { playerId: 1, readyStart: true }),
     }));
     expect(store.getState().games.games[99].players[1].properties.readyStart).toBe(true);
 
     // With no playerProperties on the payload the handler short-circuits.
     expect(() => response.session.playerPropertiesChanged(99, 1,
-      create(Data.Event_PlayerPropertiesChangedSchema, {}))).not.toThrow();
+      create(Event_PlayerPropertiesChangedSchema, {}))).not.toThrow();
   });
 
   it('getGamesOfUser stores normalized games keyed by username', () => {
     const store = createStore();
     const response = attachResponseHandlers(store);
 
-    const gamesResponse = create(Data.Response_GetGamesOfUserSchema, {
-      gameList: [create(Data.ServerInfo_GameSchema, { gameId: 7, description: 'old game' })],
+    const gamesResponse = create(Response_GetGamesOfUserSchema, {
+      gameList: [create(ServerInfo_GameSchema, { gameId: 7, description: 'old game' })],
       roomList: [],
     });
     response.session.getGamesOfUser('alice', gamesResponse);
@@ -282,8 +302,8 @@ describe('integration: session server decks', () => {
   function withDeckRoot() {
     const store = createStore();
     const response = attachResponseHandlers(store);
-    response.session.updateServerDecks(create(Data.Response_DeckListSchema, {
-      root: create(Data.ServerInfo_DeckStorage_FolderSchema, { items: [] }),
+    response.session.updateServerDecks(create(Response_DeckListSchema, {
+      root: create(ServerInfo_DeckStorage_FolderSchema, { items: [] }),
     }));
     return { store, response };
   }
@@ -295,7 +315,7 @@ describe('integration: session server decks', () => {
 
   it('uploadServerDeck inserts a tree item at the root', () => {
     const { store, response } = withDeckRoot();
-    response.session.uploadServerDeck('', create(Data.ServerInfo_DeckStorage_TreeItemSchema, {
+    response.session.uploadServerDeck('', create(ServerInfo_DeckStorage_TreeItemSchema, {
       id: 11, name: 'My Deck',
     }));
     const items = server.Selectors.getBackendDecks(store.getState())?.root?.items ?? [];
@@ -315,7 +335,7 @@ describe('integration: session server decks', () => {
 
   it('deleteServerDeck removes a deck by id', () => {
     const { store, response } = withDeckRoot();
-    response.session.uploadServerDeck('', create(Data.ServerInfo_DeckStorage_TreeItemSchema, {
+    response.session.uploadServerDeck('', create(ServerInfo_DeckStorage_TreeItemSchema, {
       id: 22, name: 'Doomed Deck',
     }));
     response.session.deleteServerDeck(22);
@@ -326,7 +346,7 @@ describe('integration: session server decks', () => {
   it('downloadServerDeck stores the downloaded deck payload', () => {
     const store = createStore();
     const response = attachResponseHandlers(store);
-    response.session.downloadServerDeck(5, create(Data.Response_DeckDownloadSchema, { deck: '<deck/>' }));
+    response.session.downloadServerDeck(5, create(Response_DeckDownloadSchema, { deck: '<deck/>' }));
     expect(server.Selectors.getDownloadedDeck(store.getState())).toEqual({ deckId: 5, deck: '<deck/>' });
   });
 });
@@ -334,8 +354,8 @@ describe('integration: session server decks', () => {
 // --- replays -------------------------------------------------------------
 
 describe('integration: session replays', () => {
-  function makeReplay(gameId: number): Data.ServerInfo_ReplayMatch {
-    return create(Data.ServerInfo_ReplayMatchSchema, {
+  function makeReplay(gameId: number): ServerInfo_ReplayMatch {
+    return create(ServerInfo_ReplayMatchSchema, {
       gameId, roomName: 'Room', gameName: `Game ${gameId}`, playerNames: [], replayList: [],
     });
   }
@@ -370,7 +390,7 @@ describe('integration: session replays', () => {
     const store = createStore();
     const response = attachResponseHandlers(store);
     const bytes = new Uint8Array([9, 8, 7]);
-    response.session.replayDownloaded(4, create(Data.Response_ReplayDownloadSchema, { replayData: bytes }));
+    response.session.replayDownloaded(4, create(Response_ReplayDownloadSchema, { replayData: bytes }));
     expect(server.Selectors.getDownloadedReplay(store.getState())).toEqual({ replayId: 4, replayData: bytes });
   });
 });

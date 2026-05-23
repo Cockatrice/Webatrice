@@ -1,13 +1,13 @@
 import { createSelector } from '@reduxjs/toolkit';
-import { Data } from '../../types';
+import { ServerInfo_ReplayMatch, ServerInfo_User, ServerInfo_User_UserLevelFlag } from '@cockatrice/sockatrice/generated';
 import { WebsocketTypes } from '@cockatrice/sockatrice/types';
 import { SortUtil } from '../../common';
 import { ServerState } from './server.interfaces';
 
 type State = { server: ServerState };
 
-const EMPTY_USERS: Data.ServerInfo_User[] = [];
-const EMPTY_REPLAYS: Data.ServerInfo_ReplayMatch[] = [];
+const EMPTY_USERS: ServerInfo_User[] = [];
+const EMPTY_REPLAYS: ServerInfo_ReplayMatch[] = [];
 
 export const Selectors = {
   getInitialized: ({ server }: State) => server.initialized,
@@ -31,7 +31,7 @@ export const Selectors = {
       if (!user) {
         return false;
       }
-      const mask = Data.ServerInfo_User_UserLevelFlag.IsModerator;
+      const mask = ServerInfo_User_UserLevelFlag.IsModerator;
       return (user.userLevel & mask) === mask;
     }
   ),
@@ -42,7 +42,7 @@ export const Selectors = {
       if (!user) {
         return false;
       }
-      const mask = Data.ServerInfo_User_UserLevelFlag.IsJudge;
+      const mask = ServerInfo_User_UserLevelFlag.IsJudge;
       return (user.userLevel & mask) === mask;
     }
   ),
@@ -53,11 +53,11 @@ export const Selectors = {
       if (!user) {
         return false;
       }
-      const mask = Data.ServerInfo_User_UserLevelFlag.IsRegistered;
+      const mask = ServerInfo_User_UserLevelFlag.IsRegistered;
       return (user.userLevel & mask) === mask;
     }
   ),
-  getUserInfoByName: ({ server }: State, userName: string): Data.ServerInfo_User | undefined =>
+  getUserInfoByName: ({ server }: State, userName: string): ServerInfo_User | undefined =>
     server.userInfo[userName],
   getLogs: ({ server }: State) => server.logs,
   getBackendDecks: ({ server }: State) => server.backendDecks,
@@ -73,7 +73,7 @@ export const Selectors = {
 
   getSortedUsers: createSelector(
     [(state: State) => state.server.users, (state: State) => state.server.sortUsersBy],
-    (users, sortBy): Data.ServerInfo_User[] => {
+    (users, sortBy): ServerInfo_User[] => {
       if (!users || Object.keys(users).length === 0) {
         return EMPTY_USERS;
       }
@@ -83,7 +83,7 @@ export const Selectors = {
 
   getSortedBuddyList: createSelector(
     [(state: State) => state.server.buddyList, (state: State) => state.server.sortUsersBy],
-    (buddyList, sortBy): Data.ServerInfo_User[] => {
+    (buddyList, sortBy): ServerInfo_User[] => {
       if (!buddyList || Object.keys(buddyList).length === 0) {
         return EMPTY_USERS;
       }
@@ -93,7 +93,7 @@ export const Selectors = {
 
   getSortedIgnoreList: createSelector(
     [(state: State) => state.server.ignoreList, (state: State) => state.server.sortUsersBy],
-    (ignoreList, sortBy): Data.ServerInfo_User[] => {
+    (ignoreList, sortBy): ServerInfo_User[] => {
       if (!ignoreList || Object.keys(ignoreList).length === 0) {
         return EMPTY_USERS;
       }
@@ -103,7 +103,7 @@ export const Selectors = {
 
   getReplaysList: createSelector(
     [(state: State) => state.server.replays],
-    (replays): Data.ServerInfo_ReplayMatch[] => {
+    (replays): ServerInfo_ReplayMatch[] => {
       if (!replays || Object.keys(replays).length === 0) {
         return EMPTY_REPLAYS;
       }

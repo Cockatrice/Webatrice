@@ -1,5 +1,5 @@
 ﻿import { create } from '@bufbuild/protobuf';
-import { Data } from '../../types';
+import { ServerInfo_RoomSchema } from '@cockatrice/sockatrice/generated';
 
 import { roomsReducer } from './rooms.reducer';
 import { Actions } from './rooms.actions';
@@ -8,7 +8,7 @@ import { makeGame, makeRoom, makeRoomsState, makeUser } from '../../testing/fixt
 describe('roomUpserted', () => {
   it('inserts a fresh RoomEntry with empty games/users when preserveGamesAndUsers is false', () => {
     const state = makeRoomsState({ rooms: {} });
-    const info = create(Data.ServerInfo_RoomSchema, {
+    const info = create(ServerInfo_RoomSchema, {
       roomId: 42,
       name: 'Fresh Room',
       description: 'New',
@@ -42,7 +42,7 @@ describe('roomUpserted', () => {
     });
     const state = makeRoomsState({ rooms: { 1: existingRoom } });
 
-    const mergedInfo = create(Data.ServerInfo_RoomSchema, {
+    const mergedInfo = create(ServerInfo_RoomSchema, {
       roomId: 1,
       name: 'Old Name',
       playerCount: 42,
@@ -71,7 +71,7 @@ describe('roomUpserted', () => {
     });
     const state = makeRoomsState({ rooms: { 1: existingRoom } });
 
-    const info = create(Data.ServerInfo_RoomSchema, { roomId: 1, name: 'Replaced' });
+    const info = create(ServerInfo_RoomSchema, { roomId: 1, name: 'Replaced' });
     const result = roomsReducer(state, Actions.roomUpserted({
       roomId: 1,
       info,
@@ -90,7 +90,7 @@ describe('roomUpserted', () => {
     // application. Fall through to fresh-insert shape rather than no-op,
     // since the listener's intent was to make the room exist.
     const state = makeRoomsState({ rooms: {} });
-    const info = create(Data.ServerInfo_RoomSchema, { roomId: 99, name: 'Recovered' });
+    const info = create(ServerInfo_RoomSchema, { roomId: 99, name: 'Recovered' });
 
     const result = roomsReducer(state, Actions.roomUpserted({
       roomId: 99,

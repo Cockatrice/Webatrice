@@ -1,4 +1,5 @@
-import { Data, Enriched } from '../../types';
+import { Enriched } from '../../types';
+import { ServerInfo_Game } from '@cockatrice/sockatrice/generated';
 import { GameFilters } from './rooms.interfaces';
 
 export const DEFAULT_MAX_PLAYERS_MIN = 1;
@@ -59,7 +60,7 @@ export function gameMatchesFilters(
   filters: GameFilters,
   ctx: GameFilterContext,
 ): boolean {
-  const info: Data.ServerInfo_Game = game.info;
+  const info: ServerInfo_Game = game.info;
   const creatorName = info.creatorInfo?.name ?? '';
 
   if (filters.hideBuddiesOnlyGames && info.onlyBuddies) {

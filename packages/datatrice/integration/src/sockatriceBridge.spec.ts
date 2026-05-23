@@ -1,7 +1,8 @@
 import { create } from '@bufbuild/protobuf';
 import { WebsocketTypes } from '@cockatrice/sockatrice/types';
 
-import { attachResponseHandlers, createStore, Data } from '../../src';
+import { attachResponseHandlers, createStore } from '../../src';
+import { ServerInfo_RoomSchema } from '@cockatrice/sockatrice/generated';
 
 // Integration: verify the attachResponseHandlers seam wires the five
 // IWebClientResponse handlers to the store passed in. Unit tests cover
@@ -35,7 +36,7 @@ describe('attachResponseHandlers', () => {
     const store = createStore();
     const response = attachResponseHandlers(store);
 
-    const roomInfo = create(Data.ServerInfo_RoomSchema, { roomId: 1, name: 'Main' });
+    const roomInfo = create(ServerInfo_RoomSchema, { roomId: 1, name: 'Main' });
     response.room.joinRoom(roomInfo);
 
     expect(store.getState().rooms.joinedRoomIds[1]).toBe(true);

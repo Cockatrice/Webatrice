@@ -1,5 +1,6 @@
 import { create } from '@bufbuild/protobuf';
-import { App, Data } from '../types';
+import { App } from '../types';
+import { ServerInfo_UserSchema } from '@cockatrice/sockatrice/generated';
 import SortUtil from './SortUtil';
 
 
@@ -116,9 +117,9 @@ describe('sortByFields', () => {
 describe('sortUsersByField', () => {
   it('sorts by userLevel DESC first, then name ASC', () => {
     const users = [
-      create(Data.ServerInfo_UserSchema, { name: 'Alice', userLevel: 1, accountageSecs: 0n, privlevel: '' }),
-      create(Data.ServerInfo_UserSchema, { name: 'Bob', userLevel: 8, accountageSecs: 0n, privlevel: '' }),
-      create(Data.ServerInfo_UserSchema, { name: 'Carol', userLevel: 1, accountageSecs: 0n, privlevel: '' }),
+      create(ServerInfo_UserSchema, { name: 'Alice', userLevel: 1, accountageSecs: 0n, privlevel: '' }),
+      create(ServerInfo_UserSchema, { name: 'Bob', userLevel: 8, accountageSecs: 0n, privlevel: '' }),
+      create(ServerInfo_UserSchema, { name: 'Carol', userLevel: 1, accountageSecs: 0n, privlevel: '' }),
     ];
     SortUtil.sortUsersByField(users, { field: 'name', order: App.SortDirection.ASC });
     expect(users[0].name).toBe('Bob');
@@ -134,8 +135,8 @@ describe('sortUsersByField', () => {
 
   it('returns 0 (stable) when two users tie on both userLevel and name', () => {
     const users = [
-      create(Data.ServerInfo_UserSchema, { name: 'Alice', userLevel: 1, accountageSecs: 0n, privlevel: '' }),
-      create(Data.ServerInfo_UserSchema, { name: 'Alice', userLevel: 1, accountageSecs: 0n, privlevel: '' }),
+      create(ServerInfo_UserSchema, { name: 'Alice', userLevel: 1, accountageSecs: 0n, privlevel: '' }),
+      create(ServerInfo_UserSchema, { name: 'Alice', userLevel: 1, accountageSecs: 0n, privlevel: '' }),
     ];
     expect(() =>
       SortUtil.sortUsersByField(users, { field: 'name', order: App.SortDirection.ASC })

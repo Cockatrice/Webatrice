@@ -1,7 +1,12 @@
 import { create } from '@bufbuild/protobuf';
 
 import { createStore } from '../store/createStore';
-import { Data } from '../types';
+import {
+  Response_WarnListSchema,
+  ServerInfo_BanSchema,
+  ServerInfo_ChatMessageSchema,
+  ServerInfo_WarningSchema,
+} from '@cockatrice/sockatrice/generated';
 import { Actions as ServerActions } from '../store/server/server.actions';
 import { ModeratorResponseImpl } from './ModeratorResponseImpl';
 
@@ -20,28 +25,28 @@ describe('ModeratorResponseImpl', () => {
 
   it('banHistory dispatches the banHistory action with the ban list', () => {
     const { impl, dispatch } = setup();
-    const bans = [create(Data.ServerInfo_BanSchema, { adminName: 'admin', reason: 'spam' })];
+    const bans = [create(ServerInfo_BanSchema, { adminName: 'admin', reason: 'spam' })];
     impl.banHistory('alice', bans);
     expect(dispatch).toHaveBeenCalledWith(ServerActions.banHistory({ userName: 'alice', banHistory: bans }));
   });
 
   it('viewLogs dispatches the viewLogs action with the log list', () => {
     const { impl, dispatch } = setup();
-    const logs = [create(Data.ServerInfo_ChatMessageSchema, { senderName: 'bob', message: 'hi' })];
+    const logs = [create(ServerInfo_ChatMessageSchema, { senderName: 'bob', message: 'hi' })];
     impl.viewLogs(logs);
     expect(dispatch).toHaveBeenCalledWith(ServerActions.viewLogs({ logs }));
   });
 
   it('warnHistory dispatches the warnHistory action with the warn list', () => {
     const { impl, dispatch } = setup();
-    const warnings = [create(Data.ServerInfo_WarningSchema, { adminName: 'admin', reason: 'noise' })];
+    const warnings = [create(ServerInfo_WarningSchema, { adminName: 'admin', reason: 'noise' })];
     impl.warnHistory('alice', warnings);
     expect(dispatch).toHaveBeenCalledWith(ServerActions.warnHistory({ userName: 'alice', warnHistory: warnings }));
   });
 
   it('warnListOptions dispatches the warnListOptions action with the list', () => {
     const { impl, dispatch } = setup();
-    const warnList = [create(Data.Response_WarnListSchema, { warning: 'spam' })];
+    const warnList = [create(Response_WarnListSchema, { warning: 'spam' })];
     impl.warnListOptions(warnList);
     expect(dispatch).toHaveBeenCalledWith(ServerActions.warnListOptions({ warnList }));
   });

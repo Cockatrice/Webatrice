@@ -1,5 +1,6 @@
 import { CaseReducer, PayloadAction } from '@reduxjs/toolkit';
-import { Data, Enriched } from '../../types';
+import { Enriched } from '../../types';
+import { ServerInfo_Room } from '@cockatrice/sockatrice/generated';
 
 import { RoomsState } from './rooms.interfaces';
 
@@ -22,7 +23,7 @@ export const primitiveReducers = {
     };
   }) as CaseReducer<RoomsState, PayloadAction<{
     roomId: number;
-    info: Data.ServerInfo_Room;
+    info: ServerInfo_Room;
     gametypeMap: Enriched.GametypeMap;
     order: number;
     preserveGamesAndUsers: boolean;
