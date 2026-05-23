@@ -1,4 +1,0 @@
-[submodule "vendor/cockatrice"]
-	path = vendor/cockatrice
-	url = https://github.com/Cockatrice/Cockatrice.git
-	shallow = true

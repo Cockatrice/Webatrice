@@ -1,6 +1,6 @@
 version: v2
 inputs:
-  - directory: vendor/cockatrice/libcockatrice_protocol/libcockatrice/protocol/pb
+  - directory: ../../vendor/cockatrice/libcockatrice_protocol/libcockatrice/protocol/pb
 plugins:
   - local: protoc-gen-es
     out: src/generated/proto

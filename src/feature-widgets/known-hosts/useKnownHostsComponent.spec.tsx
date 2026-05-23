@@ -27,7 +27,7 @@ function setup(args: {
   onChange?: (host: any) => void;
   knownHostsOverrides?: Partial<ReturnType<typeof makeKnownHostsHook>>;
 } = {}) {
-  const onChange = args.onChange ?? vi.fn();
+  const onChange = vi.fn(args.onChange);
   vi.mocked(useKnownHosts).mockReturnValue(
     makeKnownHostsHook(args.knownHostsOverrides),
   );

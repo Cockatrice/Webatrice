@@ -135,7 +135,7 @@ describe('useCardContextMenu', () => {
       result.current.handleUnattach();
     });
 
-    const call = webClient.request.game.attachCard.mock.calls[0]?.[1] as Record<string, unknown>;
+    const call = vi.mocked(webClient.request.game.attachCard).mock.calls[0]?.[1] as Record<string, unknown>;
     expect(call).toEqual({ startZone: Enriched.ZoneName.TABLE, cardId: 21 });
     expect(call).not.toHaveProperty('targetPlayerId');
     expect(call).not.toHaveProperty('targetCardId');

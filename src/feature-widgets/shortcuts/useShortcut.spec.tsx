@@ -16,7 +16,7 @@ function makeWrapper(register: ShortcutContextValue['register']) {
 describe('useShortcut', () => {
   it('registers with the active scope, actionId, and preventDefault=true by default', () => {
     const unregister = vi.fn();
-    const register = vi.fn(() => unregister);
+    const register = vi.fn<ShortcutContextValue['register']>(() => unregister);
     const handler = vi.fn();
     const wrapper = makeWrapper(register);
 
@@ -33,7 +33,7 @@ describe('useShortcut', () => {
 
   it('invokes the latest handler via a stable ref on key event', () => {
     const unregister = vi.fn();
-    const register = vi.fn(() => unregister);
+    const register = vi.fn<ShortcutContextValue['register']>(() => unregister);
     const first = vi.fn();
     const second = vi.fn();
 
@@ -55,7 +55,7 @@ describe('useShortcut', () => {
   });
 
   it('does not register when enabled=false', () => {
-    const register = vi.fn(() => () => {});
+    const register = vi.fn<ShortcutContextValue['register']>(() => () => {});
     const wrapper = makeWrapper(register);
 
     renderHook(
@@ -72,7 +72,7 @@ describe('useShortcut', () => {
 
   it('calls the unregister function returned by register on unmount', () => {
     const unregister = vi.fn();
-    const register = vi.fn(() => unregister);
+    const register = vi.fn<ShortcutContextValue['register']>(() => unregister);
     const wrapper = makeWrapper(register);
 
     const { unmount } = renderHook(

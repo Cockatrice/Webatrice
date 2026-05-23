@@ -47,7 +47,7 @@ function setup({
 
   const form: FormState = { ...initial };
   const setValue = vi.fn((field: keyof FormState, value: any) => {
-    form[field] = value;
+    (form as Record<keyof FormState, unknown>)[field] = value;
   });
   const getValues = vi.fn(() => ({ ...form }));
 

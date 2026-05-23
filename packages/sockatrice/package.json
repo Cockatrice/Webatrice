@@ -44,6 +44,7 @@
     "dist"
   ],
   "scripts": {
+    "prebuild": "npm run proto:generate",
     "build": "tsup && tsc -p tsconfig.build.json --emitDeclarationOnly --declarationMap false",
     "typecheck": "tsc -p tsconfig.build.json --noEmit",
     "lint": "eslint src",
@@ -62,8 +63,6 @@
     "golden": "npm run lint && npm run test && npm run test:integration",
     "golden:coverage": "npm run test:coverage && npm run test:integration:coverage",
     "proto:generate": "npx buf generate",
-    "proto:submodule": "git submodule update --init && git -C vendor/cockatrice sparse-checkout set --no-cone libcockatrice_protocol/ servatrice/servatrice.sql",
-    "prepare": "npm run proto:submodule && npm run proto:generate",
     "prepack": "npm run build",
     "pack": "npm pack"
   },
