@@ -1,0 +1,19 @@
+node_modules/
+coverage/
+dist/
+src/generated/
+e2e/test-results/
+
+# IDE
+.vs/
+.vscode/
+.idea/
+.claude/settings.local.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+npm-debug.log*
+*.log
