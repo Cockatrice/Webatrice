@@ -33,12 +33,7 @@ const SequenceEdit = ({ actionId, onClose }: SequenceEditProps) => {
     };
   }, [dispatch, actionId]);
 
-  // Provider's Esc-during-recording handler dispatches cancelRecording. When we observe
-  // the slice flip to null while we're still mounted, treat it as the user dismissing.
-  // Branch decisions key off the captured recordingActionId, not on a "first run"
-  // sentinel — see plan: this version complies with React 18 StrictMode's effect
-  // double-invoke (refs are preserved across cleanup→re-setup, which would corrupt a
-  // run-count-based sentinel like `initialMount`).
+  // Slice flip to null while mounted = user dismiss (Esc). Branch on captured recordingActionId, not a mount sentinel (StrictMode-safe).
   const hasRecorded = useRef(false);
   useEffect(() => {
     if (recordingActionId !== null) {

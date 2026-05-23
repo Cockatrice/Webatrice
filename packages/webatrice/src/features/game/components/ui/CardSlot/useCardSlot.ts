@@ -27,9 +27,7 @@ export interface UseCardSlotArgs {
 export function useCardSlot({ card, draggable, ownerPlayerId, zone }: UseCardSlotArgs): CardSlot {
   const { smallUrl } = useScryfallCard(card);
 
-  // React-stable id salts the dnd-kit IDs so even two disabled CardSlots
-  // rendering the same card (during state transitions / hidden-zone leaks)
-  // never collide.
+  // useId salt avoids dnd-kit id collisions across disabled-slot duplicates.
   const instanceId = useId();
 
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
@@ -38,11 +36,7 @@ export function useCardSlot({ card, draggable, ownerPlayerId, zone }: UseCardSlo
     disabled: !draggable || ownerPlayerId == null || zone == null,
   });
 
-  // Cards are NOT drop targets. Drag-drop on a card falls through to the
-  // BattlefieldRow's droppable and is resolved by grid math (stack/move) —
-  // matches desktop where attach is right-click-menu-only via
-  // CardItem::drawAttachArrow (cockatrice/src/game/board/card_item.cpp).
-
+  // Cards aren't drop targets; drops resolve at the row level.
   const registryKey =
     ownerPlayerId != null && zone != null
       ? makeCardKey(ownerPlayerId, zone, card.id)

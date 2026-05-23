@@ -103,12 +103,7 @@ export function useCardContextMenu({
     if (!ready) {
       return;
     }
-    // TODO(card-db): desktop's Player::actCardMenuFlip reads the card's stored
-    // P/T and forwards it so the revealed side shows the correct stats
-    // (cockatrice/src/game/player/player_actions.cpp:1805-1810). We can't
-    // do that without a card-database-by-name lookup, which isn't wired in
-    // the webclient yet. The server re-derives PT from the card DB for known
-    // names, so omitting `pt` is harmless for non-custom cards.
+    // TODO(card-db): forward stored P/T once a name-keyed card DB is wired in (server re-derives for known names).
     webClient.request.game.flipCard(gameId, {
       zone: sourceZone!,
       cardId: card!.id,
@@ -183,11 +178,7 @@ export function useCardContextMenu({
     if (!ready) {
       return;
     }
-    // Desktop's actUnattach sends only start_zone + card_id; the server uses
-    // proto2 presence (`has_target_player_id()`) to detect "detach". Setting
-    // targetPlayerId: -1 here would leave presence set and trip the attach
-    // code path server-side. MessageInitShape makes these fields optional,
-    // so omitting them produces an unset wire field.
+    // Unattach: omit target_* (server detects via proto2 presence).
     webClient.request.game.attachCard(gameId, { startZone: sourceZone!, cardId: card!.id });
     onClose();
   };
@@ -196,8 +187,7 @@ export function useCardContextMenu({
     if (!ready) {
       return;
     }
-    // targetPlayerId is the ACTING player (local), matching desktop's
-    // Player::actMoveCardTo* which uses playerInfo->getId().
+    // targetPlayerId = local (acting player), per desktop actMoveCardTo*.
     webClient.request.game.moveCard(gameId, {
       startPlayerId: ownerPlayerId!,
       startZone: sourceZone!,
@@ -236,9 +226,7 @@ export function useCardContextMenu({
     if (!ready) {
       return;
     }
-    // Cockatrice's actPeek (player_actions.cpp:1822) reveals the face-down
-    // card to the local player only — never broadcasts. Setting playerId to
-    // the local player matches that scope.
+    // actPeek reveals to local player only; scope via playerId.
     webClient.request.game.revealCards(gameId, {
       zoneName: sourceZone!,
       cardId: [card!.id],

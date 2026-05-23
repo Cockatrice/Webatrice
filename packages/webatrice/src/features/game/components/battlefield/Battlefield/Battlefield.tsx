@@ -45,9 +45,7 @@ function Battlefield({
         >
           {stackColumnsByRow[rowIdx].map((stackCards, colIdx) => {
             if (stackCards == null) {
-              // Spacer for an empty stack column so visual position matches
-              // stored x — e.g. a single card at x=9 still renders at visual
-              // column 3 with cols 0/1/2 empty.
+              // Spacer for empty column; see .github/instructions/webatrice-game.instructions.md#battlefield-grid.
               return (
                 <div
                   key={`empty-${rowIdx}-${colIdx}`}
@@ -59,9 +57,7 @@ function Battlefield({
               );
             }
             return (
-              // Key on the first (sub-position 0) card's id: React keys must be
-              // stable per stack across re-renders, and the leftmost card's id
-              // uniquely identifies a stack on this row.
+              // Stable React key: leftmost card's id identifies the stack.
               <BattlefieldStackColumn
                 key={stackCards[0].id}
                 cards={stackCards}

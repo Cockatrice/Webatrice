@@ -56,9 +56,7 @@ export function useTurnControls({
   const webClient = useWebClient();
   const leaveGame = useLeaveGame();
   const { game, isHost } = useCurrentGame(gameId);
-  // Per-turn affordances (canPassTurn, canAdvancePhase, canConcede, canRoll, …)
-  // come from the shared hook so this hook, usePhaseBar, and useGameShortcuts
-  // can't drift from each other on gating semantics.
+  // Shared affordances hook keeps turn/phase gating consistent across consumers.
   const {
     hasLiveGame,
     isConceded,
@@ -85,8 +83,7 @@ export function useTurnControls({
       }));
   }, [game]);
 
-  // Local arrows belong to `localPlayerId`; Remove Local Arrows iterates
-  // and deletes each one. Matches desktop's Player::actRemoveLocalArrows.
+  // Remove Local Arrows: iterate and delete each one.
   const localArrows = useAppSelector((state) =>
     gameId != null && game != null
       ? games.Selectors.getArrows(state, gameId, game.localPlayerId)
@@ -119,9 +116,7 @@ export function useTurnControls({
     if (!canAdvancePhase || !hasLiveGame) {
       return;
     }
-    // Desktop wraps at PHASE_COUNT → 0 (the Phase enum is 0–10). When no phase
-    // is active yet (activePhase < 0 during the pre-game lobby), advance to
-    // Untap (0).
+    // Wrap at PHASE_COUNT → 0; pre-game (activePhase < 0) → Untap (0).
     const current = game.activePhase;
     const next = current >= 0 ? (current + 1) % PHASE_COUNT : 0;
     webClient.request.game.setActivePhase(gameId, { phase: next });

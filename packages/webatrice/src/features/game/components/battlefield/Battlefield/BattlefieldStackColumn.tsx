@@ -17,17 +17,7 @@ const EMPTY_ATTACHMENTS: games.AttachedChild[] = [];
 
 const round = (n: number): number => Math.round(n * 100) / 100;
 
-// Footprint of a stack column in nominal pixels (146×204 reference card).
-// - Width: rightmost extent across all cards in the stack, including each
-//   card's attachment fan (parent + N×fraction). Prevents an attachment on
-//   subPos 0 from overlapping the next stack.
-// - Height: bottommost extent. Subpos cards stair-step down by
-//   STACKED_CARD_OFFSET_Y_PX, and a card *with* attachments shifts its parent
-//   further down by ATTACH_PARENT_OFFSET_Y_PX (the fan's Y offset is only
-//   applied when N > 0, matching desktop's `if (numberAttachedCards)` guard).
-// The stack column scales with lane height via aspect-ratio; per-slot
-// left/top/width/height are expressed as percentages of this footprint so
-// positions stay proportional at any zoom level.
+// Footprint of a stack column in nominal pixels. See .github/instructions/webatrice-game.instructions.md#attachment-stack for the N>0 parent shift rule.
 function computeStackFootprint(
   cards: ServerInfo_Card[],
   attachmentsByParent: ReadonlyMap<number, games.AttachedChild[]>,
@@ -102,8 +92,7 @@ function BattlefieldStackColumn({
               top: `${topPct}%`,
               width: `${widthPct}%`,
               height: `${slotHeightPct}%`,
-              // Later sub-positions render on top of earlier ones, matching
-              // desktop's paint order where cards added later overlay neighbors.
+              // Later subPos paints on top (desktop paint order).
               zIndex: subPos + 1,
             }}
           >

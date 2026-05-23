@@ -400,10 +400,7 @@ export function useGameDialogs({
     });
   }, [cardMenu, startPendingAttach]);
 
-  // Mirrors useCardContextMenu's old handlePlay — moves the cardMenu's card
-  // to the local battlefield/stack via tablerow logic. Lifted up to the
-  // container so the helper can stay in `containers/` (boundaries don't
-  // permit components to import from containers).
+  // Play-from-card-menu via tablerow logic (boundaries prevent inlining in CardContextMenu).
   const handleRequestPlayFromCardMenu = useCallback(
     (faceDown: boolean) => {
       const menu = cardMenu;
@@ -559,11 +556,7 @@ export function useGameDialogs({
     if (gameId == null) {
       return;
     }
-    // Desktop's DlgMulligan (player_actions.cpp actMulligan) accepts any
-    // integer in [-handSize, handSize + deckSize]. 0 and negative values are
-    // "relative to current hand size" — doMulligan computes
-    // `handSize + number` before dispatching. Seeding with the configured
-    // starting hand size (7) matches desktop's default.
+    // Mulligan accepts [-handSize, handSize + deckSize]; ≤0 is relative-to-hand-size (desktop parity).
     const handSize = localPlayer?.zones[Enriched.ZoneName.HAND]?.cardCount ?? 0;
     const deckSize = localPlayer?.zones[Enriched.ZoneName.DECK]?.cardCount ?? 0;
     const min = -handSize;
@@ -613,8 +606,7 @@ export function useGameDialogs({
     });
   }, [gameId, webClient]);
 
-  // Cockatrice's aViewHand routes through its client-only zone-view (player_
-  // actions.cpp:137), so we reuse Webatrice's existing zone-view dialog.
+  // Reuse zone-view dialog for aViewHand parity.
   const handleRequestViewHand = useCallback(() => {
     if (game?.localPlayerId == null) {
       return;
@@ -622,10 +614,7 @@ export function useGameDialogs({
     handleZoneClick(game.localPlayerId, Enriched.ZoneName.HAND);
   }, [game?.localPlayerId, handleZoneClick]);
 
-  // Cockatrice's hand_menu.cpp sortHand iterates the local hand and dispatches
-  // moveCard for each card to its new x slot. We mirror that — async because
-  // each card's metadata (maintype / manacost) is fetched from the local
-  // CardDTO/Dexie store.
+  // Sort-hand: per-card moveCard dispatches (desktop hand_menu.cpp parity); async for Dexie metadata lookups.
   const handleRequestSortHandBy = useCallback(
     (key: HandSortKey) => {
       if (gameId == null || game == null || localPlayer == null) {
@@ -643,10 +632,7 @@ export function useGameDialogs({
             const meta = await CardDTO.get(card.name).catch(() => undefined);
             const maintype = meta?.prop?.value?.maintype?.value ?? '';
             const manacost = meta?.prop?.value?.manacost?.value ?? '';
-            // Cockatrice sorts by mana value (CMC). The stored manacost is a
-            // mana-symbol string ("{2}{U}{U}"); approximate CMC as the count
-            // of distinct {…} groups plus any embedded numerics. For sort
-            // stability this only needs to be monotonic, not exact.
+            // CMC approximated from mana-symbol string; needs to be monotonic, not exact.
             const cmc = (() => {
               if (!manacost) {
                 return 0;
@@ -675,9 +661,7 @@ export function useGameDialogs({
           const c = a.cmc - b.cmc;
           return c !== 0 ? c : a.name.localeCompare(b.name);
         });
-        // Dispatch moves in reverse so each card lands at index 0 in turn —
-        // the natural-feeling outcome is the first sorted card on the left of
-        // the hand. Cockatrice does the same.
+        // Reverse dispatch so the first sorted card ends up at index 0.
         for (let i = sorted.length - 1; i >= 0; i--) {
           const entry = sorted[i];
           webClient.request.game.moveCard(gameId, {
@@ -696,9 +680,7 @@ export function useGameDialogs({
     [game, gameId, localPlayer, webClient],
   );
 
-  // Cockatrice hand_menu.cpp:90-93: aMoveHandToTopLibrary sends moveCard per
-  // card with target_zone=DECK and x=0 (top) or x=-1 (bottom). We iterate the
-  // hand and dispatch one moveCard per card.
+  // Move hand → deck: per-card moveCard, x=0 (top) or x=-1 (bottom).
   const handleRequestMoveHandToDeck = useCallback(
     (top: boolean) => {
       if (gameId == null || localPlayer == null || game?.localPlayerId == null) {
@@ -822,11 +804,7 @@ export function useGameDialogs({
   }, [gameId, zoneMenu, webClient]);
 
   // ---------------------------------------------------------------------
-  // Library / Graveyard / Exile extended actions (mirrors desktop's
-  // library_menu.cpp / grave_menu.cpp / rfg_menu.cpp). All actions resolve
-  // their source zone from the current `zoneMenu` state and dispatch via the
-  // already-wrapped sockatrice commands; no new server commands are needed.
-  // ---------------------------------------------------------------------
+  // Library / Graveyard / Exile extended actions.
 
   const handleRequestUndoDraw = useCallback(() => {
     if (gameId == null) {
@@ -847,8 +825,7 @@ export function useGameDialogs({
     if (cardCount === 0) {
       return;
     }
-    // Mirrors actDrawBottomCard (player_actions.cpp:747-759): cmdSetBottomCard
-    // sets card_id = size-1, then target HAND with x=0, y=0. No is_reversed.
+    // Draw bottom: card_id = size-1.
     webClient.request.game.moveCard(gameId, {
       startPlayerId: localPlayerId,
       startZone: Enriched.ZoneName.DECK,
@@ -871,8 +848,7 @@ export function useGameDialogs({
       if ((deck?.cardCount ?? 0) === 0) {
         return;
       }
-      // Mirrors actMoveTopCardToGraveyard / Exile / Bottom — uses cmdSetTopCard
-      // (card_id = 0) plus a target placement.
+      // card_id = 0 for top.
       webClient.request.game.moveCard(gameId, {
         startPlayerId: localPlayerId,
         startZone: Enriched.ZoneName.DECK,
@@ -897,14 +873,7 @@ export function useGameDialogs({
       if ((deck?.cardCount ?? 0) === 0) {
         return;
       }
-      // Mirrors Cockatrice player_actions.cpp:555-587 exactly:
-      //   actMoveTopCardToPlay        → STACK,  x=-1, y=0
-      //   actMoveTopCardToPlayFaceDown→ TABLE,  x=-1, y=0, face_down=true
-      // Desktop deliberately doesn't consult tablerow for this action — the
-      // local player can grab the card off the stack/table and drag it where
-      // they actually want it. Tablerow routing is reserved for the
-      // double-click-from-hand path, where the card name is already known
-      // to the local player (see useGameArrowInteractions.handleCardDoubleClick).
+      // Play-from-top deliberately ignores tablerow. See .github/instructions/webatrice-game.instructions.md#servatrice-game-event-quirks.
       webClient.request.game.moveCard(gameId, {
         startPlayerId: localPlayerId,
         startZone: Enriched.ZoneName.DECK,
@@ -942,10 +911,7 @@ export function useGameDialogs({
             return;
           }
           const n = Math.min(requested, cardCount);
-          // Mirrors moveTopCardsTo (player_actions.cpp:464-477): build
-          // cards_to_move with positional indices [n-1, n-2, ..., 0] (i.e.
-          // the top `n` cards in reverse order). Server resolves indices
-          // against its own deck ordering.
+          // Positional indices [n-1, ..., 0]; server resolves against deck ordering.
           const cards: { cardId: number }[] = [];
           for (let i = n - 1; i >= 0; i--) {
             cards.push({ cardId: i });
@@ -1011,9 +977,7 @@ export function useGameDialogs({
     });
   }, [gameId, webClient]);
 
-  // Move every card in the current zoneMenu's source zone to a target zone.
-  // Used for "Move graveyard to library/hand/exile" etc. — Cockatrice's
-  // grave_menu.cpp / rfg_menu.cpp dispatch one moveCard per card.
+  // Move every card in source zone → target via one moveCard each.
   const handleRequestMoveAllFromZoneToDeck = useCallback(
     (top: boolean) => {
       if (gameId == null || zoneMenu == null || game == null) {
@@ -1068,9 +1032,7 @@ export function useGameDialogs({
     [game, gameId, webClient, zoneMenu],
   );
 
-  // Reuses Webatrice's existing zone-view stack — Cockatrice's aViewLibrary
-  // / aViewGraveyard / aViewRfg are also client-only (player_actions.cpp:132,
-  // 223, 228) so no server roundtrip is needed.
+  // Client-only zone-view (no server roundtrip).
   const handleRequestViewZone = useCallback(() => {
     if (zoneMenu == null) {
       return;
@@ -1087,8 +1049,7 @@ export function useGameDialogs({
       sourceZoneName === Enriched.ZoneName.GRAVE ? 'Graveyard'
         : sourceZoneName === Enriched.ZoneName.EXILE ? 'Exile'
           : sourceZoneName;
-    // Same RANDOM_CARD_FROM_ZONE sentinel desktop uses for reveal-random
-    // (player_actions.cpp:1763 for grave; -2 = "any random card in zone").
+    // See .github/instructions/webatrice-game.instructions.md#dialog-parity.
     const RANDOM_CARD_FROM_ZONE = -2;
     setRevealState({
       title: `Reveal random card from ${label.toLowerCase()}`,

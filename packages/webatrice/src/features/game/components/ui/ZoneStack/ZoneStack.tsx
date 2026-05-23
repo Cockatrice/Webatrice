@@ -41,9 +41,7 @@ function ZoneStack({
   const { smallUrl } = useScryfallCard(topCard ?? null);
   const count = zone?.cardCount ?? 0;
 
-  // Disable drops onto zones the local user can't act on (opponent zones
-  // for non-judges, etc.). Server rejects the same moves; this keeps the
-  // dnd-kit over-feedback honest.
+  // Disable drops on zones the user can't act on (mirrors server enforcement).
   const { canAct } = useGameAccess(gameId, playerId);
   const { setNodeRef, isOver } = useDroppable({
     id: `zone-${playerId}-${zoneName}`,
@@ -62,9 +60,7 @@ function ZoneStack({
       onMouseEnter={() => topCard && onCardHover?.(topCard)}
       onClick={() => onClick?.(zoneName)}
       onContextMenu={(e) => {
-        // Stop bubbling so the parent PlayerInfoPanel's onContextMenu (player
-        // menu) doesn't also fire — without this, right-clicking a zone stack
-        // opens both menus on top of each other.
+        // Stop bubbling so the player menu doesn't open under this zone's menu.
         e.stopPropagation();
         onContextMenu?.(zoneName, e);
       }}

@@ -37,13 +37,7 @@ export function useLoginFormBody({ setValue, getValues }: UseLoginFormBodyArgs):
 
   const togglePasswordLabel = (on: boolean) => setUseStoredPasswordLabel(on);
 
-  // @critical Host-sync normally must not touch autoConnect — it's an app-level
-  // setting, not per-host. The single exception is switching to a host that is
-  // *proven* naked (supportsHashedPassword === false): the Remember/AutoConnect
-  // UI is hidden there, so we also clear the persisted setting to prevent a
-  // stale `true` from surviving silently. `undefined` (fresh host, test not
-  // yet complete) leaves the preference alone — test-connection will resolve
-  // capability in milliseconds.
+  // @critical Host-sync touches persisted autoConnect ONLY when switching to a proven-naked host (supportsHashedPassword === false). `undefined` capability leaves the preference alone.
   const onSelectedHostChange = (host: HostDTO | undefined) => {
     if (!host) {
       return;
@@ -81,8 +75,7 @@ export function useLoginFormBody({ setValue, getValues }: UseLoginFormBodyArgs):
     togglePasswordLabel(canUseStoredPassword(checked, password));
   };
 
-  // @critical Only persist-path for autoConnect; called from native onChange,
-  // not from a watcher, to avoid leaking setValue() writes into Dexie.
+  // @critical Sole persist path for autoConnect; must be wired to native onChange (no setValue watcher) to keep form writes out of Dexie.
   const onUserToggleAutoConnect = (checked: boolean, fieldOnChange: (v: boolean) => void) => {
     fieldOnChange(checked);
 

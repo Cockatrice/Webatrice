@@ -47,9 +47,7 @@ const GameSelector = ({ room }: GameSelectorProps) => {
   const joinError = useAppSelector(rooms.Selectors.getJoinGameError);
   const activeGameIds = useAppSelector(games.Selectors.getActiveGameIds);
 
-  // Mirrors Server.tsx's JOIN_ROOM → navigate(ROOM) pattern: when Event_GameJoined
-  // lands, we're actually in the game — route to /game/:gameId so the URL
-  // identifies which joined game to display.
+  // On Event_GameJoined: route to /game/:gameId.
   useReduxEffect<{ data: Event_GameJoined }>((action) => {
     const gameId = action.payload.data.gameInfo?.gameId;
     if (gameId == null) {
@@ -64,10 +62,7 @@ const GameSelector = ({ room }: GameSelectorProps) => {
 
   const sendJoin = useCallback(
     (gameId: number, asSpectator: boolean, asJudge: boolean, password: string) => {
-      // Mirrors Rooms.tsx short-circuit: if we already have a live game entry
-      // (Event_GameJoined has populated games.games[gameId]), skip the duplicate
-      // JoinGame — the server would reject it with RespContextError — and go
-      // straight to the game view.
+      // Already in this game: skip the JoinGame (server would RespContextError) and route directly.
       if (activeGameIds.includes(gameId)) {
         navigate(generatePath(RouteEnum.GAME, { gameId: gameId.toString() }));
         return;

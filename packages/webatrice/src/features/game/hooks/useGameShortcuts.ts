@@ -57,10 +57,7 @@ export function useGameShortcuts({ gameId, onRequestConcede }: UseGameShortcutsA
   useShortcut(
     'game.drawCard',
     () => {
-      // Draw is allowed any time you're a non-conceded participant — instants,
-      // Howling Mine, Brainstorm etc. all draw out of turn. canPassTurn encodes
-      // exactly that (started + participant/judge + not conceded), unlike
-      // canAdvancePhase which gates on being the active player.
+      // Draw is allowed off-turn; canPassTurn is the right gate (canAdvancePhase requires active player).
       if (!canPassTurn || gameId == null) {
         return;
       }

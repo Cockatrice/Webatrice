@@ -30,9 +30,7 @@ export interface UseGameLogArgs {
 
 export function useGameLog({ gameId, listRef }: UseGameLogArgs): GameLog {
   const webClient = useWebClient();
-  // getMessages falls back to a shared EMPTY_ARRAY typed as ServerInfo_Card[]
-  // (see game.selectors.ts). The runtime array is empty, so the cast is safe;
-  // fixing the selector's fallback type is out of scope for this refactor.
+  // Selector's EMPTY_ARRAY fallback is typed ServerInfo_Card[]; cast is safe at runtime.
   const messages = useAppSelector((state) =>
     gameId != null ? games.Selectors.getMessages(state, gameId) : EMPTY_MESSAGES,
   ) as GameMessage[];
@@ -43,9 +41,7 @@ export function useGameLog({ gameId, listRef }: UseGameLogArgs): GameLog {
     gameId != null ? games.Selectors.getSecondsElapsed(state, gameId) : 0,
   );
 
-  // Local 1Hz ticker, resynced from Redux whenever a server event delivers a
-  // fresh `secondsElapsed`. Mirrors desktop's QTimer(1000) +
-  // setGameTime(event.seconds_elapsed()) pattern in game_state.cpp.
+  // 1Hz ticker; resync to redux on each server `secondsElapsed`.
   const [displaySeconds, setDisplaySeconds] = useState(secondsElapsed);
 
   useEffect(() => {
@@ -64,9 +60,7 @@ export function useGameLog({ gameId, listRef }: UseGameLogArgs): GameLog {
 
   const [draft, setDraft] = useState('');
 
-  // Desktop pins the log to the bottom unless the user has scrolled up to read backlog.
-  // Capture pin state before the new line renders so auto-scroll only fires when the
-  // user was already following the tail.
+  // Pin to bottom unless the user scrolled up; capture before render.
   const wasPinnedRef = useRef(true);
   useEffect(() => {
     const el = listRef.current;

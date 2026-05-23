@@ -15,9 +15,7 @@ interface PendingArrow {
   sourceCardId: number;
 }
 
-// Shares shape with PendingArrow today, but kept distinct so future
-// protocol fields (e.g. desktop's attach-target coord hints) can diverge
-// without a runtime switch.
+// Distinct from PendingArrow so attach-only fields can diverge later.
 interface PendingAttach {
   sourcePlayerId: number;
   sourceZone: string;
@@ -99,9 +97,7 @@ export function useGameArrowInteractions({
   const [arrowDrag, setArrowDrag] = useState<ArrowDragState | null>(null);
   const suppressNextContextMenuRef = useRef(false);
 
-  // ESC cancels a pending arrow OR attach (matches desktop). Suppress the
-  // cancel when a MUI dialog is open — the dialog's own ESC handler should
-  // win so the user isn't rug-pulled out of a modal form.
+  // ESC cancels pending arrow/attach unless a MUI dialog has it first.
   useEffect(() => {
     if (!pendingArrow && !pendingAttach && !arrowDrag) {
       return undefined;
@@ -121,8 +117,7 @@ export function useGameArrowInteractions({
     return () => window.removeEventListener('keydown', handler);
   }, [pendingArrow, pendingAttach, arrowDrag]);
 
-  // Right-click-drag arrow-draw lifecycle: window-level mousemove + mouseup
-  // listeners that track the cursor and finalize on release.
+  // Right-click-drag arrow lifecycle: window mousemove + mouseup.
   useEffect(() => {
     if (!arrowDrag) {
       return undefined;
@@ -261,8 +256,7 @@ export function useGameArrowInteractions({
         ? makeCardKey(arrowDrag.sourcePlayerId, arrowDrag.sourceZone, arrowDrag.sourceCardId)
         : null;
 
-  // Convert arrowDrag's viewport coords → board-relative coords for the SVG
-  // preview line. Recomputed every render; cheap.
+  // viewport → board-relative coords for the SVG preview line.
   const dragPreview = useMemo<ArrowDragPreview | null>(() => {
     if (!arrowDrag || !arrowDrag.moved) {
       return null;
@@ -290,9 +284,7 @@ export function useGameArrowInteractions({
         return;
       }
 
-      // Pending-attach (from CardContextMenu "Attach to card…") takes
-      // precedence over pending-arrow because it was activated by a later menu
-      // action. Click on the pending source to cancel.
+      // Pending-attach takes precedence over pending-arrow (later menu action wins).
       if (pendingAttach) {
         if (
           pendingAttach.sourcePlayerId === ownerPlayerId &&
@@ -363,8 +355,7 @@ export function useGameArrowInteractions({
       if (gameId == null) {
         return;
       }
-      // Desktop's arrow drag owns the pointer while active; mirror that by
-      // short-circuiting double-click while a pending arrow/attach is armed.
+      // Pending arrow/attach owns the pointer; skip double-click.
       if (pendingArrow || pendingAttach) {
         return;
       }
@@ -379,10 +370,7 @@ export function useGameArrowInteractions({
       }
       if (sourceZone === Enriched.ZoneName.HAND && game?.localPlayerId != null) {
         const localPlayerId = game.localPlayerId;
-        // Hand-zone visibility is gated on the local player being in slotA
-        // (see useGame.ts:96-102), so the local target is never per-player
-        // mirrored. The user's invertVerticalCoordinate setting still flips
-        // the rendered row order; honor it when picking wire y.
+        // Local target is never per-player mirrored; honor invertVerticalCoordinate for wire y.
         void playCardViaTableRow({
           webClient,
           gameId,

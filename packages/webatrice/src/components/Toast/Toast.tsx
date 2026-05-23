@@ -17,9 +17,7 @@ export interface ToastProps {
   children?: ReactNode;
 }
 
-// MUI's Snackbar already self-portals to the end of document.body; adding our
-// own createPortal wrapper would leak <div>s under React StrictMode's double-
-// invoked effects. Render the Snackbar directly.
+// Don't double-portal. See .github/instructions/webatrice.instructions.md#ui.
 function Toast({ open, onClose, severity = 'success', autoHideDuration = 10000, children }: ToastProps) {
   const handleClose = (event?: SyntheticEvent | Event, reason?: string) => {
     if (reason === 'clickaway') {

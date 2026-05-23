@@ -43,12 +43,7 @@ export function useGame(): Game {
 
   const boardRef = useRef<HTMLDivElement>(null);
   const cardRegistry = useMemo(() => createCardRegistry(), []);
-  // 8px activation distance distinguishes a tap from a drag. Without it,
-  // every pointerdown fires onDragStart → cancelPendingOnDragStart, which
-  // wipes any armed pendingArrow / pendingAttach before the click event
-  // can reach handleCardClick — silently breaking the right-click → "Attach
-  // to card…" / "Draw arrow" flows. Matches ARROW_DRAG_THRESHOLD_PX in
-  // useGameArrowInteractions so click-vs-drag is consistent across the app.
+  // 8px activation distance; must match ARROW_DRAG_THRESHOLD_PX. See .github/instructions/webatrice-game.instructions.md#pointer--click-vs-drag.
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
     useSensor(KeyboardSensor),
@@ -77,9 +72,7 @@ export function useGame(): Game {
 
   useGameShortcuts({ gameId, onRequestConcede: dialogs.openConcede });
 
-  // Explicit localPlayer null-check closes a window during reconnect where
-  // `game` is present but `players[localPlayerId]` is not yet populated
-  // (Event_GameStateChanged arrives after Event_GameJoined echo).
+  // localPlayer null-check guards the reconnect window before Event_GameStateChanged repopulates players.
   const deckSelectOpen =
     game != null &&
     localPlayer != null &&

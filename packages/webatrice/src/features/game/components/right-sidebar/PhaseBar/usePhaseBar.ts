@@ -44,11 +44,7 @@ export function usePhaseBar(gameId: number | undefined): PhaseBar {
     webClient.request.game.nextTurn(gameId);
   };
 
-  // Desktop's untap-step double-click fires "Untap All" on the local player's
-  // table zone (cockatrice/src/game/player/player_actions.cpp actUntapAll).
-  // We replicate by sending one setCardAttr per tapped card; there is no
-  // batch variant on the wire. Gated to the active player (or judge) since
-  // it's a start-of-your-turn action.
+  // Untap-step double-click → Untap All. See .github/instructions/webatrice-game.instructions.md#phase-model.
   const handleUntapAll = () => {
     if (!canAdvancePhase || gameId == null || !tableCards) {
       return;

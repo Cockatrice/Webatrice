@@ -4,18 +4,7 @@ import { Enriched, ZoneEntry } from '@cockatrice/datatrice';
 import { CardDTO } from '../../../services/dexie/DexieDTOs/CardDTO';
 import { MAX_SUBPOS, applyInvertY, clampRow } from '../components/battlefield/Battlefield/gridMath';
 
-// Mirrors desktop's player_actions.cpp:47-93 (PlayerActions::playCard) — the
-// destination zone is chosen from CardInfo's `tableRow`. tableRow=3 routes to
-// the stack (instant/sorcery); 0/1/2 route to the battlefield with a
-// per-row default that the user can later drag-correct.
-//
-// `tableZone` is the local player's TABLE zone (used to pick a fresh column);
-// pass `undefined` if not yet hydrated and we'll drop into column 0.
-//
-// `isInverted` is the same flag useBattlefield computes
-// (mirrored !== invertVerticalCoordinate). For the local player (who's never
-// per-player mirrored when this UI fires), the only contributor is the user's
-// invertVerticalCoordinate setting.
+// tableRow=3 → stack; 0/1/2 → battlefield with per-row default. tableZone picks fresh column (undefined → col 0). isInverted = useBattlefield's flag.
 export async function playCardViaTableRow({
   webClient,
   gameId,
@@ -37,8 +26,7 @@ export async function playCardViaTableRow({
   isInverted: boolean;
   tableZone: ZoneEntry | undefined;
 }): Promise<void> {
-  // Cockatrice XML schema: `<tablerow>` is a top-level element on `<card>`
-  // (not inside `<prop>`). See types/cards.ts and CockatriceXmlParser.spec.ts.
+  // `<tablerow>` is a top-level element on `<card>`, not inside `<prop>`.
   const meta = await CardDTO.get(card.name).catch(() => undefined);
   const tablerowRaw = meta?.tablerow?.value;
   const tablerow =
@@ -48,7 +36,6 @@ export async function playCardViaTableRow({
     webClient.request.game.moveCard(gameId, {
       startPlayerId: sourcePlayerId,
       startZone: sourceZone,
-      // `face_down` is per-card on CardToMove, not on Command_MoveCard.
       cardsToMove: { card: [{ cardId: card.id, faceDown }] },
       targetPlayerId: localPlayerId,
       targetZone: Enriched.ZoneName.STACK,
@@ -59,16 +46,12 @@ export async function playCardViaTableRow({
     return;
   }
 
-  // tablerow 0=lands(bottom), 1=creatures(middle), 2=artifacts/enchantments
-  // (top). Convert to player-perspective visualY (0 = top of player view),
-  // then to wire y via applyInvertY. Missing/unknown tablerow defaults to
-  // top row, matching the user's "default to top lane" preference.
+  // tablerow 0/1/2 → visualY 2/1/0 (top-of-player-view); unknown → top row.
   const visualY =
     tablerow === 0 || tablerow === 1 || tablerow === 2 ? 2 - tablerow : 0;
   const wireY = applyInvertY(visualY, isInverted);
 
-  // Place the card in a fresh stack column at the right edge of the target
-  // row, mirroring desktop's "play next to existing cards" placement.
+  // Fresh stack column at the right edge of the target row.
   let nextCol = 0;
   if (tableZone) {
     for (const cardId of tableZone.order) {

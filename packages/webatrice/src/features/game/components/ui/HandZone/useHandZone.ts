@@ -30,18 +30,14 @@ export function useHandZone({
     games.Selectors.getCards(state, gameId, playerId, Enriched.ZoneName.HAND),
   );
 
-  // Match desktop: can't drop into a hand zone that isn't yours (judges
-  // aside; server enforces the same restriction). Today only the local
-  // HandZone mounts, but this guard future-proofs opponent-hand mirrors.
+  // Can't drop into someone else's hand; future-proofs opponent-hand mirrors.
   const { setNodeRef, isOver } = useDroppable({
     id: `hand-${playerId}`,
     data: { targetPlayerId: playerId, targetZone: Enriched.ZoneName.HAND },
     disabled: !canAct,
   });
 
-  // Right-click anywhere inside the hand that doesn't land on a card opens
-  // the hand zone context menu (mulligan / reveal hand). Card-level right-
-  // click has its own handler on CardSlot.
+  // Hand-area right-click opens the zone menu (card-level handler lives on CardSlot).
   const handleZoneContextMenu = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!onZoneContextMenu) {
       return;

@@ -77,9 +77,7 @@ function SideboardDialog({
 }: SideboardDialogProps) {
   const [moves, setMoves] = useState<SideboardPlanMove[]>([]);
 
-  // Reset the draft whenever the dialog opens, or when the server locks the
-  // sideboard mid-edit (desktop's resetSideboardPlan parity). Consolidated
-  // into one effect keyed on both triggers.
+  // Reset draft on open or server-side lock (resetSideboardPlan parity).
   useEffect(() => {
     if (isOpen || isLocked) {
       setMoves([]);
