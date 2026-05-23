@@ -1,4 +1,4 @@
-// @critical Must match the production boot order in src/index.tsx. See .github/instructions/root.instructions.md#initialization-order.
+// @critical Must match the production boot order in src/index.tsx. See .github/instructions/webatrice.instructions.md#initialization-order.
 import './polyfills';
 
 import '@testing-library/jest-dom/vitest';
@@ -44,9 +44,7 @@ vi.mock('dexie', () => {
   return { default: FakeDexie, __esModule: true };
 });
 
-// Tests within a file share the module graph (vite.config.ts sets isolate: true
-// between files, not within them). Never add vi.resetAllMocks() — it resets
-// vi.fn() instances created inside vi.mock(...) factories at file load.
+// See .github/instructions/webatrice-testing.instructions.md#mocking-footguns.
 afterEach(() => {
   vi.clearAllMocks();
   vi.restoreAllMocks();

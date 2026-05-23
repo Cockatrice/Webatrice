@@ -54,9 +54,7 @@ export function useGame(): Game {
     useSensor(KeyboardSensor),
   );
   const [hoveredCard, setHoveredCard] = useState<ServerInfo_Card | null>(null);
-  // View-only 90° rotation; local to this tab, mirrors desktop's
-  // Player::actRotateLocal which applies a QGraphicsView transform with no
-  // server call.
+  // View-only 90° rotation. See .github/instructions/webatrice-game.instructions.md#board-rotation.
   const [isRotated, setIsRotated] = useState(false);
   const toggleRotated = useCallback(() => setIsRotated((prev) => !prev), []);
 
@@ -90,12 +88,7 @@ export function useGame(): Game {
     !current.isJudge &&
     !localPlayer.properties.readyStart;
 
-  // Hand zone visibility: as an active player you only see your own hand;
-  // as a spectator you only see hands when the game was created with
-  // omniscient spectators (`spectators_omniscient` on ServerInfo_Game). The
-  // desktop server uses the same flag to gate sending real card data to
-  // spectators (server_game.cpp:298-315), so when it's false the hand zone
-  // would only show face-down placeholders anyway.
+  // Spectator hand visibility gated on spectators_omniscient. See .github/instructions/webatrice-game.instructions.md#servatrice-game-event-quirks.
   const showHandZone =
     game != null &&
     slots.slotAPlayerId != null &&

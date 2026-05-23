@@ -1,4 +1,4 @@
-// Port of cockatrice/src/game/zones/table_zone.cpp.
+// Port of cockatrice/src/game/zones/table_zone.cpp. See .github/instructions/webatrice-game.instructions.md#battlefield-grid.
 
 import { ServerInfo_Card } from '@cockatrice/sockatrice/generated';
 export const CARD_WIDTH_PX = 146;

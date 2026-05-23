@@ -13,7 +13,7 @@ export function getScryfallUrlByName(
   name: string,
   size: ScryfallImageSize = ScryfallImageSize.Small,
 ): string {
-  // Strip Cockatrice's "(Token)" suffix; Scryfall uses the unsuffixed printed name.
+  // See .github/instructions/webatrice.instructions.md#protocol-quirks.
   const cleaned = name.replace(/\s*\(?\bToken\b\)?\s*$/i, '');
   const exact = encodeURIComponent(cleaned);
   return `${SCRYFALL_API}/cards/named?exact=${exact}&format=image&version=${size}`;

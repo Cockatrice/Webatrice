@@ -178,11 +178,7 @@ export function useGameArrowInteractions({
       ) {
         return;
       }
-      // Desktop parity: dragging an arrow from a local-hand card to a target
-      // outside the hand auto-plays the card (card_item.cpp:243-250) — the
-      // card is moved to the battlefield before any arrow is drawn. The
-      // server re-keys the card id during the move, so we can't also send
-      // createArrow here; instead we resolve this drag as a play-card intent.
+      // Local-hand arrow → non-hand auto-plays the card. See .github/instructions/webatrice-game.instructions.md#servatrice-game-event-quirks.
       if (
         drag.sourceZone === Enriched.ZoneName.HAND &&
         drag.sourcePlayerId === game?.localPlayerId &&
@@ -329,9 +325,7 @@ export function useGameArrowInteractions({
         setPendingArrow(null);
         return;
       }
-      // Desktop parity: arrow from local-hand → non-hand target auto-plays the
-      // card (card_item.cpp:243-250). The server re-keys the moved card id, so
-      // we resolve this as a play-card intent and drop the arrow command.
+      // Local-hand arrow → non-hand auto-plays the card. See .github/instructions/webatrice-game.instructions.md#servatrice-game-event-quirks.
       if (
         pendingArrow.sourceZone === Enriched.ZoneName.HAND &&
         pendingArrow.sourcePlayerId === game?.localPlayerId &&

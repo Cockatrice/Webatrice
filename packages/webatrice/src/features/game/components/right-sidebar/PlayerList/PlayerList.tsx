@@ -8,9 +8,7 @@ export interface PlayerListProps {
   gameId: number | undefined;
 }
 
-// HSV gradient from green (0s) to red (>=10s); black when disconnected
-// (ping < 0). Mirrors desktop's PingPixmapGenerator in
-// cockatrice/src/interface/pixel_map_generator.cpp.
+// See .github/instructions/webatrice-game.instructions.md#servatrice-game-event-quirks.
 function pingCssColor(pingSeconds: number | undefined): string {
   if (pingSeconds == null || pingSeconds < 0) {
     return '#000';

@@ -431,8 +431,7 @@ export function useGameDialogs({
     if (!menu || gameId == null || game == null) {
       return;
     }
-    // Desktop prompts for a 1-indexed position into the library, then
-    // internally subtracts 1 for the protocol's 0-indexed x-coordinate.
+    // 1-indexed prompt → 0-indexed wire. See .github/instructions/webatrice-game.instructions.md#dialog-parity.
     setPrompt({
       title: 'Move to library at position',
       label: 'Position (1 = top)',
@@ -756,9 +755,7 @@ export function useGameDialogs({
     if (gameId == null) {
       return;
     }
-    // Desktop's RANDOM_CARD_FROM_ZONE sentinel (-2); see
-    // cockatrice/src/game/player/player_actions.h:47 and
-    // actRevealRandomHandCard at player_actions.cpp:1705-1712.
+    // RANDOM_CARD_FROM_ZONE = -2. See .github/instructions/webatrice-game.instructions.md#dialog-parity.
     const RANDOM_CARD_FROM_ZONE = -2;
     setRevealState({
       title: 'Reveal random card',
@@ -838,17 +835,7 @@ export function useGameDialogs({
     webClient.request.game.undoDraw(gameId);
   }, [gameId, webClient]);
 
-  // ---------------------------------------------------------------------
-  // DECK-source moves use POSITIONAL indices for `card_id`, not stable IDs.
-  // Cockatrice's protocol convention for hidden zones:
-  //   index 0       = top of deck
-  //   index size-1  = bottom of deck
-  // (See cmdSetTopCard / cmdSetBottomCard in cockatrice/src/game/player/
-  // player_actions.cpp:376-392.) Webatrice's enriched `deck.order` reflects
-  // insertion history rather than authoritative deck position, so it can't
-  // be used to address top/bottom cards. Servatrice resolves these indices
-  // server-side against its own card-zone ordering.
-  // ---------------------------------------------------------------------
+  // Hidden-zone command addressing is positional. See .github/instructions/webatrice-game.instructions.md#servatrice-game-event-quirks.
 
   const handleRequestDrawBottom = useCallback(() => {
     if (gameId == null || game?.localPlayerId == null) {

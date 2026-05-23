@@ -8,11 +8,7 @@ interface MoveTarget {
   y: number;
 }
 
-// Mirrors desktop's cockatrice/src/game/player/menu/move_menu.cpp:32-42 —
-// six fixed targets plus one prompt ("Move to library at position…") for the
-// 7-entry parity. Note that desktop's "Send to Table" label maps to our
-// "Send to Battlefield" (same wire semantics: zone=table, x=0, y=0); the
-// label diverges but the command is identical.
+// Desktop 7-entry move menu. See .github/instructions/webatrice-game.instructions.md#dialog-parity.
 export const CARD_MOVE_TARGETS: ReadonlyArray<MoveTarget> = [
   { label: 'Send to Hand', zone: Enriched.ZoneName.HAND, x: -1, y: 0 },
   { label: 'Send to Battlefield', zone: Enriched.ZoneName.TABLE, x: 0, y: 0 },
@@ -83,21 +79,11 @@ export function useCardContextMenu({
 
   const ready = card != null && ownerPlayerId != null && sourceZone != null && localPlayerId != null;
 
-  // Mutating actions (tap, flip, counters, attrs, P/T, annotation, attach,
-  // move) require ownership of the card — matches desktop's
-  // `card_menu.cpp:151-161` which drops all mutators when the menu target
-  // isn't getLocalOrJudge()-modifiable. Read-only actions (Draw arrow)
-  // stay available for planning/communication.
+  // Card-menu affordance gates. See .github/instructions/webatrice-game.instructions.md#dialog-parity.
   const isOwnedByLocal = ready && ownerPlayerId === localPlayerId;
   const isAttached = ready && (card!.attachCardId ?? -1) >= 0;
-  // Desktop's actAttach is only available from a table card; other zones
-  // never expose the attach arrow.
   const canAttach = ready && sourceZone === Enriched.ZoneName.TABLE;
-  // Desktop's aPlay / aPlayFacedown are exposed on cards in any non-TABLE
-  // zone (hand / grave / exile / stack). See card_menu.cpp:201-303.
   const canPlay = ready && isOwnedByLocal && sourceZone !== Enriched.ZoneName.TABLE;
-  // Desktop's aPeek is only available on face-down table cards
-  // (player_actions.cpp:1822 — Command_RevealCards to self).
   const canPeek =
     ready && isOwnedByLocal && sourceZone === Enriched.ZoneName.TABLE && (card!.faceDown ?? false);
 

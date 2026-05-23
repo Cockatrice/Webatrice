@@ -9,7 +9,7 @@ export function useLeaveGame(): (gameId: number) => void {
   return (gameId: number) => {
     webClient.request.game.leaveGame(gameId);
     // @critical Servatrice strips the leaver from the broadcast list before Event_Leave; dispatch locally.
-    // See .github/instructions/root.instructions.md#ui--server-layering-invariant.
+    // See .github/instructions/webatrice.instructions.md#ui--server-layering-invariant.
     dispatch(games.Actions.gameLeft({ gameId }));
   };
 }
