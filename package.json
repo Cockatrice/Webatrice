@@ -22,7 +22,7 @@
     "prepare": "npm run assets:submodule && npm run -w @cockatrice/sockatrice proto:generate && npm run -w @cockatrice/webatrice prebuild && husky"
   },
   "devDependencies": {
-    "@changesets/cli": "^2.31.0",
+    "@changesets/cli": "~2.31.0",
     "husky": "^9.1.7"
   }
 }
