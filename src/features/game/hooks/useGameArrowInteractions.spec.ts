@@ -260,7 +260,7 @@ describe('useGameArrowInteractions', () => {
     });
   });
 
-  describe('handleCardDoubleClick â€” hand → play', () => {
+  describe('handleCardDoubleClick — hand → play', () => {
     function makeCardMeta(tablerow: string | null) {
       if (tablerow == null) {
         return { name: { value: 'Foo' } };

@@ -1,4 +1,4 @@
-// M4–M6 orchestration tests â€” extracted from Game.spec.tsx so they run in
+// M4–M6 orchestration tests — extracted from Game.spec.tsx so they run in
 // their own vitest worker slot (pool: 'threads'). Each of these goes through
 // the Game.tsx state wiring between a trigger component and the dialog/menu
 // it opens; individual handlers are tested in child specs. This suite pins
@@ -35,7 +35,7 @@ vi.mock('./components/right-sidebar/PhaseBar/PhaseBar', () => ({ default: () => 
 vi.mock('./components/arrows/GameArrowOverlay/GameArrowOverlay', () => ({ default: () => null }));
 
 // Every test here renders the full <Game /> tree and drives it through RTL
-// queries â€” a genuinely heavy integration suite. The default 15s testTimeout
+// queries — a genuinely heavy integration suite. The default 15s testTimeout
 // left no headroom on a loaded dev machine; 30s reflects the real cost.
 vi.setConfig({ testTimeout: 30000 });
 
@@ -105,7 +105,7 @@ function buildGame({
 describe('Game orchestration (M4–M6)', () => {
   // The first <Game /> render in a worker pays one-time cold costs (V8 JIT of the
   // render path, MUI/emotion cache warmup, initial jsdom layout). Absorb that here
-  // so it isn't charged against the first it()'s timeout budget â€” without it the
+  // so it isn't charged against the first it()'s timeout budget — without it the
   // leading test intermittently brushed the 15s testTimeout.
   beforeAll(() => {
     renderWithProviders(<Game />, {
@@ -124,7 +124,7 @@ describe('Game orchestration (M4–M6)', () => {
 
     // Scope role/name lookups to a small subtree. An unscoped
     // `screen.getByRole('button', { name })` recomputes accessible names across
-    // the whole <Game /> document (~2s each here) â€” the dominant cost that made
+    // the whole <Game /> document (~2s each here) — the dominant cost that made
     // this test brush the timeout under load.
     const rollDieBtn = within(screen.getByTestId('turn-controls')).getByRole('button', {
       name: /roll die/i,

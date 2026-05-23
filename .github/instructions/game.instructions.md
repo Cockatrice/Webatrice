@@ -53,6 +53,10 @@ Port of `table_zone.cpp:153-185`.
 - **CreateTokenDialog** color dropdown: `White → Blue → Black → Red → Green → Multicolor → Colorless`, default White. Matches desktop `DlgCreateToken`.
 - **RevealCardsDialog**: `targetPlayerId === -1` means "all players"; `topCards === -1` means "all cards in the zone". Desktop convention for full-hand / full-grave reveals.
 - **SideboardDialog** `applyMoves`: **identify-by-name, one copy per entry** — mirrors desktop `DeckView::applyPlan`. The server protocol speaks names, not ids; don't switch to id-based matching.
+- **Move-to-library-at-position prompt is 1-indexed.** Desktop's `DlgMoveCard` collects a 1-indexed position from the user and subtracts 1 before sending `Command_MoveCard.x`. The server speaks 0-indexed; off-by-one regressions silently land cards one slot away.
+- **`Command_RevealCards.cardId = [-2]` is the desktop `RANDOM_CARD_FROM_ZONE` sentinel.** Servatrice resolves it server-side to a uniformly-random card in the named zone. Used for "Reveal Random Hand Card" and "Reveal Random Graveyard Card".
+- **Card move-to-zone menu is the desktop 7-entry list.** `CARD_MOVE_TARGETS` in `useCardContextMenu` mirrors `move_menu.cpp:32-42`: Hand, Battlefield (`x=0,y=0`), Graveyard, Exile, Library top (`x=0`), Library bottom (`x=-1`), plus the "Move to library at position…" prompt. Wire payloads must stay identical — labels may diverge ("Battlefield" vs desktop's "Table").
+- **Card-menu affordance gates mirror `card_menu.cpp`.** Mutators (tap/flip/counters/attrs/P-T/annotation/attach/move) require `ownerPlayerId === localPlayerId`; `actAttach` only on TABLE-zone cards; `actPlay`/`actPlayFaceDown` only on **non-TABLE** owned cards; `actPeek` only on face-down TABLE cards. Read-only actions (Draw arrow) stay available regardless of ownership.
 
 ## Board rotation
 
@@ -68,6 +72,16 @@ Affecting [src/store/game/game.listeners.ts](../../src/store/game/game.listeners
 - **Attach unset surfaces as `-1` / `""`.** Treat `attachCardId < 0 || !attachZone` as "unattached". Same proto3/proto2 trap as in [store.instructions.md](store.instructions.md).
 - **`-1` is the proto2 "no actor" sentinel** for `GameEvent.player_id`. Webclient speaks proto3 (unset → `0`, a valid player id). Detect absent explicitly before writing `-1`.
 - **Hidden zones**: `zone.cardCount` is authoritative; `zone.order.length` only reflects what the local client knows. Render hand/library counts off `cardCount`.
+- **Hidden-zone command addressing is positional.** `Command_MoveCard` / `Command_SetTopCard` / `Command_SetBottomCard` use `card_id = 0` for top, `card_id = size - 1` for bottom — Servatrice resolves these against its own zone ordering. The local enriched `deck.order` reflects insertion history, not deck position, and must not be used to compute these indices.
+- **Play-from-top deliberately ignores `tablerow`.** Cards played via the deck context-menu route to the stack/table at `x=-1`; desktop reserves tablerow-based row routing for the double-click-from-hand path (where the card name is known to the local player). Don't "fix" this to consult `CardDTO`.
+- **Arrow from local-hand → non-hand auto-plays the card and drops the arrow.** Mirrors desktop `card_item.cpp:243-250`: the move re-keys the card on the server, so a follow-up `createArrow` would target a stale id. This branch lives in both right-click-drag (`useGameArrowInteractions`) and click-target (`handleCardClick`); both must stay in sync.
+- **Spectator hand visibility is server-gated by `spectators_omniscient`.** When false, Servatrice ships face-down placeholders to spectators (`server_game.cpp:298-315`); the client's `showHandZone` mirrors that — hiding the zone entirely instead of rendering placeholders. Don't surface a "see hands" toggle locally — the data isn't there.
+- **Ping indicator color is HSV-derived to match desktop.** Hue = `120 × (1 - clamp(ping, 0, 10) / 10)` (green→red); negative ping renders black (disconnected). Mirrors `pixel_map_generator.cpp` `PingPixmapGenerator`. Don't switch to a discrete threshold scheme — desktop and web players see the same gradient mid-call.
+- **Per-counter coloring**: `hue = id × 60°` for IDs 0-5 (A-F). Desktop uses `QColor::fromHsv(hue, 150, 255)`; the CSS equivalent is `hsl(hue, 59%, 70%)`. Hardcoded count of 6 matches `card_counter_settings.cpp`. Adding a 7th counter type requires updating both desktop and webclient.
+
+## Pointer / click-vs-drag
+
+**Click-vs-drag threshold is 8px and must stay synchronized.** `useGame`'s `PointerSensor` activation distance and `useGameArrowInteractions`'s `ARROW_DRAG_THRESHOLD_PX` are the two enforcement sites. A regression on either side silently breaks the right-click → "Attach to card…" / "Draw arrow" click-through paths because pointerdown fires `cancelPendingOnDragStart` before `handleCardClick` runs.
 
 ## Message log
 

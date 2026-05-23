@@ -206,7 +206,7 @@ describe('Battlefield', () => {
         preloadedState: stateWithBattlefield(cards),
       });
 
-      // Parent is in row 0; child is NOT bucketed into its own y=2 lane â€”
+      // Parent is in row 0; child is NOT bucketed into its own y=2 lane —
       // instead it lives inside the parent's AttachmentStack.
       const row0 = screen.getByTestId('battlefield-row-0');
       const row2 = screen.getByTestId('battlefield-row-2');
@@ -333,7 +333,7 @@ describe('Battlefield', () => {
       // Servatrice keeps the aura in its original owner's zone (player 1)
       // but parent-points it at player 2's creature. Cockatrice paints the
       // aura under the parent's zone via attachedTo->getZone()->reorganize.
-      // The webclient must do the same â€” when rendering player 2's
+      // The webclient must do the same — when rendering player 2's
       // battlefield, the aura should appear nested under their creature even
       // though it lives in player 1's TABLE zone.
       const ownersAura = makeCard({
@@ -417,7 +417,7 @@ describe('Battlefield', () => {
       // Regression: after right-click → "Attach to card…" → click target,
       // the source card was visually staying as a standalone in its lane
       // until any subsequent action triggered another render. The dispatch
-      // path itself is fine â€” this test pins the dispatch → DOM update so
+      // path itself is fine — this test pins the dispatch → DOM update so
       // any future selector-cache or memoization regression surfaces here.
       const parent = makeCard({ id: 10, name: 'Creature', x: 0, y: 0 });
       const source = makeCard({ id: 11, name: 'Aura', x: 3, y: 0 });
@@ -615,7 +615,7 @@ describe('Battlefield', () => {
         );
       });
 
-      // After: placeholder at col 0, Mover at col 1, Still at col 2 â€” no
+      // After: placeholder at col 0, Mover at col 1, Still at col 2 — no
       // placeholder between them since col 1 is now occupied.
       const row0After = screen.getByTestId('battlefield-row-0');
       const items = Array.from(row0After.children);

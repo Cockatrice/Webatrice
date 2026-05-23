@@ -4,7 +4,7 @@ import { configureStore } from '@reduxjs/toolkit';
 import { Provider } from 'react-redux';
 
 // Pulling the games reducer + state type from `datatrice` (not `@app/store`)
-// avoids importing the augmented RootState â€” see useGameAccess.spec.tsx.
+// avoids importing the augmented RootState — see useGameAccess.spec.tsx.
 import { games, type GamesState } from '@cockatrice/datatrice';
 import { makeGameEntry, makePlayerEntry, makePlayerProperties } from '@cockatrice/datatrice/testing';
 import { useCurrentGame } from './useCurrentGame';

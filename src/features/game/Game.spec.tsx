@@ -462,7 +462,7 @@ describe('Game container', () => {
     });
   });
 
-  // M4–M6 orchestration tests live in Game.orchestration.spec.tsx â€” that
+  // M4–M6 orchestration tests live in Game.orchestration.spec.tsx — that
   // file pins the end-to-end dispatch flows (dialog/menu → command) that go
   // through Game.tsx state wiring. Splitting them out lets vitest's threads
   // pool run them in parallel with the unit-style tests in this file.

@@ -232,7 +232,7 @@ describe('PlayerInfoPanel', () => {
     expect(container.querySelector('.player-info-panel__host-badge')).toBeNull();
   });
 
-  // Sideboard lock lives in the right-side PlayerList â€” it must NOT render
+  // Sideboard lock lives in the right-side PlayerList — it must NOT render
   // inside the PlayerInfoPanel.
   it('never renders the sideboard-lock indicator in the panel', () => {
     const player = makePlayerEntry({

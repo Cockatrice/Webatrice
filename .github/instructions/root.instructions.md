@@ -45,7 +45,7 @@ Enforced by [eslint.boundaries.mjs](../../eslint.boundaries.mjs); zero violation
 
 ### UI → server layering invariant
 
-1. UI layers call `useWebClient()` ([src/hooks/useWebClient.tsx](../../src/hooks/useWebClient.tsx)) to get the Sockatrice `WebClient`, then `client.request.<scope>.<method>(…)`. The `WebClient` value may only be imported by `useWebClient.tsx` itself; type-only `import type { WebClient } from '@cockatrice/sockatrice'` is allowed everywhere. Enforced by `@typescript-eslint/no-restricted-imports` in [eslint.config.mjs](../../eslint.config.mjs). `new WebClient(...)` is called only inside `WebClientProvider`, never at module load.
+1. UI layers call `useWebClient()` from `@cockatrice/datatrice/react` to get the Sockatrice `WebClient`, then `client.request.<scope>.<method>(…)`. Type-only `import type { WebClient } from '@cockatrice/sockatrice'` is allowed everywhere; the runtime class is restricted by `@typescript-eslint/no-restricted-imports` in [eslint.config.mjs](../../eslint.config.mjs). `new WebClient(...)` is called only inside `WebClientProvider`, never at module load.
 2. Sockatrice fires response callbacks into the `IWebClientResponse` instance built by Datatrice's `attachResponseHandlers(store)`. The per-scope `*ResponseImpl` classes (session / room / game / admin / moderator) live inside Datatrice and are the only place that dispatches to the Redux store.
 
 **Documented exception**: `useLeaveGame` optimistically dispatches `gameLeft` on send because Servatrice removes the leaving player from the broadcast list before sending `Event_Leave` — the leaver never sees confirmation. Without the optimistic dispatch, the lifecycle hook never fires and the tab stays on `/game/:gameId`.
@@ -66,7 +66,7 @@ Dexie (IndexedDB) holds cards, sets, tokens, known hosts, and settings; separate
 
 ### UI
 
-Route-level UI in `src/features/<slice>/` (one per route — account, decks, game, login, logs, player, rooms, server, settings, shell). Page chrome (Layout, LeftNav) in `src/feature-wrappers/layout/`. Root orchestration at [src/AppShell.tsx](../../src/AppShell.tsx) with route registration in [src/AppShellRoutes.tsx](../../src/AppShellRoutes.tsx). Load-bearing hooks: **`useWebClient`** (the only way UI reaches the server; see the layering invariant) and **`useAutoLogin`** (owns the once-per-session gate). `WebClientContext` is exported so integration tests can inject a pre-built `WebClient`. UI kit: MUI v9 + `@emotion`; i18n via `react-i18next` + ICU (Transifex).
+Route-level UI in `src/features/<slice>/` (one per route — account, decks, game, login, logs, player, rooms, server, settings, shell). Page chrome (Layout, LeftNav) in `src/feature-wrappers/layout/`. Root orchestration at [src/AppShell.tsx](../../src/AppShell.tsx) with route registration in [src/AppShellRoutes.tsx](../../src/AppShellRoutes.tsx). Load-bearing hooks: **`useWebClient`** (the only way UI reaches the server; see the layering invariant) and **`useAutoLogin`** (owns the once-per-session gate). Datatrice's `WebClientContext` is consumed directly from `@cockatrice/datatrice/react` so integration tests and per-test `renderHook` wrappers can inject a pre-built `WebClient`. **Don't double-portal MUI components.** MUI's Snackbar/Tooltip/Popover already portal themselves; wrapping them in our own `createPortal` leaks DOM nodes under React 18 StrictMode (effects fire twice; the inner portal's mount runs before the outer's cleanup). UI kit: MUI v9 + `@emotion`; i18n via `react-i18next` + ICU (Transifex).
 
 ### Forms (react-hook-form + Zod)
 
@@ -75,6 +75,7 @@ All forms use `useForm` + `zodResolver` + `<Controller>`. Patterns enforced acro
 - **Defaults are explicit per field** (`defaultValues: { foo: '' }`). RHF treats `undefined` as uncontrolled and warns on text inputs.
 - **Conditional schemas**: when a field's requirement flips at runtime (e.g. server demanded MFA), rebuild the resolver via `useMemo(() => buildXSchema(t, flag), [t, flag])`. The resolver is reattached when the memo re-runs.
 - **Server-driven errors** mirror onto the form via `setError(field, { type: 'server', message })` in a `useEffect` keyed on the `*Error` selector. `Controller`'s `fieldState.error` picks it up like a Zod error.
+- **Persisted-vs-form preference writes**: form-state writes (`setValue`) must never leak into Dexie. Persistence happens only on the native `onChange` of a controlled checkbox, never inside a watch effect or a parent `setValue` chain. The exception (LoginForm clearing `autoConnect` when switching to a proven-naked server) requires the `supportsHashedPassword === false` test result; `undefined` means "not yet known" and must leave the persisted preference alone.
 
 ## Hooks and effects
 

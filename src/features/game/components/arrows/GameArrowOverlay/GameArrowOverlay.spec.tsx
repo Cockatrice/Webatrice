@@ -91,7 +91,7 @@ describe('GameArrowOverlay', () => {
   it('renders a line for each arrow with endpoints at card centers relative to the board', () => {
     const { registry } = setupRegistryWithTwoCards();
     // Pretend the board rect starts at 0,0 for simplicity; card A center is
-    // (125, 125) and card B center is (325, 325) in viewport coords â€” same in
+    // (125, 125) and card B center is (325, 325) in viewport coords — same in
     // board-relative coords since the harness root is at 0,0.
     renderWithProviders(wrapWithRegistry(<Harness gameId={1} />, registry), {
       preloadedState: stateWithOneArrow(),

@@ -77,7 +77,7 @@ describe('CardSlot', () => {
 
   it('renders the annotation pill for an enemy\'s card on the local battlefield', () => {
     // The server populates card.annotation whenever the card's owner differs
-    // from the controller â€” including stolen / cloned cards on YOUR table.
+    // from the controller — including stolen / cloned cards on YOUR table.
     const card = makeCard({ annotation: 'Owner: Bob' });
     render(<CardSlot card={card} zone={Enriched.ZoneName.TABLE} />);
     expect(screen.getByText('Bob')).toBeInTheDocument();
