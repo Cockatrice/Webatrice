@@ -1,11 +1,31 @@
 name: Release
 
+# Two release flows in one workflow:
+#   - libraries: Changesets-driven publishing of @cockatrice/sockatrice +
+#     @cockatrice/datatrice to GitHub Packages. Runs automatically on every
+#     push to master (opens/updates a "Version Packages" PR when changesets
+#     are pending; publishes when that PR is merged). Can also be invoked
+#     manually with `target=libraries`.
+#   - app: manual Webatrice app release. Bumps the root package.json,
+#     builds, packages the build/ directory as a tarball, and creates a
+#     GitHub Release that deploy.yml then consumes.
+
 on:
+  push:
+    branches: [master]
   workflow_dispatch:
     inputs:
-      bump:
-        description: 'Version bump'
+      target:
+        description: 'What to release'
         required: true
+        default: 'libraries'
+        type: choice
+        options:
+          - libraries
+          - app
+      bump:
+        description: 'App version bump (only used when target=app)'
+        required: false
         default: 'patch'
         type: choice
         options:
@@ -14,12 +34,51 @@ on:
           - major
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  release:
-    if: github.ref == 'refs/heads/master'
+  libraries:
+    name: Publish libraries (Changesets)
+    if: ${{ github.event_name == 'push' || github.event.inputs.target == 'libraries' }}
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      packages: write
+    steps:
+      - name: Checkout (with submodules)
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          submodules: true
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: package-lock.json
+          registry-url: https://npm.pkg.github.com
+          scope: '@cockatrice'
+
+      - name: Install dependencies
+        run: npm clean-install
+
+      - name: Create Release PR or publish to GitHub Packages
+        uses: changesets/action@v1
+        with:
+          publish: npx changeset publish
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  app:
+    name: Build & release Webatrice app
+    if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.target == 'app' && github.ref == 'refs/heads/master' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout (with submodules)
         uses: actions/checkout@v6
@@ -28,13 +87,12 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      # Node 24 to match Webatrice's own ci.yml (siblings use 20 as their baseline).
       - name: Setup Node
         uses: actions/setup-node@v6
         with:
           node-version: 24
-          cache: 'npm'
-          cache-dependency-path: 'package-lock.json'
+          cache: npm
+          cache-dependency-path: package-lock.json
 
       - name: Install dependencies
         run: npm clean-install

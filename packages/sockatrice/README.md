@@ -1,45 +1,40 @@
 # Sockatrice
 
-WebSocket client layer for [Cockatrice](https://github.com/Cockatrice/Cockatrice),
-extracted from the webclient and distributed as standalone tarball releases on
-GitHub.
+WebSocket client layer for [Cockatrice](https://github.com/Cockatrice/Cockatrice).
+Developed inside the [Webatrice monorepo](https://github.com/Cockatrice/Webatrice) and published independently to GitHub Packages.
 
 ## Installation
 
-Sockatrice is published as a tarball asset on each GitHub Release (not to
-npmjs.com). Install a specific version directly from its release URL:
+Sockatrice is published to **GitHub Packages** under the `@cockatrice` scope.
+Add this to your project's `.npmrc`:
 
-```sh
-npm install https://github.com/Cockatrice/Sockatrice/releases/download/v1.2.3/cockatrice-sockatrice-1.2.3.tgz
+```
+@cockatrice:registry=https://npm.pkg.github.com
 ```
 
-The URL is recorded in your `package.json` and `package-lock.json`; upgrade by
-replacing it with the next release. No registry account or authentication is
-required. The tarball install does **not** run the `prepare` script, so
-consumers do not need git submodules or `buf`.
-
-Available releases: <https://github.com/Cockatrice/Sockatrice/releases>
-
-## First-run setup
+…and authenticate with a GitHub personal access token that has the
+`read:packages` scope (see [GitHub's docs][gh-pkg-auth]). Then:
 
 ```sh
-git clone <sockatrice-url> Sockatrice
-cd Sockatrice
-npm install
+npm install @cockatrice/sockatrice
 ```
 
-`npm install` triggers the `prepare` script, which:
+[gh-pkg-auth]: https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-npm-registry#authenticating-to-github-packages
 
-1. Initializes the `vendor/cockatrice` submodule with sparse-checkout so only
-   `libcockatrice_protocol/` is materialized.
-2. Runs `buf generate` to populate `src/generated/` from the proto sources.
+## Development (inside the Webatrice monorepo)
 
-If you ever need to refresh the submodule or regenerate manually:
+Sockatrice lives at `packages/sockatrice/` in the [Webatrice monorepo](https://github.com/Cockatrice/Webatrice). Clone the monorepo, then:
 
 ```sh
-npm run proto:submodule
-npm run proto:generate
+npm install                                            # at the monorepo root
+npm run -w @cockatrice/sockatrice proto:generate       # populates src/generated/
+npm run -w @cockatrice/sockatrice build
 ```
+
+The root `npm install` runs `assets:submodule`, which initializes the
+shared `vendor/cockatrice` submodule with a sparse-checkout that includes
+`libcockatrice_protocol/`. `proto:generate` then runs `buf generate`
+against those proto sources into `src/generated/`.
 
 ## Scripts
 
@@ -48,8 +43,8 @@ npm run proto:generate
 | `npm test` | Unit tests (vitest, jsdom). |
 | `npm run test:integration` | Integration tests against a mocked WebSocket. |
 | `npm run lint` | ESLint with module boundaries. |
-| `npm run build` | Bundles ESM via `tsup`, then emits `.d.ts` via `tsc --emitDeclarationOnly`. Proto generation runs separately in `npm run prepare` (on install). |
-| `npm run proto:generate` | Runs `buf generate`. |
+| `npm run build` | Runs `proto:generate` via the `prebuild` hook, bundles ESM with `tsup`, then emits `.d.ts` via `tsc --emitDeclarationOnly`. |
+| `npm run proto:generate` | Runs `buf generate` from `../../vendor/cockatrice/libcockatrice_protocol/` into `src/generated/`. |
 
 ## Public API
 
@@ -78,37 +73,24 @@ import { Command_Login_ext, Command_LoginSchema } from '@cockatrice/sockatrice/g
 
 ## Releasing
 
-Releases are cut by the **Release** GitHub Actions workflow at
-[.github/workflows/release.yml](.github/workflows/release.yml). It runs on
-manual dispatch from the Actions tab on `master` and accepts a `bump` input
-(`patch` / `minor` / `major`).
+Sockatrice and Datatrice both publish via [Changesets](https://github.com/changesets/changesets) from the monorepo's [release.yml](../../.github/workflows/release.yml). The mechanics are documented at [`.changeset/README.md`](../../.changeset/README.md); the short version:
 
-The workflow:
+1. After a change, run `npx changeset` at the monorepo root and pick a bump (`patch` / `minor` / `major`) plus a summary.
+2. Commit the resulting `.changeset/*.md` file alongside your code change and merge.
+3. The release workflow opens a **"Version Packages"** PR that consumes pending changesets, bumps versions, and updates each library's `CHANGELOG.md`.
+4. Merging that PR triggers a publish to GitHub Packages.
 
-1. Checks out the repo with submodules.
-2. Runs `npm run lint`, `npm run test:coverage`, and
-   `npm run test:integration:coverage`. Coverage thresholds in
-   [vitest.config.ts](vitest.config.ts) and
-   [vitest.integration.config.ts](vitest.integration.config.ts) gate the
-   release.
-3. Bumps the version with `npm version <bump>`, which creates a commit and an
-   annotated tag.
-4. Runs `npm pack` (which triggers `prepack` → `npm run build`) to produce
-   `cockatrice-sockatrice-<version>.tgz`.
-5. Pushes the version commit and tag back to `master`.
-6. Creates a GitHub Release with the `.tgz` attached as an asset.
+## Semver policy
 
-To reproduce a packaging step locally:
+A **major** bump is required when any of these change:
 
-```sh
-npm run lint
-npm run test:coverage
-npm run pack    # → cockatrice-sockatrice-<version>.tgz in repo root
-```
+- `PROTOCOL_VERSION` — desktop/server compatibility break.
+- The `IWebClientResponse` interface (shape, method signatures, removals).
+- Any exported type or function signature reachable via the `exports` map (`.`, `./generated`, `./types`, `./testing`, `./testing/setup-hooks`).
 
-`npm pack` runs the `prepare` script first (proto submodule + buf generate) and
-then `prepack` (the build). Without git available or the submodule initialized,
-`src/generated/` will be empty and the build will fail.
+**Minor** bumps cover additive exports, additive proto fields, and new optional methods. **Patch** bumps cover bug fixes and internal refactors with no surface change.
+
+A Sockatrice **minor** automatically cascades a Datatrice **minor** (its `Enriched.*` types embed Sockatrice protobuf types — a minor surface change here is a visible surface change there). A Sockatrice **major** does NOT auto-cascade Datatrice major — author a paired Datatrice changeset by hand.
 
 ## License
 

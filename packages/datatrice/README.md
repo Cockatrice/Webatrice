@@ -16,13 +16,43 @@ const buddies = server.selectors.selectBuddyList(store.getState());
 
 ## Install
 
-Distributed as a `.tgz` via GitHub Releases (no npm registry):
+Datatrice is published to **GitHub Packages** under the `@cockatrice` scope. Add this to your project's `.npmrc`:
 
-```sh
-npm install https://github.com/Cockatrice/Datatrice/releases/download/v1.0.0/cockatrice-datatrice-1.0.0.tgz
+```
+@cockatrice:registry=https://npm.pkg.github.com
 ```
 
-You also need to install [Sockatrice](https://github.com/Cockatrice/Sockatrice) (peer dependency) and `@reduxjs/toolkit`.
+…and authenticate with a GitHub personal access token that has the `read:packages` scope (see [GitHub's docs][gh-pkg-auth]). Then:
+
+```sh
+npm install @cockatrice/datatrice @cockatrice/sockatrice @reduxjs/toolkit
+```
+
+`@cockatrice/sockatrice` and `@reduxjs/toolkit` are peer dependencies; `react` + `react-redux` are optional peers (only needed if you use `@cockatrice/datatrice/react`).
+
+[gh-pkg-auth]: https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-npm-registry#authenticating-to-github-packages
+
+## Development (inside the Webatrice monorepo)
+
+Datatrice lives at `packages/datatrice/` in the [Webatrice monorepo](https://github.com/Cockatrice/Webatrice). After cloning and `npm install` at the root:
+
+```sh
+npm run -w @cockatrice/datatrice test
+npm run -w @cockatrice/datatrice build
+```
+
+Datatrice's build depends on Sockatrice's `dist/`, so run `npm run -w @cockatrice/sockatrice build` first if you're starting from a clean checkout.
+
+## Semver policy
+
+A **major** bump is required when any of these change:
+
+- The `Enriched.*` shapes consumers depend on (these embed Sockatrice protobuf types, so a Sockatrice **major** typically forces a Datatrice **major** too — author a paired changeset).
+- The `App.*` enum surface.
+- `attachResponseHandlers` or any exported store/action/selector signature.
+- Any export reachable via the `exports` map (`.`, `./react`, `./types`, `./testing`).
+
+**Minor** bumps cover additive exports and new optional fields. **Patch** bumps cover bug fixes and internal refactors with no surface change. A Sockatrice **minor** automatically cascades a Datatrice **minor** via Changesets (`updateInternalDependencies: minor`).
 
 ## Public API
 
