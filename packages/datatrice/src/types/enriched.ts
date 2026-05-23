@@ -11,7 +11,7 @@ import type {
 } from '@cockatrice/sockatrice/generated';
 
 // @critical `info` is the wire snapshot; repeated collections on it go stale. Read normalized siblings.
-// See .github/instructions/store.instructions.md#data-structure-invariants.
+// See .github/instructions/datatrice-store.instructions.md#data-structure-invariants.
 
 export interface GametypeMap { [index: number]: string }
 
@@ -33,7 +33,7 @@ export type Message = Event_RoomSay & {
 };
 
 // @critical `info` = wire snapshot at join time; top-level twins hold live values updated by game events.
-// See .github/instructions/store.instructions.md#data-structure-invariants.
+// See .github/instructions/datatrice-store.instructions.md#data-structure-invariants.
 export interface GameEntry {
   info: ServerInfo_Game;
 

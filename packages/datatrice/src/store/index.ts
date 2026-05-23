@@ -12,11 +12,7 @@ export * as server from './server';
 export * as rooms from './rooms';
 export * as games from './games';
 
-// Flat type re-exports for slice state shapes. Use these in type positions
-// (`const x: GamesState`, `type T = { games: GamesState }`). tsup's bundling
-// of `export * as X` namespaces declares type-only members as `typeof X`,
-// which prevents `games.GamesState` from being usable as a type at the
-// consumer site. The flat re-exports below sidestep that surface.
+// Flat type re-exports — sidestep tsup's namespace-of-types limitation. See .github/instructions/datatrice-store.instructions.md#slice-authoring.
 export type { GamesState } from './games/game.interfaces';
 export type { RoomsState, GameFilters, JoinGameError } from './rooms/rooms.interfaces';
 export type {

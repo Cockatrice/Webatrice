@@ -50,7 +50,7 @@ export function normalizeLogs(logs: Data.ServerInfo_ChatMessage[]): Enriched.Log
 }
 
 // @critical Server omits `name` on messages from the current user; preserves that as a no-op.
-// See .github/instructions/root.instructions.md#protocol-quirks.
+// See .github/instructions/datatrice.instructions.md#protocol-quirks.
 export function normalizeUserMessage(message: Enriched.Message): Enriched.Message {
   if (!message.name) {
     return message;

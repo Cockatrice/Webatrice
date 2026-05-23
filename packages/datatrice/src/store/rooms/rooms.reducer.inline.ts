@@ -38,12 +38,7 @@ export function removeGameFromRooms(state: RoomsState, gameId: number): void {
   }
 }
 
-// Reducers extracted into typed CaseReducer constants. Inlining all of these
-// into the createSlice call triggers TS7056 — TypeScript can infer the
-// resulting Slice type but it exceeds the serializer's length limit when the
-// declaration is written out. Naming each reducer with an explicit
-// CaseReducer<S, A> annotation collapses each one into a small named type,
-// and the resulting Slice declaration stays small enough to serialize.
+// Typed CaseReducer extraction avoids TS7056. See .github/instructions/datatrice-store.instructions.md#slice-authoring.
 
 export const clearStore: CaseReducer<RoomsState> = () => initialState;
 

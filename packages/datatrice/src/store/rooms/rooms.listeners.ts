@@ -19,16 +19,7 @@ export function registerRoomsListeners(mw: ListenerMiddlewareInstance<unknown>):
         const rawGametypeList = rawRoom.gametypeList ?? [];
 
         if (existing) {
-          // Partial merge — UPDATE_ROOMS sets only changed fields.
-          // Cockatrice's server_room.cpp addClient/removeClient emits
-          // Event_ListRooms with only room_id/player_count/game_count
-          // populated. A wholesale info replacement would blank out
-          // name/description/permissionlevel until the next full listing.
-          // mergeSetFields uses bufbuild's isFieldSet so only server-populated
-          // fields propagate; the rest of the existing info is preserved.
-          // Runs HERE rather than inside the primitive because Immer drafts
-          // redux state but does NOT understand protobuf-es message shapes —
-          // we build the next info object outside the reducer.
+          // Sparse mergeSetFields outside the reducer (Immer doesn't draft protobuf-es). See .github/instructions/datatrice-store.instructions.md#reducer-author-hazards.
           const nextInfo = { ...existing.info } as Data.ServerInfo_Room;
           mergeSetFields(Data.ServerInfo_RoomSchema, nextInfo, rawRoom);
           const nextGametypeMap = rawGametypeList.length > 0

@@ -47,6 +47,12 @@ Other invariants:
 - No `getState()` outside the listener middleware.
 - Listener middleware is a singleton; `createStore` wires it once per store instance.
 
+## Protocol quirks
+
+Servatrice protocol behaviors the data layer accommodates:
+
+- **System-injected user messages can omit the username** (ban notifications targeting the current user, server announcements). [src/common/normalizers.ts](../../packages/datatrice/src/common/normalizers.ts) `normalizeUserMessage` preserves the omission as a no-op so the store always holds a clean string regardless of whether the server attributes the message to a user.
+
 ## Build, test, release
 
 | Command | Purpose |

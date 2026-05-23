@@ -123,12 +123,7 @@ export function registerGameListeners(mw: ListenerMiddlewareInstance<unknown>): 
       const wasStarted = game.started;
 
       if (data.playerList?.length > 0) {
-      // Cockatrice's Server_Game::sendGameStateToPlayers (server_game.cpp:280)
-      // always emits playerList with withUserInfo=false, so the wire payload's
-      // properties.userInfo is undefined for every player on resync (game
-      // start, post-concede/unconcede, etc.). Carry the previously-known
-      // userInfo forward per playerId so names don't flip to "(unknown)" mid-
-      // game. Individual Event_PlayerJoined still carries full userInfo.
+      // gameStateChanged resync: carry prior userInfo forward. See .github/instructions/datatrice-game.instructions.md#servatrice-game-event-quirks.
         const previous = game.players;
         const next = normalizePlayers(data.playerList);
         for (const idStr of Object.keys(next)) {
@@ -141,11 +136,7 @@ export function registerGameListeners(mw: ListenerMiddlewareInstance<unknown>): 
         api.dispatch(Actions.gamePlayersReplaced({ gameId, players: next }));
       }
 
-      // proto3 default-zero rules: each scalar field reads as 0/false even
-      // when the server didn't intend to update it. `isFieldSet` distinguishes
-      // "explicitly set" from "left at default" by inspecting the bufbuild
-      // tracking bits; only fields the server actually populated propagate
-      // into the primitive payload.
+      // isFieldSet distinguishes "set" from "default"; see .github/instructions/datatrice-store.instructions.md#reducer-author-hazards.
       let nextStarted = wasStarted;
       const update: {
       gameId: number;
@@ -176,9 +167,7 @@ export function registerGameListeners(mw: ListenerMiddlewareInstance<unknown>): 
         api.dispatch(Actions.gameInfoUpdated(update));
       }
 
-      // System log on the wasStarted→started edge. The transition is computed
-      // from pre-mutation state, so it must be observed in the listener
-      // before the scalar update primitive applies.
+      // Pre-mutation read for the wasStarted→started log edge. See .github/instructions/datatrice-game.instructions.md#listener-patterns.
       if (!wasStarted && nextStarted) {
         api.dispatch(Actions.gameMessageAppended({
           gameId,
@@ -284,18 +273,7 @@ export function registerGameListeners(mw: ListenerMiddlewareInstance<unknown>): 
       }
       const sourceCardName = card.name;
 
-      // Cockatrice/Servatrice gap-fill: desktop's `actUnattach` sends
-      // Event_AttachCard with target_* fields unset. proto3 surfaces unset
-      // numerics as 0 and strings as '', not -1 — so we cannot distinguish
-      // "explicit attach to player 0 / card 0" from "unset" by looking at the
-      // numerics alone. Detect the unattach intent via empty `targetZone` (a
-      // real attach always specifies a zone) and write -1 / '' / -1
-      // explicitly so downstream consumers (`isAttachedChild` in
-      // useBattlefield) recognize the card as detached and re-render it in
-      // its own lane. The protobuf-safe `byId[cardId] = { ...card, ...fields }`
-      // reassignment is owned by the `cardFieldsUpdated` primitive (see the
-      // comment on that primitive for the Immer-doesn't-draft-protobuf
-      // rationale).
+      // Unattach detected via empty targetZone; explicit sentinels. See .github/instructions/datatrice-game.instructions.md#servatrice-game-event-quirks.
       const isUnattach = !targetZone;
       const fields: Partial<Data.ServerInfo_Card> = isUnattach
         ? { attachPlayerId: -1, attachZone: '', attachCardId: -1 }
@@ -336,13 +314,7 @@ export function registerGameListeners(mw: ListenerMiddlewareInstance<unknown>): 
         }));
       }
 
-      // Cockatrice/Servatrice gap-fill: when `drawCount > cards.length` the
-      // server has emitted an authoritative count change without revealing
-      // the corresponding card objects (opponent draws — own draws emit
-      // `cards.length === drawCount`). Each `cardInsertedIntoZone` above
-      // raised hand.cardCount by 1 for the visible cards; raise the count
-      // for the remaining hidden slots so the sum equals +drawCount, matching
-      // the pre-refactor `handZone.cardCount += drawCount` semantics.
+      // Opponent draws: bump cardCount for hidden slots. See .github/instructions/datatrice-game.instructions.md#servatrice-game-event-quirks.
       if (drawCount > cards.length) {
         api.dispatch(Actions.zoneCardCountAdjusted({
           gameId, playerId, zoneName: Enriched.ZoneName.HAND,
@@ -394,8 +366,7 @@ export function registerGameListeners(mw: ListenerMiddlewareInstance<unknown>): 
       if (!game || !zone) {
         return;
       }
-      // Capture the destroyed card's name from pre-mutation state for the log.
-      // The primitive below splices it out of byId, so post-state would lose it.
+      // Pre-mutation read for log. See .github/instructions/datatrice-game.instructions.md#listener-patterns.
       const destroyedName = zone.byId[cardId]?.name;
       api.dispatch(Actions.cardRemovedFromZone({ gameId, playerId, zoneName, cardId }));
 
@@ -591,10 +562,7 @@ export function registerGameListeners(mw: ListenerMiddlewareInstance<unknown>): 
     actionCreator: Actions.playerLeft,
     effect: (action, api) => {
       const { gameId, playerId, reason } = action.payload;
-      // CRITICAL: read pre-mutation state. The reducer deletes the player, so
-      // post-state has no `player.properties.userInfo.name` to recover. The
-      // `formatLeaveMessage` fallback to 'Unknown player' must be applied here
-      // (matches pre-refactor reducer behavior).
+      // @critical Pre-mutation read; reducer deletes the player. See .github/instructions/datatrice-game.instructions.md#listener-patterns.
       const preState = api.getOriginalState() as { games: GamesState };
       const preGame = preState.games.games[gameId];
       if (!preGame) {

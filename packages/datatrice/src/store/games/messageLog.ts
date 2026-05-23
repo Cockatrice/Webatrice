@@ -1,6 +1,7 @@
 import { App, Data, Enriched } from '../../types';
 
 // @critical proto2 wire default for GameEvent.player_id — must be -1, not 0. 0 is a valid player id.
+// See .github/instructions/datatrice-game.instructions.md#servatrice-game-event-quirks.
 export const EVENT_PLAYER_ID_SYSTEM = -1;
 
 function nameOf(game: Enriched.GameEntry, playerId: number): string {

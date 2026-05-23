@@ -22,10 +22,7 @@ export const storeMiddlewareOptions = {
 
 let listenersRegistered = false;
 function ensureListenersRegistered(): void {
-  // listenerMiddleware is a module-scoped singleton; registering twice
-  // would attach the same listeners again and double-dispatch every
-  // matching action. The guard makes `createStore()` callable more than
-  // once per process (handy for tests) without that hazard.
+  // See .github/instructions/datatrice.instructions.md#initialization-order.
   if (listenersRegistered) {
     return;
   }
