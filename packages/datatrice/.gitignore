@@ -1,0 +1,20 @@
+node_modules/
+coverage/
+dist/
+
+# IDE
+.vs/
+.vscode/
+.idea/
+.claude/settings.local.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+npm-debug.log*
+*.log
+
+# Local tarballs
+datatrice-*.tgz
