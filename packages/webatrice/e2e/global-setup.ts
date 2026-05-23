@@ -3,10 +3,10 @@
 // Servatrice emits on a new connection is its `Event_ServerIdentification`,
 // so receiving any data within the timeout means it is fully ready.
 //
-// `e2e/docker/docker-compose.e2e.yml` already waits for MySQL inside the
-// container before launching servatrice, but `up -d` returns as soon as the
-// containers exist — not when the binary is ready to accept clients. Hence
-// the additional poll here.
+// The shared e2e compose at `docker/servatrice/docker-compose.e2e.yml`
+// already waits for MySQL inside the container before launching servatrice,
+// but `up -d` returns as soon as the containers exist — not when the binary
+// is ready to accept clients. Hence the additional poll here.
 
 import WebSocket from 'ws';
 
@@ -40,6 +40,6 @@ export default async function globalSetup(): Promise<void> {
   }
   throw new Error(
     `Servatrice did not become ready on ${E2E_WS_URL} within ${READINESS_TIMEOUT_MS}ms. ` +
-    'Did `npm run test:e2e:up` finish? Check `docker compose -f e2e/docker/docker-compose.e2e.yml logs`.',
+    'Did `npm run test:e2e:up` finish? Check `npm run test:e2e:up` output and `docker compose --env-file ../../.env.e2e --env-file .env.e2e -f ../../docker/servatrice/docker-compose.e2e.yml logs`.',
   );
 }

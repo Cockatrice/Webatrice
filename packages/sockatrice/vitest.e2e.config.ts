@@ -1,7 +1,9 @@
 // End-to-end test suite. Specs (e2e/specs/**/*.spec.ts) run against a real
-// Servatrice (+ MySQL) stood up via e2e/docker/docker-compose.e2e.yml, using
-// the `ws` package as the WebSocket implementation. They run sequentially in a
-// single fork because they share one server and the WebClient singleton.
+// Servatrice (+ MySQL) stood up via the shared compose at
+// docker/servatrice/docker-compose.e2e.yml (see e2e/docker/.env for the per-
+// package project name + host port), using the `ws` package as the WebSocket
+// implementation. They run sequentially in a single fork because they share
+// one server and the WebClient singleton.
 // Coverage is disabled — this suite is measured by user-flow coverage, not
 // line %.
 
