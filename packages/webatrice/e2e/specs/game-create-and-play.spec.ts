@@ -26,29 +26,42 @@ test('two clients create+join, load decks, draw, play, end turn', async ({ brows
     const hostPage = await hostCtx.newPage();
     const joinerPage = await joinerCtx.newPage();
 
-    const host = await registerAndJoinFirstRoom(hostPage);
-    const joiner = await registerAndJoinFirstRoom(joinerPage);
+    const [host, joiner] = await Promise.all([
+      registerAndJoinFirstRoom(hostPage),
+      registerAndJoinFirstRoom(joinerPage),
+    ]);
 
     const gameDescription = `e2e-${randomSuffix()}`;
 
     await host.rooms.createGame(gameDescription, { maxPlayers: 2, spectatorsAllowed: true });
     const hostGame = new GamePage(hostPage);
-    await hostGame.deckSelect.waitForOpen();
-
     await joiner.rooms.joinGame(gameDescription);
     const joinerGame = new GamePage(joinerPage);
-    await joinerGame.deckSelect.waitForOpen();
+    await Promise.all([
+      hostGame.deckSelect.waitForOpen(),
+      joinerGame.deckSelect.waitForOpen(),
+    ]);
 
-    await hostGame.deckSelect.loadDeckFile(DECK_PATH);
-    await hostGame.deckSelect.submitDeck();
-    await joinerGame.deckSelect.loadDeckFile(DECK_PATH);
-    await joinerGame.deckSelect.submitDeck();
+    await Promise.all([
+      (async () => {
+        await hostGame.deckSelect.loadDeckFile(DECK_PATH);
+        await hostGame.deckSelect.submitDeck();
+      })(),
+      (async () => {
+        await joinerGame.deckSelect.loadDeckFile(DECK_PATH);
+        await joinerGame.deckSelect.submitDeck();
+      })(),
+    ]);
 
-    await hostGame.deckSelect.setReady();
-    await joinerGame.deckSelect.setReady();
+    await Promise.all([
+      hostGame.deckSelect.setReady(),
+      joinerGame.deckSelect.setReady(),
+    ]);
 
-    await hostGame.waitForBoard();
-    await joinerGame.waitForBoard();
+    await Promise.all([
+      hostGame.waitForBoard(),
+      joinerGame.waitForBoard(),
+    ]);
 
     await hostGame.drawCard();
     await hostGame.endTurn();
