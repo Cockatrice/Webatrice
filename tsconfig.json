@@ -1,54 +1,7 @@
 {
-  "compilerOptions": {
-    "target": "es2020",
-    "lib": [
-      "dom",
-      "dom.iterable",
-      "esnext"
-    ],
-    "typeRoots": [
-      "node_modules/@types"
-    ],
-    "types": ["node"],
-    "allowJs": true,
-    "skipLibCheck": true,
-    "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true,
-    "strict": false,
-    "forceConsistentCasingInFileNames": true,
-    "module": "esnext",
-    "moduleResolution": "bundler",
-    "resolveJsonModule": true,
-    "isolatedModules": true,
-    "noEmit": true,
-    "jsx": "react-jsx",
-    "noFallthroughCasesInSwitch": false,
-    "paths": {
-      "@app/components": ["./src/components/index.ts"],
-      "@app/dialogs": ["./src/dialogs/index.ts"],
-      "@app/hooks": ["./src/hooks/index.ts"],
-      "@app/images": ["./src/images/index.ts"],
-      "@app/services": ["./src/services/index.ts"],
-      "@app/feature-wrappers/layout": ["./src/feature-wrappers/layout/index.ts"],
-      "@app/features/account": ["./src/features/account/index.ts"],
-      "@app/features/decks": ["./src/features/decks/index.ts"],
-      "@app/features/game": ["./src/features/game/index.ts"],
-      "@app/features/logs": ["./src/features/logs/index.ts"],
-      "@app/features/login": ["./src/features/login/index.ts"],
-      "@app/features/player": ["./src/features/player/index.ts"],
-      "@app/features/rooms": ["./src/features/rooms/index.ts"],
-      "@app/features/server": ["./src/features/server/index.ts"],
-      "@app/features/settings": ["./src/features/settings/index.ts"],
-      "@app/features/shell": ["./src/features/shell/index.ts"],
-      "@app/feature-widgets/card-import": ["./src/feature-widgets/card-import/index.ts"],
-      "@app/feature-widgets/known-hosts": ["./src/feature-widgets/known-hosts/index.ts"],
-      "@app/feature-widgets/shortcuts": ["./src/feature-widgets/shortcuts/index.ts"],
-      "@app/store": ["./src/store/index.ts"],
-      "@app/types": ["./src/types/index.ts"],
-      "@app/utils": ["./src/utils/index.ts"]
-    }
-  },
-  "include": [
-    "src"
+  "files": [],
+  "references": [
+    { "path": "./packages/sockatrice/tsconfig.build.json" },
+    { "path": "./packages/datatrice/tsconfig.build.json" }
   ]
 }

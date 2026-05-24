@@ -1,0 +1,86 @@
+import { useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
+import Button from '@mui/material/Button';
+import Chip from '@mui/material/Chip';
+import Dialog from '@mui/material/Dialog';
+import DialogActions from '@mui/material/DialogActions';
+import DialogContent from '@mui/material/DialogContent';
+import DialogTitle from '@mui/material/DialogTitle';
+import Typography from '@mui/material/Typography';
+
+import { shortcuts, useAppDispatch, useAppSelector } from '@app/store';
+
+import { displaySequence } from '../shortcutSequence';
+import { ActionId } from '../types';
+
+interface SequenceEditProps {
+  actionId: ActionId;
+  onClose: () => void;
+}
+
+const SequenceEdit = ({ actionId, onClose }: SequenceEditProps) => {
+  const { t } = useTranslation();
+  const dispatch = useAppDispatch();
+  const sequences = useAppSelector(shortcuts.Selectors.getRecordingSequences);
+  const recordingActionId = useAppSelector(shortcuts.Selectors.getRecordingActionId);
+
+  // Start recording on open. The cleanup cancels recording so leaving the dialog any
+  // way (Save, Cancel, dismiss) clears the slice's capture state.
+  useEffect(() => {
+    dispatch(shortcuts.Actions.startRecording({ actionId }));
+    return () => {
+      dispatch(shortcuts.Actions.cancelRecording());
+    };
+  }, [dispatch, actionId]);
+
+  // Slice flip to null while mounted = user dismiss (Esc). Branch on captured recordingActionId, not a mount sentinel (StrictMode-safe).
+  const hasRecorded = useRef(false);
+  useEffect(() => {
+    if (recordingActionId !== null) {
+      hasRecorded.current = true;
+      return;
+    }
+    if (hasRecorded.current) {
+      onClose();
+    }
+  }, [recordingActionId, onClose]);
+
+  const handleSave = () => {
+    dispatch(shortcuts.Actions.setOverride({ actionId, sequences }));
+    onClose();
+  };
+
+  return (
+    <Dialog open onClose={onClose} maxWidth="xs" fullWidth>
+      <DialogTitle>{t(`ShortcutsTab.action.${actionId}`)}</DialogTitle>
+      <DialogContent>
+        <Typography variant="body2">{t('ShortcutsTab.recording')}</Typography>
+        <div className="SequenceEdit__chips">
+          {sequences.length === 0 ? (
+            <span className="SequenceEdit__placeholder">{t('ShortcutsTab.noBinding')}</span>
+          ) : (
+            sequences.map((seq) => (
+              <Chip
+                key={seq}
+                label={displaySequence(seq)}
+                size="small"
+                onDelete={() => dispatch(shortcuts.Actions.removeCapturedSequence({ sequence: seq }))}
+              />
+            ))
+          )}
+        </div>
+        <Typography variant="caption" color="text.secondary">
+          {t('ShortcutsTab.recordingHint')}
+        </Typography>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>{t('ShortcutsTab.cancel')}</Button>
+        <Button variant="contained" color="primary" onClick={handleSave}>
+          {t('ShortcutsTab.save')}
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+};
+
+export default SequenceEdit;

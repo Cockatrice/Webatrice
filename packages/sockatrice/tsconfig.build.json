@@ -1,0 +1,23 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "composite": true,
+    "noEmit": false,
+    "rootDir": "src",
+    "outDir": "dist",
+    "declaration": true,
+    "declarationMap": false,
+    "sourceMap": true,
+    "inlineSources": true,
+    "tsBuildInfoFile": "dist/.tsbuildinfo"
+  },
+  "exclude": [
+    "**/*.spec.ts",
+    "**/__mocks__/**",
+    "**/__test-utils__/**",
+    "src/setupTests.ts",
+    "integration/**",
+    "node_modules",
+    "dist"
+  ]
+}

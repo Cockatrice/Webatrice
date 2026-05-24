@@ -1,0 +1,99 @@
+{
+  "name": "@cockatrice/datatrice",
+  "version": "4.0.0",
+  "description": "Redux Toolkit server-data layer for Sockatrice-based webclients",
+  "license": "GPL-2.0-or-later",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Cockatrice/Datatrice.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Cockatrice/Datatrice/issues"
+  },
+  "homepage": "https://github.com/Cockatrice/Datatrice#readme",
+  "engines": {
+    "node": ">=20"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./react": {
+      "types": "./dist/react/index.d.ts",
+      "import": "./dist/react/index.js"
+    },
+    "./types": {
+      "types": "./dist/types/index.d.ts",
+      "import": "./dist/types/index.js"
+    },
+    "./testing": {
+      "types": "./dist/testing/index.d.ts",
+      "import": "./dist/testing/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc -p tsconfig.build.json --noEmit",
+    "lint": "eslint src",
+    "lint:fix": "eslint src --fix",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
+    "test:coverage": "vitest run --coverage",
+    "test:integration:coverage": "vitest run --config vitest.integration.config.ts --coverage",
+    "golden": "npm run lint && npm run test && npm run test:integration",
+    "golden:coverage": "npm run lint && npm run test:coverage && npm run test:integration:coverage",
+    "prepack": "npm run build",
+    "pack": "npm pack"
+  },
+  "peerDependencies": {
+    "@bufbuild/protobuf": "^2.11.0",
+    "@reduxjs/toolkit": "^2.11.2",
+    "@cockatrice/sockatrice": "^4.0.0"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    },
+    "react-redux": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@bufbuild/protobuf": "^2.11.0",
+    "@eslint/js": "^9.39.4",
+    "@reduxjs/toolkit": "^2.11.2",
+    "@testing-library/react": "^16.3.2",
+    "@types/node": "^22.19.17",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.3",
+    "@vitest/coverage-v8": "^4.1.4",
+    "eslint": "^9.39.4",
+    "eslint-import-resolver-typescript": "^4.4.4",
+    "eslint-plugin-boundaries": "^6.0.2",
+    "eslint-plugin-import": "^2.32.0",
+    "globals": "^17.5.0",
+    "jsdom": "^29.1.1",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6",
+    "react-redux": "^9.2.0",
+    "tsup": "^8.5.1",
+    "typescript": "~6.0",
+    "typescript-eslint": "^8.58.2",
+    "vitest": "^4.1.4"
+  },
+  "keywords": [
+    "cockatrice",
+    "redux",
+    "sockatrice"
+  ],
+  "author": ""
+}

@@ -1,0 +1,71 @@
+# Shared e2e stack consumed by both @cockatrice/webatrice and @cockatrice/sockatrice.
+#
+# Two env files are passed at invocation time:
+#   * root `.env.e2e` carries SERVATRICE_IMAGE (shared image-tag pin)
+#   * per-package `packages/<pkg>/.env.e2e` carries COMPOSE_PROJECT_NAME +
+#     E2E_SERVATRICE_PORT (per-package values)
+# Invocation shape from a package root:
+#   docker compose --env-file ../../.env.e2e --env-file .env.e2e \
+#     -f ../../docker/servatrice/docker-compose.e2e.yml ...
+# The compose project name namespaces all containers and volumes, so the two
+# packages can run their e2e stacks concurrently without collision.
+#
+# Servatrice is consumed as the published `ghcr.io/cockatrice/servatrice` image
+# (built and pushed by Cockatrice's docker-release.yml on every tagged release).
+# No C++ source build, no submodule dependency for the e2e stack.
+#
+# `servatrice.sql` is sourced from the servatrice image itself: `make install`
+# in Cockatrice's Dockerfile places it at /usr/local/share/servatrice/
+# servatrice.sql. The `servatrice-sql` sidecar below copies it into a named
+# volume that MySQL mounts at /docker-entrypoint-initdb.d/ so the schema is
+# loaded on first start. The image tag is the single source of truth for the
+# SQL schema version — binary and schema can't drift.
+
+x-servatrice: &servatrice-image
+  image: ${SERVATRICE_IMAGE}
+  pull_policy: always
+
+services:
+  servatrice-sql:
+    <<: *servatrice-image
+    entrypoint: ["/bin/sh", "-c"]
+    command: ["cp /usr/local/share/servatrice/servatrice.sql /init/servatrice.sql"]
+    volumes:
+      - servatrice_sql:/init
+    restart: "no"
+
+  mysql:
+    image: mysql:8
+    command: --sql_mode=
+    environment:
+      MYSQL_ROOT_PASSWORD: root-password
+      MYSQL_DATABASE: servatrice
+      MYSQL_USER: servatrice
+      MYSQL_PASSWORD: password
+    depends_on:
+      servatrice-sql:
+        condition: service_completed_successfully
+    volumes:
+      - servatrice_sql:/docker-entrypoint-initdb.d:ro
+      - mysql_data:/var/lib/mysql
+
+  servatrice:
+    <<: *servatrice-image
+    depends_on:
+      - mysql
+    ports:
+      - "${E2E_SERVATRICE_PORT}:4748"
+    # Wait for MySQL's TCP port to accept connections before launching
+    # servatrice. The first-time `up` has to load servatrice.sql, which
+    # takes longer than any fixed sleep — without this wait, servatrice
+    # exits silently with code 0 when it can't reach the DB. The trailing
+    # `sleep 2` gives mysqld a moment after the port opens to finish
+    # accepting auth. Each package's global-setup additionally polls the
+    # WebSocket port to avoid races.
+    entrypoint: "/bin/bash -c 'until (echo > /dev/tcp/mysql/3306) 2>/dev/null; do sleep 1; done; sleep 2; servatrice --config /tmp/servatrice.ini --log-to-console'"
+    volumes:
+      - ./servatrice-e2e.ini:/tmp/servatrice.ini:ro
+
+volumes:
+  mysql_data:
+  servatrice_sql:

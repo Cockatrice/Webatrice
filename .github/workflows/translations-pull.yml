@@ -10,6 +10,10 @@ on:
       - '.tx/**'
       - '.github/workflows/translations-pull.yml'
 
+permissions:
+  contents: write
+  pull-requests: write
+
 jobs:
   translations:
     # Do not run the scheduled workflow on forks
@@ -36,7 +40,7 @@ jobs:
         uses: peter-evans/create-pull-request@v8
         with:
           add-paths: |
-            public/locales/*/translation.json
+            packages/webatrice/public/locales/*/translation.json
           commit-message: Update translation files
           # author is the owner of the commit
           author: github-actions <github-actions@github.com>
