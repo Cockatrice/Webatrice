@@ -1,5 +1,11 @@
 # @cockatrice/datatrice
 
+## 4.1.0
+
+### Minor Changes
+
+- 73513b3: Removed the `Data` re-export namespace. Import protobuf types directly from `@cockatrice/sockatrice/generated`.
+
 ## 4.0.0
 
 ### Major Changes

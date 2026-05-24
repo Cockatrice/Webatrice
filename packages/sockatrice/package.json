@@ -1,6 +1,6 @@
 {
   "name": "@cockatrice/sockatrice",
-  "version": "4.0.0",
+  "version": "4.0.1",
   "description": "Websocket integration for Servatrice",
   "license": "GPL-2.0-or-later",
   "repository": {
