@@ -236,12 +236,23 @@ jobs:
           [ -d packages/datatrice/dist ] || npm run -w @cockatrice/datatrice build
           npm run -w @cockatrice/webatrice build
 
+  # Fork point for the e2e sub-graph. Re-emits the gates the e2e jobs need so
+  # they hang off this node instead of `changes` directly — keeps the e2e lane
+  # visually separate from the validation/build lane in the Actions UI.
+  e2e:
+    needs: [changes]
+    runs-on: ubuntu-latest
+    outputs:
+      sockatriceGate: ${{ needs.changes.outputs.sockatriceGate }}
+    steps:
+      - run: echo "e2e gate"
+
   # Sockatrice's WebSocket-level Docker e2e — only when sockatrice or the
   # proto schema changed (expensive).
   sockatrice-e2e:
     name: Sockatrice e2e (Servatrice)
-    needs: [changes]
-    if: needs.changes.outputs.sockatriceGate == 'true'
+    needs: [e2e]
+    if: needs.e2e.outputs.sockatriceGate == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -286,6 +297,7 @@ jobs:
   # UI regressions matter regardless of which package the change touched).
   app-e2e:
     name: App e2e (Playwright + Servatrice)
+    needs: [e2e]
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
