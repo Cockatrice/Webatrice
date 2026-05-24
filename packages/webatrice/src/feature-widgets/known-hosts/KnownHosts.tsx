@@ -91,7 +91,7 @@ const KnownHosts = ({ onChange, error, touched, disabled }: KnownHostsProps) => 
           </div>
         )}
 
-        <InputLabel id="KnownHosts-select">{t('KnownHosts.label')}</InputLabel>
+        <InputLabel id="KnownHosts-label">{t('KnownHosts.label')}</InputLabel>
         <Select
           id="KnownHosts-select"
           labelId="KnownHosts-label"
