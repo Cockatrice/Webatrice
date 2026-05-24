@@ -75,7 +75,7 @@
     "@bufbuild/protoc-gen-es": "^2.11.0",
     "@bufbuild/protoplugin": "^2.11.0",
     "@eslint/js": "^9.39.4",
-    "@types/dompurify": "^3.0.5",
+    "@types/dompurify": "^3.2.0",
     "@types/node": "^22.19.17",
     "@types/ws": "^8.5.12",
     "@vitest/coverage-v8": "^4.1.4",
