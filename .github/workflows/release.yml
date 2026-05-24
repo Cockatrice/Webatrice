@@ -65,6 +65,15 @@ jobs:
       - name: Install dependencies
         run: npm clean-install
 
+      # Changesets publishes in package-graph order, not topological build
+      # order — datatrice's prepack tsup dts build resolves
+      # @cockatrice/sockatrice/types through the workspace symlink, so
+      # sockatrice's dist/ must exist before datatrice publishes.
+      - name: Pre-build libraries (sockatrice → datatrice)
+        run: |
+          npm run -w @cockatrice/sockatrice build
+          npm run -w @cockatrice/datatrice build
+
       - name: Create Release PR or publish to GitHub Packages
         uses: changesets/action@63a615b9cd06ba9a3e6d13796c7fbcb080a60a0b  # v1.8.0
         with:
