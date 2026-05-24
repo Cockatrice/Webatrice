@@ -8,13 +8,15 @@ name: Release
 #     when that PR is merged). Can also be invoked manually with
 #     `target=libraries` for a re-run.
 #
-#   - app: Builds + tarballs @cockatrice/webatrice and creates a GitHub
-#     Release that deploy.yml then consumes. Webatrice is private (not
-#     published to a registry), but Changesets versions its package.json via
-#     `privatePackages.version: true` and tags it via `privatePackages.tag:
-#     true`. This job reads that version, checks if the matching tag/release
-#     already exists, and builds + releases when fresh. Runs on push to
-#     master (idempotent — exits early when nothing to release) or manually.
+#   - app: Builds + tarballs @cockatrice/webatrice and creates the GitHub
+#     Release (and its git tag) that deploy.yml consumes. This job is the
+#     SOLE owner of the @cockatrice/webatrice@<version> release object.
+#     Changesets versions package.json via `privatePackages.version: true`
+#     but does NOT tag (`privatePackages.tag: false`) — that prevents
+#     changesets/action from creating an empty release that would collide
+#     with this job. Runs on push to master (idempotent — exits early when
+#     a release at the current package.json version already exists) or
+#     manually via workflow_dispatch with target=app.
 
 on:
   push:
