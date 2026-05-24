@@ -7,7 +7,7 @@ on:
     - cron: '0 0 15 1,4,7,10 *'
   pull_request:
     paths:
-      - 'packages/webatrice/.tx/**'
+      - '.tx/**'
       - '.github/workflows/translations-pull.yml'
 
 permissions:
@@ -29,11 +29,10 @@ jobs:
       - name: Pull translated strings from Transifex
         uses: transifex/cli-action@v2
         with:
-          # used config file: https://github.com/Cockatrice/Webatrice/blob/master/packages/webatrice/.tx/config
+          # used config file: https://github.com/Cockatrice/Webatrice/blob/master/.tx/config
           # https://github.com/transifex/cli#pulling-files-from-transifex
-          # --root-dir points tx at packages/webatrice/.tx/config (the action runs from repo root)
           token: ${{ secrets.TX_TOKEN }}
-          args: --root-dir packages/webatrice pull --force --all
+          args: pull --force --all
 
       - name: Create pull request
         if: github.event_name != 'pull_request'
