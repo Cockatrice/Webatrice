@@ -9,8 +9,6 @@ import { useCardSlot } from './useCardSlot';
 
 import './CardSlot.css';
 
-// Handlers receive (ownerPlayerId, zone, card) so callers can pass bare references
-// (e.g. arrows.handleCardClick) without per-card closures that would defeat memoization.
 export interface CardSlotProps {
   card: ServerInfo_Card;
   draggable?: boolean;
@@ -22,6 +20,62 @@ export interface CardSlotProps {
   onContextMenu?: (ownerPlayerId: number | undefined, zone: string | undefined, card: ServerInfo_Card, event: React.MouseEvent) => void;
   onMouseEnter?: (card: ServerInfo_Card) => void;
 }
+
+interface CardSlotContentProps {
+  card: ServerInfo_Card;
+  smallUrl: string | null | undefined;
+  zone: string | undefined;
+}
+
+// Memoized inner so the ~60 CardSlots whose visual state is unchanged on drag
+// activation skip re-rendering even though their parent wrappers re-render
+// (dnd-kit's useDraggable subscribes to InternalContext inside useCardSlot).
+const CardSlotContent = memo(function CardSlotContent({
+  card,
+  smallUrl,
+  zone,
+}: CardSlotContentProps) {
+  return (
+    <>
+      {card.faceDown ? (
+        <div className="card-slot__back" aria-label="face-down card" />
+      ) : (
+        smallUrl && (
+          <img className="card-slot__image" src={smallUrl} alt={card.name} draggable={false} />
+        )
+      )}
+
+      {!card.faceDown && (card.name || (zone === Enriched.ZoneName.TABLE && card.annotation)) && (
+        <div className="card-slot__top">
+          {card.name && <div className="card-slot__name">{card.name}</div>}
+          {zone === Enriched.ZoneName.TABLE && card.annotation && (
+            <div className="card-slot__owner">
+              {card.annotation.replace(/^Owner:\s*/i, '')}
+            </div>
+          )}
+        </div>
+      )}
+
+      {card.pt && !card.faceDown && (
+        <div className="card-slot__pt">{card.pt}</div>
+      )}
+
+      {card.counterList.length > 0 && !card.faceDown && (
+        <div className="card-slot__counters">
+          {card.counterList.map((c) => (
+            <span
+              key={c.id}
+              className={`card-slot__counter card-slot__counter--pos-${c.id}`}
+              style={{ background: counterColorForId(c.id) }}
+            >
+              {c.value}
+            </span>
+          ))}
+        </div>
+      )}
+    </>
+  );
+});
 
 function CardSlot({
   card,
@@ -72,42 +126,7 @@ function CardSlot({
       {...(draggable ? attributes : {})}
       {...(draggable ? listeners : {})}
     >
-      {card.faceDown ? (
-        <div className="card-slot__back" aria-label="face-down card" />
-      ) : (
-        smallUrl && (
-          <img className="card-slot__image" src={smallUrl} alt={card.name} />
-        )
-      )}
-
-      {!card.faceDown && (card.name || (zone === Enriched.ZoneName.TABLE && card.annotation)) && (
-        <div className="card-slot__top">
-          {card.name && <div className="card-slot__name">{card.name}</div>}
-          {zone === Enriched.ZoneName.TABLE && card.annotation && (
-            <div className="card-slot__owner">
-              {card.annotation.replace(/^Owner:\s*/i, '')}
-            </div>
-          )}
-        </div>
-      )}
-
-      {card.pt && !card.faceDown && (
-        <div className="card-slot__pt">{card.pt}</div>
-      )}
-
-      {card.counterList.length > 0 && !card.faceDown && (
-        <div className="card-slot__counters">
-          {card.counterList.map((c) => (
-            <span
-              key={c.id}
-              className={`card-slot__counter card-slot__counter--pos-${c.id}`}
-              style={{ background: counterColorForId(c.id) }}
-            >
-              {c.value}
-            </span>
-          ))}
-        </div>
-      )}
+      <CardSlotContent card={card} smallUrl={smallUrl} zone={zone} />
     </div>
   );
 }

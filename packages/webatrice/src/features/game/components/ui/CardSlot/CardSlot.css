@@ -7,6 +7,7 @@
   border-radius: 6px;
   overflow: hidden;
   user-select: none;
+  user-drag: none;
   cursor: pointer;
   transition: transform 120ms ease-out;
 }
@@ -26,6 +27,7 @@
   height: 100%;
   object-fit: cover;
   display: block;
+  user-drag: none;
 }
 
 .card-slot__back {

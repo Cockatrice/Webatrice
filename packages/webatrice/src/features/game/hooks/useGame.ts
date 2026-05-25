@@ -43,10 +43,9 @@ export function useGame(): Game {
 
   const boardRef = useRef<HTMLDivElement>(null);
   const cardRegistry = useMemo(() => createCardRegistry(), []);
-  // 8px activation distance; must match ARROW_DRAG_THRESHOLD_PX.
   // See .github/instructions/webatrice-game.instructions.md#pointer--click-vs-drag.
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(PointerSensor, { activationConstraint: { distance: 0 } }),
     useSensor(KeyboardSensor),
   );
   const [hoveredCard, setHoveredCard] = useState<ServerInfo_Card | null>(null);

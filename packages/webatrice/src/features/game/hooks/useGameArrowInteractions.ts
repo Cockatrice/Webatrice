@@ -80,7 +80,7 @@ function arrowColorForModifiers(e: {
   return ArrowColor.RED;
 }
 
-const ARROW_DRAG_THRESHOLD_PX = 8;
+const ARROW_DRAG_THRESHOLD_PX = 4;
 
 export function useGameArrowInteractions({
   gameId,

@@ -310,7 +310,7 @@ function Game() {
             />
           </div>
 
-          <DragOverlay>
+          <DragOverlay dropAnimation={null}>
             {dnd.activeCard ? <CardDragOverlay card={dnd.activeCard} /> : null}
           </DragOverlay>
         </DndContext>

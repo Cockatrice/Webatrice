@@ -81,7 +81,14 @@ Affecting [src/store/game/game.listeners.ts](../../packages/webatrice/src/store/
 
 ## Pointer / click-vs-drag
 
-**Click-vs-drag threshold is 8px and must stay synchronized.** `useGame`'s `PointerSensor` activation distance and `useGameArrowInteractions`'s `ARROW_DRAG_THRESHOLD_PX` are the two enforcement sites. A regression on either side silently breaks the right-click → "Attach to card…" / "Draw arrow" click-through paths because pointerdown fires `cancelPendingOnDragStart` before `handleCardClick` runs.
+**Left-click and right-click use independent click-vs-drag thresholds.** They serve different gestures and have different ergonomics:
+
+- **Left-click** (`useGame`'s `PointerSensor`): `activationConstraint: { distance: 0 }`. Any motion at all activates a drag; a pure click (pointerdown → pointerup with no `pointermove`) never calls dnd-kit's `handleStart`, so the click event flows through to `arrows.handleCardClick`. No "dead zone" between press and visible drag feedback.
+- **Right-click** (`useGameArrowInteractions`'s `ARROW_DRAG_THRESHOLD_PX = 4`): 4px of motion budget before a right-click promotes from "open context menu" to "drag-to-draw-arrow." More grace because menus need a confirmation gesture.
+
+A regression on either side silently breaks its corresponding click-through path (left: card click for arrow source/target; right: context menu open) because `pointerdown` fires `cancelPendingOnDragStart` before `handleCardClick` runs.
+
+Press-and-hold-without-motion as an alternative activation path was attempted via dnd-kit's combined `{ distance, delay, tolerance }` constraint but surfaces a latent double-`handleStart` bug (the delay-timer's `setTimeout` is never cleared when motion activates first). Implementing press-and-hold requires a custom sensor — deferred until requested.
 
 ## Message log
 
