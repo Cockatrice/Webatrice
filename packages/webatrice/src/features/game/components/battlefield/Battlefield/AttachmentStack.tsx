@@ -1,3 +1,5 @@
+import { memo } from 'react';
+
 import { ServerInfo_Card } from '@cockatrice/sockatrice/generated';
 import { Enriched } from '@cockatrice/datatrice';
 import { games } from '@cockatrice/datatrice';
@@ -9,6 +11,8 @@ import {
   ATTACH_OFFSET_FRACTION,
   ATTACH_PARENT_OFFSET_Y_PX,
   CARD_HEIGHT_PX,
+  attachmentStackFactor,
+  roundPercent,
 } from './gridMath';
 
 import './AttachmentStack.css';
@@ -20,12 +24,10 @@ export interface AttachmentStackProps {
   draggable: boolean;
   arrowSourceKey: string | null;
   onCardHover?: (card: ServerInfo_Card) => void;
-  onCardClick?: (playerId: number, zone: string, card: ServerInfo_Card) => void;
-  onCardContextMenu?: (card: ServerInfo_Card, event: React.MouseEvent) => void;
-  onCardDoubleClick?: (card: ServerInfo_Card) => void;
+  onCardClick?: (playerId: number | undefined, zone: string | undefined, card: ServerInfo_Card) => void;
+  onCardContextMenu?: (playerId: number | undefined, zone: string | undefined, card: ServerInfo_Card, event: React.MouseEvent) => void;
+  onCardDoubleClick?: (playerId: number | undefined, zone: string | undefined, card: ServerInfo_Card) => void;
 }
-
-const round = (n: number): number => Math.round(n * 100) / 100;
 
 function AttachmentStack({
   parent,
@@ -41,13 +43,13 @@ function AttachmentStack({
   const parentKey = makeCardKey(ownerPlayerId, Enriched.ZoneName.TABLE, parent.id);
 
   const N = attachments.length;
-  const stackFactor = 1 + N * ATTACH_OFFSET_FRACTION;
-  const cardWidthPct = round(100 / stackFactor);
+  const stackFactor = attachmentStackFactor(N);
+  const cardWidthPct = roundPercent(100 / stackFactor);
 
-  const parentLeftPct = N > 0 ? round((N * ATTACH_OFFSET_FRACTION * 100) / stackFactor) : 0;
+  const parentLeftPct = N > 0 ? roundPercent((N * ATTACH_OFFSET_FRACTION * 100) / stackFactor) : 0;
   const parentTopPct =
-    N > 0 ? round((ATTACH_PARENT_OFFSET_Y_PX * 100) / CARD_HEIGHT_PX) : 0;
-  const childTopPct = round((ATTACH_CHILD_OFFSET_Y_PX * 100) / CARD_HEIGHT_PX);
+    N > 0 ? roundPercent((ATTACH_PARENT_OFFSET_Y_PX * 100) / CARD_HEIGHT_PX) : 0;
+  const childTopPct = roundPercent((ATTACH_CHILD_OFFSET_Y_PX * 100) / CARD_HEIGHT_PX);
 
   return (
     <div className="attachment-stack">
@@ -67,7 +69,7 @@ function AttachmentStack({
           zone={Enriched.ZoneName.TABLE}
           isArrowSource={arrowSourceKey === parentKey}
           onMouseEnter={onCardHover}
-          onClick={(c) => onCardClick?.(ownerPlayerId, Enriched.ZoneName.TABLE, c)}
+          onClick={onCardClick}
           onContextMenu={onCardContextMenu}
           onDoubleClick={onCardDoubleClick}
         />
@@ -75,7 +77,7 @@ function AttachmentStack({
       {attachments.map((entry, i) => {
         const { card: child, ownerPlayerId: childOwnerId } = entry;
         const childKey = makeCardKey(childOwnerId, Enriched.ZoneName.TABLE, child.id);
-        const leftPct = round(((N - 1 - i) * ATTACH_OFFSET_FRACTION * 100) / stackFactor);
+        const leftPct = roundPercent(((N - 1 - i) * ATTACH_OFFSET_FRACTION * 100) / stackFactor);
         return (
           <div
             key={child.id}
@@ -94,7 +96,7 @@ function AttachmentStack({
               zone={Enriched.ZoneName.TABLE}
               isArrowSource={arrowSourceKey === childKey}
               onMouseEnter={onCardHover}
-              onClick={(c) => onCardClick?.(childOwnerId, Enriched.ZoneName.TABLE, c)}
+              onClick={onCardClick}
               onContextMenu={onCardContextMenu}
               onDoubleClick={onCardDoubleClick}
             />
@@ -105,4 +107,4 @@ function AttachmentStack({
   );
 }
 
-export default AttachmentStack;
+export default memo(AttachmentStack);

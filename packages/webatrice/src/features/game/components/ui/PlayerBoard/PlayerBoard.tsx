@@ -15,9 +15,9 @@ export interface PlayerBoardProps {
   canEditCounters?: boolean;
   arrowSourceKey?: string | null;
   onCardHover?: (card: ServerInfo_Card) => void;
-  onCardClick?: (playerId: number, zone: string, card: ServerInfo_Card) => void;
-  onCardContextMenu?: (card: ServerInfo_Card, event: React.MouseEvent) => void;
-  onCardDoubleClick?: (card: ServerInfo_Card) => void;
+  onCardClick?: (playerId: number | undefined, zone: string | undefined, card: ServerInfo_Card) => void;
+  onCardContextMenu?: (playerId: number | undefined, zone: string | undefined, card: ServerInfo_Card, event: React.MouseEvent) => void;
+  onCardDoubleClick?: (playerId: number | undefined, zone: string | undefined, card: ServerInfo_Card) => void;
   onZoneClick?: (playerId: number, zoneName: string) => void;
   onZoneContextMenu?: (playerId: number, zoneName: string, event: React.MouseEvent) => void;
   onPlayerContextMenu?: (event: React.MouseEvent) => void;

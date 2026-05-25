@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo, useCallback } from 'react';
 
 import { ServerInfo_Card } from '@cockatrice/sockatrice/generated';
 import { Enriched } from '@cockatrice/datatrice';
@@ -9,15 +9,17 @@ import { useCardSlot } from './useCardSlot';
 
 import './CardSlot.css';
 
+// Handlers receive (ownerPlayerId, zone, card) so callers can pass bare references
+// (e.g. arrows.handleCardClick) without per-card closures that would defeat memoization.
 export interface CardSlotProps {
   card: ServerInfo_Card;
   draggable?: boolean;
   isArrowSource?: boolean;
   ownerPlayerId?: number;
   zone?: string;
-  onClick?: (card: ServerInfo_Card) => void;
-  onDoubleClick?: (card: ServerInfo_Card) => void;
-  onContextMenu?: (card: ServerInfo_Card, event: React.MouseEvent) => void;
+  onClick?: (ownerPlayerId: number | undefined, zone: string | undefined, card: ServerInfo_Card) => void;
+  onDoubleClick?: (ownerPlayerId: number | undefined, zone: string | undefined, card: ServerInfo_Card) => void;
+  onContextMenu?: (ownerPlayerId: number | undefined, zone: string | undefined, card: ServerInfo_Card, event: React.MouseEvent) => void;
   onMouseEnter?: (card: ServerInfo_Card) => void;
 }
 
@@ -39,6 +41,14 @@ function CardSlot({
     zone,
   });
 
+  const handleClick = useCallback(() => onClick?.(ownerPlayerId, zone, card), [onClick, ownerPlayerId, zone, card]);
+  const handleDoubleClick = useCallback(() => onDoubleClick?.(ownerPlayerId, zone, card), [onDoubleClick, ownerPlayerId, zone, card]);
+  const handleContextMenu = useCallback(
+    (e: React.MouseEvent) => onContextMenu?.(ownerPlayerId, zone, card, e),
+    [onContextMenu, ownerPlayerId, zone, card],
+  );
+  const handleMouseEnter = useCallback(() => onMouseEnter?.(card), [onMouseEnter, card]);
+
   const className = cx('card-slot', {
     'card-slot--tapped': card.tapped,
     'card-slot--face-down': card.faceDown,
@@ -51,10 +61,10 @@ function CardSlot({
     <div
       ref={rootRef}
       className={className}
-      onClick={() => onClick?.(card)}
-      onDoubleClick={() => onDoubleClick?.(card)}
-      onContextMenu={(e) => onContextMenu?.(card, e)}
-      onMouseEnter={() => onMouseEnter?.(card)}
+      onClick={handleClick}
+      onDoubleClick={handleDoubleClick}
+      onContextMenu={handleContextMenu}
+      onMouseEnter={handleMouseEnter}
       data-testid="card-slot"
       data-card-id={card.id}
       data-card-owner={ownerPlayerId ?? ''}

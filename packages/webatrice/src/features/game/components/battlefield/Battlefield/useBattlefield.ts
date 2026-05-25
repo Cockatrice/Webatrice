@@ -5,7 +5,7 @@ import { games } from '@cockatrice/datatrice';
 import { useAppSelector } from '@app/store';
 import { useSettings } from '@app/hooks';
 
-import { MAX_SUBPOS, ROW_COUNT, clampRow } from './gridMath';
+import { ROW_COUNT, clampRow, getStackColumn } from './gridMath';
 
 // See .github/instructions/webatrice-game.instructions.md#battlefield-grid (stack columns) and #attachment-stack (cross-player attach).
 export interface Battlefield {
@@ -62,7 +62,7 @@ export function useBattlefield({ gameId, playerId, mirrored }: UseBattlefieldArg
       const sparse: (ServerInfo_Card[] | null)[] = [];
       let maxCol = -1;
       for (const card of rowCards) {
-        const col = Math.floor((card.x ?? 0) / MAX_SUBPOS);
+        const col = getStackColumn(card.x ?? 0);
         if (!sparse[col]) {
           sparse[col] = [];
         }

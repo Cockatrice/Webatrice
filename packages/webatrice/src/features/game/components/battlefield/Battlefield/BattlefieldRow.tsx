@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import { ReactNode, useMemo } from 'react';
 import { useDroppable } from '@dnd-kit/core';
 import { ServerInfo_Card } from '@cockatrice/sockatrice/generated';
 import { Enriched } from '@cockatrice/datatrice';
@@ -15,14 +15,18 @@ export interface BattlefieldRowProps {
 }
 
 function BattlefieldRow({ playerId, row, rowCards, children }: BattlefieldRowProps) {
-  const { setNodeRef, isOver } = useDroppable({
-    id: `battlefield-${playerId}-${row}`,
-    data: {
+  const data = useMemo(
+    () => ({
       targetPlayerId: playerId,
       targetZone: Enriched.ZoneName.TABLE,
       row,
       rowCards,
-    },
+    }),
+    [playerId, row, rowCards],
+  );
+  const { setNodeRef, isOver } = useDroppable({
+    id: `battlefield-${playerId}-${row}`,
+    data,
   });
 
   return (

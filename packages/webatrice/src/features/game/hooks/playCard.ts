@@ -2,7 +2,11 @@ import type { WebClient } from '@cockatrice/sockatrice';
 import { ServerInfo_Card } from '@cockatrice/sockatrice/generated';
 import { Enriched, ZoneEntry } from '@cockatrice/datatrice';
 import { CardDTO } from '../../../services/dexie/DexieDTOs/CardDTO';
-import { MAX_SUBPOS, applyInvertY, clampRow } from '../components/battlefield/Battlefield/gridMath';
+import {
+  applyInvertY,
+  gridXFromColumn,
+  nextAvailableColumn,
+} from '../components/battlefield/Battlefield/gridMath';
 
 // tableRow=3 → stack; 0/1/2 → battlefield with per-row default.
 // tableZone picks fresh column (undefined → col 0). isInverted = useBattlefield's flag.
@@ -53,19 +57,10 @@ export async function playCardViaTableRow({
   const wireY = applyInvertY(visualY, isInverted);
 
   // Fresh stack column at the right edge of the target row.
-  let nextCol = 0;
-  if (tableZone) {
-    for (const cardId of tableZone.order) {
-      const c = tableZone.byId[cardId];
-      if (!c || clampRow(c.y ?? 0) !== wireY) {
-        continue;
-      }
-      const col = Math.floor((c.x ?? 0) / MAX_SUBPOS);
-      if (col + 1 > nextCol) {
-        nextCol = col + 1;
-      }
-    }
-  }
+  const rowCards = tableZone
+    ? tableZone.order.map((id) => tableZone.byId[id]).filter((c): c is ServerInfo_Card => !!c)
+    : [];
+  const nextCol = nextAvailableColumn(rowCards, wireY);
 
   webClient.request.game.moveCard(gameId, {
     startPlayerId: sourcePlayerId,
@@ -73,7 +68,7 @@ export async function playCardViaTableRow({
     cardsToMove: { card: [{ cardId: card.id, faceDown }] },
     targetPlayerId: localPlayerId,
     targetZone: Enriched.ZoneName.TABLE,
-    x: nextCol * MAX_SUBPOS,
+    x: gridXFromColumn(nextCol),
     y: wireY,
     isReversed: false,
   });

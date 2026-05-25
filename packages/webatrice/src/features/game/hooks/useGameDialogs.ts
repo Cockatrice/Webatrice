@@ -71,8 +71,8 @@ export interface GameDialogs {
   closePlayerMenu: () => void;
   closeHandMenu: () => void;
   handleCardContextMenu: (
-    sourcePlayerId: number,
-    sourceZone: string,
+    sourcePlayerId: number | undefined,
+    sourceZone: string | undefined,
     card: ServerInfo_Card,
     event: React.MouseEvent,
   ) => void;
@@ -246,11 +246,14 @@ export function useGameDialogs({
 
   const handleCardContextMenu = useCallback(
     (
-      sourcePlayerId: number,
-      sourceZone: string,
+      sourcePlayerId: number | undefined,
+      sourceZone: string | undefined,
       card: ServerInfo_Card,
       event: React.MouseEvent,
     ) => {
+      if (sourcePlayerId == null || sourceZone == null) {
+        return;
+      }
       event.preventDefault();
       closeAllContextMenus();
       setCardMenu({

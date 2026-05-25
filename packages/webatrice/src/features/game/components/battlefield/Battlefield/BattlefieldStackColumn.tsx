@@ -1,21 +1,22 @@
+import { memo } from 'react';
+
 import { ServerInfo_Card } from '@cockatrice/sockatrice/generated';
 import { games } from '@cockatrice/datatrice';
 
 import AttachmentStack from './AttachmentStack';
 import {
-  ATTACH_OFFSET_FRACTION,
   ATTACH_PARENT_OFFSET_Y_PX,
   CARD_HEIGHT_PX,
   CARD_WIDTH_PX,
   STACKED_CARD_OFFSET_X_PX,
   STACKED_CARD_OFFSET_Y_PX,
+  attachmentStackFactor,
+  roundPercent,
 } from './gridMath';
 
 import './BattlefieldStackColumn.css';
 
 const EMPTY_ATTACHMENTS: games.AttachedChild[] = [];
-
-const round = (n: number): number => Math.round(n * 100) / 100;
 
 // Footprint of a stack column in nominal pixels.
 // See .github/instructions/webatrice-game.instructions.md#attachment-stack for the N>0 parent shift rule.
@@ -27,7 +28,7 @@ function computeStackFootprint(
   let maxBottom = CARD_HEIGHT_PX;
   cards.forEach((card, subPos) => {
     const attachCount = attachmentsByParent.get(card.id)?.length ?? 0;
-    const cardWidth = CARD_WIDTH_PX * (1 + attachCount * ATTACH_OFFSET_FRACTION);
+    const cardWidth = CARD_WIDTH_PX * attachmentStackFactor(attachCount);
     const leftOffset = subPos * STACKED_CARD_OFFSET_X_PX;
     maxRight = Math.max(maxRight, leftOffset + cardWidth);
 
@@ -35,7 +36,7 @@ function computeStackFootprint(
     const parentTop = stackTop + (attachCount > 0 ? ATTACH_PARENT_OFFSET_Y_PX : 0);
     maxBottom = Math.max(maxBottom, parentTop + CARD_HEIGHT_PX);
   });
-  return { widthPx: round(maxRight), heightPx: round(maxBottom) };
+  return { widthPx: roundPercent(maxRight), heightPx: roundPercent(maxBottom) };
 }
 
 function slotWidthFor(
@@ -43,7 +44,7 @@ function slotWidthFor(
   attachmentsByParent: ReadonlyMap<number, games.AttachedChild[]>,
 ): number {
   const attachCount = attachmentsByParent.get(card.id)?.length ?? 0;
-  return CARD_WIDTH_PX * (1 + attachCount * ATTACH_OFFSET_FRACTION);
+  return CARD_WIDTH_PX * attachmentStackFactor(attachCount);
 }
 
 export interface BattlefieldStackColumnProps {
@@ -53,9 +54,9 @@ export interface BattlefieldStackColumnProps {
   ownerPlayerId: number;
   arrowSourceKey: string | null;
   onCardHover?: (card: ServerInfo_Card) => void;
-  onCardClick?: (playerId: number, zone: string, card: ServerInfo_Card) => void;
-  onCardContextMenu?: (card: ServerInfo_Card, event: React.MouseEvent) => void;
-  onCardDoubleClick?: (card: ServerInfo_Card) => void;
+  onCardClick?: (playerId: number | undefined, zone: string | undefined, card: ServerInfo_Card) => void;
+  onCardContextMenu?: (playerId: number | undefined, zone: string | undefined, card: ServerInfo_Card, event: React.MouseEvent) => void;
+  onCardDoubleClick?: (playerId: number | undefined, zone: string | undefined, card: ServerInfo_Card) => void;
 }
 
 function BattlefieldStackColumn({
@@ -70,7 +71,7 @@ function BattlefieldStackColumn({
   onCardDoubleClick,
 }: BattlefieldStackColumnProps) {
   const { widthPx, heightPx } = computeStackFootprint(cards, attachmentsByParent);
-  const slotHeightPct = round((CARD_HEIGHT_PX * 100) / heightPx);
+  const slotHeightPct = roundPercent((CARD_HEIGHT_PX * 100) / heightPx);
 
   return (
     <div
@@ -80,9 +81,9 @@ function BattlefieldStackColumn({
     >
       {cards.map((card, subPos) => {
         const slotWidth = slotWidthFor(card, attachmentsByParent);
-        const leftPct = round((subPos * STACKED_CARD_OFFSET_X_PX * 100) / widthPx);
-        const widthPct = round((slotWidth * 100) / widthPx);
-        const topPct = round((subPos * STACKED_CARD_OFFSET_Y_PX * 100) / heightPx);
+        const leftPct = roundPercent((subPos * STACKED_CARD_OFFSET_X_PX * 100) / widthPx);
+        const widthPct = roundPercent((slotWidth * 100) / widthPx);
+        const topPct = roundPercent((subPos * STACKED_CARD_OFFSET_Y_PX * 100) / heightPx);
         return (
           <div
             key={card.id}
@@ -115,4 +116,4 @@ function BattlefieldStackColumn({
   );
 }
 
-export default BattlefieldStackColumn;
+export default memo(BattlefieldStackColumn);

@@ -134,7 +134,7 @@ describe('CardSlot', () => {
     expect(screen.getByTestId('card-slot')).toHaveClass('card-slot--attacking');
   });
 
-  it('invokes click handlers with the card payload', () => {
+  it('invokes click handlers with (ownerPlayerId, zone, card)', () => {
     const card = makeCard();
     const onClick = vi.fn();
     const onDoubleClick = vi.fn();
@@ -143,6 +143,8 @@ describe('CardSlot', () => {
     render(
       <CardSlot
         card={card}
+        ownerPlayerId={42}
+        zone={Enriched.ZoneName.TABLE}
         onClick={onClick}
         onDoubleClick={onDoubleClick}
         onContextMenu={onContextMenu}
@@ -156,10 +158,12 @@ describe('CardSlot', () => {
     fireEvent.contextMenu(el);
     fireEvent.mouseEnter(el);
 
-    expect(onClick).toHaveBeenCalledWith(card);
-    expect(onDoubleClick).toHaveBeenCalledWith(card);
+    expect(onClick).toHaveBeenCalledWith(42, Enriched.ZoneName.TABLE, card);
+    expect(onDoubleClick).toHaveBeenCalledWith(42, Enriched.ZoneName.TABLE, card);
     expect(onContextMenu).toHaveBeenCalled();
-    expect(onContextMenu.mock.calls[0][0]).toBe(card);
+    expect(onContextMenu.mock.calls[0][0]).toBe(42);
+    expect(onContextMenu.mock.calls[0][1]).toBe(Enriched.ZoneName.TABLE);
+    expect(onContextMenu.mock.calls[0][2]).toBe(card);
     expect(onMouseEnter).toHaveBeenCalledWith(card);
   });
 });

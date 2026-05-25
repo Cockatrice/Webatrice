@@ -1,6 +1,15 @@
 // Port of cockatrice/src/game/zones/table_zone.cpp. See .github/instructions/webatrice-game.instructions.md#battlefield-grid.
+//
+// Grid encoding: a server-wire X coordinate ("gridX") packs a stack column and a sub-position
+// within that column as `gridX = col * MAX_SUBPOS + subPos`. Y is the row index in [0, ROW_COUNT).
+// Helpers below are the single source of truth for translating between gridX and (col, subPos),
+// computing stack/attachment footprints, and mapping pointer pixels onto the grid.
 
 import { ServerInfo_Card } from '@cockatrice/sockatrice/generated';
+
+/** Server wire X coordinate on the battlefield grid (col * MAX_SUBPOS + subPos). */
+export type GridCoord = number;
+
 export const CARD_WIDTH_PX = 146;
 export const CARD_HEIGHT_PX = 204;
 export const STACKED_CARD_OFFSET_X_PX = 49;
@@ -18,6 +27,7 @@ export const ATTACH_CHILD_OFFSET_Y_PX = 6;
 
 export const ATTACH_OFFSET_FRACTION = 1 / 3;
 
+/** Clamps a row index into [0, ROW_COUNT). */
 export function clampRow(y: number): number {
   if (y < 0) {
     return 0;
@@ -28,6 +38,26 @@ export function clampRow(y: number): number {
   return y;
 }
 
+/** Stack column index of a gridX (the floor-divide half of `gridX = col * MAX_SUBPOS + subPos`). */
+export function getStackColumn(gridX: GridCoord): number {
+  return Math.floor(gridX / MAX_SUBPOS);
+}
+
+/** Sub-position within a stack column (the modulo half of `gridX = col * MAX_SUBPOS + subPos`). */
+export function getSubPosition(gridX: GridCoord): number {
+  return ((gridX % MAX_SUBPOS) + MAX_SUBPOS) % MAX_SUBPOS;
+}
+
+/** Packs (col, subPos) into a gridX. Pass subPos = 0 for "base of stack". */
+export function gridXFromColumn(col: number, subPos = 0): GridCoord {
+  return col * MAX_SUBPOS + subPos;
+}
+
+/**
+ * Pixel width of a stack column holding `cardCount` cards. Width is capped at MAX_SUBPOS
+ * cards even when cardCount is larger; overflow is the caller's problem (a 4th card spills
+ * to the next column).
+ */
 export function stackColumnWidth(
   cardCount: number,
   cardWidth: number = CARD_WIDTH_PX,
@@ -40,22 +70,47 @@ export function stackColumnWidth(
   return cardWidth + extras * offsetX;
 }
 
+/** Groups cards by stack column (`getStackColumn(card.x)`) → count. */
 export function stackCountsForRow(cards: ServerInfo_Card[]): Map<number, number> {
   const counts = new Map<number, number>();
   for (const card of cards) {
-    const col = Math.floor((card.x ?? 0) / MAX_SUBPOS);
+    const col = getStackColumn(card.x ?? 0);
     counts.set(col, (counts.get(col) ?? 0) + 1);
   }
   return counts;
 }
 
+/**
+ * First empty stack column on `wireY` — i.e. one past the rightmost existing column.
+ * Returns 0 when the row is empty. Caller is responsible for passing only cards from
+ * the relevant zone (attachments etc. should be filtered upstream as appropriate).
+ */
+export function nextAvailableColumn(cards: ServerInfo_Card[], wireY: number): number {
+  let nextCol = 0;
+  for (const card of cards) {
+    if (clampRow(card.y ?? 0) !== wireY) {
+      continue;
+    }
+    const col = getStackColumn(card.x ?? 0);
+    if (col + 1 > nextCol) {
+      nextCol = col + 1;
+    }
+  }
+  return nextCol;
+}
+
+/**
+ * Translates a pointer X (relative to a row's content edge) into a gridX by walking stack
+ * columns left-to-right, adding `PADDING_X / 2` to snap to the nearer column (matches
+ * desktop table_zone.cpp line 340).
+ */
 export function mapToGridX(
   pointerXInRow: number,
   stackCounts: Map<number, number>,
   cardWidth: number = CARD_WIDTH_PX,
   offsetX: number = STACKED_CARD_OFFSET_X_PX,
   paddingX: number = PADDING_X_PX,
-): number {
+): GridCoord {
   const x = pointerXInRow + paddingX / 2;
 
   let xStack = 0;
@@ -70,15 +125,18 @@ export function mapToGridX(
   const stackCol = Math.max(nextStackCol - 1, 0);
   const xDiff = Math.max(0, x - xStack);
   const subPos = Math.min(Math.floor(xDiff / offsetX), MAX_SUBPOS - 1);
-  return stackCol * MAX_SUBPOS + subPos;
+  return gridXFromColumn(stackCol, subPos);
 }
 
-// Returns null when all MAX_SUBPOS slots in the target stack are taken — callers must skip the move.
+/**
+ * Resolves a target gridX to the nearest unoccupied sub-position within its stack column.
+ * Returns null when all MAX_SUBPOS slots are taken — callers must skip the move.
+ */
 export function closestGridPoint(
-  gridX: number,
+  gridX: GridCoord,
   occupiedXs: ReadonlySet<number>,
-): number | null {
-  const base = Math.floor(gridX / MAX_SUBPOS) * MAX_SUBPOS;
+): GridCoord | null {
+  const base = gridXFromColumn(getStackColumn(gridX));
   for (let i = 0; i < MAX_SUBPOS; i++) {
     if (!occupiedXs.has(base + i)) {
       return base + i;
@@ -87,7 +145,32 @@ export function closestGridPoint(
   return null;
 }
 
+/** Inverts a row index for opponent-perspective rendering (front-of-board stays nearest the viewer). */
 export function applyInvertY(gridY: number, isInverted: boolean): number {
   const clamped = clampRow(gridY);
   return isInverted ? ROW_COUNT - 1 - clamped : clamped;
+}
+
+/** Horizontal scale factor for a parent slot that fans `attachmentCount` children to its left. */
+export function attachmentStackFactor(attachmentCount: number): number {
+  return 1 + attachmentCount * ATTACH_OFFSET_FRACTION;
+}
+
+/**
+ * Effective card dimensions when the row is rendered at a different height than CARD_HEIGHT_PX
+ * (cards use CSS aspect-ratio, so width scales with the rendered lane height). Falls back to
+ * the nominal width when laneHeight is non-positive.
+ */
+export function effectiveCardDimensions(laneHeightPx: number): { width: number; offsetX: number } {
+  if (laneHeightPx <= 0) {
+    return { width: CARD_WIDTH_PX, offsetX: STACKED_CARD_OFFSET_X_PX };
+  }
+  const width = (laneHeightPx * CARD_WIDTH_PX) / CARD_HEIGHT_PX;
+  const offsetX = (width * STACKED_CARD_OFFSET_X_PX) / CARD_WIDTH_PX;
+  return { width, offsetX };
+}
+
+/** Rounds a CSS-percentage value to 2 decimal places (sub-pixel jitter trim). */
+export function roundPercent(value: number): number {
+  return Math.round(value * 100) / 100;
 }

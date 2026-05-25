@@ -14,9 +14,9 @@ export interface HandZoneProps {
   canAct?: boolean;
   arrowSourceKey?: string | null;
   onCardHover?: (card: ServerInfo_Card) => void;
-  onCardClick?: (playerId: number, zone: string, card: ServerInfo_Card) => void;
-  onCardContextMenu?: (card: ServerInfo_Card, event: React.MouseEvent) => void;
-  onCardDoubleClick?: (card: ServerInfo_Card) => void;
+  onCardClick?: (playerId: number | undefined, zone: string | undefined, card: ServerInfo_Card) => void;
+  onCardContextMenu?: (playerId: number | undefined, zone: string | undefined, card: ServerInfo_Card, event: React.MouseEvent) => void;
+  onCardDoubleClick?: (playerId: number | undefined, zone: string | undefined, card: ServerInfo_Card) => void;
   onZoneContextMenu?: (event: React.MouseEvent) => void;
 }
 
@@ -57,7 +57,7 @@ function HandZone({
               zone={Enriched.ZoneName.HAND}
               isArrowSource={arrowSourceKey === key}
               onMouseEnter={onCardHover}
-              onClick={(c) => onCardClick?.(playerId, Enriched.ZoneName.HAND, c)}
+              onClick={onCardClick}
               onContextMenu={onCardContextMenu}
               onDoubleClick={onCardDoubleClick}
             />

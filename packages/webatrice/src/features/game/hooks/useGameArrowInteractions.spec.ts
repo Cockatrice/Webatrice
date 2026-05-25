@@ -277,7 +277,7 @@ describe('useGameArrowInteractions', () => {
       const { result, webClient } = setup({ localPlayerId: 1 });
 
       act(() => {
-        result.current.handleCardDoubleClick(Enriched.ZoneName.HAND, makeCard({ id: 7, name: 'Counterspell' }));
+        result.current.handleCardDoubleClick(1, Enriched.ZoneName.HAND, makeCard({ id: 7, name: 'Counterspell' }));
       });
 
       await waitFor(() => {
@@ -298,7 +298,7 @@ describe('useGameArrowInteractions', () => {
       const { result, webClient } = setup({ localPlayerId: 1 });
 
       act(() => {
-        result.current.handleCardDoubleClick(Enriched.ZoneName.HAND, makeCard({ id: 8, name: 'Bear' }));
+        result.current.handleCardDoubleClick(1, Enriched.ZoneName.HAND, makeCard({ id: 8, name: 'Bear' }));
       });
 
       await waitFor(() => {
@@ -319,7 +319,7 @@ describe('useGameArrowInteractions', () => {
       const { result, webClient } = setup({ localPlayerId: 1 });
 
       act(() => {
-        result.current.handleCardDoubleClick(Enriched.ZoneName.HAND, makeCard({ id: 9, name: 'Sol Ring' }));
+        result.current.handleCardDoubleClick(1, Enriched.ZoneName.HAND, makeCard({ id: 9, name: 'Sol Ring' }));
       });
 
       await waitFor(() => {
@@ -340,7 +340,7 @@ describe('useGameArrowInteractions', () => {
       const { result, webClient } = setup({ localPlayerId: 1 });
 
       act(() => {
-        result.current.handleCardDoubleClick(Enriched.ZoneName.HAND, makeCard({ id: 10, name: 'Forest' }));
+        result.current.handleCardDoubleClick(1, Enriched.ZoneName.HAND, makeCard({ id: 10, name: 'Forest' }));
       });
 
       await waitFor(() => {
@@ -361,7 +361,7 @@ describe('useGameArrowInteractions', () => {
       const { result, webClient } = setup({ localPlayerId: 1 });
 
       act(() => {
-        result.current.handleCardDoubleClick(Enriched.ZoneName.HAND, makeCard({ id: 11, name: 'Mystery Card' }));
+        result.current.handleCardDoubleClick(1, Enriched.ZoneName.HAND, makeCard({ id: 11, name: 'Mystery Card' }));
       });
 
       await waitFor(() => {
@@ -382,7 +382,7 @@ describe('useGameArrowInteractions', () => {
       const { result, webClient } = setup({ localPlayerId: 1 });
 
       act(() => {
-        result.current.handleCardDoubleClick(Enriched.ZoneName.HAND, makeCard({ id: 12, name: 'Unknown' }));
+        result.current.handleCardDoubleClick(1, Enriched.ZoneName.HAND, makeCard({ id: 12, name: 'Unknown' }));
       });
 
       await waitFor(() => {
@@ -402,6 +402,7 @@ describe('useGameArrowInteractions', () => {
 
       act(() => {
         result.current.handleCardDoubleClick(
+          1,
           Enriched.ZoneName.TABLE,
           makeCard({ id: 5, tapped: false }),
         );

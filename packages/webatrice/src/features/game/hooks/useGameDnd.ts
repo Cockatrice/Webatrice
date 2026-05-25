@@ -5,12 +5,10 @@ import { useWebClient } from '@cockatrice/datatrice/react';
 import { ServerInfo_Card } from '@cockatrice/sockatrice/generated';
 import { Enriched } from '@cockatrice/datatrice';
 import {
-  CARD_HEIGHT_PX,
-  CARD_WIDTH_PX,
   MARGIN_LEFT_PX,
   PADDING_X_PX,
-  STACKED_CARD_OFFSET_X_PX,
   closestGridPoint,
+  effectiveCardDimensions,
   mapToGridX,
   stackCountsForRow,
 } from '../components/battlefield/Battlefield/gridMath';
@@ -97,12 +95,8 @@ export function useGameDnd({ gameId, onDragStart }: UseGameDndArgs): GameDnd {
         const pointerXInRow = computePointerXInRow(event);
         const stackCounts = stackCountsForRow(neighbors);
         // Effective card width derived from laneHeight so grid math tracks zoom (cards render via CSS aspect-ratio).
-        const laneHeight = event.over.rect.height;
-        const effectiveCardWidth = laneHeight > 0
-          ? (laneHeight * CARD_WIDTH_PX) / CARD_HEIGHT_PX
-          : CARD_WIDTH_PX;
-        const effectiveOffsetX =
-          (effectiveCardWidth * STACKED_CARD_OFFSET_X_PX) / CARD_WIDTH_PX;
+        const { width: effectiveCardWidth, offsetX: effectiveOffsetX } =
+          effectiveCardDimensions(event.over.rect.height);
         const rawGridX = mapToGridX(
           pointerXInRow,
           stackCounts,

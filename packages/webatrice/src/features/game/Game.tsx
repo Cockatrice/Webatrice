@@ -105,12 +105,8 @@ function Game() {
                     arrowSourceKey={arrows.arrowSourceKey}
                     onCardHover={setHoveredCard}
                     onCardClick={arrows.handleCardClick}
-                    onCardContextMenu={(card, e) =>
-                      dialogs.handleCardContextMenu(slots.slotBPlayerId!, Enriched.ZoneName.TABLE, card, e)
-                    }
-                    onCardDoubleClick={(card) =>
-                      arrows.handleCardDoubleClick(Enriched.ZoneName.TABLE, card)
-                    }
+                    onCardContextMenu={dialogs.handleCardContextMenu}
+                    onCardDoubleClick={arrows.handleCardDoubleClick}
                     onZoneClick={dialogs.handleZoneClick}
                     onZoneContextMenu={dialogs.handleZoneContextMenu}
                   />
@@ -122,12 +118,8 @@ function Game() {
                     arrowSourceKey={arrows.arrowSourceKey}
                     onCardHover={setHoveredCard}
                     onCardClick={arrows.handleCardClick}
-                    onCardContextMenu={(card, e) =>
-                      dialogs.handleCardContextMenu(slots.slotAPlayerId!, Enriched.ZoneName.TABLE, card, e)
-                    }
-                    onCardDoubleClick={(card) =>
-                      arrows.handleCardDoubleClick(Enriched.ZoneName.TABLE, card)
-                    }
+                    onCardContextMenu={dialogs.handleCardContextMenu}
+                    onCardDoubleClick={arrows.handleCardDoubleClick}
                     onZoneClick={dialogs.handleZoneClick}
                     onZoneContextMenu={dialogs.handleZoneContextMenu}
                     onPlayerContextMenu={dialogs.handlePlayerContextMenu}
@@ -140,12 +132,8 @@ function Game() {
                       arrowSourceKey={arrows.arrowSourceKey}
                       onCardHover={setHoveredCard}
                       onCardClick={arrows.handleCardClick}
-                      onCardContextMenu={(card, e) =>
-                        dialogs.handleCardContextMenu(slots.slotAPlayerId!, Enriched.ZoneName.HAND, card, e)
-                      }
-                      onCardDoubleClick={(card) =>
-                        arrows.handleCardDoubleClick(Enriched.ZoneName.HAND, card)
-                      }
+                      onCardContextMenu={dialogs.handleCardContextMenu}
+                      onCardDoubleClick={arrows.handleCardDoubleClick}
                       onZoneContextMenu={dialogs.handleHandContextMenu}
                     />
                   )}

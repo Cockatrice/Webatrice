@@ -8,8 +8,15 @@ import {
   STACKED_CARD_OFFSET_X_PX,
   STACKED_CARD_OFFSET_Y_PX,
   applyInvertY,
+  attachmentStackFactor,
   closestGridPoint,
+  effectiveCardDimensions,
+  getStackColumn,
+  getSubPosition,
+  gridXFromColumn,
   mapToGridX,
+  nextAvailableColumn,
+  roundPercent,
   stackColumnWidth,
   stackCountsForRow,
 } from './gridMath';
@@ -145,6 +152,76 @@ describe('gridMath', () => {
       expect((MAX_SUBPOS - 1) * STACKED_CARD_OFFSET_Y_PX).toBeLessThan(
         CARD_HEIGHT_PX * 0.15,
       );
+    });
+  });
+
+  describe('getStackColumn / getSubPosition / gridXFromColumn', () => {
+    it('round-trips (col, subPos) through gridXFromColumn', () => {
+      for (let col = 0; col < 4; col++) {
+        for (let sub = 0; sub < MAX_SUBPOS; sub++) {
+          const gridX = gridXFromColumn(col, sub);
+          expect(getStackColumn(gridX)).toBe(col);
+          expect(getSubPosition(gridX)).toBe(sub);
+        }
+      }
+    });
+
+    it('defaults gridXFromColumn subPos to 0', () => {
+      expect(gridXFromColumn(2)).toBe(2 * MAX_SUBPOS);
+    });
+  });
+
+  describe('nextAvailableColumn', () => {
+    it('returns 0 for an empty row', () => {
+      expect(nextAvailableColumn([], 1)).toBe(0);
+    });
+
+    it('returns one past the rightmost column on the target row', () => {
+      const cards = [
+        makeCard({ id: 1, x: gridXFromColumn(0), y: 1 }),
+        makeCard({ id: 2, x: gridXFromColumn(2), y: 1 }),
+      ];
+      expect(nextAvailableColumn(cards, 1)).toBe(3);
+    });
+
+    it('ignores cards on other rows', () => {
+      const cards = [
+        makeCard({ id: 1, x: gridXFromColumn(5), y: 0 }),
+        makeCard({ id: 2, x: gridXFromColumn(1), y: 1 }),
+      ];
+      expect(nextAvailableColumn(cards, 1)).toBe(2);
+    });
+  });
+
+  describe('attachmentStackFactor', () => {
+    it('is 1 with no attachments', () => {
+      expect(attachmentStackFactor(0)).toBe(1);
+    });
+
+    it('grows by ATTACH_OFFSET_FRACTION per attachment', () => {
+      expect(attachmentStackFactor(3)).toBeCloseTo(1 + 3 * ATTACH_OFFSET_FRACTION);
+    });
+  });
+
+  describe('effectiveCardDimensions', () => {
+    it('returns nominal dimensions for non-positive laneHeight', () => {
+      expect(effectiveCardDimensions(0)).toEqual({
+        width: CARD_WIDTH_PX,
+        offsetX: STACKED_CARD_OFFSET_X_PX,
+      });
+    });
+
+    it('scales width and offset proportionally to laneHeight', () => {
+      const { width, offsetX } = effectiveCardDimensions(CARD_HEIGHT_PX * 2);
+      expect(width).toBeCloseTo(CARD_WIDTH_PX * 2);
+      expect(offsetX).toBeCloseTo(STACKED_CARD_OFFSET_X_PX * 2);
+    });
+  });
+
+  describe('roundPercent', () => {
+    it('rounds to two decimal places', () => {
+      expect(roundPercent(33.336)).toBe(33.34);
+      expect(roundPercent(33.334)).toBe(33.33);
     });
   });
 

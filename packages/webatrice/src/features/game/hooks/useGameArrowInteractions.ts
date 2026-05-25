@@ -46,11 +46,11 @@ export interface GameArrowInteractions {
   dragPreview: ArrowDragPreview | null;
   handleBoardMouseDown: (e: React.MouseEvent<HTMLDivElement>) => void;
   handleCardClick: (
-    ownerPlayerId: number,
-    zone: string,
+    ownerPlayerId: number | undefined,
+    zone: string | undefined,
     card: ServerInfo_Card,
   ) => void;
-  handleCardDoubleClick: (sourceZone: string, card: ServerInfo_Card) => void;
+  handleCardDoubleClick: (sourcePlayerId: number | undefined, sourceZone: string | undefined, card: ServerInfo_Card) => void;
   startPendingArrow: (source: PendingArrow) => void;
   startPendingAttach: (source: PendingAttach) => void;
   cancelPendingOnDragStart: () => void;
@@ -280,8 +280,8 @@ export function useGameArrowInteractions({
   }, [arrowDrag, cardRegistry, boardRef]);
 
   const handleCardClick = useCallback(
-    (ownerPlayerId: number, zone: string, card: ServerInfo_Card) => {
-      if (gameId == null) {
+    (ownerPlayerId: number | undefined, zone: string | undefined, card: ServerInfo_Card) => {
+      if (gameId == null || ownerPlayerId == null || zone == null) {
         return;
       }
 
@@ -353,8 +353,8 @@ export function useGameArrowInteractions({
   );
 
   const handleCardDoubleClick = useCallback(
-    (sourceZone: string, card: ServerInfo_Card) => {
-      if (gameId == null) {
+    (_sourcePlayerId: number | undefined, sourceZone: string | undefined, card: ServerInfo_Card) => {
+      if (gameId == null || sourceZone == null) {
         return;
       }
       // Pending arrow/attach owns the pointer; skip double-click.
