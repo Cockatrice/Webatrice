@@ -43,8 +43,6 @@ function Game() {
     selectedCardKey,
     onCardFocus,
     onCardBlur,
-    isRotated,
-    toggleRotated,
     slotAAccess,
     slotBAccess,
     deckSelectOpen,
@@ -107,7 +105,6 @@ function Game() {
                   <div
                     className={
                       'game__board-inner' +
-                      (isRotated ? ' game__board-inner--rotated' : '') +
                       (showSlotAHand ? '' : ' game__board-inner--no-hand-a') +
                       (showSlotBHand ? '' : ' game__board-inner--no-hand-b')
                     }
@@ -184,8 +181,6 @@ function Game() {
               onRequestConcede={dialogs.openConcede}
               onRequestUnconcede={dialogs.openUnconcede}
               onRequestGameInfo={dialogs.openGameInfo}
-              onToggleRotate90={toggleRotated}
-              isRotated={isRotated}
             />
 
             <GameArrowOverlay gameId={gameId} containerRef={gameRef} dragPreview={arrows.dragPreview} />

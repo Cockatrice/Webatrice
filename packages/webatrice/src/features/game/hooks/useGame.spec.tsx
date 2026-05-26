@@ -1,5 +1,5 @@
 import { ReactNode } from 'react';
-import { act, renderHook } from '@testing-library/react';
+import { renderHook } from '@testing-library/react';
 import { combineReducers } from '@reduxjs/toolkit';
 import { Provider } from 'react-redux';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
@@ -119,22 +119,6 @@ describe('useGame', () => {
     expect(result.current.localPlayer).toBeDefined();
     expect(result.current.boardRef.current).toBeNull();
     expect(result.current.sensors).toBeDefined();
-  });
-
-  it('toggles isRotated when toggleRotated is called', () => {
-    const { result } = setup();
-
-    expect(result.current.isRotated).toBe(false);
-
-    act(() => {
-      result.current.toggleRotated();
-    });
-    expect(result.current.isRotated).toBe(true);
-
-    act(() => {
-      result.current.toggleRotated();
-    });
-    expect(result.current.isRotated).toBe(false);
   });
 
   it('exposes deckSelectOpen=true before game start when local is not ready', () => {

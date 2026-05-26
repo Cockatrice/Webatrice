@@ -58,10 +58,6 @@ Port of `table_zone.cpp:153-185`.
 - **Card move-to-zone menu is the desktop 7-entry list.** `CARD_MOVE_TARGETS` in `useCardContextMenu` mirrors `move_menu.cpp:32-42`: Hand, Battlefield (`x=0,y=0`), Graveyard, Exile, Library top (`x=0`), Library bottom (`x=-1`), plus the "Move to library at position…" prompt. Wire payloads must stay identical — labels may diverge ("Battlefield" vs desktop's "Table").
 - **Card-menu affordance gates mirror `card_menu.cpp`.** Mutators (tap/flip/counters/attrs/P-T/annotation/attach/move) require `ownerPlayerId === localPlayerId`; `actAttach` only on TABLE-zone cards; `actPlay`/`actPlayFaceDown` only on **non-TABLE** owned cards; `actPeek` only on face-down TABLE cards. Read-only actions (Draw arrow) stay available regardless of ownership.
 
-## Board rotation
-
-**90° board rotation is view-only.** `.game__board-inner--rotated` is a pure CSS transform — no server call, no state change. Mirrors desktop `Player::actRotateLocal`.
-
 ## Servatrice game-event quirks
 
 Affecting [src/store/game/game.listeners.ts](../../packages/webatrice/src/store/game/game.listeners.ts) and [src/store/game/messageLog.ts](../../packages/webatrice/src/store/game/messageLog.ts).

@@ -66,8 +66,6 @@ const DEFAULT_TURN_PROPS = {
   onRequestConcede: NOOP,
   onRequestUnconcede: NOOP,
   onRequestGameInfo: NOOP,
-  onToggleRotate90: NOOP,
-  isRotated: false,
 };
 
 describe('TurnControls', () => {
@@ -86,7 +84,6 @@ describe('TurnControls', () => {
     expect(screen.getByRole('button', { name: /^concede$/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /roll die/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /remove arrows/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /rotate 90/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /game info/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /leave game/i })).toBeInTheDocument();
   });
@@ -233,20 +230,6 @@ describe('TurnControls', () => {
     fireEvent.click(screen.getByRole('button', { name: /game info/i }));
 
     expect(onRequestGameInfo).toHaveBeenCalled();
-  });
-
-  it('fires onToggleRotate90 when Rotate 90° is clicked and flips label when already rotated', () => {
-    const onToggleRotate90 = vi.fn();
-    const { rerender } = renderWithProviders(
-      <TurnControls {...DEFAULT_TURN_PROPS} onToggleRotate90={onToggleRotate90} />,
-      { preloadedState: stateWith() },
-    );
-
-    fireEvent.click(screen.getByRole('button', { name: /rotate 90/i }));
-    expect(onToggleRotate90).toHaveBeenCalled();
-
-    rerender(<TurnControls {...DEFAULT_TURN_PROPS} onToggleRotate90={onToggleRotate90} isRotated />);
-    expect(screen.getByRole('button', { name: /unrotate view/i })).toBeInTheDocument();
   });
 
   it('disables Remove Arrows when the local player has no arrows', () => {

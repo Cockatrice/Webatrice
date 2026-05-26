@@ -38,11 +38,6 @@
   grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
 }
 
-.game__board-inner--rotated {
-  transform: rotate(90deg);
-  transform-origin: center center;
-}
-
 .game__empty {
   flex: 1;
   display: flex;

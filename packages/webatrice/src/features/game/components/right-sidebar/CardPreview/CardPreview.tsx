@@ -26,10 +26,14 @@ function CardPreview({ card }: CardPreviewProps) {
   useEffect(() => {
     setDto(null);
     const name = card?.name;
-    if (!name) return;
+    if (!name) {
+      return;
+    }
     let cancelled = false;
     CardDTO.get(name).then((found) => {
-      if (!cancelled) setDto(found ?? null);
+      if (!cancelled) {
+        setDto(found ?? null);
+      }
     });
     return () => {
       cancelled = true;
@@ -150,7 +154,9 @@ function Attr({
   label: string;
   value: string | number | undefined | null;
 }) {
-  if (value === undefined || value === null || value === '') return null;
+  if (value === undefined || value === null || value === '') {
+    return null;
+  }
   return (
     <div className="card-preview__back-attr">
       <span className="card-preview__back-attr-label">{label}:</span>

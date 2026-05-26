@@ -24,8 +24,6 @@ export interface Game extends CurrentGame {
   selectedCardKey: string | null;
   onCardFocus: (ownerPlayerId: number | undefined, zone: string | undefined, card: ServerInfo_Card) => void;
   onCardBlur: (ownerPlayerId: number | undefined, zone: string | undefined, card: ServerInfo_Card) => void;
-  isRotated: boolean;
-  toggleRotated: () => void;
   localAccess: GameAccess;
   slotAAccess: GameAccess;
   slotBAccess: GameAccess;
@@ -82,9 +80,6 @@ export function useGame(): Game {
   );
   const previewCard = selection?.card ?? hoveredCard;
   const selectedCardKey = selection?.key ?? null;
-  // View-only 90° rotation. See .github/instructions/webatrice-game.instructions.md#board-rotation.
-  const [isRotated, setIsRotated] = useState(false);
-  const toggleRotated = useCallback(() => setIsRotated((prev) => !prev), []);
 
   const slots = useGamePlayerSlots(game);
   const localAccess = useGameAccess(gameId, game?.localPlayerId);
@@ -141,8 +136,6 @@ export function useGame(): Game {
     selectedCardKey,
     onCardFocus,
     onCardBlur,
-    isRotated,
-    toggleRotated,
     localAccess,
     slotAAccess,
     slotBAccess,

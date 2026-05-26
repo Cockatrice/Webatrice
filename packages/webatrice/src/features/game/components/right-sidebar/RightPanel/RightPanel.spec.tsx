@@ -21,8 +21,6 @@ const DEFAULT_RP_PROPS = {
   onRequestConcede: NOOP,
   onRequestUnconcede: NOOP,
   onRequestGameInfo: NOOP,
-  onToggleRotate90: NOOP,
-  isRotated: false,
 };
 
 describe('RightPanel', () => {

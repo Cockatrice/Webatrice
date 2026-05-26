@@ -11,8 +11,6 @@ export interface TurnControlsProps {
   onRequestConcede: () => void;
   onRequestUnconcede: () => void;
   onRequestGameInfo: () => void;
-  onToggleRotate90: () => void;
-  isRotated: boolean;
 }
 
 function TurnControls({
@@ -21,8 +19,6 @@ function TurnControls({
   onRequestConcede,
   onRequestUnconcede,
   onRequestGameInfo,
-  onToggleRotate90,
-  isRotated,
 }: TurnControlsProps) {
   const {
     isHost,
@@ -101,16 +97,6 @@ function TurnControls({
         title="Remove all arrows you've drawn this turn"
       >
         Remove Arrows
-      </button>
-      <button
-        type="button"
-        className={`turn-controls__btn${isRotated ? ' turn-controls__btn--active' : ''}`}
-        onClick={onToggleRotate90}
-        aria-pressed={isRotated}
-        disabled={gameId == null}
-        title="Rotate your view 90° (view-only; no server call)"
-      >
-        {isRotated ? 'Unrotate View' : 'Rotate 90°'}
       </button>
       <button
         type="button"

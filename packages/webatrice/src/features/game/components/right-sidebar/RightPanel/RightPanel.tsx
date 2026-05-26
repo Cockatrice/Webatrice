@@ -16,8 +16,6 @@ export interface RightPanelProps {
   onRequestConcede: () => void;
   onRequestUnconcede: () => void;
   onRequestGameInfo: () => void;
-  onToggleRotate90: () => void;
-  isRotated: boolean;
 }
 
 function RightPanel({
@@ -27,8 +25,6 @@ function RightPanel({
   onRequestConcede,
   onRequestUnconcede,
   onRequestGameInfo,
-  onToggleRotate90,
-  isRotated,
 }: RightPanelProps) {
   const isSpectator = useAppSelector((state) =>
     gameId != null ? games.Selectors.isSpectator(state, gameId) : false,
@@ -50,8 +46,6 @@ function RightPanel({
         onRequestConcede={onRequestConcede}
         onRequestUnconcede={onRequestUnconcede}
         onRequestGameInfo={onRequestGameInfo}
-        onToggleRotate90={onToggleRotate90}
-        isRotated={isRotated}
       />
     </aside>
   );

@@ -178,12 +178,12 @@ export function useGameArrowOverlay({
         // targets stay center-anchored.
         const tip = isPlayerTarget
           ? pointOnCircleEdge(
-              x1,
-              y1,
-              tcx,
-              tcy,
-              Math.min(t.width, t.height) / 2 + ARROW_HEAD_TIP_OVERSHOOT_PX,
-            )
+            x1,
+            y1,
+            tcx,
+            tcy,
+            Math.min(t.width, t.height) / 2 + ARROW_HEAD_TIP_OVERSHOOT_PX,
+          )
           : { x: tcx, y: tcy };
         out.push({
           arrowId: a.id,
