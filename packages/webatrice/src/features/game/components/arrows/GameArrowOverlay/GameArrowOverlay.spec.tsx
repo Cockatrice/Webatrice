@@ -20,7 +20,7 @@ function Harness({ gameId }: { gameId: number }) {
   const ref = useRef<HTMLDivElement>(null);
   return (
     <div ref={ref} data-testid="arrow-harness-root" style={{ position: 'relative', width: 600, height: 400 }}>
-      <GameArrowOverlay gameId={gameId} boardRef={ref} />
+      <GameArrowOverlay gameId={gameId} containerRef={ref} />
     </div>
   );
 }

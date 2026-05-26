@@ -18,6 +18,7 @@ export interface PlayerBoardProps {
   arrowTargetKey?: string | null;
   selectedCardKey?: string | null;
   onPlayerContextMenu?: (event: React.MouseEvent) => void;
+  onPlayerClick?: (playerId: number) => boolean;
   players?: PlayerSlotEntry[];
   onSelectPlayer?: (playerId: number) => void;
 }
@@ -33,6 +34,7 @@ function PlayerBoard({
   arrowTargetKey = null,
   selectedCardKey = null,
   onPlayerContextMenu,
+  onPlayerClick,
   players,
   onSelectPlayer,
 }: PlayerBoardProps) {
@@ -46,7 +48,9 @@ function PlayerBoard({
         gameId={gameId}
         playerId={playerId}
         canEdit={canEditCounters}
+        arrowTargetKey={arrowTargetKey}
         onContextMenu={onPlayerContextMenu}
+        onPlayerClick={onPlayerClick}
         players={players}
         onSelectPlayer={onSelectPlayer}
       />

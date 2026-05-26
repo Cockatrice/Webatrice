@@ -1,4 +1,5 @@
 .game {
+  position: relative;
   display: grid;
   grid-template-columns: 56px minmax(0, 1fr) 320px;
   grid-template-rows: 1fr;

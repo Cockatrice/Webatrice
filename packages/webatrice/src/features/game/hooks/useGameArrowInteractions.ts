@@ -5,7 +5,7 @@ import { useWebClient } from '@cockatrice/datatrice/react';
 import { CardAttribute, ServerInfo_Card } from '@cockatrice/sockatrice/generated';
 import { Enriched, GameEntry } from '@cockatrice/datatrice';
 import { ArrowColor, ColorRGBA, rgbaToCss } from '@app/types';
-import { makeCardKey, type CardRegistry } from '../utils/CardRegistry/CardRegistryContext';
+import { makeCardKey, makePlayerKey, type CardRegistry } from '../utils/CardRegistry/CardRegistryContext';
 
 import { playCardViaTableRow } from './playCard';
 
@@ -49,6 +49,7 @@ export interface GameArrowInteractions {
     card: ServerInfo_Card,
   ) => void;
   handleCardDoubleClick: (sourcePlayerId: number | undefined, sourceZone: string | undefined, card: ServerInfo_Card) => void;
+  handlePlayerClick: (targetPlayerId: number) => boolean;
   startPendingArrow: (source: CardSource) => void;
   startPendingAttach: (source: CardSource) => void;
   cancelPendingOnDragStart: () => void;
@@ -57,7 +58,7 @@ export interface GameArrowInteractions {
 export interface UseGameArrowInteractionsArgs {
   gameId: number | undefined;
   game: GameEntry | undefined;
-  boardRef: RefObject<HTMLDivElement>;
+  containerRef: RefObject<HTMLDivElement>;
   cardRegistry: CardRegistry;
 }
 
@@ -83,7 +84,7 @@ const ARROW_DRAG_THRESHOLD_PX = 4;
 export function useGameArrowInteractions({
   gameId,
   game,
-  boardRef,
+  containerRef,
   cardRegistry,
 }: UseGameArrowInteractionsArgs): GameArrowInteractions {
   const webClient = useWebClient();
@@ -129,13 +130,12 @@ export function useGameArrowInteractions({
         const movedY = Math.abs(e.clientY - prev.startY);
         const moved = prev.moved || movedX + movedY > ARROW_DRAG_THRESHOLD_PX;
         if (moved) {
-          const el = document
-            .elementFromPoint(e.clientX, e.clientY)
-            ?.closest('[data-card-id]') as HTMLElement | null;
-          if (el) {
-            const tPlayerId = Number(el.getAttribute('data-card-owner'));
-            const tZone = el.getAttribute('data-card-zone') ?? '';
-            const tCardId = Number(el.getAttribute('data-card-id'));
+          const hit = document.elementFromPoint(e.clientX, e.clientY);
+          const cardEl = hit?.closest('[data-card-id]') as HTMLElement | null;
+          if (cardEl) {
+            const tPlayerId = Number(cardEl.getAttribute('data-card-owner'));
+            const tZone = cardEl.getAttribute('data-card-zone') ?? '';
+            const tCardId = Number(cardEl.getAttribute('data-card-id'));
             if (Number.isFinite(tPlayerId) && tZone && Number.isFinite(tCardId)) {
               const key = makeCardKey(tPlayerId, tZone, tCardId);
               const sourceKey = makeCardKey(prev.sourcePlayerId, prev.sourceZone, prev.sourceCardId);
@@ -144,7 +144,17 @@ export function useGameArrowInteractions({
               setArrowTargetKey(null);
             }
           } else {
-            setArrowTargetKey(null);
+            const playerEl = hit?.closest('[data-arrow-target-kind="player"]') as HTMLElement | null;
+            if (playerEl) {
+              const tPlayerId = Number(playerEl.getAttribute('data-arrow-target-player-id'));
+              if (Number.isFinite(tPlayerId)) {
+                setArrowTargetKey(makePlayerKey(tPlayerId));
+              } else {
+                setArrowTargetKey(null);
+              }
+            } else {
+              setArrowTargetKey(null);
+            }
           }
         }
         return { ...prev, currentX: e.clientX, currentY: e.clientY, moved };
@@ -181,24 +191,43 @@ export function useGameArrowInteractions({
         { once: true, capture: true },
       );
 
-      const el = document.elementFromPoint(e.clientX, e.clientY)?.closest('[data-card-id]') as HTMLElement | null;
-      if (!el) {
-        return;
+      const hit = document.elementFromPoint(e.clientX, e.clientY);
+      const cardEl = hit?.closest('[data-card-id]') as HTMLElement | null;
+      let targetPlayerId: number;
+      let targetZone = '';
+      let targetCardId = -1;
+      let isPlayerTarget = false;
+      if (cardEl) {
+        targetPlayerId = Number(cardEl.getAttribute('data-card-owner'));
+        targetZone = cardEl.getAttribute('data-card-zone') ?? '';
+        targetCardId = Number(cardEl.getAttribute('data-card-id'));
+        if (!Number.isFinite(targetPlayerId) || !targetZone || !Number.isFinite(targetCardId)) {
+          return;
+        }
+      } else {
+        const playerEl = hit?.closest('[data-arrow-target-kind="player"]') as HTMLElement | null;
+        if (!playerEl) {
+          return;
+        }
+        targetPlayerId = Number(playerEl.getAttribute('data-arrow-target-player-id'));
+        if (!Number.isFinite(targetPlayerId)) {
+          return;
+        }
+        isPlayerTarget = true;
       }
-      const targetPlayerId = Number(el.getAttribute('data-card-owner'));
-      const targetZone = el.getAttribute('data-card-zone') ?? '';
-      const targetCardId = Number(el.getAttribute('data-card-id'));
-      if (!Number.isFinite(targetPlayerId) || !targetZone || !Number.isFinite(targetCardId)) {
-        return;
-      }
-      // Same-card drops are cancellations.
+      // Same-card drops are cancellations (card targets only).
       if (
+        !isPlayerTarget &&
         targetPlayerId === drag.sourcePlayerId &&
         targetZone === drag.sourceZone &&
         targetCardId === drag.sourceCardId
       ) {
         return;
       }
+      // proto2 field-presence: omit targetZone/targetCardId for player targets
+      // so Servatrice's has_target_zone()/has_target_card_id() return false
+      // and routes the command as "player is targeted" per command_create_arrow.proto.
+      const targetFields = isPlayerTarget ? {} : { targetZone, targetCardId };
       // Local-hand arrow → non-hand plays the card AND draws the arrow.
       // Mirrors desktop arrow_item.cpp:223-282 — start_zone is rewritten to
       // the post-play zone (TABLE or STACK) while start_card_id stays the
@@ -228,8 +257,7 @@ export function useGameArrowInteractions({
               startZone: postPlayZone,
               startCardId: drag.sourceCardId,
               targetPlayerId,
-              targetZone,
-              targetCardId,
+              ...targetFields,
               arrowColor,
             });
           })();
@@ -241,8 +269,7 @@ export function useGameArrowInteractions({
         startZone: drag.sourceZone,
         startCardId: drag.sourceCardId,
         targetPlayerId,
-        targetZone,
-        targetCardId,
+        ...targetFields,
         arrowColor: arrowColorForModifiers(e),
       });
     };
@@ -292,22 +319,22 @@ export function useGameArrowInteractions({
     if (!arrowDrag || !arrowDrag.moved) {
       return null;
     }
-    const boardRect = boardRef.current?.getBoundingClientRect();
+    const containerRect = containerRef.current?.getBoundingClientRect();
     const sourceEl = cardRegistry.get(
       makeCardKey(arrowDrag.sourcePlayerId, arrowDrag.sourceZone, arrowDrag.sourceCardId),
     );
-    if (!boardRect || !sourceEl) {
+    if (!containerRect || !sourceEl) {
       return null;
     }
     const sourceRect = sourceEl.getBoundingClientRect();
     return {
-      x1: sourceRect.left + sourceRect.width / 2 - boardRect.left,
-      y1: sourceRect.top + sourceRect.height / 2 - boardRect.top,
-      x2: arrowDrag.currentX - boardRect.left,
-      y2: arrowDrag.currentY - boardRect.top,
+      x1: sourceRect.left + sourceRect.width / 2 - containerRect.left,
+      y1: sourceRect.top + sourceRect.height / 2 - containerRect.top,
+      x2: arrowDrag.currentX - containerRect.left,
+      y2: arrowDrag.currentY - containerRect.top,
       color: rgbaToCss(ArrowColor.RED),
     };
-  }, [arrowDrag, cardRegistry, boardRef]);
+  }, [arrowDrag, cardRegistry, containerRef]);
 
   const handleCardClick = useCallback(
     (ownerPlayerId: number | undefined, zone: string | undefined, card: ServerInfo_Card) => {
@@ -431,6 +458,29 @@ export function useGameArrowInteractions({
     [gameId, game, invertVerticalCoordinate, pending, webClient],
   );
 
+  // Returns true iff a pending arrow was resolved against this player. Callers
+  // use the return value to suppress the player-select dropdown's own click.
+  const handlePlayerClick = useCallback(
+    (targetPlayerId: number): boolean => {
+      if (gameId == null || !pending || pending.kind !== 'arrow') {
+        return false;
+      }
+      const src = pending.source;
+      // Omit targetZone + targetCardId so the proto2 fields stay unset and
+      // Servatrice routes this as a player-targeted arrow.
+      webClient.request.game.createArrow(gameId, {
+        startPlayerId: src.sourcePlayerId,
+        startZone: src.sourceZone,
+        startCardId: src.sourceCardId,
+        targetPlayerId,
+        arrowColor: ArrowColor.RED,
+      });
+      setPending(null);
+      return true;
+    },
+    [gameId, pending, webClient],
+  );
+
   const startPendingArrow = useCallback((source: CardSource) => {
     setPending({ kind: 'arrow', source });
   }, []);
@@ -450,6 +500,7 @@ export function useGameArrowInteractions({
     handleBoardMouseDown,
     handleCardClick,
     handleCardDoubleClick,
+    handlePlayerClick,
     startPendingArrow,
     startPendingAttach,
     cancelPendingOnDragStart,

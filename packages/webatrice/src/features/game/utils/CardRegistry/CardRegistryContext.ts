@@ -6,6 +6,10 @@ export function makeCardKey(playerId: number, zone: string, cardId: number): Car
   return `${playerId}-${zone}-${cardId}`;
 }
 
+export function makePlayerKey(playerId: number): CardKey {
+  return `player:${playerId}`;
+}
+
 export interface CardRegistry {
   register(key: CardKey, el: HTMLElement): void;
   unregister(key: CardKey): void;

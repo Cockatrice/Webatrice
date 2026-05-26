@@ -4,12 +4,12 @@ import './GameArrowOverlay.css';
 
 export interface GameArrowOverlayProps {
   gameId: number | undefined;
-  boardRef: React.RefObject<HTMLElement | null>;
+  containerRef: React.RefObject<HTMLElement | null>;
   dragPreview?: { x1: number; y1: number; x2: number; y2: number; color: string } | null;
 }
 
-function GameArrowOverlay({ gameId, boardRef, dragPreview = null }: GameArrowOverlayProps) {
-  const { arrows, width, height, handleArrowClick } = useGameArrowOverlay({ gameId, boardRef });
+function GameArrowOverlay({ gameId, containerRef, dragPreview = null }: GameArrowOverlayProps) {
+  const { arrows, width, height, handleArrowClick } = useGameArrowOverlay({ gameId, containerRef });
 
   return (
     <svg

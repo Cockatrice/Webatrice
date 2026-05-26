@@ -7,6 +7,7 @@ import { Enriched } from '@cockatrice/datatrice';
 import ZoneStack from '../../ui/ZoneStack/ZoneStack';
 import { useGameInteraction } from '../../ui/GameInteractionContext';
 import { PlayerSlotEntry } from '../../../hooks/useGamePlayerSlots';
+import { makePlayerKey, useRegisterCardRef } from '../../../utils/CardRegistry/CardRegistryContext';
 
 import { counterCssColor, usePlayerInfoPanel } from './usePlayerInfoPanel';
 
@@ -25,7 +26,9 @@ export interface PlayerInfoPanelProps {
   gameId: number;
   playerId: number;
   canEdit?: boolean;
+  arrowTargetKey?: string | null;
   onContextMenu?: (event: React.MouseEvent) => void;
+  onPlayerClick?: (playerId: number) => boolean;
   players?: PlayerSlotEntry[];
   onSelectPlayer?: (playerId: number) => void;
 }
@@ -34,7 +37,9 @@ function PlayerInfoPanel({
   gameId,
   playerId,
   canEdit = false,
+  arrowTargetKey,
   onContextMenu,
+  onPlayerClick,
   players,
   onSelectPlayer,
 }: PlayerInfoPanelProps) {
@@ -44,6 +49,14 @@ function PlayerInfoPanel({
     gameId,
     playerId,
   });
+  const registerLifeCounterRef = useRegisterCardRef(makePlayerKey(playerId));
+  const isArrowTarget = arrowTargetKey === makePlayerKey(playerId);
+  const handleHeaderClickCapture = (e: React.MouseEvent) => {
+    if (onPlayerClick && onPlayerClick(playerId)) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  };
 
   if (!player) {
     return <div className="player-info-panel player-info-panel--empty" />;
@@ -91,7 +104,14 @@ function PlayerInfoPanel({
       data-testid={`player-info-${playerId}`}
       onContextMenu={onContextMenu}
     >
-      <div className="player-info-panel__header">
+      <div
+        className={cx('player-info-panel__header', {
+          'player-info-panel__header--arrow-target': isArrowTarget,
+        })}
+        data-arrow-target-kind="player"
+        data-arrow-target-player-id={playerId}
+        onClickCapture={handleHeaderClickCapture}
+      >
         {isHost && (
           <span
             className="player-info-panel__host-badge"
@@ -135,7 +155,7 @@ function PlayerInfoPanel({
           <span className="player-info-panel__name">{name}</span>
         )}
         {lifeCounter && (
-          <ul className="player-info-panel__life-slot">
+          <ul className="player-info-panel__life-slot" ref={registerLifeCounterRef}>
             {renderCounterCircle(lifeCounter, 'player-info-panel__counter--life')}
           </ul>
         )}

@@ -84,7 +84,7 @@ function setup(opts: SetupOpts = {}) {
   }
 
   const { result } = renderHook(
-    () => useGameArrowOverlay({ gameId, boardRef }),
+    () => useGameArrowOverlay({ gameId, containerRef: boardRef }),
     { wrapper: Wrapper },
   );
   return { result, webClient, registry, boardRef };

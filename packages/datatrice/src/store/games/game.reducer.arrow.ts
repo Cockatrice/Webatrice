@@ -10,7 +10,14 @@ export const arrowReducers = {
     if (!game || !player || !data.arrowInfo) {
       return;
     }
-    player.arrows[data.arrowInfo.id] = { ...data.arrowInfo };
+    // Assign the proto message directly (no spread). Spread copies only own
+    // enumerable properties; bufbuild-protobuf doesn't list unset proto2
+    // optionals as own properties, so a spread of a player-targeted
+    // ServerInfo_Arrow drops `targetZone` and `targetCardId`. Assigning the
+    // raw message preserves bufbuild's default-value accessors so downstream
+    // readers see `targetZone === ''` instead of `undefined`. Matches the
+    // refresh path at game.reducer.helpers.ts:80.
+    player.arrows[data.arrowInfo.id] = data.arrowInfo;
   }) as CaseReducer<GamesState, PayloadAction<{ gameId: number; playerId: number; data: Event_CreateArrow }>>,
 
   arrowDeleted: ((state, action) => {

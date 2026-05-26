@@ -100,8 +100,9 @@ export function registerGameListeners(mw: ListenerMiddlewareInstance<unknown>): 
       // retain orphans that re-render if the card returns. Mirror the server
       // semantics by sweeping every player's arrows (arrows can cross players)
       // for any endpoint matching the pre-move (startPlayerId, startZone,
-      // resolvedCardId).
-      if (resolvedCardId >= 0) {
+      // resolvedCardId). Intra-zone repositions (e.g. moving a card around the
+      // battlefield) keep their arrows server-side, so skip the sweep there.
+      if (resolvedCardId >= 0 && startZone !== effectiveTargetZone) {
         const postState = api.getState() as { games: GamesState };
         const postGame = postState.games.games[gameId];
         if (postGame) {

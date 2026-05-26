@@ -35,6 +35,7 @@ function Game() {
     game,
     localPlayer,
     boardRef,
+    gameRef,
     cardRegistry,
     sensors,
     setHoveredCard,
@@ -87,7 +88,7 @@ function Game() {
           onDragStart={arrows.cancelPendingOnDragStart}
           onDragEnd={dnd.handleDragEnd}
         >
-          <div className="game" data-testid="game-container">
+          <div className="game" data-testid="game-container" ref={gameRef}>
             <PhaseBar gameId={gameId} />
 
             <div
@@ -137,6 +138,7 @@ function Game() {
                         arrowSourceKey={arrows.arrowSourceKey}
                         arrowTargetKey={arrows.arrowTargetKey}
                         selectedCardKey={selectedCardKey}
+                        onPlayerClick={arrows.handlePlayerClick}
                         players={slots.players}
                         onSelectPlayer={slots.setSlotBPlayerId}
                       />
@@ -151,6 +153,7 @@ function Game() {
                       arrowTargetKey={arrows.arrowTargetKey}
                       selectedCardKey={selectedCardKey}
                       onPlayerContextMenu={dialogs.handlePlayerContextMenu}
+                      onPlayerClick={arrows.handlePlayerClick}
                       players={slots.players}
                       onSelectPlayer={slots.setSlotAPlayerId}
                     />
@@ -172,8 +175,6 @@ function Game() {
                   </div>
                 </GameInteractionProvider>
               )}
-
-              <GameArrowOverlay gameId={gameId} boardRef={boardRef} dragPreview={arrows.dragPreview} />
             </div>
 
             <RightPanel
@@ -186,6 +187,8 @@ function Game() {
               onToggleRotate90={toggleRotated}
               isRotated={isRotated}
             />
+
+            <GameArrowOverlay gameId={gameId} containerRef={gameRef} dragPreview={arrows.dragPreview} />
 
             <DeckSelectDialog isOpen={deckSelectOpen} gameId={gameId} />
 

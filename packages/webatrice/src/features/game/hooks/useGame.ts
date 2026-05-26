@@ -15,6 +15,7 @@ import { useGameShortcuts } from './useGameShortcuts';
 
 export interface Game extends CurrentGame {
   boardRef: RefObject<HTMLDivElement>;
+  gameRef: RefObject<HTMLDivElement>;
   cardRegistry: CardRegistry;
   sensors: ReturnType<typeof useSensors>;
   hoveredCard: ServerInfo_Card | null;
@@ -47,6 +48,7 @@ export function useGame(): Game {
   useGameLifecycleNavigation(gameId);
 
   const boardRef = useRef<HTMLDivElement>(null);
+  const gameRef = useRef<HTMLDivElement>(null);
   const cardRegistry = useMemo(() => createCardRegistry(), []);
   // See .github/instructions/webatrice-game.instructions.md#pointer--click-vs-drag.
   const sensors = useSensors(
@@ -89,7 +91,7 @@ export function useGame(): Game {
   const slotAAccess = useGameAccess(gameId, slots.slotAPlayerId);
   const slotBAccess = useGameAccess(gameId, slots.slotBPlayerId);
 
-  const arrows = useGameArrowInteractions({ gameId, game, boardRef, cardRegistry });
+  const arrows = useGameArrowInteractions({ gameId, game, containerRef: gameRef, cardRegistry });
   const dialogs = useGameDialogs({
     gameId,
     game,
@@ -130,6 +132,7 @@ export function useGame(): Game {
   return {
     ...current,
     boardRef,
+    gameRef,
     cardRegistry,
     sensors,
     hoveredCard,

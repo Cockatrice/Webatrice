@@ -25,6 +25,12 @@
   border-bottom: 1px solid #1a2b52;
 }
 
+.player-info-panel__header--arrow-target {
+  border-radius: 4px;
+  box-shadow: 0 0 0 3px var(--color-arrow-red), 0 0 16px var(--color-arrow-red-glow);
+  transition: box-shadow 80ms ease-out;
+}
+
 .player-info-panel__host-badge {
   color: var(--color-highlight-yellow);
   font-size: 13px;
