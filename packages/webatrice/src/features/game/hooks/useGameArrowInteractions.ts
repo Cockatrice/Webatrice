@@ -147,7 +147,16 @@ export function useGameArrowInteractions({
         return;
       }
       // Any real drag suppresses the contextmenu event that follows mouseup.
-      window.addEventListener('contextmenu', (ev) => ev.preventDefault(), { once: true });
+      // Capture phase + stopPropagation is required so the event never reaches
+      // React's delegated root listener (which would open the card menu).
+      window.addEventListener(
+        'contextmenu',
+        (ev) => {
+          ev.preventDefault();
+          ev.stopPropagation();
+        },
+        { once: true, capture: true },
+      );
 
       const el = document.elementFromPoint(e.clientX, e.clientY)?.closest('[data-card-id]') as HTMLElement | null;
       if (!el) {
