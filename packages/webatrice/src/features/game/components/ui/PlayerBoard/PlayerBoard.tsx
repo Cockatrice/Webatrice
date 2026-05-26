@@ -3,6 +3,7 @@ import { cx } from '@app/utils';
 import Battlefield from '../../battlefield/Battlefield/Battlefield';
 import PlayerInfoPanel from '../../right-sidebar/PlayerInfoPanel/PlayerInfoPanel';
 import StackColumn from '../StackColumn/StackColumn';
+import { PlayerSlotEntry } from '../../../hooks/useGamePlayerSlots';
 
 import './PlayerBoard.css';
 
@@ -14,6 +15,8 @@ export interface PlayerBoardProps {
   canEditCounters?: boolean;
   arrowSourceKey?: string | null;
   onPlayerContextMenu?: (event: React.MouseEvent) => void;
+  players?: PlayerSlotEntry[];
+  onSelectPlayer?: (playerId: number) => void;
 }
 
 function PlayerBoard({
@@ -24,6 +27,8 @@ function PlayerBoard({
   canEditCounters = false,
   arrowSourceKey = null,
   onPlayerContextMenu,
+  players,
+  onSelectPlayer,
 }: PlayerBoardProps) {
   return (
     <div
@@ -35,6 +40,8 @@ function PlayerBoard({
         playerId={playerId}
         canEdit={canEditCounters}
         onContextMenu={onPlayerContextMenu}
+        players={players}
+        onSelectPlayer={onSelectPlayer}
       />
       <StackColumn
         gameId={gameId}

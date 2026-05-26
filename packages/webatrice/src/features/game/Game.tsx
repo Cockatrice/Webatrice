@@ -15,7 +15,6 @@ import RightPanel from './components/right-sidebar/RightPanel/RightPanel';
 import { CardDragOverlayHost } from './components/ui/CardDragOverlay/CardDragOverlay';
 import HandZone from './components/ui/HandZone/HandZone';
 import PlayerBoard from './components/ui/PlayerBoard/PlayerBoard';
-import PlayerSlotSelector from './components/ui/PlayerSlotSelector/PlayerSlotSelector';
 import CreateTokenDialog from './dialogs/CreateTokenDialog/CreateTokenDialog';
 import DeckSelectDialog from './dialogs/DeckSelectDialog/DeckSelectDialog';
 import GameInfoDialog from './dialogs/GameInfoDialog/GameInfoDialog';
@@ -88,21 +87,6 @@ function Game() {
               ref={boardRef}
               onMouseDown={arrows.handleBoardMouseDown}
             >
-              <PlayerSlotSelector
-                label="Player 2"
-                slot="b"
-                players={slots.players}
-                selectedPlayerId={slots.slotBPlayerId}
-                onSelect={slots.setSlotBPlayerId}
-              />
-              <PlayerSlotSelector
-                label="Player 1"
-                slot="a"
-                players={slots.players}
-                selectedPlayerId={slots.slotAPlayerId}
-                onSelect={slots.setSlotAPlayerId}
-              />
-
               {!game && (
                 <div className="game__empty" data-testid="game-empty">
                   No active game. Join a game from a room to see the board.
@@ -124,6 +108,8 @@ function Game() {
                       canAct={slotBAccess.canAct}
                       canEditCounters={slotBAccess.canAct}
                       arrowSourceKey={arrows.arrowSourceKey}
+                      players={slots.players}
+                      onSelectPlayer={slots.setSlotBPlayerId}
                     />
                     <PlayerBoard
                       gameId={gameId!}
@@ -132,6 +118,8 @@ function Game() {
                       canEditCounters={slotAAccess.canAct}
                       arrowSourceKey={arrows.arrowSourceKey}
                       onPlayerContextMenu={dialogs.handlePlayerContextMenu}
+                      players={slots.players}
+                      onSelectPlayer={slots.setSlotAPlayerId}
                     />
                     {showHandZone && (
                       <HandZone

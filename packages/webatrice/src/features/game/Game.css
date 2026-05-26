@@ -48,7 +48,7 @@
 .turn-controls__btn:focus-visible,
 .phase-bar__btn:focus-visible,
 .player-info-panel__counter[role='button']:focus-visible,
-.player-slot-selector__button:focus-visible {
+.player-info-panel__name--interactive:focus-visible {
   outline: 2px solid var(--color-highlight-yellow);
   outline-offset: 2px;
   border-radius: 2px;

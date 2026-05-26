@@ -108,22 +108,22 @@ describe('Game container', () => {
     expect(screen.queryByTestId('game-empty')).not.toBeInTheDocument();
   });
 
-  it('renders both player slot selectors whenever there is a seated player', () => {
+  it('renders both player name selectors whenever there is a seated player', () => {
     renderWithProviders(<Game />, {
       preloadedState: buildGame({ localId: 1, opponentIds: [2] }),
     });
 
-    expect(screen.getByTestId('player-slot-selector-a')).toBeInTheDocument();
-    expect(screen.getByTestId('player-slot-selector-b')).toBeInTheDocument();
+    expect(screen.getByTestId('player-info-name-select-1')).toBeInTheDocument();
+    expect(screen.getByTestId('player-info-name-select-2')).toBeInTheDocument();
   });
 
-  it('renders both slot selectors in a 3+ player game', () => {
+  it('renders both name selectors in a 3+ player game', () => {
     renderWithProviders(<Game />, {
       preloadedState: buildGame({ localId: 1, opponentIds: [2, 3] }),
     });
 
-    expect(screen.getByTestId('player-slot-selector-a')).toBeInTheDocument();
-    expect(screen.getByTestId('player-slot-selector-b')).toBeInTheDocument();
+    expect(screen.getByTestId('player-info-name-select-1')).toBeInTheDocument();
+    expect(screen.getByTestId('player-info-name-select-2')).toBeInTheDocument();
   });
 
   it('defaults slot A to the local player and slot B to an opponent', () => {
