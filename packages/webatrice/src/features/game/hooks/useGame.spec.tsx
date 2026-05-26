@@ -149,12 +149,24 @@ describe('useGame', () => {
     expect(result.current.deckSelectOpen).toBe(false);
   });
 
-  it('showHandZone is false for spectators regardless of omniscience', () => {
+  it('shows both hand zones to spectators only when the game is omniscient', () => {
     const omniscient = setup({ spectator: true, spectatorsOmniscient: true });
     expect(omniscient.result.current.isSpectator).toBe(true);
-    expect(omniscient.result.current.showHandZone).toBe(false);
+    expect(omniscient.result.current.showSlotAHand).toBe(true);
+    expect(omniscient.result.current.showSlotBHand).toBe(true);
 
     const blind = setup({ spectator: true, spectatorsOmniscient: false });
-    expect(blind.result.current.showHandZone).toBe(false);
+    expect(blind.result.current.showSlotAHand).toBe(false);
+    expect(blind.result.current.showSlotBHand).toBe(false);
+  });
+
+  it('shows the local hand to seated players, and the opponent hand only when omniscient', () => {
+    const normal = setup({ spectator: false, spectatorsOmniscient: false });
+    expect(normal.result.current.showSlotAHand).toBe(true);
+    expect(normal.result.current.showSlotBHand).toBe(false);
+
+    const omniscient = setup({ spectator: false, spectatorsOmniscient: true });
+    expect(omniscient.result.current.showSlotAHand).toBe(true);
+    expect(omniscient.result.current.showSlotBHand).toBe(true);
   });
 });

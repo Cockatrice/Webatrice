@@ -25,7 +25,8 @@ export interface Game extends CurrentGame {
   slotAAccess: GameAccess;
   slotBAccess: GameAccess;
   deckSelectOpen: boolean;
-  showHandZone: boolean;
+  showSlotAHand: boolean;
+  showSlotBHand: boolean;
   slots: GamePlayerSlots;
   arrows: GameArrowInteractions;
   dialogs: GameDialogs;
@@ -81,12 +82,20 @@ export function useGame(): Game {
     !current.isJudge &&
     !localPlayer.properties.readyStart;
 
-  // Hand zone is the local player's hand UI; spectators are always viewing
-  // someone else's side, so it never renders for them.
-  const showHandZone =
+  // A seated player always sees their own hand. Other hands render only when
+  // the server has marked the game omniscient (spectators_see_everything),
+  // which is what gates whether the server sends face-up cards in the first place.
+  const omniscient = game?.info?.spectatorsOmniscient === true;
+  const isOwnSeat = (pid: number | null | undefined) =>
+    !isSpectator && pid != null && game != null && pid === game.localPlayerId;
+  const showSlotAHand =
     game != null &&
-    !isSpectator &&
-    slots.slotAPlayerId === game.localPlayerId;
+    slots.slotAPlayerId != null &&
+    (isOwnSeat(slots.slotAPlayerId) || omniscient);
+  const showSlotBHand =
+    game != null &&
+    slots.slotBPlayerId != null &&
+    (isOwnSeat(slots.slotBPlayerId) || omniscient);
 
   return {
     ...current,
@@ -101,7 +110,8 @@ export function useGame(): Game {
     slotAAccess,
     slotBAccess,
     deckSelectOpen,
-    showHandZone,
+    showSlotAHand,
+    showSlotBHand,
     slots,
     arrows,
     dialogs,

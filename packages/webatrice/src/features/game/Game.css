@@ -22,10 +22,18 @@
   flex: 1;
   min-height: 0;
   display: grid;
+  grid-template-rows: 176px minmax(0, 1fr) minmax(0, 1fr) 176px;
+}
+
+.game__board-inner--no-hand-b {
   grid-template-rows: minmax(0, 1fr) minmax(0, 1fr) 176px;
 }
 
-.game__board-inner--no-hand {
+.game__board-inner--no-hand-a {
+  grid-template-rows: 176px minmax(0, 1fr) minmax(0, 1fr);
+}
+
+.game__board-inner--no-hand-a.game__board-inner--no-hand-b {
   grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
 }
 
