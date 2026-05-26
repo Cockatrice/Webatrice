@@ -111,6 +111,16 @@ function PlayerInfoPanel({
         data-arrow-target-kind="player"
         data-arrow-target-player-id={playerId}
         onClickCapture={handleHeaderClickCapture}
+        onClick={
+          players && onSelectPlayer && players.length > 1
+            ? (e) => setMenuAnchor(e.currentTarget)
+            : undefined
+        }
+        data-testid={
+          players && onSelectPlayer && players.length > 1
+            ? `player-info-name-select-${playerId}`
+            : undefined
+        }
       >
         {isHost && (
           <span
@@ -122,35 +132,10 @@ function PlayerInfoPanel({
           </span>
         )}
         {players && onSelectPlayer && players.length > 1 ? (
-          <>
-            <button
-              type="button"
-              className="player-info-panel__name player-info-panel__name--interactive"
-              onClick={(e) => setMenuAnchor(e.currentTarget)}
-              data-testid={`player-info-name-select-${playerId}`}
-            >
-              <span className="player-info-panel__name-text">{name}</span>
-              <span className="player-info-panel__name-caret" aria-hidden>▾</span>
-            </button>
-            <Menu
-              anchorEl={menuAnchor}
-              open={menuAnchor != null}
-              onClose={() => setMenuAnchor(null)}
-            >
-              {players.map((p) => (
-                <MenuItem
-                  key={p.playerId}
-                  selected={p.playerId === playerId}
-                  onClick={() => {
-                    onSelectPlayer(p.playerId);
-                    setMenuAnchor(null);
-                  }}
-                >
-                  {p.name}
-                </MenuItem>
-              ))}
-            </Menu>
-          </>
+          <span className="player-info-panel__name">
+            <span className="player-info-panel__name-text">{name}</span>
+            <span className="player-info-panel__name-caret" aria-hidden>▾</span>
+          </span>
         ) : (
           <span className="player-info-panel__name">{name}</span>
         )}
@@ -160,6 +145,26 @@ function PlayerInfoPanel({
           </ul>
         )}
       </div>
+      {players && onSelectPlayer && players.length > 1 && (
+        <Menu
+          anchorEl={menuAnchor}
+          open={menuAnchor != null}
+          onClose={() => setMenuAnchor(null)}
+        >
+          {players.map((p) => (
+            <MenuItem
+              key={p.playerId}
+              selected={p.playerId === playerId}
+              onClick={() => {
+                onSelectPlayer(p.playerId);
+                setMenuAnchor(null);
+              }}
+            >
+              {p.name}
+            </MenuItem>
+          ))}
+        </Menu>
+      )}
 
       {conceded && <div className="player-info-panel__flag">Conceded</div>}
       {!conceded && ready && <div className="player-info-panel__flag player-info-panel__flag--ready">Ready</div>}
