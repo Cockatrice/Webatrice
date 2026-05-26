@@ -23,14 +23,20 @@ function GameArrowOverlay({ gameId, containerRef, dragPreview = null }: GameArro
       <defs>
         <marker
           id="game-arrow-overlay__head"
-          viewBox="0 0 12 12"
+          viewBox="-1 -1 14 14"
           refX="10"
           refY="6"
           markerWidth="10"
           markerHeight="10"
           orient="auto-start-reverse"
         >
-          <path d="M0,0 L12,6 L0,12 z" fill="currentColor" />
+          <path
+            d="M0,0 L12,6 L0,12 z"
+            fill="currentColor"
+            stroke="black"
+            strokeWidth={1}
+            strokeLinejoin="round"
+          />
         </marker>
       </defs>
       {arrows.map((a) => (
@@ -44,7 +50,6 @@ function GameArrowOverlay({ gameId, containerRef, dragPreview = null }: GameArro
           y2={a.y2}
           stroke={a.color}
           style={{ color: a.color }}
-          markerEnd="url(#game-arrow-overlay__head)"
           onClick={() => handleArrowClick(a.arrowId)}
         />
       ))}
@@ -57,6 +62,30 @@ function GameArrowOverlay({ gameId, containerRef, dragPreview = null }: GameArro
           x2={dragPreview.x2}
           y2={dragPreview.y2}
           stroke={dragPreview.color}
+          style={{ color: dragPreview.color }}
+        />
+      )}
+      {arrows.map((a) => (
+        <line
+          key={`head-${a.arrowId}`}
+          className="game-arrow-overlay__head"
+          x1={a.x1}
+          y1={a.y1}
+          x2={a.x2}
+          y2={a.y2}
+          stroke="none"
+          style={{ color: a.color }}
+          markerEnd="url(#game-arrow-overlay__head)"
+        />
+      ))}
+      {dragPreview && (
+        <line
+          className="game-arrow-overlay__head"
+          x1={dragPreview.x1}
+          y1={dragPreview.y1}
+          x2={dragPreview.x2}
+          y2={dragPreview.y2}
+          stroke="none"
           style={{ color: dragPreview.color }}
           markerEnd="url(#game-arrow-overlay__head)"
         />

@@ -17,6 +17,11 @@
   stroke-width: 6;
 }
 
+.game-arrow-overlay__head {
+  stroke-width: 4;
+  pointer-events: none;
+}
+
 .game-arrow-overlay__line--preview {
   stroke-dasharray: 8 6;
   pointer-events: none;
