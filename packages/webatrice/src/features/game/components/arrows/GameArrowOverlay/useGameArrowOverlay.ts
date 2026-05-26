@@ -81,6 +81,29 @@ export function useGameArrowOverlay({
     return () => ro.disconnect();
   }, [boardRef, bump]);
 
+  // Scroll events don't bubble, so a capturing listener on `window` is the
+  // canonical way to catch every element's scroll page-wide. rAF coalesces
+  // bursts to one re-measure per frame.
+  useLayoutEffect(() => {
+    let raf = 0;
+    const onScroll = () => {
+      if (raf) {
+        return;
+      }
+      raf = requestAnimationFrame(() => {
+        raf = 0;
+        bump();
+      });
+    };
+    window.addEventListener('scroll', onScroll, { capture: true, passive: true });
+    return () => {
+      window.removeEventListener('scroll', onScroll, true);
+      if (raf) {
+        cancelAnimationFrame(raf);
+      }
+    };
+  }, [bump]);
+
   const boardRect = boardRef.current?.getBoundingClientRect();
 
   const arrows = useMemo<ResolvedArrow[]>(() => {

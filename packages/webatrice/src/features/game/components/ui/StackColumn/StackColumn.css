@@ -31,7 +31,8 @@
   flex-direction: column;
   align-items: center;
   gap: 3px;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .stack-column--mirrored .stack-column__cards {
