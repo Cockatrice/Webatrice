@@ -149,10 +149,12 @@ describe('useGame', () => {
     expect(result.current.deckSelectOpen).toBe(false);
   });
 
-  it('showHandZone is false for a non-omniscient spectator', () => {
-    const { result } = setup({ spectator: true, spectatorsOmniscient: false });
+  it('showHandZone is false for spectators regardless of omniscience', () => {
+    const omniscient = setup({ spectator: true, spectatorsOmniscient: true });
+    expect(omniscient.result.current.isSpectator).toBe(true);
+    expect(omniscient.result.current.showHandZone).toBe(false);
 
-    expect(result.current.isSpectator).toBe(true);
-    expect(result.current.showHandZone).toBe(false);
+    const blind = setup({ spectator: true, spectatorsOmniscient: false });
+    expect(blind.result.current.showHandZone).toBe(false);
   });
 });

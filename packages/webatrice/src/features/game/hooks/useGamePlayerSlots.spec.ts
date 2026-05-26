@@ -102,6 +102,96 @@ describe('useGamePlayerSlots', () => {
     expect(result.current.slotBPlayerId).toBe(0);
   });
 
+  it('leaves slot B empty when only one player is seated', () => {
+    const game = buildGame({
+      localPlayerId: 1,
+      playerSpec: [{ id: 1, name: 'Me' }],
+    });
+    const { result } = renderHook(() => useGamePlayerSlots(game));
+    expect(result.current.slotAPlayerId).toBe(1);
+    expect(result.current.slotBPlayerId).toBeUndefined();
+  });
+
+  it('fills slot B once a second player joins, preserving join order', () => {
+    const initial = buildGame({
+      localPlayerId: 1,
+      playerSpec: [{ id: 1, name: 'Me' }],
+    });
+    const { result, rerender } = renderHook(({ g }) => useGamePlayerSlots(g), {
+      initialProps: { g: initial },
+    });
+    expect(result.current.slotBPlayerId).toBeUndefined();
+
+    const after = buildGame({
+      localPlayerId: 1,
+      playerSpec: [
+        { id: 1, name: 'Me' },
+        { id: 2, name: 'Foe' },
+      ],
+    });
+    rerender({ g: after });
+
+    expect(result.current.slotAPlayerId).toBe(1);
+    expect(result.current.slotBPlayerId).toBe(2);
+  });
+
+  it('defaults slots by join order rather than numeric playerId', () => {
+    const initial = buildGame({
+      localPlayerId: 99,
+      spectator: true,
+      playerSpec: [
+        { id: 5, name: 'First' },
+        { id: 99, name: 'Watcher', spectator: true },
+      ],
+    });
+    const { result, rerender } = renderHook(({ g }) => useGamePlayerSlots(g), {
+      initialProps: { g: initial },
+    });
+    expect(result.current.slotAPlayerId).toBe(5);
+
+    const after = buildGame({
+      localPlayerId: 99,
+      spectator: true,
+      playerSpec: [
+        { id: 5, name: 'First' },
+        { id: 2, name: 'Second' },
+        { id: 99, name: 'Watcher', spectator: true },
+      ],
+    });
+    rerender({ g: after });
+
+    // Slot B is the later joiner (id 2), not the numerically smaller id.
+    expect(result.current.players.map((p) => p.playerId)).toEqual([5, 2]);
+    expect(result.current.slotAPlayerId).toBe(5);
+    expect(result.current.slotBPlayerId).toBe(2);
+  });
+
+  it('swaps the two slots when the user picks a player already in the other slot', () => {
+    const game = buildGame({
+      localPlayerId: 1,
+      playerSpec: [
+        { id: 1, name: 'Me' },
+        { id: 2, name: 'Foe' },
+        { id: 3, name: 'Third' },
+      ],
+    });
+    const { result } = renderHook(() => useGamePlayerSlots(game));
+    expect(result.current.slotAPlayerId).toBe(1);
+    expect(result.current.slotBPlayerId).toBe(2);
+
+    act(() => {
+      result.current.setSlotAPlayerId(2);
+    });
+    expect(result.current.slotAPlayerId).toBe(2);
+    expect(result.current.slotBPlayerId).toBe(1);
+
+    act(() => {
+      result.current.setSlotBPlayerId(2);
+    });
+    expect(result.current.slotAPlayerId).toBe(1);
+    expect(result.current.slotBPlayerId).toBe(2);
+  });
+
   it('reassigns a slot when its selected player leaves the game', () => {
     const initial = buildGame({
       localPlayerId: 0,

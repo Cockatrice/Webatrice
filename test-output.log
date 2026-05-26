@@ -1,0 +1,230 @@
+
+> @cockatrice/webatrice@4.0.1 test:e2e
+> run-s build test:e2e:install-browsers test:e2e:up test:e2e:run-with-cleanup
+
+
+> @cockatrice/webatrice@4.0.1 prebuild
+> node prebuild.js
+
+
+> @cockatrice/webatrice@4.0.1 build
+> vite build
+
+[36mvite v8.0.14 [32mbuilding client environment for production...[36m[39m
+[2Ktransforming...✓ 1719 modules transformed.
+rendering chunks...
+computing gzip size...
+build/assets/keepAliveWorker-CtLQWAbz.js      0.26 kB
+build/index.html                              0.87 kB │ gzip:   0.45 kB
+build/assets/gu-Di1JYREk.svg                  4.32 kB │ gzip:   1.84 kB
+build/assets/sz-qxMwa2gs.svg                  4.66 kB │ gzip:   1.94 kB
+build/assets/kg-B0FsxZiL.svg                  4.74 kB │ gzip:   1.93 kB
+build/assets/gq-Cag8QTk2.svg                  4.94 kB │ gzip:   2.04 kB
+build/assets/zm-BmsW91ne.svg                  5.42 kB │ gzip:   2.28 kB
+build/assets/cy-bZuP8hmf.svg                  5.46 kB │ gzip:   2.40 kB
+build/assets/nf-Dl00mlk2.svg                  5.56 kB │ gzip:   2.49 kB
+build/assets/ki-p_fAQGbS.svg                  5.62 kB │ gzip:   1.63 kB
+build/assets/ms-DxciGbUu.svg                  5.83 kB │ gzip:   2.57 kB
+build/assets/zw-U0m7oJ5e.svg                  6.18 kB │ gzip:   2.52 kB
+build/assets/kz-CwKXYZ8s.svg                  7.09 kB │ gzip:   2.95 kB
+build/assets/tc-dtelpZmc.svg                  7.11 kB │ gzip:   3.02 kB
+build/assets/kh-BeWfuE30.svg                  7.12 kB │ gzip:   2.75 kB
+build/assets/br-Cu5YU29T.svg                  7.14 kB │ gzip:   2.44 kB
+build/assets/li-CHdhvNcr.svg                  7.31 kB │ gzip:   3.00 kB
+build/assets/face3-DCuUgkOI.jpg               7.84 kB
+build/assets/pt-DZ2ADgIR.svg                  8.00 kB │ gzip:   3.26 kB
+build/assets/xk-Bj15g7cp.svg                  8.26 kB │ gzip:   3.29 kB
+build/assets/vi-BC_zcciE.svg                  8.51 kB │ gzip:   3.63 kB
+build/assets/eg-YC70hswZ.svg                  8.72 kB │ gzip:   3.59 kB
+build/assets/aw-W0PWLK5p.svg                  9.00 kB │ gzip:   1.65 kB
+build/assets/face1-DKQv3DTX.jpg               9.05 kB
+build/assets/im--VPIqfkF.svg                  9.13 kB │ gzip:   3.55 kB
+build/assets/face2-DLiwh-sd.jpg               9.68 kB
+build/assets/sa-Dh79zbT9.svg                  9.96 kB │ gzip:   4.30 kB
+build/assets/vg-C7xY6pic.svg                 10.01 kB │ gzip:   4.20 kB
+build/assets/lk-DUkgV9Tq.svg                 10.72 kB │ gzip:   4.53 kB
+build/assets/md-DRlxvNwm.svg                 11.12 kB │ gzip:   2.84 kB
+build/assets/sx-nDhIaDNb.svg                 12.21 kB │ gzip:   4.34 kB
+build/assets/ht-DIMg4gti.svg                 13.30 kB │ gzip:   4.80 kB
+build/assets/bn-B6T3O78g.svg                 13.34 kB │ gzip:   5.73 kB
+build/assets/pn-DgxdtieE.svg                 13.47 kB │ gzip:   5.05 kB
+build/assets/mt-YqzKx9xl.svg                 13.92 kB │ gzip:   5.92 kB
+build/assets/ir-cCIgaNf6.svg                 15.39 kB │ gzip:   2.22 kB
+build/assets/sm-DGBIRFB_.svg                 15.68 kB │ gzip:   5.33 kB
+build/assets/dm-Cbhezfe1.svg                 15.78 kB │ gzip:   3.09 kB
+build/assets/py-mNzh0mZC.svg                 16.18 kB │ gzip:   5.86 kB
+build/assets/ni-CcFCSQxm.svg                 17.24 kB │ gzip:   5.44 kB
+build/assets/af-C77Rf6cE.svg                 19.19 kB │ gzip:   7.89 kB
+build/assets/om-DcqxRdQL.svg                 22.22 kB │ gzip:   4.41 kB
+build/assets/bm-BeYgB2z9.svg                 22.46 kB │ gzip:   7.30 kB
+build/assets/mp-CrOApEqW.svg                 22.56 kB │ gzip:   7.06 kB
+build/assets/io-13HOfeJD.svg                 23.02 kB │ gzip:   4.16 kB
+build/assets/ky-Dpsu1myA.svg                 23.38 kB │ gzip:   8.72 kB
+build/assets/fj-DEAVMg38.svg                 24.10 kB │ gzip:   9.26 kB
+build/assets/bt-BTo4qm10.svg                 24.78 kB │ gzip:  10.27 kB
+build/assets/logo-BolU2BZp.png               25.69 kB
+build/assets/va-B9-hqIE-.svg                 28.72 kB │ gzip:   9.83 kB
+build/assets/fk-nuUF_Ak3.svg                 28.73 kB │ gzip:   9.36 kB
+build/assets/ec-CaVOFQ3t.svg                 28.77 kB │ gzip:   6.93 kB
+build/assets/as-Dekqy8Of.svg                 30.44 kB │ gzip:  11.73 kB
+build/assets/ad-B18i8NGa.svg                 30.51 kB │ gzip:  11.37 kB
+build/assets/hr-fzLfaANM.svg                 30.73 kB │ gzip:  13.28 kB
+build/assets/gt-CJo5DI-7.svg                 31.35 kB │ gzip:  11.49 kB
+build/assets/gs-DiiNa0F5.svg                 31.50 kB │ gzip:  11.61 kB
+build/assets/je-DyWbhIiC.svg                 34.19 kB │ gzip:  10.01 kB
+build/assets/tm-C_WSgUcv.svg                 38.34 kB │ gzip:  12.37 kB
+build/assets/do-B86d445t.svg                 40.34 kB │ gzip:  14.63 kB
+build/assets/bz-BCKHR4_q.svg                 42.50 kB │ gzip:  15.93 kB
+build/assets/me-Cv4Gwqah.svg                 56.37 kB │ gzip:  21.73 kB
+build/assets/sv-CJIHhYwF.svg                 77.27 kB │ gzip:  22.25 kB
+build/assets/es-d5m8M5h8.svg                 80.95 kB │ gzip:  14.98 kB
+build/assets/mx-Cc8Ccfe8.svg                 84.75 kB │ gzip:  30.16 kB
+build/assets/bo-CcUiMqkJ.svg                102.88 kB │ gzip:  25.24 kB
+build/assets/rs-BfwKwXtn.svg                181.63 kB │ gzip:  51.26 kB
+build/assets/index-C7_vwZKh.css              40.54 kB │ gzip:   8.81 kB
+build/assets/index-CW5tBkJr.js            1,606.08 kB │ gzip: 475.74 kB
+
+[33m[33m[INEFFECTIVE_DYNAMIC_IMPORT] [0msrc/services/index.ts is dynamically imported by src/features/game/dialogs/CreateTokenDialog/useCreateTokenDialog.ts but also statically imported by src/components/Card/Card.tsx, src/components/Message/useCardCallout.ts, src/feature-widgets/card-import/LocalOracleImportService.ts, src/feature-widgets/known-hosts/useKnownHosts.ts, src/features/game/hooks/useScryfallCard.ts, ..., dynamic import will not move module into another chunk.
+[39m
+[33m[plugin builtin:vite-reporter] 
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.[39m
+[32m✓ built in 1.73s[39m
+
+> @cockatrice/webatrice@4.0.1 test:e2e:install-browsers
+> playwright install chromium
+
+
+> @cockatrice/webatrice@4.0.1 test:e2e:up
+> docker compose --env-file ../../.env.e2e --env-file .env.e2e -f ../../docker/servatrice/docker-compose.e2e.yml up -d
+
+ Image ghcr.io/cockatrice/servatrice:2026-05-08-Release-3.0.0 Pulling 
+ Image ghcr.io/cockatrice/servatrice:2026-05-08-Release-3.0.0 Pulling 
+ Image ghcr.io/cockatrice/servatrice:2026-05-08-Release-3.0.0 Pulled 
+ Image ghcr.io/cockatrice/servatrice:2026-05-08-Release-3.0.0 Pulled 
+ Network webatrice-e2e_default Creating 
+ Network webatrice-e2e_default Created 
+ Volume webatrice-e2e_servatrice_sql Creating 
+ Volume webatrice-e2e_servatrice_sql Created 
+ Volume webatrice-e2e_mysql_data Creating 
+ Volume webatrice-e2e_mysql_data Created 
+ Container webatrice-e2e-servatrice-sql-1 Creating 
+ Container webatrice-e2e-servatrice-sql-1 Created 
+ Container webatrice-e2e-mysql-1 Creating 
+ Container webatrice-e2e-mysql-1 Created 
+ Container webatrice-e2e-servatrice-1 Creating 
+ Container webatrice-e2e-servatrice-1 Created 
+ Container webatrice-e2e-servatrice-sql-1 Starting 
+ Container webatrice-e2e-servatrice-sql-1 Started 
+ Container webatrice-e2e-servatrice-sql-1 Waiting 
+ Container webatrice-e2e-servatrice-sql-1 Exited 
+ Container webatrice-e2e-mysql-1 Starting 
+ Container webatrice-e2e-mysql-1 Started 
+ Container webatrice-e2e-servatrice-1 Starting 
+ Container webatrice-e2e-servatrice-1 Started 
+
+> @cockatrice/webatrice@4.0.1 test:e2e:run-with-cleanup
+> run-s --continue-on-error test:e2e:run test:e2e:down
+
+
+> @cockatrice/webatrice@4.0.1 test:e2e:run
+> playwright test
+
+
+Running 6 tests using 1 worker
+
+  ok 1 [chromium] › e2e\specs\app-boots.spec.ts:11:5 › the app boots and mounts the root (1.5s)
+  ok 2 [chromium] › e2e\specs\connection-stability.spec.ts:41:5 › connection holds for 60 s in the foreground (1.2m)
+  ok 3 [chromium] › e2e\specs\connection-stability.spec.ts:63:5 › connection persists across SPA navigation (rooms → room → rooms) (4.7s)
+  ok 4 [chromium] › e2e\specs\game-create-and-play.spec.ts:20:5 › two clients create+join, load decks, draw, play, end turn (7.7s)
+  x  5 [chromium] › e2e\specs\login-join-room.spec.ts:15:5 › register, login, known-host persisted, re-login (32.1s)
+  ok 6 [chromium] › e2e\specs\spectator.spec.ts:18:5 › third client spectates a game in progress (16.4s)
+
+
+  1) [chromium] › e2e\specs\login-join-room.spec.ts:15:5 › register, login, known-host persisted, re-login 
+
+    [31mTest timeout of 30000ms exceeded.[39m
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+
+    Locator: getByRole('columnheader', { name: /^name$/i })
+    Expected: visible
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "toBeVisible" with timeout 30000ms[22m
+    [2m  - waiting for getByRole('columnheader', { name: /^name$/i })[22m
+
+
+       at ..\pages\LoginPage.ts:120
+
+      118 |   // also keys off.
+      119 |   async waitForRoomsView(): Promise<void> {
+    > 120 |     await expect(this.page.getByRole('columnheader', { name: /^name$/i })).toBeVisible({ timeout: 30_000 });
+          |                                                                            ^
+      121 |   }
+      122 | }
+      123 |
+        at LoginPage.waitForRoomsView (C:\Users\User\source\repos\Webatrice\packages\webatrice\e2e\pages\LoginPage.ts:120:76)
+        at C:\Users\User\source\repos\Webatrice\packages\webatrice\e2e\specs\login-join-room.spec.ts:27:15
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\login-join-room-register-login-known-host-persisted-re-login-chromium\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results\login-join-room-register-login-known-host-persisted-re-login-chromium\video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\login-join-room-register-login-known-host-persisted-re-login-chromium\error-context.md
+
+  1 failed
+    [chromium] › e2e\specs\login-join-room.spec.ts:15:5 › register, login, known-host persisted, re-login 
+  5 passed (2.6m)
+npm error Lifecycle script `test:e2e:run` failed with error:
+npm error code 1
+npm error path C:\Users\User\source\repos\Webatrice\packages\webatrice
+npm error workspace @cockatrice/webatrice@4.0.1
+npm error location C:\Users\User\source\repos\Webatrice\packages\webatrice
+npm error command failed
+npm error command C:\WINDOWS\system32\cmd.exe /d /s /c playwright test
+
+> @cockatrice/webatrice@4.0.1 test:e2e:down
+> docker compose --env-file ../../.env.e2e --env-file .env.e2e -f ../../docker/servatrice/docker-compose.e2e.yml down -v
+
+ Container webatrice-e2e-servatrice-1 Stopping 
+ Container webatrice-e2e-servatrice-1 Stopped 
+ Container webatrice-e2e-servatrice-1 Removing 
+ Container webatrice-e2e-servatrice-1 Removed 
+ Container webatrice-e2e-mysql-1 Stopping 
+ Container webatrice-e2e-mysql-1 Stopped 
+ Container webatrice-e2e-mysql-1 Removing 
+ Container webatrice-e2e-mysql-1 Removed 
+ Container webatrice-e2e-servatrice-sql-1 Stopping 
+ Container webatrice-e2e-servatrice-sql-1 Stopped 
+ Container webatrice-e2e-servatrice-sql-1 Removing 
+ Container webatrice-e2e-servatrice-sql-1 Removed 
+ Volume webatrice-e2e_servatrice_sql Removing 
+ Volume webatrice-e2e_mysql_data Removing 
+ Network webatrice-e2e_default Removing 
+ Volume webatrice-e2e_servatrice_sql Removed 
+ Volume webatrice-e2e_mysql_data Removed 
+ Network webatrice-e2e_default Removed 
+ERROR: "test:e2e:run" exited with 1.
+npm error Lifecycle script `test:e2e:run-with-cleanup` failed with error:
+npm error code 1
+npm error path C:\Users\User\source\repos\Webatrice\packages\webatrice
+npm error workspace @cockatrice/webatrice@4.0.1
+npm error location C:\Users\User\source\repos\Webatrice\packages\webatrice
+npm error command failed
+npm error command C:\WINDOWS\system32\cmd.exe /d /s /c run-s --continue-on-error test:e2e:run test:e2e:down
+ERROR: "test:e2e:run-with-cleanup" exited with 1.
+npm error Lifecycle script `test:e2e` failed with error:
+npm error code 1
+npm error path C:\Users\User\source\repos\Webatrice\packages\webatrice
+npm error workspace @cockatrice/webatrice@4.0.1
+npm error location C:\Users\User\source\repos\Webatrice\packages\webatrice
+npm error command failed
+npm error command C:\WINDOWS\system32\cmd.exe /d /s /c run-s build test:e2e:install-browsers test:e2e:up test:e2e:run-with-cleanup

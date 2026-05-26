@@ -25,6 +25,10 @@
   grid-template-rows: minmax(0, 1fr) minmax(0, 1fr) 176px;
 }
 
+.game__board-inner--no-hand {
+  grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+}
+
 .game__board-inner--rotated {
   transform: rotate(90deg);
   transform-origin: center center;
@@ -48,7 +52,7 @@
 .turn-controls__btn:focus-visible,
 .phase-bar__btn:focus-visible,
 .player-info-panel__counter[role='button']:focus-visible,
-.player-slot-selector__button:focus-visible {
+.player-info-panel__name--interactive:focus-visible {
   outline: 2px solid var(--color-highlight-yellow);
   outline-offset: 2px;
   border-radius: 2px;

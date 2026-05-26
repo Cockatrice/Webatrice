@@ -1,8 +1,12 @@
+import { useState } from 'react';
+import { Menu, MenuItem } from '@mui/material';
+
 import { cx } from '@app/utils';
 import { ServerInfo_Counter } from '@cockatrice/sockatrice/generated';
 import { Enriched } from '@cockatrice/datatrice';
 import ZoneStack from '../../ui/ZoneStack/ZoneStack';
 import { useGameInteraction } from '../../ui/GameInteractionContext';
+import { PlayerSlotEntry } from '../../../hooks/useGamePlayerSlots';
 
 import { counterCssColor, usePlayerInfoPanel } from './usePlayerInfoPanel';
 
@@ -22,6 +26,8 @@ export interface PlayerInfoPanelProps {
   playerId: number;
   canEdit?: boolean;
   onContextMenu?: (event: React.MouseEvent) => void;
+  players?: PlayerSlotEntry[];
+  onSelectPlayer?: (playerId: number) => void;
 }
 
 function PlayerInfoPanel({
@@ -29,7 +35,10 @@ function PlayerInfoPanel({
   playerId,
   canEdit = false,
   onContextMenu,
+  players,
+  onSelectPlayer,
 }: PlayerInfoPanelProps) {
+  const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
   const { onCardHover, onZoneClick, onZoneContextMenu } = useGameInteraction();
   const { player, isHost, lifeCounter, otherCounters, handleIncrement } = usePlayerInfoPanel({
     gameId,
@@ -92,7 +101,39 @@ function PlayerInfoPanel({
             ♛
           </span>
         )}
-        <span className="player-info-panel__name">{name}</span>
+        {players && onSelectPlayer && players.length > 1 ? (
+          <>
+            <button
+              type="button"
+              className="player-info-panel__name player-info-panel__name--interactive"
+              onClick={(e) => setMenuAnchor(e.currentTarget)}
+              data-testid={`player-info-name-select-${playerId}`}
+            >
+              <span className="player-info-panel__name-text">{name}</span>
+              <span className="player-info-panel__name-caret" aria-hidden>▾</span>
+            </button>
+            <Menu
+              anchorEl={menuAnchor}
+              open={menuAnchor != null}
+              onClose={() => setMenuAnchor(null)}
+            >
+              {players.map((p) => (
+                <MenuItem
+                  key={p.playerId}
+                  selected={p.playerId === playerId}
+                  onClick={() => {
+                    onSelectPlayer(p.playerId);
+                    setMenuAnchor(null);
+                  }}
+                >
+                  {p.name}
+                </MenuItem>
+              ))}
+            </Menu>
+          </>
+        ) : (
+          <span className="player-info-panel__name">{name}</span>
+        )}
         {lifeCounter && (
           <ul className="player-info-panel__life-slot">
             {renderCounterCircle(lifeCounter, 'player-info-panel__counter--life')}

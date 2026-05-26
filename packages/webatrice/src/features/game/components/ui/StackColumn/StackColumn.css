@@ -1,5 +1,5 @@
 .stack-column {
-  width: 76px;
+  width: 96px;
   height: 100%;
   box-sizing: border-box;
   display: flex;
@@ -30,8 +30,13 @@
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: safe center;
   gap: 3px;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #a04040 #2a0c0c;
+  scrollbar-gutter: stable both-edges;
 }
 
 .stack-column--mirrored .stack-column__cards {
