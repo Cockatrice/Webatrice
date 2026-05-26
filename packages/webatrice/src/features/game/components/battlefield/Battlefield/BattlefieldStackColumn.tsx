@@ -53,10 +53,6 @@ export interface BattlefieldStackColumnProps {
   draggable: boolean;
   ownerPlayerId: number;
   arrowSourceKey: string | null;
-  onCardHover?: (card: ServerInfo_Card) => void;
-  onCardClick?: (playerId: number | undefined, zone: string | undefined, card: ServerInfo_Card) => void;
-  onCardContextMenu?: (playerId: number | undefined, zone: string | undefined, card: ServerInfo_Card, event: React.MouseEvent) => void;
-  onCardDoubleClick?: (playerId: number | undefined, zone: string | undefined, card: ServerInfo_Card) => void;
 }
 
 function BattlefieldStackColumn({
@@ -65,10 +61,6 @@ function BattlefieldStackColumn({
   draggable,
   ownerPlayerId,
   arrowSourceKey,
-  onCardHover,
-  onCardClick,
-  onCardContextMenu,
-  onCardDoubleClick,
 }: BattlefieldStackColumnProps) {
   const { widthPx, heightPx } = computeStackFootprint(cards, attachmentsByParent);
   const slotHeightPct = roundPercent((CARD_HEIGHT_PX * 100) / heightPx);
@@ -104,10 +96,6 @@ function BattlefieldStackColumn({
               draggable={draggable}
               ownerPlayerId={ownerPlayerId}
               arrowSourceKey={arrowSourceKey}
-              onCardHover={onCardHover}
-              onCardClick={onCardClick}
-              onCardContextMenu={onCardContextMenu}
-              onCardDoubleClick={onCardDoubleClick}
             />
           </div>
         );

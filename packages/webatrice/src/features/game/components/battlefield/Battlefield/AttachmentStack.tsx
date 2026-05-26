@@ -6,14 +6,8 @@ import { games } from '@cockatrice/datatrice';
 
 import CardSlot from '../../ui/CardSlot/CardSlot';
 import { makeCardKey } from '../../../utils/CardRegistry/CardRegistryContext';
-import {
-  ATTACH_CHILD_OFFSET_Y_PX,
-  ATTACH_OFFSET_FRACTION,
-  ATTACH_PARENT_OFFSET_Y_PX,
-  CARD_HEIGHT_PX,
-  attachmentStackFactor,
-  roundPercent,
-} from './gridMath';
+import { useGameInteraction } from '../../ui/GameInteractionContext';
+import { attachmentSlotLayout } from './gridMath';
 
 import './AttachmentStack.css';
 
@@ -23,10 +17,6 @@ export interface AttachmentStackProps {
   attachments: games.AttachedChild[];
   draggable: boolean;
   arrowSourceKey: string | null;
-  onCardHover?: (card: ServerInfo_Card) => void;
-  onCardClick?: (playerId: number | undefined, zone: string | undefined, card: ServerInfo_Card) => void;
-  onCardContextMenu?: (playerId: number | undefined, zone: string | undefined, card: ServerInfo_Card, event: React.MouseEvent) => void;
-  onCardDoubleClick?: (playerId: number | undefined, zone: string | undefined, card: ServerInfo_Card) => void;
 }
 
 function AttachmentStack({
@@ -35,31 +25,22 @@ function AttachmentStack({
   draggable,
   ownerPlayerId,
   arrowSourceKey,
-  onCardHover,
-  onCardClick,
-  onCardContextMenu,
-  onCardDoubleClick,
 }: AttachmentStackProps) {
+  const { onCardHover, onCardClick, onCardContextMenu, onCardDoubleClick } = useGameInteraction();
   const parentKey = makeCardKey(ownerPlayerId, Enriched.ZoneName.TABLE, parent.id);
 
   const N = attachments.length;
-  const stackFactor = attachmentStackFactor(N);
-  const cardWidthPct = roundPercent(100 / stackFactor);
-
-  const parentLeftPct = N > 0 ? roundPercent((N * ATTACH_OFFSET_FRACTION * 100) / stackFactor) : 0;
-  const parentTopPct =
-    N > 0 ? roundPercent((ATTACH_PARENT_OFFSET_Y_PX * 100) / CARD_HEIGHT_PX) : 0;
-  const childTopPct = roundPercent((ATTACH_CHILD_OFFSET_Y_PX * 100) / CARD_HEIGHT_PX);
+  const parentSlot = attachmentSlotLayout(N, -1);
 
   return (
     <div className="attachment-stack">
       <div
         className="attachment-stack__parent"
         style={{
-          left: `${parentLeftPct}%`,
-          top: `${parentTopPct}%`,
-          width: `${cardWidthPct}%`,
-          zIndex: N + 1,
+          left: `${parentSlot.leftPct}%`,
+          top: `${parentSlot.topPct}%`,
+          width: `${parentSlot.widthPct}%`,
+          zIndex: parentSlot.zIndex,
         }}
       >
         <CardSlot
@@ -77,16 +58,16 @@ function AttachmentStack({
       {attachments.map((entry, i) => {
         const { card: child, ownerPlayerId: childOwnerId } = entry;
         const childKey = makeCardKey(childOwnerId, Enriched.ZoneName.TABLE, child.id);
-        const leftPct = roundPercent(((N - 1 - i) * ATTACH_OFFSET_FRACTION * 100) / stackFactor);
+        const slot = attachmentSlotLayout(N, i);
         return (
           <div
             key={child.id}
             className="attachment-stack__child"
             style={{
-              left: `${leftPct}%`,
-              top: `${childTopPct}%`,
-              width: `${cardWidthPct}%`,
-              zIndex: N - i,
+              left: `${slot.leftPct}%`,
+              top: `${slot.topPct}%`,
+              width: `${slot.widthPct}%`,
+              zIndex: slot.zIndex,
             }}
           >
             <CardSlot

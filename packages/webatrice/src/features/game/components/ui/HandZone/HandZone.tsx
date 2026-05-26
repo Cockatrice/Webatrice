@@ -1,9 +1,9 @@
-import { ServerInfo_Card } from '@cockatrice/sockatrice/generated';
 import { Enriched } from '@cockatrice/datatrice';
 import { cx } from '@app/utils';
 
 import CardSlot from '../CardSlot/CardSlot';
 import { makeCardKey } from '../../../utils/CardRegistry/CardRegistryContext';
+import { useGameInteraction } from '../GameInteractionContext';
 import { useHandZone } from './useHandZone';
 
 import './HandZone.css';
@@ -13,11 +13,7 @@ export interface HandZoneProps {
   playerId: number;
   canAct?: boolean;
   arrowSourceKey?: string | null;
-  onCardHover?: (card: ServerInfo_Card) => void;
-  onCardClick?: (playerId: number | undefined, zone: string | undefined, card: ServerInfo_Card) => void;
-  onCardContextMenu?: (playerId: number | undefined, zone: string | undefined, card: ServerInfo_Card, event: React.MouseEvent) => void;
-  onCardDoubleClick?: (playerId: number | undefined, zone: string | undefined, card: ServerInfo_Card) => void;
-  onZoneContextMenu?: (event: React.MouseEvent) => void;
+  onHandContextMenu?: (event: React.MouseEvent) => void;
 }
 
 function HandZone({
@@ -25,17 +21,14 @@ function HandZone({
   playerId,
   canAct = false,
   arrowSourceKey = null,
-  onCardHover,
-  onCardClick,
-  onCardContextMenu,
-  onCardDoubleClick,
-  onZoneContextMenu,
+  onHandContextMenu,
 }: HandZoneProps) {
+  const { onCardHover, onCardClick, onCardContextMenu, onCardDoubleClick } = useGameInteraction();
   const { cards, setNodeRef, isOver, handleZoneContextMenu } = useHandZone({
     gameId,
     playerId,
     canAct,
-    onZoneContextMenu,
+    onZoneContextMenu: onHandContextMenu,
   });
 
   return (

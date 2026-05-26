@@ -1,5 +1,5 @@
-import { useCallback, useState } from 'react';
-import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core';
+import { useCallback } from 'react';
+import type { DragEndEvent } from '@dnd-kit/core';
 
 import { useWebClient } from '@cockatrice/datatrice/react';
 import { ServerInfo_Card } from '@cockatrice/sockatrice/generated';
@@ -14,15 +14,11 @@ import {
 } from '../components/battlefield/Battlefield/gridMath';
 
 export interface GameDnd {
-  activeCard: ServerInfo_Card | null;
-  handleDragStart: (event: DragStartEvent) => void;
   handleDragEnd: (event: DragEndEvent) => void;
-  handleDragCancel: () => void;
 }
 
 export interface UseGameDndArgs {
   gameId: number | undefined;
-  onDragStart: () => void;
 }
 
 // Drop point = card center at release (matches desktop scene position).
@@ -36,25 +32,11 @@ function computePointerXInRow(event: DragEndEvent): number {
   return cardCenterX - overRect.left - MARGIN_LEFT_PX;
 }
 
-export function useGameDnd({ gameId, onDragStart }: UseGameDndArgs): GameDnd {
+export function useGameDnd({ gameId }: UseGameDndArgs): GameDnd {
   const webClient = useWebClient();
-  const [activeCard, setActiveCard] = useState<ServerInfo_Card | null>(null);
-
-  const handleDragStart = useCallback(
-    (event: DragStartEvent) => {
-      const data = event.active.data.current as
-        | { card: ServerInfo_Card }
-        | undefined;
-      setActiveCard(data?.card ?? null);
-      // Drag start cancels any armed pending-arrow / pending-attach.
-      onDragStart();
-    },
-    [onDragStart],
-  );
 
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
-      setActiveCard(null);
       if (!gameId || !event.over || !event.active.data.current) {
         return;
       }
@@ -129,9 +111,5 @@ export function useGameDnd({ gameId, onDragStart }: UseGameDndArgs): GameDnd {
     [gameId, webClient],
   );
 
-  const handleDragCancel = useCallback(() => {
-    setActiveCard(null);
-  }, []);
-
-  return { activeCard, handleDragStart, handleDragEnd, handleDragCancel };
+  return { handleDragEnd };
 }

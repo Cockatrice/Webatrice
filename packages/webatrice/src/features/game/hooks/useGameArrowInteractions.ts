@@ -1,4 +1,4 @@
-import { RefObject, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { RefObject, useCallback, useEffect, useMemo, useState } from 'react';
 
 import { useSettings } from '@app/hooks';
 import { useWebClient } from '@cockatrice/datatrice/react';
@@ -9,18 +9,15 @@ import { makeCardKey, type CardRegistry } from '../utils/CardRegistry/CardRegist
 
 import { playCardViaTableRow } from './playCard';
 
-interface PendingArrow {
+interface CardSource {
   sourcePlayerId: number;
   sourceZone: string;
   sourceCardId: number;
 }
 
-// Distinct from PendingArrow so attach-only fields can diverge later.
-interface PendingAttach {
-  sourcePlayerId: number;
-  sourceZone: string;
-  sourceCardId: number;
-}
+type Pending =
+  | { kind: 'arrow'; source: CardSource }
+  | { kind: 'attach'; source: CardSource };
 
 interface ArrowDragState {
   sourcePlayerId: number;
@@ -51,8 +48,8 @@ export interface GameArrowInteractions {
     card: ServerInfo_Card,
   ) => void;
   handleCardDoubleClick: (sourcePlayerId: number | undefined, sourceZone: string | undefined, card: ServerInfo_Card) => void;
-  startPendingArrow: (source: PendingArrow) => void;
-  startPendingAttach: (source: PendingAttach) => void;
+  startPendingArrow: (source: CardSource) => void;
+  startPendingAttach: (source: CardSource) => void;
   cancelPendingOnDragStart: () => void;
 }
 
@@ -92,14 +89,12 @@ export function useGameArrowInteractions({
   const { value: settings } = useSettings();
   const invertVerticalCoordinate = settings?.invertVerticalCoordinate ?? false;
 
-  const [pendingArrow, setPendingArrow] = useState<PendingArrow | null>(null);
-  const [pendingAttach, setPendingAttach] = useState<PendingAttach | null>(null);
+  const [pending, setPending] = useState<Pending | null>(null);
   const [arrowDrag, setArrowDrag] = useState<ArrowDragState | null>(null);
-  const suppressNextContextMenuRef = useRef(false);
 
   // ESC cancels pending arrow/attach unless a MUI dialog has it first.
   useEffect(() => {
-    if (!pendingArrow && !pendingAttach && !arrowDrag) {
+    if (!pending && !arrowDrag) {
       return undefined;
     }
     const handler = (e: KeyboardEvent) => {
@@ -109,13 +104,12 @@ export function useGameArrowInteractions({
       if (document.querySelector('.MuiDialog-root[role="dialog"]')) {
         return;
       }
-      setPendingArrow(null);
-      setPendingAttach(null);
+      setPending(null);
       setArrowDrag(null);
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [pendingArrow, pendingAttach, arrowDrag]);
+  }, [pending, arrowDrag]);
 
   // Right-click-drag arrow lifecycle: window mousemove + mouseup.
   useEffect(() => {
@@ -153,7 +147,7 @@ export function useGameArrowInteractions({
         return;
       }
       // Any real drag suppresses the contextmenu event that follows mouseup.
-      suppressNextContextMenuRef.current = true;
+      window.addEventListener('contextmenu', (ev) => ev.preventDefault(), { once: true });
 
       const el = document.elementFromPoint(e.clientX, e.clientY)?.closest('[data-card-id]') as HTMLElement | null;
       if (!el) {
@@ -211,18 +205,6 @@ export function useGameArrowInteractions({
     };
   }, [arrowDrag, gameId, webClient, game?.localPlayerId]);
 
-  // Suppress the browser contextmenu event after a right-drag.
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (suppressNextContextMenuRef.current) {
-        e.preventDefault();
-        suppressNextContextMenuRef.current = false;
-      }
-    };
-    window.addEventListener('contextmenu', handler);
-    return () => window.removeEventListener('contextmenu', handler);
-  }, []);
-
   const handleBoardMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     if (e.button !== 2) {
       return;
@@ -249,13 +231,11 @@ export function useGameArrowInteractions({
     });
   }, []);
 
-  const arrowSourceKey = pendingArrow
-    ? makeCardKey(pendingArrow.sourcePlayerId, pendingArrow.sourceZone, pendingArrow.sourceCardId)
-    : pendingAttach
-      ? makeCardKey(pendingAttach.sourcePlayerId, pendingAttach.sourceZone, pendingAttach.sourceCardId)
-      : arrowDrag
-        ? makeCardKey(arrowDrag.sourcePlayerId, arrowDrag.sourceZone, arrowDrag.sourceCardId)
-        : null;
+  const arrowSourceKey = pending
+    ? makeCardKey(pending.source.sourcePlayerId, pending.source.sourceZone, pending.source.sourceCardId)
+    : arrowDrag
+      ? makeCardKey(arrowDrag.sourcePlayerId, arrowDrag.sourceZone, arrowDrag.sourceCardId)
+      : null;
 
   // viewport → board-relative coords for the SVG preview line.
   const dragPreview = useMemo<ArrowDragPreview | null>(() => {
@@ -285,71 +265,68 @@ export function useGameArrowInteractions({
         return;
       }
 
-      // Pending-attach takes precedence over pending-arrow (later menu action wins).
-      if (pendingAttach) {
-        if (
-          pendingAttach.sourcePlayerId === ownerPlayerId &&
-          pendingAttach.sourceZone === zone &&
-          pendingAttach.sourceCardId === card.id
-        ) {
-          setPendingAttach(null);
+      if (!pending) {
+        return;
+      }
+      const src = pending.source;
+      const isSameCard =
+        src.sourcePlayerId === ownerPlayerId &&
+        src.sourceZone === zone &&
+        src.sourceCardId === card.id;
+
+      if (pending.kind === 'attach') {
+        if (isSameCard) {
+          setPending(null);
           return;
         }
         webClient.request.game.attachCard(gameId, {
-          startZone: pendingAttach.sourceZone,
-          cardId: pendingAttach.sourceCardId,
+          startZone: src.sourceZone,
+          cardId: src.sourceCardId,
           targetPlayerId: ownerPlayerId,
           targetZone: zone,
           targetCardId: card.id,
         });
-        setPendingAttach(null);
+        setPending(null);
         return;
       }
 
-      if (!pendingArrow) {
-        return;
-      }
-      // Cancel if user re-clicks the pending source.
-      if (
-        pendingArrow.sourcePlayerId === ownerPlayerId &&
-        pendingArrow.sourceZone === zone &&
-        pendingArrow.sourceCardId === card.id
-      ) {
-        setPendingArrow(null);
+      // pending.kind === 'arrow'
+      if (isSameCard) {
+        setPending(null);
         return;
       }
       // Local-hand arrow → non-hand auto-plays the card.
       // See .github/instructions/webatrice-game.instructions.md#servatrice-game-event-quirks.
       if (
-        pendingArrow.sourceZone === Enriched.ZoneName.HAND &&
-        pendingArrow.sourcePlayerId === game?.localPlayerId &&
+        src.sourceZone === Enriched.ZoneName.HAND &&
+        src.sourcePlayerId === game?.localPlayerId &&
         zone !== Enriched.ZoneName.HAND
       ) {
         webClient.request.game.moveCard(gameId, {
-          startPlayerId: pendingArrow.sourcePlayerId,
-          startZone: pendingArrow.sourceZone,
-          cardsToMove: { card: [{ cardId: pendingArrow.sourceCardId }] },
-          targetPlayerId: pendingArrow.sourcePlayerId,
+          startPlayerId: src.sourcePlayerId,
+          startZone: src.sourceZone,
+          cardsToMove: { card: [{ cardId: src.sourceCardId }] },
+          targetPlayerId: src.sourcePlayerId,
           targetZone: Enriched.ZoneName.TABLE,
           x: 0,
           y: 0,
           isReversed: false,
         });
-        setPendingArrow(null);
+        setPending(null);
         return;
       }
       webClient.request.game.createArrow(gameId, {
-        startPlayerId: pendingArrow.sourcePlayerId,
-        startZone: pendingArrow.sourceZone,
-        startCardId: pendingArrow.sourceCardId,
+        startPlayerId: src.sourcePlayerId,
+        startZone: src.sourceZone,
+        startCardId: src.sourceCardId,
         targetPlayerId: ownerPlayerId,
         targetZone: zone,
         targetCardId: card.id,
         arrowColor: ArrowColor.RED,
       });
-      setPendingArrow(null);
+      setPending(null);
     },
-    [gameId, game?.localPlayerId, pendingArrow, pendingAttach, webClient],
+    [gameId, game?.localPlayerId, pending, webClient],
   );
 
   const handleCardDoubleClick = useCallback(
@@ -358,7 +335,7 @@ export function useGameArrowInteractions({
         return;
       }
       // Pending arrow/attach owns the pointer; skip double-click.
-      if (pendingArrow || pendingAttach) {
+      if (pending) {
         return;
       }
       if (sourceZone === Enriched.ZoneName.TABLE) {
@@ -386,20 +363,19 @@ export function useGameArrowInteractions({
         });
       }
     },
-    [gameId, game, invertVerticalCoordinate, pendingArrow, pendingAttach, webClient],
+    [gameId, game, invertVerticalCoordinate, pending, webClient],
   );
 
-  const startPendingArrow = useCallback((source: PendingArrow) => {
-    setPendingArrow(source);
+  const startPendingArrow = useCallback((source: CardSource) => {
+    setPending({ kind: 'arrow', source });
   }, []);
 
-  const startPendingAttach = useCallback((source: PendingAttach) => {
-    setPendingAttach(source);
+  const startPendingAttach = useCallback((source: CardSource) => {
+    setPending({ kind: 'attach', source });
   }, []);
 
   const cancelPendingOnDragStart = useCallback(() => {
-    setPendingArrow((prev) => (prev ? null : prev));
-    setPendingAttach((prev) => (prev ? null : prev));
+    setPending(null);
   }, []);
 
   return {

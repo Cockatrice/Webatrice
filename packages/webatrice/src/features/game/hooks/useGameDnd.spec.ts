@@ -109,9 +109,8 @@ function makeWebClient() {
 function setupHook() {
   const webClient = makeWebClient();
   mockUseWebClient.mockReturnValue(webClient);
-  const onDragStart = vi.fn();
-  const { result } = renderHook(() => useGameDnd({ gameId: 42, onDragStart }));
-  return { webClient, onDragStart, handleDragEnd: result.current.handleDragEnd };
+  const { result } = renderHook(() => useGameDnd({ gameId: 42 }));
+  return { webClient, handleDragEnd: result.current.handleDragEnd };
 }
 
 describe('useGameDnd', () => {

@@ -5,6 +5,7 @@ import { Enriched } from '@cockatrice/datatrice';
 import { cx } from '@app/utils';
 
 import { useScryfallCard } from '../../../hooks/useScryfallCard';
+import { useGameInteraction } from '../GameInteractionContext';
 
 import './StackColumn.css';
 
@@ -12,7 +13,6 @@ export interface StackColumnProps {
   gameId: number;
   playerId: number;
   mirrored?: boolean;
-  onCardHover?: (card: ServerInfo_Card) => void;
 }
 
 interface StackThumbProps {
@@ -37,7 +37,8 @@ function StackThumb({ card, onHover }: StackThumbProps) {
   );
 }
 
-function StackColumn({ gameId, playerId, mirrored = false, onCardHover }: StackColumnProps) {
+function StackColumn({ gameId, playerId, mirrored = false }: StackColumnProps) {
+  const { onCardHover } = useGameInteraction();
   const zone = useAppSelector((state) =>
     games.Selectors.getZone(state, gameId, playerId, Enriched.ZoneName.STACK),
   );

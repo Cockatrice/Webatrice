@@ -156,6 +156,37 @@ export function attachmentStackFactor(attachmentCount: number): number {
   return 1 + attachmentCount * ATTACH_OFFSET_FRACTION;
 }
 
+export interface AttachmentSlotLayout {
+  leftPct: number;
+  topPct: number;
+  widthPct: number;
+  zIndex: number;
+}
+
+/**
+ * Position for one slot in an attachment stack of size `attachmentCount`.
+ * `index === -1` is the parent slot; `0..attachmentCount-1` are children fanning left behind it.
+ */
+export function attachmentSlotLayout(attachmentCount: number, index: number): AttachmentSlotLayout {
+  const N = attachmentCount;
+  const stackFactor = attachmentStackFactor(N);
+  const widthPct = roundPercent(100 / stackFactor);
+  if (index === -1) {
+    return {
+      leftPct: N > 0 ? roundPercent((N * ATTACH_OFFSET_FRACTION * 100) / stackFactor) : 0,
+      topPct: N > 0 ? roundPercent((ATTACH_PARENT_OFFSET_Y_PX * 100) / CARD_HEIGHT_PX) : 0,
+      widthPct,
+      zIndex: N + 1,
+    };
+  }
+  return {
+    leftPct: roundPercent(((N - 1 - index) * ATTACH_OFFSET_FRACTION * 100) / stackFactor),
+    topPct: roundPercent((ATTACH_CHILD_OFFSET_Y_PX * 100) / CARD_HEIGHT_PX),
+    widthPct,
+    zIndex: N - index,
+  };
+}
+
 /**
  * Effective card dimensions when the row is rendered at a different height than CARD_HEIGHT_PX
  * (cards use CSS aspect-ratio, so width scales with the rendered lane height). Falls back to

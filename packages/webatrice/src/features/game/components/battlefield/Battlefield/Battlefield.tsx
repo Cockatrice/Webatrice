@@ -1,4 +1,3 @@
-import { ServerInfo_Card } from '@cockatrice/sockatrice/generated';
 import BattlefieldRow from './BattlefieldRow';
 import BattlefieldStackColumn from './BattlefieldStackColumn';
 import { useBattlefield } from './useBattlefield';
@@ -11,10 +10,6 @@ export interface BattlefieldProps {
   mirrored?: boolean;
   canAct?: boolean;
   arrowSourceKey?: string | null;
-  onCardHover?: (card: ServerInfo_Card) => void;
-  onCardClick?: (playerId: number | undefined, zone: string | undefined, card: ServerInfo_Card) => void;
-  onCardContextMenu?: (playerId: number | undefined, zone: string | undefined, card: ServerInfo_Card, event: React.MouseEvent) => void;
-  onCardDoubleClick?: (playerId: number | undefined, zone: string | undefined, card: ServerInfo_Card) => void;
 }
 
 function Battlefield({
@@ -23,10 +18,6 @@ function Battlefield({
   mirrored = false,
   canAct = false,
   arrowSourceKey = null,
-  onCardHover,
-  onCardClick,
-  onCardContextMenu,
-  onCardDoubleClick,
 }: BattlefieldProps) {
   const { rows, stackColumnsByRow, rowOrder, attachmentsByParent } = useBattlefield({
     gameId,
@@ -65,10 +56,6 @@ function Battlefield({
                 draggable={canAct}
                 ownerPlayerId={playerId}
                 arrowSourceKey={arrowSourceKey}
-                onCardHover={onCardHover}
-                onCardClick={onCardClick}
-                onCardContextMenu={onCardContextMenu}
-                onCardDoubleClick={onCardDoubleClick}
               />
             );
           })}

@@ -1,4 +1,5 @@
-import { DndContext, DragOverlay } from '@dnd-kit/core';
+import { useMemo } from 'react';
+import { DndContext } from '@dnd-kit/core';
 
 import { AuthGuard } from '@app/components';
 import { Layout } from '@app/feature-wrappers/layout';
@@ -11,7 +12,7 @@ import PlayerContextMenu from './components/context-menus/PlayerContextMenu/Play
 import ZoneContextMenu from './components/context-menus/ZoneContextMenu/ZoneContextMenu';
 import PhaseBar from './components/right-sidebar/PhaseBar/PhaseBar';
 import RightPanel from './components/right-sidebar/RightPanel/RightPanel';
-import CardDragOverlay from './components/ui/CardDragOverlay/CardDragOverlay';
+import { CardDragOverlayHost } from './components/ui/CardDragOverlay/CardDragOverlay';
 import HandZone from './components/ui/HandZone/HandZone';
 import PlayerBoard from './components/ui/PlayerBoard/PlayerBoard';
 import PlayerSlotSelector from './components/ui/PlayerSlotSelector/PlayerSlotSelector';
@@ -24,6 +25,7 @@ import SideboardDialog, { cardsFromZone } from './dialogs/SideboardDialog/Sidebo
 import ZoneViewDialog from './dialogs/ZoneViewDialog/ZoneViewDialog';
 import { useGame } from './hooks/useGame';
 import { CardRegistryContext } from './utils/CardRegistry/CardRegistryContext';
+import { GameInteractionProvider } from './components/ui/GameInteractionContext';
 
 import './Game.css';
 
@@ -50,15 +52,33 @@ function Game() {
     dnd,
   } = g;
 
+  const interactionHandlers = useMemo(
+    () => ({
+      onCardHover: setHoveredCard,
+      onCardClick: arrows.handleCardClick,
+      onCardContextMenu: dialogs.handleCardContextMenu,
+      onCardDoubleClick: arrows.handleCardDoubleClick,
+      onZoneClick: dialogs.handleZoneClick,
+      onZoneContextMenu: dialogs.handleZoneContextMenu,
+    }),
+    [
+      setHoveredCard,
+      arrows.handleCardClick,
+      arrows.handleCardDoubleClick,
+      dialogs.handleCardContextMenu,
+      dialogs.handleZoneClick,
+      dialogs.handleZoneContextMenu,
+    ],
+  );
+
   return (
     <Layout>
       <AuthGuard />
       <CardRegistryContext.Provider value={cardRegistry}>
         <DndContext
           sensors={sensors}
-          onDragStart={dnd.handleDragStart}
+          onDragStart={arrows.cancelPendingOnDragStart}
           onDragEnd={dnd.handleDragEnd}
-          onDragCancel={dnd.handleDragCancel}
         >
           <div className="game" data-testid="game-container">
             <PhaseBar gameId={gameId} />
@@ -90,54 +110,40 @@ function Game() {
               )}
 
               {game && slots.slotBPlayerId != null && slots.slotAPlayerId != null && (
-                <div
-                  className={
-                    'game__board-inner' +
-                    (isRotated ? ' game__board-inner--rotated' : '')
-                  }
-                >
-                  <PlayerBoard
-                    gameId={gameId!}
-                    playerId={slots.slotBPlayerId}
-                    mirrored
-                    canAct={slotBAccess.canAct}
-                    canEditCounters={slotBAccess.canAct}
-                    arrowSourceKey={arrows.arrowSourceKey}
-                    onCardHover={setHoveredCard}
-                    onCardClick={arrows.handleCardClick}
-                    onCardContextMenu={dialogs.handleCardContextMenu}
-                    onCardDoubleClick={arrows.handleCardDoubleClick}
-                    onZoneClick={dialogs.handleZoneClick}
-                    onZoneContextMenu={dialogs.handleZoneContextMenu}
-                  />
-                  <PlayerBoard
-                    gameId={gameId!}
-                    playerId={slots.slotAPlayerId}
-                    canAct={slotAAccess.canAct}
-                    canEditCounters={slotAAccess.canAct}
-                    arrowSourceKey={arrows.arrowSourceKey}
-                    onCardHover={setHoveredCard}
-                    onCardClick={arrows.handleCardClick}
-                    onCardContextMenu={dialogs.handleCardContextMenu}
-                    onCardDoubleClick={arrows.handleCardDoubleClick}
-                    onZoneClick={dialogs.handleZoneClick}
-                    onZoneContextMenu={dialogs.handleZoneContextMenu}
-                    onPlayerContextMenu={dialogs.handlePlayerContextMenu}
-                  />
-                  {showHandZone && (
-                    <HandZone
+                <GameInteractionProvider value={interactionHandlers}>
+                  <div
+                    className={
+                      'game__board-inner' +
+                      (isRotated ? ' game__board-inner--rotated' : '')
+                    }
+                  >
+                    <PlayerBoard
+                      gameId={gameId!}
+                      playerId={slots.slotBPlayerId}
+                      mirrored
+                      canAct={slotBAccess.canAct}
+                      canEditCounters={slotBAccess.canAct}
+                      arrowSourceKey={arrows.arrowSourceKey}
+                    />
+                    <PlayerBoard
                       gameId={gameId!}
                       playerId={slots.slotAPlayerId}
                       canAct={slotAAccess.canAct}
+                      canEditCounters={slotAAccess.canAct}
                       arrowSourceKey={arrows.arrowSourceKey}
-                      onCardHover={setHoveredCard}
-                      onCardClick={arrows.handleCardClick}
-                      onCardContextMenu={dialogs.handleCardContextMenu}
-                      onCardDoubleClick={arrows.handleCardDoubleClick}
-                      onZoneContextMenu={dialogs.handleHandContextMenu}
+                      onPlayerContextMenu={dialogs.handlePlayerContextMenu}
                     />
-                  )}
-                </div>
+                    {showHandZone && (
+                      <HandZone
+                        gameId={gameId!}
+                        playerId={slots.slotAPlayerId}
+                        canAct={slotAAccess.canAct}
+                        arrowSourceKey={arrows.arrowSourceKey}
+                        onHandContextMenu={dialogs.handleHandContextMenu}
+                      />
+                    )}
+                  </div>
+                </GameInteractionProvider>
               )}
 
               <GameArrowOverlay gameId={gameId} boardRef={boardRef} dragPreview={arrows.dragPreview} />
@@ -310,9 +316,7 @@ function Game() {
             />
           </div>
 
-          <DragOverlay dropAnimation={null}>
-            {dnd.activeCard ? <CardDragOverlay card={dnd.activeCard} /> : null}
-          </DragOverlay>
+          <CardDragOverlayHost />
         </DndContext>
       </CardRegistryContext.Provider>
     </Layout>

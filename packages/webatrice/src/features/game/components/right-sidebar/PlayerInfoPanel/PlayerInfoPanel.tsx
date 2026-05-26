@@ -1,7 +1,8 @@
 import { cx } from '@app/utils';
-import { ServerInfo_Card, ServerInfo_Counter } from '@cockatrice/sockatrice/generated';
+import { ServerInfo_Counter } from '@cockatrice/sockatrice/generated';
 import { Enriched } from '@cockatrice/datatrice';
 import ZoneStack from '../../ui/ZoneStack/ZoneStack';
+import { useGameInteraction } from '../../ui/GameInteractionContext';
 
 import { counterCssColor, usePlayerInfoPanel } from './usePlayerInfoPanel';
 
@@ -21,9 +22,6 @@ export interface PlayerInfoPanelProps {
   playerId: number;
   canEdit?: boolean;
   onContextMenu?: (event: React.MouseEvent) => void;
-  onCardHover?: (card: ServerInfo_Card) => void;
-  onZoneClick?: (playerId: number, zoneName: string) => void;
-  onZoneContextMenu?: (playerId: number, zoneName: string, event: React.MouseEvent) => void;
 }
 
 function PlayerInfoPanel({
@@ -31,10 +29,8 @@ function PlayerInfoPanel({
   playerId,
   canEdit = false,
   onContextMenu,
-  onCardHover,
-  onZoneClick,
-  onZoneContextMenu,
 }: PlayerInfoPanelProps) {
+  const { onCardHover, onZoneClick, onZoneContextMenu } = useGameInteraction();
   const { player, isHost, lifeCounter, otherCounters, handleIncrement } = usePlayerInfoPanel({
     gameId,
     playerId,
@@ -116,7 +112,7 @@ function PlayerInfoPanel({
             // Hand is context-menu only: desktop's hand counter doesn't open
             // a zone view on left-click, and HandZone already renders the cards.
             const clickHandler =
-              onZoneClick && z.name !== Enriched.ZoneName.HAND
+              z.name !== Enriched.ZoneName.HAND
                 ? (name: string) => onZoneClick(playerId, name)
                 : undefined;
             return (
@@ -129,11 +125,7 @@ function PlayerInfoPanel({
                 rotated={z.rotated}
                 onCardHover={onCardHover}
                 onClick={clickHandler}
-                onContextMenu={
-                  onZoneContextMenu
-                    ? (name, e) => onZoneContextMenu(playerId, name, e)
-                    : undefined
-                }
+                onContextMenu={(name, e) => onZoneContextMenu(playerId, name, e)}
               />
             );
           })}

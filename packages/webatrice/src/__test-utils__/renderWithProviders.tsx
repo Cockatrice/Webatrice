@@ -32,7 +32,17 @@ const testTheme = createTheme({
 
 import { rootReducerMap, type RootState } from '../store';
 import { ToastProvider } from '../components/Toast/ToastContext';
+import { GameInteractionProvider, type GameInteractionHandlers } from '../features/game/components/ui/GameInteractionContext';
 import { createMockWebClient } from './mockWebClient';
+
+const NOOP_GAME_INTERACTION: GameInteractionHandlers = {
+  onCardHover: () => undefined,
+  onCardClick: () => undefined,
+  onCardContextMenu: () => undefined,
+  onCardDoubleClick: () => undefined,
+  onZoneClick: () => undefined,
+  onZoneContextMenu: () => undefined,
+};
 
 let defaultWebClient: WebClient | undefined;
 function getDefaultWebClient(): WebClient {
@@ -70,6 +80,8 @@ interface ExtendedRenderOptions extends Omit<RenderOptions, 'wrapper'> {
   // setup.ts owns a test store shared with a manually-constructed WebClient.
   // When omitted, the helper builds a fresh store per render.
   store?: EnhancedStore<RootState>;
+  // Partial overrides for the game-interaction context (defaults to no-ops).
+  gameInteraction?: Partial<GameInteractionHandlers>;
 }
 
 export function renderWithProviders(
@@ -79,9 +91,13 @@ export function renderWithProviders(
     route = '/',
     webClient = getDefaultWebClient(),
     store: externalStore,
+    gameInteraction,
     ...renderOptions
   }: ExtendedRenderOptions = {},
 ) {
+  const interactionHandlers: GameInteractionHandlers = gameInteraction
+    ? { ...NOOP_GAME_INTERACTION, ...gameInteraction }
+    : NOOP_GAME_INTERACTION;
   const store = externalStore ?? createStore<RootState>({
     reducer: combineReducers(rootReducerMap),
     preloadedState,
@@ -100,7 +116,9 @@ export function renderWithProviders(
                       screenReaderInstructions: { draggable: '' },
                     }}
                   >
-                    {children}
+                    <GameInteractionProvider value={interactionHandlers}>
+                      {children}
+                    </GameInteractionProvider>
                   </DndContext>
                 </MemoryRouter>
               </ToastProvider>

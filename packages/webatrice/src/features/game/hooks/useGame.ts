@@ -68,7 +68,7 @@ export function useGame(): Game {
     startPendingArrow: arrows.startPendingArrow,
     startPendingAttach: arrows.startPendingAttach,
   });
-  const dnd = useGameDnd({ gameId, onDragStart: arrows.cancelPendingOnDragStart });
+  const dnd = useGameDnd({ gameId });
 
   useGameShortcuts({ gameId, onRequestConcede: dialogs.openConcede });
 

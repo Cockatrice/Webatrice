@@ -1,3 +1,4 @@
+import { DragOverlay, useDndContext } from '@dnd-kit/core';
 import { ServerInfo_Card } from '@cockatrice/sockatrice/generated';
 import { useScryfallCard } from '../../../hooks/useScryfallCard';
 
@@ -19,6 +20,12 @@ function CardDragOverlay({ card }: CardDragOverlayProps) {
       )}
     </div>
   );
+}
+
+export function CardDragOverlayHost() {
+  const { active } = useDndContext();
+  const card = (active?.data.current as { card?: ServerInfo_Card } | undefined)?.card ?? null;
+  return <DragOverlay dropAnimation={null}>{card ? <CardDragOverlay card={card} /> : null}</DragOverlay>;
 }
 
 export default CardDragOverlay;

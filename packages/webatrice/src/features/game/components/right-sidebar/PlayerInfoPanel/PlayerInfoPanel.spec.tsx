@@ -121,8 +121,8 @@ describe('PlayerInfoPanel', () => {
   it('does not wire left-click onZoneClick for the Hand row', () => {
     const onZoneClick = vi.fn();
     renderWithProviders(
-      <PlayerInfoPanel gameId={1} playerId={1} onZoneClick={onZoneClick} />,
-      { preloadedState: statefulPlayer() },
+      <PlayerInfoPanel gameId={1} playerId={1} />,
+      { preloadedState: statefulPlayer(), gameInteraction: { onZoneClick } },
     );
 
     fireEvent.click(screen.getByTestId('zone-stack-hand'));
@@ -133,8 +133,8 @@ describe('PlayerInfoPanel', () => {
   it('forwards zone clicks with (playerId, zoneName)', () => {
     const onZoneClick = vi.fn();
     renderWithProviders(
-      <PlayerInfoPanel gameId={1} playerId={1} onZoneClick={onZoneClick} />,
-      { preloadedState: statefulPlayer() },
+      <PlayerInfoPanel gameId={1} playerId={1} />,
+      { preloadedState: statefulPlayer(), gameInteraction: { onZoneClick } },
     );
 
     fireEvent.click(screen.getByTestId('zone-stack-deck'));
@@ -384,9 +384,11 @@ describe('PlayerInfoPanel', () => {
           playerId={1}
           canEdit
           onContextMenu={onContextMenu}
-          onZoneContextMenu={onZoneContextMenu}
         />,
-        { preloadedState: statefulPlayer({ counters: { 1: life } }) },
+        {
+          preloadedState: statefulPlayer({ counters: { 1: life } }),
+          gameInteraction: { onZoneContextMenu },
+        },
       );
 
       fireEvent.contextMenu(screen.getByTestId(`zone-stack-${Enriched.ZoneName.DECK}`));
