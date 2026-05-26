@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { GameEntry } from '@cockatrice/datatrice';
 export interface PlayerSlotEntry {
@@ -15,23 +15,42 @@ export interface GamePlayerSlots {
   revealPlayers: PlayerSlotEntry[];
 }
 
+interface SlotState {
+  a: number | undefined;
+  b: number | undefined;
+}
+
 export function useGamePlayerSlots(
   game: GameEntry | undefined,
 ): GamePlayerSlots {
-  const [slotAPlayerId, setSlotAPlayerId] = useState<number | undefined>();
-  const [slotBPlayerId, setSlotBPlayerId] = useState<number | undefined>();
+  const [slots, setSlots] = useState<SlotState>({ a: undefined, b: undefined });
+  // Tracks the order in which seated playerIds were first observed, so slot
+  // defaults follow join order rather than numeric playerId order.
+  const joinOrderRef = useRef<number[]>([]);
 
   const players = useMemo<PlayerSlotEntry[]>(() => {
     if (!game) {
+      joinOrderRef.current = [];
       return [];
     }
-    return Object.values(game.players)
-      .filter((p) => !p.properties.spectator)
-      .sort((a, b) => a.properties.playerId - b.properties.playerId)
-      .map((p) => ({
-        playerId: p.properties.playerId,
-        name: p.properties.userInfo?.name ?? `p${p.properties.playerId}`,
-      }));
+    const seated = Object.values(game.players).filter((p) => !p.properties.spectator);
+    const seatedIds = new Set(seated.map((p) => p.properties.playerId));
+    // Drop ids that left; a re-join lands at the end of the order.
+    joinOrderRef.current = joinOrderRef.current.filter((id) => seatedIds.has(id));
+    for (const p of seated) {
+      const id = p.properties.playerId;
+      if (!joinOrderRef.current.includes(id)) {
+        joinOrderRef.current.push(id);
+      }
+    }
+    const byId = new Map(seated.map((p) => [p.properties.playerId, p]));
+    return joinOrderRef.current.map((id) => {
+      const p = byId.get(id)!;
+      return {
+        playerId: id,
+        name: p.properties.userInfo?.name ?? `p${id}`,
+      };
+    });
   }, [game]);
 
   const localPlayerId = game?.localPlayerId;
@@ -42,28 +61,46 @@ export function useGamePlayerSlots(
       return;
     }
 
-    const slotAValid = slotAPlayerId != null && players.some((p) => p.playerId === slotAPlayerId);
-    let resolvedA = slotAPlayerId;
-    if (!slotAValid) {
-      if (!isSpectator && localPlayerId != null && players.some((p) => p.playerId === localPlayerId)) {
-        resolvedA = localPlayerId;
-      } else {
-        resolvedA = players[0].playerId;
+    setSlots((prev) => {
+      const ids = players.map((p) => p.playerId);
+      const aValid = prev.a != null && ids.includes(prev.a);
+      let nextA = prev.a;
+      if (!aValid) {
+        if (!isSpectator && localPlayerId != null && ids.includes(localPlayerId)) {
+          nextA = localPlayerId;
+        } else {
+          nextA = ids[0];
+        }
       }
-      setSlotAPlayerId(resolvedA);
-    }
 
-    const slotBValid = slotBPlayerId != null && players.some((p) => p.playerId === slotBPlayerId);
-    if (!slotBValid) {
-      const other = players.find((p) => p.playerId !== resolvedA) ?? players[0];
-      setSlotBPlayerId(other.playerId);
-    }
-  }, [players, localPlayerId, isSpectator, slotAPlayerId, slotBPlayerId]);
+      const bValid = prev.b != null && ids.includes(prev.b) && prev.b !== nextA;
+      let nextB = prev.b;
+      if (players.length < 2) {
+        // Lone player: leave slot B unfilled so we don't render the same
+        // player on both sides of the board.
+        nextB = undefined;
+      } else if (!bValid) {
+        nextB = ids.find((id) => id !== nextA);
+      }
+
+      if (nextA === prev.a && nextB === prev.b) {
+        return prev;
+      }
+      return { a: nextA, b: nextB };
+    });
+  }, [players, localPlayerId, isSpectator]);
+
+  const setSlotAPlayerId = (id: number) => {
+    setSlots((prev) => (prev.b === id ? { a: id, b: prev.a } : { ...prev, a: id }));
+  };
+  const setSlotBPlayerId = (id: number) => {
+    setSlots((prev) => (prev.a === id ? { a: prev.b, b: id } : { ...prev, b: id }));
+  };
 
   return {
     players,
-    slotAPlayerId,
-    slotBPlayerId,
+    slotAPlayerId: slots.a,
+    slotBPlayerId: slots.b,
     setSlotAPlayerId,
     setSlotBPlayerId,
     revealPlayers: players,

@@ -81,15 +81,12 @@ export function useGame(): Game {
     !current.isJudge &&
     !localPlayer.properties.readyStart;
 
-  // Spectator hand visibility gated on spectators_omniscient.
-  // See .github/instructions/webatrice-game.instructions.md#servatrice-game-event-quirks.
+  // Hand zone is the local player's hand UI; spectators are always viewing
+  // someone else's side, so it never renders for them.
   const showHandZone =
     game != null &&
-    slots.slotAPlayerId != null &&
-    (
-      (!isSpectator && slots.slotAPlayerId === game.localPlayerId) ||
-      (isSpectator && (game.info.spectatorsOmniscient ?? false))
-    );
+    !isSpectator &&
+    slots.slotAPlayerId === game.localPlayerId;
 
   return {
     ...current,

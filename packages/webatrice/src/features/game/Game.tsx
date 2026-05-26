@@ -93,24 +93,27 @@ function Game() {
                 </div>
               )}
 
-              {game && slots.slotBPlayerId != null && slots.slotAPlayerId != null && (
+              {game && slots.slotAPlayerId != null && (
                 <GameInteractionProvider value={interactionHandlers}>
                   <div
                     className={
                       'game__board-inner' +
-                      (isRotated ? ' game__board-inner--rotated' : '')
+                      (isRotated ? ' game__board-inner--rotated' : '') +
+                      (showHandZone ? '' : ' game__board-inner--no-hand')
                     }
                   >
-                    <PlayerBoard
-                      gameId={gameId!}
-                      playerId={slots.slotBPlayerId}
-                      mirrored
-                      canAct={slotBAccess.canAct}
-                      canEditCounters={slotBAccess.canAct}
-                      arrowSourceKey={arrows.arrowSourceKey}
-                      players={slots.players}
-                      onSelectPlayer={slots.setSlotBPlayerId}
-                    />
+                    {slots.slotBPlayerId != null && (
+                      <PlayerBoard
+                        gameId={gameId!}
+                        playerId={slots.slotBPlayerId}
+                        mirrored
+                        canAct={slotBAccess.canAct}
+                        canEditCounters={slotBAccess.canAct}
+                        arrowSourceKey={arrows.arrowSourceKey}
+                        players={slots.players}
+                        onSelectPlayer={slots.setSlotBPlayerId}
+                      />
+                    )}
                     <PlayerBoard
                       gameId={gameId!}
                       playerId={slots.slotAPlayerId}

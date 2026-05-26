@@ -207,6 +207,30 @@ describe('Game board integration', () => {
     });
   });
 
+  it('renders only the local board when no opponent has joined yet', async () => {
+    renderAppScreen(<Game />);
+
+    act(() => {
+      store.dispatch(games.Actions.gameJoined({ data: buildEventGameJoined({ gameId: 42, localPlayerId: 1, hostId: 1 }), }));
+      store.dispatch(games.Actions.gameStateChanged({ gameId: 42, data: buildEventGameStateChanged([1], 1), }));
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('player-board-1')).toBeInTheDocument();
+    });
+    // Slot B must stay empty so the lone player isn't mirrored onto the
+    // opponent side of the board.
+    expect(screen.queryByTestId('player-board-2')).not.toBeInTheDocument();
+
+    act(() => {
+      store.dispatch(games.Actions.gameStateChanged({ gameId: 42, data: buildEventGameStateChanged([1, 2], 1), }));
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('player-board-2')).toBeInTheDocument();
+    });
+  });
+
   it('mirrors the opponent board and leaves the local board upright', async () => {
     renderAppScreen(<Game />);
 

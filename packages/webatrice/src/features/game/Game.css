@@ -25,6 +25,10 @@
   grid-template-rows: minmax(0, 1fr) minmax(0, 1fr) 176px;
 }
 
+.game__board-inner--no-hand {
+  grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+}
+
 .game__board-inner--rotated {
   transform: rotate(90deg);
   transform-origin: center center;
