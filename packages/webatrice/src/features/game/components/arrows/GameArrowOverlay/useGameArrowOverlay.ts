@@ -20,11 +20,40 @@ export interface ResolvedArrow {
 
 const ARROW_FALLBACK_CSS = rgbaToCss(ArrowColor.RED);
 
+// Distance from the line endpoint to the visual apex of the arrowhead.
+// Derived from the marker definition in GameArrowOverlay.tsx:
+//   refX=10, path apex at x=12, markerWidth=10, viewBox width=14,
+//   .game-arrow-overlay__head stroke-width=4.
+//   overshoot = (12 - 10) * (10 / 14) * 4 ≈ 5.71px
+// plus ~1.4px for the 1-unit path outline → round up to 7 so the visual
+// tip clears the target rim with a tiny margin. Keep in sync with the
+// marker if its geometry ever changes.
+const ARROW_HEAD_TIP_OVERSHOOT_PX = 7;
+
 function cssColor(c: { r: number; g: number; b: number; a: number } | undefined): string {
   if (!c) {
     return ARROW_FALLBACK_CSS;
   }
   return rgbaToCss({ r: c.r, g: c.g, b: c.b, a: c.a ?? 255 });
+}
+
+// Point on the circle centered at (cx,cy) with radius r along the ray from
+// (sx,sy) — so the arrow head lands on the rim instead of the center. Falls
+// back to the center if the source is inside the circle (degenerate).
+function pointOnCircleEdge(
+  sx: number,
+  sy: number,
+  cx: number,
+  cy: number,
+  r: number,
+): { x: number; y: number } {
+  const dx = sx - cx;
+  const dy = sy - cy;
+  const d = Math.hypot(dx, dy);
+  if (d <= r || d === 0) {
+    return { x: cx, y: cy };
+  }
+  return { x: cx + (dx * r) / d, y: cy + (dy * r) / d };
 }
 
 export interface GameArrowOverlay {
@@ -132,13 +161,28 @@ export function useGameArrowOverlay({
         }
         const s = sourceEl.getBoundingClientRect();
         const t = targetEl.getBoundingClientRect();
+        const x1 = s.left + s.width / 2 - containerRect.left;
+        const y1 = s.top + s.height / 2 - containerRect.top;
+        const tcx = t.left + t.width / 2 - containerRect.left;
+        const tcy = t.top + t.height / 2 - containerRect.top;
+        // Player-target arrows anchor to the rim of the life circle; card
+        // targets stay center-anchored.
+        const tip = isPlayerTarget
+          ? pointOnCircleEdge(
+              x1,
+              y1,
+              tcx,
+              tcy,
+              Math.min(t.width, t.height) / 2 + ARROW_HEAD_TIP_OVERSHOOT_PX,
+            )
+          : { x: tcx, y: tcy };
         out.push({
           arrowId: a.id,
           ownerPlayerId: player.properties.playerId,
-          x1: s.left + s.width / 2 - containerRect.left,
-          y1: s.top + s.height / 2 - containerRect.top,
-          x2: t.left + t.width / 2 - containerRect.left,
-          y2: t.top + t.height / 2 - containerRect.top,
+          x1,
+          y1,
+          x2: tip.x,
+          y2: tip.y,
           color: cssColor(a.arrowColor),
         });
       }
