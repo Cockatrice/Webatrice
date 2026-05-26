@@ -4,7 +4,7 @@
   flex-direction: column;
   background: #0a4a1e;
   border-top: 2px solid #1a6a33;
-  padding: 4px 12px;
+  padding: 4px 0;
   box-sizing: border-box;
 }
 
@@ -13,9 +13,13 @@
   display: flex;
   flex-direction: row;
   align-items: center;
+  justify-content: safe center;
   gap: 4px;
-  overflow-x: auto;
+  padding-inline: 12px;
+  overflow-x: scroll;
   overflow-y: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: #2a8a4a #062a12;
 }
 
 .hand-zone--drop-over {

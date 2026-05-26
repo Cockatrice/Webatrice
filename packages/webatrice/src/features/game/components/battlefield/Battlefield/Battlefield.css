@@ -6,8 +6,10 @@
   background: #0f1c38;
   border: 1px solid #1a2b52;
   box-sizing: border-box;
-  overflow-x: auto;
+  overflow-x: scroll;
   overflow-y: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: #2d4a8a #0a142a;
 }
 
 .battlefield__row {
