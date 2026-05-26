@@ -4,6 +4,7 @@ import type { ListenerMiddlewareInstance } from '@reduxjs/toolkit';
 import { Enriched } from '../../types';
 import {
   CardAttribute,
+  Event_DeleteArrowSchema,
   Event_GameStateChangedSchema,
   ServerInfo_Card,
   ServerInfo_CardCounter,
@@ -93,6 +94,39 @@ export function registerGameListeners(mw: ListenerMiddlewareInstance<unknown>): 
         toZone: effectiveTargetZone,
         card: movedCard,
       }));
+
+      // Servatrice discards arrows server-side when a card changes zones but
+      // does not emit Event_DeleteArrow, so client-side state would otherwise
+      // retain orphans that re-render if the card returns. Mirror the server
+      // semantics by sweeping every player's arrows (arrows can cross players)
+      // for any endpoint matching the pre-move (startPlayerId, startZone,
+      // resolvedCardId).
+      if (resolvedCardId >= 0) {
+        const postState = api.getState() as { games: GamesState };
+        const postGame = postState.games.games[gameId];
+        if (postGame) {
+          for (const [ownerIdStr, owner] of Object.entries(postGame.players)) {
+            const ownerId = Number(ownerIdStr);
+            for (const arrow of Object.values(owner.arrows)) {
+              const startMatch =
+                arrow.startPlayerId === startPlayerId &&
+                arrow.startZone === startZone &&
+                arrow.startCardId === resolvedCardId;
+              const targetMatch =
+                arrow.targetPlayerId === startPlayerId &&
+                arrow.targetZone === startZone &&
+                arrow.targetCardId === resolvedCardId;
+              if (startMatch || targetMatch) {
+                api.dispatch(Actions.arrowDeleted({
+                  gameId,
+                  playerId: ownerId,
+                  data: create(Event_DeleteArrowSchema, { arrowId: arrow.id }),
+                }));
+              }
+            }
+          }
+        }
+      }
 
       if (
         resolvedCardId >= 0 &&
