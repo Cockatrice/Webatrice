@@ -44,7 +44,8 @@ function Game() {
     slotAAccess,
     slotBAccess,
     deckSelectOpen,
-    showHandZone,
+    showSlotAHand,
+    showSlotBHand,
     slots,
     arrows,
     dialogs,
@@ -99,9 +100,23 @@ function Game() {
                     className={
                       'game__board-inner' +
                       (isRotated ? ' game__board-inner--rotated' : '') +
-                      (showHandZone ? '' : ' game__board-inner--no-hand')
+                      (showSlotAHand ? '' : ' game__board-inner--no-hand-a') +
+                      (showSlotBHand ? '' : ' game__board-inner--no-hand-b')
                     }
                   >
+                    {showSlotBHand && slots.slotBPlayerId != null && (
+                      <HandZone
+                        gameId={gameId!}
+                        playerId={slots.slotBPlayerId}
+                        canAct={slotBAccess.canAct}
+                        arrowSourceKey={arrows.arrowSourceKey}
+                        onHandContextMenu={
+                          slots.slotBPlayerId === game.localPlayerId
+                            ? dialogs.handleHandContextMenu
+                            : undefined
+                        }
+                      />
+                    )}
                     {slots.slotBPlayerId != null && (
                       <PlayerBoard
                         gameId={gameId!}
@@ -126,13 +141,17 @@ function Game() {
                       players={slots.players}
                       onSelectPlayer={slots.setSlotAPlayerId}
                     />
-                    {showHandZone && (
+                    {showSlotAHand && (
                       <HandZone
                         gameId={gameId!}
                         playerId={slots.slotAPlayerId}
                         canAct={slotAAccess.canAct}
                         arrowSourceKey={arrows.arrowSourceKey}
-                        onHandContextMenu={dialogs.handleHandContextMenu}
+                        onHandContextMenu={
+                          slots.slotAPlayerId === game.localPlayerId
+                            ? dialogs.handleHandContextMenu
+                            : undefined
+                        }
                       />
                     )}
                   </div>
