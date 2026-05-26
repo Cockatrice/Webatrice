@@ -1,7 +1,13 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 
 import { makeCard } from '@cockatrice/datatrice/testing';
 import CardPreview from './CardPreview';
+
+// CardPreview triggers an async CardDTO.get(name) inside a useEffect. The
+// setupTests Dexie mock resolves immediately, but the resulting setState
+// lands after the test's synchronous body — flush it within act() so React
+// doesn't warn.
+const flushDtoLookup = () => act(async () => {});
 
 describe('CardPreview', () => {
   it('shows an empty hint when no card is hovered', () => {
@@ -28,16 +34,17 @@ describe('CardPreview', () => {
     expect(normal).not.toHaveClass('card-preview__image--loaded');
   });
 
-  it('reveals the normal image once onLoad fires', () => {
+  it('reveals the normal image once onLoad fires', async () => {
     const card = makeCard({ name: 'Lightning Bolt' });
     render(<CardPreview card={card} />);
 
     const normal = screen.getByTestId('card-preview-normal');
     fireEvent.load(normal);
     expect(normal).toHaveClass('card-preview__image--loaded');
+    await flushDtoLookup();
   });
 
-  it('resets the loaded flag when the card changes', () => {
+  it('resets the loaded flag when the card changes', async () => {
     const a = makeCard({ id: 1, name: 'A' });
     const b = makeCard({ id: 2, name: 'B' });
     const { rerender } = render(<CardPreview card={a} />);
@@ -51,5 +58,6 @@ describe('CardPreview', () => {
     expect(screen.getByTestId('card-preview-normal')).not.toHaveClass(
       'card-preview__image--loaded',
     );
+    await flushDtoLookup();
   });
 });

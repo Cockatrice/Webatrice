@@ -113,6 +113,11 @@ describe('DatatriceProvider', () => {
     });
 
     it('preserves dispatches against the external store', () => {
+      // The merged reducer below feeds state-with-`probe` back through `rootReducer`,
+      // which triggers a benign Redux warning about the unknown key. Silence it so
+      // intentional test setup doesn't pollute stderr.
+      vi.spyOn(console, 'error').mockImplementation(() => {});
+
       const probeSlice = createSlice({
         name: 'probe',
         initialState: { hits: 0 },

@@ -19,15 +19,20 @@ if (typeof Element !== 'undefined' && !Element.prototype.scrollIntoView) {
 
 // Dexie eagerly opens IndexedDB on import; jsdom's fake-indexeddb is memory-intensive.
 vi.mock('dexie', () => {
+  const whereTerminator = { first: () => Promise.resolve(null) };
   const fakeTable = {
     mapToClass: () => {},
     get: () => Promise.resolve(null),
     put: () => Promise.resolve(),
     add: () => Promise.resolve(1),
     bulkAdd: () => Promise.resolve(),
+    bulkPut: () => Promise.resolve(),
     delete: () => Promise.resolve(),
     toArray: () => Promise.resolve([]),
-    where: () => ({ equals: () => ({ first: () => Promise.resolve(null) }) }),
+    where: () => ({
+      equals: () => whereTerminator,
+      equalsIgnoreCase: () => whereTerminator,
+    }),
   };
   class FakeDexie {
     version() {

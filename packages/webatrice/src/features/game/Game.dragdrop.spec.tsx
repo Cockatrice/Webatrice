@@ -10,7 +10,7 @@
 // collision detection) needs Playwright — documented in the M3 deferrable
 // as a later-milestone item.
 
-import { screen, fireEvent, waitFor } from '@testing-library/react';
+import { screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { ServerInfo_Card } from '@cockatrice/sockatrice/generated';
 import { Enriched } from '@cockatrice/datatrice';
 vi.mock('../../components/Layout/Layout', () => ({
@@ -117,15 +117,22 @@ describe('Game drag-drop (keyboard sensor)', () => {
     const slot = screen
       .getByTestId('player-board-1')
       .querySelector('[data-testid="card-slot"]') as HTMLElement;
-    slot.focus();
-    fireEvent.keyDown(slot, { key: ' ', code: 'Space' });
+    // dnd-kit's KeyboardSensor defers DndContext state updates after each
+    // Space keydown — wrap each in async act() so the deferred setState
+    // lands within an act() boundary.
+    await act(async () => {
+      slot.focus();
+      fireEvent.keyDown(slot, { key: ' ', code: 'Space' });
+    });
 
     // Tab to the graveyard droppable and drop.
     const grave = screen
       .getByTestId('player-board-1')
       .querySelector(`[data-testid="zone-stack-${Enriched.ZoneName.GRAVE}"]`) as HTMLElement;
-    grave.focus();
-    fireEvent.keyDown(grave, { key: ' ', code: 'Space' });
+    await act(async () => {
+      grave.focus();
+      fireEvent.keyDown(grave, { key: ' ', code: 'Space' });
+    });
 
     // If jsdom layout isn't enough to resolve the drop target, the handler
     // will no-op. We assert loosely: either moveCard fired, or nothing did
