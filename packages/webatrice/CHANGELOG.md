@@ -1,5 +1,20 @@
 # @cockatrice/webatrice
 
+## 4.0.3
+
+### Patch Changes
+
+- 0509fcf: Battlefield scrolling and arrow anchoring improvements: stack columns now scroll vertically when card count overflows the available height, the three battlefield lanes for one player share a single horizontal scrollbar (so columns stay aligned across rows instead of drifting independently), and the arrow overlay re-anchors in real time on any scroll via a capturing scroll listener on `window` (rAF-coalesced).
+- 0509fcf: The player name in each side's info panel is now the dropdown for choosing which player occupies that slot. Clicking the name (with a caret affordance beside it) opens a menu of all players in the game; the previous standalone slot-selector dropdowns above the board have been removed.
+- 0509fcf: Fix four related player-slot issues in the game view:
+
+  - A lone player (e.g. host who readies before anyone joins) no longer renders on both sides of the board. Slot B stays empty until a second player is seated, and the board grid drops the hand-zone row so the battlefield fills the space.
+  - Slot defaults now follow the order players joined, not numeric `playerId` order.
+  - The hand zone no longer renders for spectators (it's the local-player's hand UI; spectators are always viewing someone else).
+  - Selecting a player who is already in the other slot now swaps the two slots instead of collapsing both onto the same player.
+
+- 0509fcf: Themed permanent scrollbars on battlefield, hand, and stack zones. Horizontal scrollers use `overflow-x: scroll` so the thin themed scrollbar is permanent — no layout shift on overflow toggle. The stack column uses `overflow-y: auto` + `scrollbar-gutter: stable both-edges` so reserved gutters stay symmetric and cards remain visually centered. Stack column widened to 96 px (1.5× the card width, matching Cockatrice's `StackZone::boundingRect`); player board grid track updated accordingly. Hand zone moves horizontal padding onto the inner scroll container so the scrollbar spans the full width.
+
 ## 4.0.2
 
 ### Patch Changes
