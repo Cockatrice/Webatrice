@@ -3,8 +3,9 @@ import IconButton from '@mui/material/IconButton';
 import CloseIcon from '@mui/icons-material/Close';
 
 import { ServerInfo_Card } from '@cockatrice/sockatrice/generated';
-import { useScryfallCard } from '../../hooks/useScryfallCard';
 
+import CardSlot from '../../components/ui/CardSlot/CardSlot';
+import { makeCardKey } from '../../utils/CardRegistry/CardRegistryContext';
 import { useZoneViewDialog } from './useZoneViewDialog';
 
 import './ZoneViewDialog.css';
@@ -16,21 +17,10 @@ export interface ZoneViewDialogProps {
   zoneName: string | undefined;
   handleClose: () => void;
   initialPosition?: { x: number; y: number };
-}
-
-function ZoneThumbnail({ card }: { card: ServerInfo_Card }) {
-  const { smallUrl } = useScryfallCard(card);
-  return (
-    <div className="zone-view-dialog__card" data-testid={`zone-view-card-${card.id}`}>
-      {smallUrl && !card.faceDown ? (
-        <img src={smallUrl} alt={card.name} className="zone-view-dialog__card-image" />
-      ) : (
-        <div className="zone-view-dialog__card-placeholder">
-          {card.faceDown ? 'Face Down' : card.name}
-        </div>
-      )}
-    </div>
-  );
+  selectedCardKey?: string | null;
+  onCardHover?: (card: ServerInfo_Card) => void;
+  onCardFocus?: (ownerPlayerId: number | undefined, zone: string | undefined, card: ServerInfo_Card) => void;
+  onCardBlur?: (ownerPlayerId: number | undefined, zone: string | undefined, card: ServerInfo_Card) => void;
 }
 
 const DEFAULT_POSITION = { x: 80, y: 80 };
@@ -42,6 +32,10 @@ function ZoneViewDialog({
   zoneName,
   handleClose,
   initialPosition = DEFAULT_POSITION,
+  selectedCardKey = null,
+  onCardHover,
+  onCardFocus,
+  onCardBlur,
 }: ZoneViewDialogProps) {
   const { cards, count, title, position, handlePointerDown, handlePointerMove, handlePointerUp } =
     useZoneViewDialog({ gameId, playerId, zoneName, initialPosition });
@@ -97,9 +91,25 @@ function ZoneViewDialog({
           </div>
         ) : (
           <div className="zone-view-dialog__grid">
-            {cards.map((card) => (
-              <ZoneThumbnail key={card.id} card={card} />
-            ))}
+            {cards.map((card) => {
+              const key =
+                playerId != null && zoneName != null
+                  ? makeCardKey(playerId, zoneName, card.id)
+                  : null;
+              return (
+                <div key={card.id} className="zone-view-dialog__card" data-testid={`zone-view-card-${card.id}`}>
+                  <CardSlot
+                    card={card}
+                    ownerPlayerId={playerId}
+                    zone={zoneName}
+                    isSelected={key != null && selectedCardKey === key}
+                    onMouseEnter={onCardHover}
+                    onFocus={onCardFocus}
+                    onBlur={onCardBlur}
+                  />
+                </div>
+              );
+            })}
           </div>
         )}
       </div>

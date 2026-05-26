@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import { KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 
 import { ServerInfo_Card } from '@cockatrice/sockatrice/generated';
-import { createCardRegistry, type CardRegistry } from '../utils/CardRegistry/CardRegistryContext';
+import { createCardRegistry, makeCardKey, type CardRegistry } from '../utils/CardRegistry/CardRegistryContext';
 import { useCurrentGame, type CurrentGame } from './useCurrentGame';
 import { useGameAccess, type GameAccess } from './useGameAccess';
 import { useGameArrowInteractions, type GameArrowInteractions } from './useGameArrowInteractions';
@@ -19,6 +19,10 @@ export interface Game extends CurrentGame {
   sensors: ReturnType<typeof useSensors>;
   hoveredCard: ServerInfo_Card | null;
   setHoveredCard: (card: ServerInfo_Card | null) => void;
+  previewCard: ServerInfo_Card | null;
+  selectedCardKey: string | null;
+  onCardFocus: (ownerPlayerId: number | undefined, zone: string | undefined, card: ServerInfo_Card) => void;
+  onCardBlur: (ownerPlayerId: number | undefined, zone: string | undefined, card: ServerInfo_Card) => void;
   isRotated: boolean;
   toggleRotated: () => void;
   localAccess: GameAccess;
@@ -50,6 +54,32 @@ export function useGame(): Game {
     useSensor(KeyboardSensor),
   );
   const [hoveredCard, setHoveredCard] = useState<ServerInfo_Card | null>(null);
+  const [selection, setSelection] = useState<{ key: string; card: ServerInfo_Card } | null>(null);
+
+  const onCardFocus = useCallback(
+    (ownerPlayerId: number | undefined, zone: string | undefined, card: ServerInfo_Card) => {
+      if (ownerPlayerId == null || zone == null) {
+        return;
+      }
+      setSelection({ key: makeCardKey(ownerPlayerId, zone, card.id), card });
+    },
+    [],
+  );
+  const onCardBlur = useCallback(
+    (ownerPlayerId: number | undefined, zone: string | undefined, card: ServerInfo_Card) => {
+      if (ownerPlayerId == null || zone == null) {
+        return;
+      }
+      const blurredKey = makeCardKey(ownerPlayerId, zone, card.id);
+      // Defer so a sibling card's focus (which fires after blur) wins.
+      queueMicrotask(() => {
+        setSelection((prev) => (prev?.key === blurredKey ? null : prev));
+      });
+    },
+    [],
+  );
+  const previewCard = selection?.card ?? hoveredCard;
+  const selectedCardKey = selection?.key ?? null;
   // View-only 90° rotation. See .github/instructions/webatrice-game.instructions.md#board-rotation.
   const [isRotated, setIsRotated] = useState(false);
   const toggleRotated = useCallback(() => setIsRotated((prev) => !prev), []);
@@ -104,6 +134,10 @@ export function useGame(): Game {
     sensors,
     hoveredCard,
     setHoveredCard,
+    previewCard,
+    selectedCardKey,
+    onCardFocus,
+    onCardBlur,
     isRotated,
     toggleRotated,
     localAccess,

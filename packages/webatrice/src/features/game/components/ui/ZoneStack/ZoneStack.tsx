@@ -16,7 +16,6 @@ export interface ZoneStackProps {
   zoneName: string;
   label: string;
   rotated?: boolean;
-  onCardHover?: (card: ServerInfo_Card) => void;
   onClick?: (zoneName: string) => void;
   onContextMenu?: (zoneName: string, event: React.MouseEvent) => void;
 }
@@ -27,7 +26,6 @@ function ZoneStack({
   zoneName,
   label,
   rotated = false,
-  onCardHover,
   onClick,
   onContextMenu,
 }: ZoneStackProps) {
@@ -57,7 +55,6 @@ function ZoneStack({
         'zone-stack--rotated': rotated,
       })}
       data-testid={`zone-stack-${zoneName}`}
-      onMouseEnter={() => topCard && onCardHover?.(topCard)}
       onClick={() => onClick?.(zoneName)}
       onContextMenu={(e) => {
         // Stop bubbling so the player menu doesn't open under this zone's menu.

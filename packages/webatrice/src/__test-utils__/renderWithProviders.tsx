@@ -37,6 +37,8 @@ import { createMockWebClient } from './mockWebClient';
 
 const NOOP_GAME_INTERACTION: GameInteractionHandlers = {
   onCardHover: () => undefined,
+  onCardFocus: () => undefined,
+  onCardBlur: () => undefined,
   onCardClick: () => undefined,
   onCardContextMenu: () => undefined,
   onCardDoubleClick: () => undefined,

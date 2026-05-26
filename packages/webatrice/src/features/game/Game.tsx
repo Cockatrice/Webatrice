@@ -37,8 +37,11 @@ function Game() {
     boardRef,
     cardRegistry,
     sensors,
-    hoveredCard,
     setHoveredCard,
+    previewCard,
+    selectedCardKey,
+    onCardFocus,
+    onCardBlur,
     isRotated,
     toggleRotated,
     slotAAccess,
@@ -55,6 +58,8 @@ function Game() {
   const interactionHandlers = useMemo(
     () => ({
       onCardHover: setHoveredCard,
+      onCardFocus,
+      onCardBlur,
       onCardClick: arrows.handleCardClick,
       onCardContextMenu: dialogs.handleCardContextMenu,
       onCardDoubleClick: arrows.handleCardDoubleClick,
@@ -63,6 +68,8 @@ function Game() {
     }),
     [
       setHoveredCard,
+      onCardFocus,
+      onCardBlur,
       arrows.handleCardClick,
       arrows.handleCardDoubleClick,
       dialogs.handleCardContextMenu,
@@ -110,6 +117,7 @@ function Game() {
                         playerId={slots.slotBPlayerId}
                         canAct={slotBAccess.canAct}
                         arrowSourceKey={arrows.arrowSourceKey}
+                        selectedCardKey={selectedCardKey}
                         onHandContextMenu={
                           slots.slotBPlayerId === game.localPlayerId
                             ? dialogs.handleHandContextMenu
@@ -126,6 +134,7 @@ function Game() {
                         canAct={slotBAccess.canAct}
                         canEditCounters={slotBAccess.canAct}
                         arrowSourceKey={arrows.arrowSourceKey}
+                        selectedCardKey={selectedCardKey}
                         players={slots.players}
                         onSelectPlayer={slots.setSlotBPlayerId}
                       />
@@ -137,6 +146,7 @@ function Game() {
                       canAct={slotAAccess.canAct}
                       canEditCounters={slotAAccess.canAct}
                       arrowSourceKey={arrows.arrowSourceKey}
+                      selectedCardKey={selectedCardKey}
                       onPlayerContextMenu={dialogs.handlePlayerContextMenu}
                       players={slots.players}
                       onSelectPlayer={slots.setSlotAPlayerId}
@@ -147,6 +157,7 @@ function Game() {
                         playerId={slots.slotAPlayerId}
                         canAct={slotAAccess.canAct}
                         arrowSourceKey={arrows.arrowSourceKey}
+                        selectedCardKey={selectedCardKey}
                         onHandContextMenu={
                           slots.slotAPlayerId === game.localPlayerId
                             ? dialogs.handleHandContextMenu
@@ -163,7 +174,7 @@ function Game() {
 
             <RightPanel
               gameId={gameId}
-              hoveredCard={hoveredCard}
+              hoveredCard={previewCard}
               onRequestRollDie={dialogs.openRollDie}
               onRequestConcede={dialogs.openConcede}
               onRequestUnconcede={dialogs.openUnconcede}
@@ -183,6 +194,10 @@ function Game() {
                 zoneName={v.zoneName}
                 handleClose={() => dialogs.handleCloseZoneView(v.playerId, v.zoneName)}
                 initialPosition={{ x: 80 + idx * 36, y: 80 + idx * 36 }}
+                selectedCardKey={selectedCardKey}
+                onCardHover={setHoveredCard}
+                onCardFocus={onCardFocus}
+                onCardBlur={onCardBlur}
               />
             ))}
 

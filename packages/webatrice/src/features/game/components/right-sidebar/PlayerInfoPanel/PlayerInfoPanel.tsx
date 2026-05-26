@@ -39,7 +39,7 @@ function PlayerInfoPanel({
   onSelectPlayer,
 }: PlayerInfoPanelProps) {
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
-  const { onCardHover, onZoneClick, onZoneContextMenu } = useGameInteraction();
+  const { onZoneClick, onZoneContextMenu } = useGameInteraction();
   const { player, isHost, lifeCounter, otherCounters, handleIncrement } = usePlayerInfoPanel({
     gameId,
     playerId,
@@ -164,7 +164,6 @@ function PlayerInfoPanel({
                 zoneName={z.name}
                 label={z.label}
                 rotated={z.rotated}
-                onCardHover={onCardHover}
                 onClick={clickHandler}
                 onContextMenu={(name, e) => onZoneContextMenu(playerId, name, e)}
               />

@@ -13,12 +13,15 @@ export interface CardSlotProps {
   card: ServerInfo_Card;
   draggable?: boolean;
   isArrowSource?: boolean;
+  isSelected?: boolean;
   ownerPlayerId?: number;
   zone?: string;
   onClick?: (ownerPlayerId: number | undefined, zone: string | undefined, card: ServerInfo_Card) => void;
   onDoubleClick?: (ownerPlayerId: number | undefined, zone: string | undefined, card: ServerInfo_Card) => void;
   onContextMenu?: (ownerPlayerId: number | undefined, zone: string | undefined, card: ServerInfo_Card, event: React.MouseEvent) => void;
   onMouseEnter?: (card: ServerInfo_Card) => void;
+  onFocus?: (ownerPlayerId: number | undefined, zone: string | undefined, card: ServerInfo_Card) => void;
+  onBlur?: (ownerPlayerId: number | undefined, zone: string | undefined, card: ServerInfo_Card) => void;
 }
 
 interface CardSlotContentProps {
@@ -81,12 +84,15 @@ function CardSlot({
   card,
   draggable = false,
   isArrowSource = false,
+  isSelected = false,
   ownerPlayerId,
   zone,
   onClick,
   onDoubleClick,
   onContextMenu,
   onMouseEnter,
+  onFocus,
+  onBlur,
 }: CardSlotProps) {
   const { smallUrl, attributes, listeners, isDragging, rootRef } = useCardSlot({
     card,
@@ -102,12 +108,15 @@ function CardSlot({
     [onContextMenu, ownerPlayerId, zone, card],
   );
   const handleMouseEnter = useCallback(() => onMouseEnter?.(card), [onMouseEnter, card]);
+  const handleFocus = useCallback(() => onFocus?.(ownerPlayerId, zone, card), [onFocus, ownerPlayerId, zone, card]);
+  const handleBlur = useCallback(() => onBlur?.(ownerPlayerId, zone, card), [onBlur, ownerPlayerId, zone, card]);
 
   const className = cx('card-slot', {
     'card-slot--tapped': card.tapped,
     'card-slot--face-down': card.faceDown,
     'card-slot--attacking': card.attacking,
     'card-slot--dragging': isDragging,
+    'card-slot--selected': isSelected,
     'card-slot--arrow-source': isArrowSource,
   });
 
@@ -115,10 +124,13 @@ function CardSlot({
     <div
       ref={rootRef}
       className={className}
+      tabIndex={0}
       onClick={handleClick}
       onDoubleClick={handleDoubleClick}
       onContextMenu={handleContextMenu}
       onMouseEnter={handleMouseEnter}
+      onFocus={handleFocus}
+      onBlur={handleBlur}
       data-testid="card-slot"
       data-card-id={card.id}
       data-card-owner={ownerPlayerId ?? ''}

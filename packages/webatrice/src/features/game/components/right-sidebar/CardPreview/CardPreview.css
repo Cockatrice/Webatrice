@@ -18,8 +18,7 @@
 
 .card-preview__frame {
   position: relative;
-  width: 100%;
-  max-width: 280px;
+  height: 100%;
   aspect-ratio: 488 / 680;
   border-radius: 10px;
   overflow: hidden;

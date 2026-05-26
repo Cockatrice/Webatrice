@@ -15,7 +15,7 @@
   align-items: center;
   justify-content: safe center;
   gap: 4px;
-  padding-inline: 12px;
+  padding: 4px;
   overflow-x: scroll;
   overflow-y: hidden;
   scrollbar-width: thin;

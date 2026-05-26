@@ -86,8 +86,16 @@
   opacity: 0.35;
 }
 
+.card-slot--selected {
+  box-shadow: 0 0 0 3px var(--color-selection), 0 0 16px var(--color-selection-glow);
+}
+
 .card-slot--arrow-source {
   box-shadow: 0 0 0 3px var(--color-arrow-red), 0 0 16px var(--color-arrow-red-glow);
+}
+
+.card-slot:focus {
+  outline: none;
 }
 
 .card-slot__pt {

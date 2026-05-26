@@ -9,6 +9,9 @@
   --color-arrow-red-glow: rgba(224, 75, 59, 0.55);
   --color-arrow-green-glow: rgba(61, 162, 107, 0.55);
 
+  --color-selection: #5fb3ff;
+  --color-selection-glow: rgba(95, 179, 255, 0.55);
+
   --color-highlight-yellow: #f7b01c;
   --color-highlight-yellow-soft: rgba(247, 176, 28, 0.4);
   --color-highlight-yellow-soft-alt: rgba(247, 176, 28, 0.55);
