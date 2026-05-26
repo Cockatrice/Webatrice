@@ -1,9 +1,14 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 
+import { isFieldSet } from '@bufbuild/protobuf';
 import { useWebClient } from '@cockatrice/datatrice/react';
 import { games } from '@cockatrice/datatrice';
 import { useAppSelector } from '@app/store';
-import { ServerInfo_Arrow } from '@cockatrice/sockatrice/generated';
+import {
+  type color,
+  colorSchema,
+  ServerInfo_Arrow,
+} from '@cockatrice/sockatrice/generated';
 import { PlayerEntry } from '@cockatrice/datatrice';
 import { ArrowColor, rgbaToCss } from '@app/types';
 import { makeCardKey, makePlayerKey, useCardRegistry } from '../../../utils/CardRegistry/CardRegistryContext';
@@ -30,11 +35,15 @@ const ARROW_FALLBACK_CSS = rgbaToCss(ArrowColor.RED);
 // marker if its geometry ever changes.
 const ARROW_HEAD_TIP_OVERSHOOT_PX = 7;
 
-function cssColor(c: { r: number; g: number; b: number; a: number } | undefined): string {
+function cssColor(c: color | undefined): string {
   if (!c) {
     return ARROW_FALLBACK_CSS;
   }
-  return rgbaToCss({ r: c.r, g: c.g, b: c.b, a: c.a ?? 255 });
+  // Cockatrice's convertQColorToColor sets r/g/b but never alpha, so the wire
+  // omits field 4 and bufbuild surfaces `a` as the default 0 — coerce unset
+  // alpha to fully opaque rather than fully transparent.
+  const a = isFieldSet(c, colorSchema.field.a) ? c.a : 255;
+  return rgbaToCss({ r: c.r, g: c.g, b: c.b, a });
 }
 
 // Point on the circle centered at (cx,cy) with radius r along the ray from

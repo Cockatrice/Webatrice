@@ -110,6 +110,28 @@ function stateWithArrow(): GamesState {
   return { games: { 1: game } };
 }
 
+function stateWithCockatriceArrow(): GamesState {
+  // Cockatrice's C++ convertQColorToColor sets r/g/b but never `a`, so the
+  // wire omits field 4. bufbuild surfaces the unset alpha as 0 — verify the
+  // overlay still resolves it to a fully opaque line.
+  const arrow = makeArrow({
+    id: 3,
+    startPlayerId: 1,
+    startZone: 'table',
+    startCardId: 10,
+    targetPlayerId: 1,
+    targetZone: 'table',
+    targetCardId: 11,
+    arrowColor: create(colorSchema, { r: 224, g: 75, b: 59 }),
+  });
+  const player = makePlayerEntry({
+    properties: makePlayerProperties({ playerId: 1 }),
+    arrows: { 3: arrow },
+  });
+  const game = makeGameEntry({ players: { 1: player } });
+  return { games: { 1: game } };
+}
+
 function stateWithPlayerArrow(): GamesState {
   // Player-target: targetZone='' / targetCardId=-1 trips the isPlayerTarget
   // check (mirrors the proto2-unset wire shape).
@@ -169,6 +191,19 @@ describe('useGameArrowOverlay', () => {
     expect(arrow.color).toMatch(/^rgba\(224, 75, 59/);
   });
 
+  it('renders Cockatrice-shaped arrows (alpha unset on the wire) with an opaque line', () => {
+    const registry = createCardRegistry();
+    const sourceEl = makeCardElement(rect(100, 100));
+    const targetEl = makeCardElement(rect(300, 300));
+    registry.register(makeCardKey(1, 'table', 10), sourceEl);
+    registry.register(makeCardKey(1, 'table', 11), targetEl);
+
+    const { result } = setup({ registry, gamesState: stateWithCockatriceArrow() });
+
+    expect(result.current.arrows).toHaveLength(1);
+    expect(result.current.arrows[0].color).toBe('rgba(224, 75, 59, 1)');
+  });
+
   it('anchors player-targeted arrows to the life circle rim, not the center', () => {
     const registry = createCardRegistry();
     const sourceEl = makeCardElement(rect(100, 100, 50));
@@ -182,13 +217,13 @@ describe('useGameArrowOverlay', () => {
     expect(result.current.arrows).toHaveLength(1);
     const arrow = result.current.arrows[0];
     // Source center (125,125) → target circle center (316,316), rim radius 16
-    // inflated by ARROW_HEAD_TIP_OVERSHOOT_PX (=5) so the visual arrowhead
+    // inflated by ARROW_HEAD_TIP_OVERSHOOT_PX (=7) so the visual arrowhead
     // tip clears the life circle. d = hypot(191,191) ≈ 270.116; effective
-    // radius 21; tip = 316 - 191 * 21 / d ≈ 301.149.
+    // radius 23; tip = 316 - 191 * 23 / d ≈ 299.737.
     expect(arrow.x1).toBe(125);
     expect(arrow.y1).toBe(125);
-    expect(arrow.x2).toBeCloseTo(301.149, 2);
-    expect(arrow.y2).toBeCloseTo(301.149, 2);
+    expect(arrow.x2).toBeCloseTo(299.737, 2);
+    expect(arrow.y2).toBeCloseTo(299.737, 2);
   });
 
   it('handleArrowClick dispatches deleteArrow with the gameId and arrowId', () => {
