@@ -9,7 +9,7 @@
     "declarationMap": false,
     "sourceMap": true,
     "inlineSources": true,
-    "tsBuildInfoFile": "dist/.tsbuildinfo"
+    "tsBuildInfoFile": "dist/tsbuildinfo"
   },
   "exclude": [
     "**/*.spec.ts",

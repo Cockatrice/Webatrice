@@ -6,7 +6,10 @@
     "packages/*"
   ],
   "scripts": {
-    "start": "npm run -w @cockatrice/webatrice start",
+    "start": "run-p start:sockatrice:watch start:datatrice:watch start:webatrice",
+    "start:datatrice:watch": "npm run -w @cockatrice/datatrice watch",
+    "start:sockatrice:watch": "npm run -w @cockatrice/sockatrice watch",
+    "start:webatrice": "npm run -w @cockatrice/webatrice start -- --force",
     "preview": "npm run -w @cockatrice/webatrice preview",
     "build": "npm run -w @cockatrice/webatrice build",
     "lint": "npm run lint --workspaces --if-present",
@@ -23,6 +26,7 @@
   },
   "devDependencies": {
     "@changesets/cli": "~2.31.0",
-    "husky": "^9.1.7"
+    "husky": "^9.1.7",
+    "npm-run-all2": "^8.0.4"
   }
 }

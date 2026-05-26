@@ -46,6 +46,7 @@
   "scripts": {
     "prebuild": "npm run proto:generate",
     "build": "tsup && tsc -p tsconfig.build.json --emitDeclarationOnly --declarationMap false",
+    "watch": "tsup --watch",
     "typecheck": "tsc -p tsconfig.build.json --noEmit",
     "lint": "eslint src",
     "lint:fix": "eslint src --fix",
