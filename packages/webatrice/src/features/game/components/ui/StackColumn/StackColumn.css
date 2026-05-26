@@ -18,6 +18,11 @@
   flex-direction: column-reverse;
 }
 
+.stack-column--drop-over {
+  background: #7a3030;
+  box-shadow: inset 0 0 0 2px #e07878;
+}
+
 .stack-column__cards {
   flex: 1 1 auto;
   min-height: 0;
@@ -33,25 +38,8 @@
   flex-direction: column-reverse;
 }
 
-.stack-column__thumb {
+.stack-column__cards .card-slot {
   width: 64px;
   height: 88px;
-  background: #1a0808;
-  border: 1px solid #2a0c0c;
-  border-radius: 3px;
-  overflow: hidden;
   flex-shrink: 0;
-}
-
-.stack-column__image {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
-.stack-column__placeholder {
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(135deg, #3a1414 0%, #1a0808 100%);
 }

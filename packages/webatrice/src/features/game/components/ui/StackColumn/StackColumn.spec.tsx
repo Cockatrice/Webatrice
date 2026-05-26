@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react';
+import { screen, fireEvent } from '@testing-library/react';
 import { Enriched } from '@cockatrice/datatrice';
 vi.mock('../../../../../hooks/useSettings');
 vi.mock('../../../hooks/useScryfallCard', () => ({
@@ -40,11 +40,10 @@ describe('StackColumn', () => {
     });
 
     expect(screen.getByTestId('stack-column-1')).toBeInTheDocument();
-    const cards = screen.getByTestId('stack-column-cards-1');
-    expect(cards.children).toHaveLength(0);
+    expect(screen.queryAllByTestId('card-slot')).toHaveLength(0);
   });
 
-  it('renders one thumbnail per card on the stack', () => {
+  it('renders a CardSlot per card on the stack', () => {
     renderWithProviders(<StackColumn gameId={1} playerId={1} />, {
       preloadedState: stateWithStack([
         makeCard({ id: 1, name: 'Lightning Bolt' }),
@@ -52,7 +51,21 @@ describe('StackColumn', () => {
       ]),
     });
 
-    const cards = screen.getByTestId('stack-column-cards-1');
-    expect(cards.children).toHaveLength(2);
+    expect(screen.getAllByTestId('card-slot')).toHaveLength(2);
+  });
+
+  it('fires onCardContextMenu when right-clicking a stack card', () => {
+    const onCardContextMenu = vi.fn();
+    renderWithProviders(<StackColumn gameId={1} playerId={1} />, {
+      preloadedState: stateWithStack([makeCard({ id: 7, name: 'Lightning Bolt' })]),
+      gameInteraction: { onCardContextMenu },
+    });
+
+    fireEvent.contextMenu(screen.getByTestId('card-slot'));
+
+    expect(onCardContextMenu).toHaveBeenCalled();
+    const [ownerPlayerId, zoneName] = onCardContextMenu.mock.calls[0];
+    expect(ownerPlayerId).toBe(1);
+    expect(zoneName).toBe(Enriched.ZoneName.STACK);
   });
 });

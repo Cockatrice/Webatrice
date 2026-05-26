@@ -36,7 +36,13 @@ function PlayerBoard({
         canEdit={canEditCounters}
         onContextMenu={onPlayerContextMenu}
       />
-      <StackColumn gameId={gameId} playerId={playerId} mirrored={mirrored} />
+      <StackColumn
+        gameId={gameId}
+        playerId={playerId}
+        mirrored={mirrored}
+        canAct={canAct}
+        arrowSourceKey={arrowSourceKey}
+      />
       <Battlefield
         gameId={gameId}
         playerId={playerId}
