@@ -17,6 +17,7 @@ export interface StackColumnProps {
   mirrored?: boolean;
   canAct?: boolean;
   arrowSourceKey?: string | null;
+  arrowTargetKey?: string | null;
   selectedCardKey?: string | null;
 }
 
@@ -26,6 +27,7 @@ function StackColumn({
   mirrored = false,
   canAct = false,
   arrowSourceKey = null,
+  arrowTargetKey = null,
   selectedCardKey = null,
 }: StackColumnProps) {
   const { onCardHover, onCardClick, onCardContextMenu, onCardDoubleClick, onCardFocus, onCardBlur } = useGameInteraction();
@@ -60,6 +62,7 @@ function StackColumn({
               ownerPlayerId={playerId}
               zone={Enriched.ZoneName.STACK}
               isArrowSource={arrowSourceKey === key}
+              isArrowTarget={arrowTargetKey === key}
               isSelected={selectedCardKey === key}
               onMouseEnter={onCardHover}
               onFocus={onCardFocus}

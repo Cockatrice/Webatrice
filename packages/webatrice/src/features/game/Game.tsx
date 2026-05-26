@@ -117,6 +117,7 @@ function Game() {
                         playerId={slots.slotBPlayerId}
                         canAct={slotBAccess.canAct}
                         arrowSourceKey={arrows.arrowSourceKey}
+                        arrowTargetKey={arrows.arrowTargetKey}
                         selectedCardKey={selectedCardKey}
                         onHandContextMenu={
                           slots.slotBPlayerId === game.localPlayerId
@@ -134,6 +135,7 @@ function Game() {
                         canAct={slotBAccess.canAct}
                         canEditCounters={slotBAccess.canAct}
                         arrowSourceKey={arrows.arrowSourceKey}
+                        arrowTargetKey={arrows.arrowTargetKey}
                         selectedCardKey={selectedCardKey}
                         players={slots.players}
                         onSelectPlayer={slots.setSlotBPlayerId}
@@ -146,6 +148,7 @@ function Game() {
                       canAct={slotAAccess.canAct}
                       canEditCounters={slotAAccess.canAct}
                       arrowSourceKey={arrows.arrowSourceKey}
+                      arrowTargetKey={arrows.arrowTargetKey}
                       selectedCardKey={selectedCardKey}
                       onPlayerContextMenu={dialogs.handlePlayerContextMenu}
                       players={slots.players}
@@ -157,6 +160,7 @@ function Game() {
                         playerId={slots.slotAPlayerId}
                         canAct={slotAAccess.canAct}
                         arrowSourceKey={arrows.arrowSourceKey}
+                        arrowTargetKey={arrows.arrowTargetKey}
                         selectedCardKey={selectedCardKey}
                         onHandContextMenu={
                           slots.slotAPlayerId === game.localPlayerId

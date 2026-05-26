@@ -30,7 +30,7 @@ export async function playCardViaTableRow({
   faceDown: boolean;
   isInverted: boolean;
   tableZone: ZoneEntry | undefined;
-}): Promise<void> {
+}): Promise<string> {
   // `<tablerow>` is a top-level element on `<card>`, not inside `<prop>`.
   const meta = await CardDTO.get(card.name).catch(() => undefined);
   const tablerowRaw = meta?.tablerow?.value;
@@ -48,7 +48,7 @@ export async function playCardViaTableRow({
       y: 0,
       isReversed: false,
     });
-    return;
+    return Enriched.ZoneName.STACK;
   }
 
   // tablerow 0/1/2 → visualY 2/1/0 (top-of-player-view); unknown → top row.
@@ -72,4 +72,5 @@ export async function playCardViaTableRow({
     y: wireY,
     isReversed: false,
   });
+  return Enriched.ZoneName.TABLE;
 }

@@ -17,6 +17,7 @@ export interface AttachmentStackProps {
   attachments: games.AttachedChild[];
   draggable: boolean;
   arrowSourceKey: string | null;
+  arrowTargetKey: string | null;
   selectedCardKey: string | null;
 }
 
@@ -26,6 +27,7 @@ function AttachmentStack({
   draggable,
   ownerPlayerId,
   arrowSourceKey,
+  arrowTargetKey,
   selectedCardKey,
 }: AttachmentStackProps) {
   const { onCardHover, onCardClick, onCardContextMenu, onCardDoubleClick, onCardFocus, onCardBlur } = useGameInteraction();
@@ -51,6 +53,7 @@ function AttachmentStack({
           ownerPlayerId={ownerPlayerId}
           zone={Enriched.ZoneName.TABLE}
           isArrowSource={arrowSourceKey === parentKey}
+          isArrowTarget={arrowTargetKey === parentKey}
           isSelected={selectedCardKey === parentKey}
           onMouseEnter={onCardHover}
           onFocus={onCardFocus}
@@ -81,6 +84,7 @@ function AttachmentStack({
               ownerPlayerId={childOwnerId}
               zone={Enriched.ZoneName.TABLE}
               isArrowSource={arrowSourceKey === childKey}
+              isArrowTarget={arrowTargetKey === childKey}
               isSelected={selectedCardKey === childKey}
               onMouseEnter={onCardHover}
               onFocus={onCardFocus}

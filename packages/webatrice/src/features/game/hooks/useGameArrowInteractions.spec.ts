@@ -6,24 +6,32 @@ import { createCardRegistry } from '../utils/CardRegistry/CardRegistryContext';
 import { combineReducers } from '@reduxjs/toolkit';
 
 import { games, type GamesState } from '@cockatrice/datatrice';
-import { makeCard, makeGameEntry, makePlayerEntry, makePlayerProperties } from '@cockatrice/datatrice/testing';
+import { makeCard, makeGameEntry, makePlayerEntry, makePlayerProperties, makeZoneEntry } from '@cockatrice/datatrice/testing';
 import { makeReduxWebClientHookWrapper } from '../../../__test-utils__/makeHookWrapper';
 import { Enriched } from '@cockatrice/datatrice';
 import { CardDTO } from '../../../services/dexie/DexieDTOs/CardDTO';
 import { useGameArrowInteractions } from './useGameArrowInteractions';
 
 vi.mock('../../../services/dexie/DexieDTOs/CardDTO', () => ({
-  CardDTO: { get: vi.fn() },
+  CardDTO: { get: vi.fn(() => Promise.resolve(undefined)) },
 }));
 
 vi.mock('../../../hooks/useSettings');
 
-function setup({ localPlayerId = 1 }: { localPlayerId?: number } = {}) {
+function setup({
+  localPlayerId = 1,
+  handCards = [],
+}: { localPlayerId?: number; handCards?: ReturnType<typeof makeCard>[] } = {}) {
   const game = makeGameEntry({
     localPlayerId,
     players: {
       [localPlayerId]: makePlayerEntry({
         properties: makePlayerProperties({ playerId: localPlayerId }),
+        zones: {
+          hand: makeZoneEntry({ name: Enriched.ZoneName.HAND, cards: handCards }),
+          deck: makeZoneEntry({ name: Enriched.ZoneName.DECK }),
+          table: makeZoneEntry({ name: Enriched.ZoneName.TABLE }),
+        },
       }),
     },
   });
@@ -119,8 +127,10 @@ describe('useGameArrowInteractions', () => {
     document.elementFromPoint = origElementFromPoint;
   });
 
-  it('plays the card (moveCard) when dragging from HAND to a non-HAND target', () => {
-    const { result, webClient } = setup({ localPlayerId: 1 });
+  it('plays the card AND draws the arrow when dragging from HAND to a non-HAND target', async () => {
+    const handCard = makeCard({ id: 5, name: 'Grizzly Bears' });
+    const { result, webClient } = setup({ localPlayerId: 1, handCards: [handCard] });
+    vi.mocked(CardDTO.get).mockResolvedValueOnce(undefined);
     const targetEl = makeCardElement({ playerId: 2, zone: Enriched.ZoneName.TABLE, cardId: 99 });
     const origElementFromPoint = document.elementFromPoint;
     document.elementFromPoint = () => targetEl;
@@ -136,10 +146,83 @@ describe('useGameArrowInteractions', () => {
     act(() => fireMouseEvent('mousemove', { clientX: 30, clientY: 30 }));
     act(() => fireMouseEvent('mouseup', { button: 2, clientX: 30, clientY: 30 }));
 
+    await waitFor(() => expect(webClient.request.game.createArrow).toHaveBeenCalled());
     expect(webClient.request.game.moveCard).toHaveBeenCalled();
-    expect(webClient.request.game.createArrow).not.toHaveBeenCalled();
+    expect(webClient.request.game.createArrow).toHaveBeenCalledWith(
+      1,
+      expect.objectContaining({
+        startPlayerId: 1,
+        startZone: Enriched.ZoneName.TABLE,
+        startCardId: 5,
+        targetPlayerId: 2,
+        targetZone: Enriched.ZoneName.TABLE,
+        targetCardId: 99,
+      }),
+    );
 
     document.elementFromPoint = origElementFromPoint;
+  });
+
+  it('rewrites startZone to STACK when the hand card has tablerow=3', async () => {
+    const handCard = makeCard({ id: 5, name: 'Lightning Bolt' });
+    const { result, webClient } = setup({ localPlayerId: 1, handCards: [handCard] });
+    vi.mocked(CardDTO.get).mockResolvedValueOnce({ tablerow: { value: '3' } } as never);
+    const targetEl = makeCardElement({ playerId: 2, zone: Enriched.ZoneName.TABLE, cardId: 99 });
+    const origElementFromPoint = document.elementFromPoint;
+    document.elementFromPoint = () => targetEl;
+
+    act(() => {
+      result.current.handleBoardMouseDown({
+        button: 2,
+        clientX: 0,
+        clientY: 0,
+        target: makeCardElement({ playerId: 1, zone: Enriched.ZoneName.HAND, cardId: 5 }),
+      } as unknown as React.MouseEvent<HTMLDivElement>);
+    });
+    act(() => fireMouseEvent('mousemove', { clientX: 30, clientY: 30 }));
+    act(() => fireMouseEvent('mouseup', { button: 2, clientX: 30, clientY: 30 }));
+
+    await waitFor(() => expect(webClient.request.game.createArrow).toHaveBeenCalled());
+    expect(webClient.request.game.createArrow).toHaveBeenCalledWith(
+      1,
+      expect.objectContaining({
+        startZone: Enriched.ZoneName.STACK,
+        startCardId: 5,
+      }),
+    );
+
+    document.elementFromPoint = origElementFromPoint;
+  });
+
+  it('click-target from HAND to battlefield plays the card AND draws the arrow', async () => {
+    const handCard = makeCard({ id: 5, name: 'Grizzly Bears' });
+    const { result, webClient } = setup({ localPlayerId: 1, handCards: [handCard] });
+    vi.mocked(CardDTO.get).mockResolvedValueOnce(undefined);
+
+    act(() => {
+      result.current.startPendingArrow({
+        sourcePlayerId: 1,
+        sourceZone: Enriched.ZoneName.HAND,
+        sourceCardId: 5,
+      });
+    });
+    act(() => {
+      result.current.handleCardClick(2, Enriched.ZoneName.TABLE, makeCard({ id: 99 }));
+    });
+
+    await waitFor(() => expect(webClient.request.game.createArrow).toHaveBeenCalled());
+    expect(webClient.request.game.moveCard).toHaveBeenCalled();
+    expect(webClient.request.game.createArrow).toHaveBeenCalledWith(
+      1,
+      expect.objectContaining({
+        startPlayerId: 1,
+        startZone: Enriched.ZoneName.TABLE,
+        startCardId: 5,
+        targetPlayerId: 2,
+        targetZone: Enriched.ZoneName.TABLE,
+        targetCardId: 99,
+      }),
+    );
   });
 
   it('does not send a request when the drop lands on the same card (cancel)', () => {
@@ -184,6 +267,94 @@ describe('useGameArrowInteractions', () => {
     expect(webClient.request.game.moveCard).not.toHaveBeenCalled();
 
     document.elementFromPoint = origElementFromPoint;
+  });
+
+  describe('arrowTargetKey hover tracking', () => {
+    it('is null before drag starts and before threshold is crossed', () => {
+      const { result } = setup();
+      expect(result.current.arrowTargetKey).toBeNull();
+
+      act(() => {
+        result.current.handleBoardMouseDown({
+          button: 2,
+          clientX: 10,
+          clientY: 10,
+          target: makeCardElement({ playerId: 1, zone: Enriched.ZoneName.TABLE, cardId: 5 }),
+        } as unknown as React.MouseEvent<HTMLDivElement>);
+      });
+      // Sub-threshold move; arrowTargetKey should stay null.
+      const targetEl = makeCardElement({ playerId: 2, zone: Enriched.ZoneName.TABLE, cardId: 99 });
+      const origElementFromPoint = document.elementFromPoint;
+      document.elementFromPoint = () => targetEl;
+      act(() => fireMouseEvent('mousemove', { clientX: 11, clientY: 11 }));
+      expect(result.current.arrowTargetKey).toBeNull();
+      document.elementFromPoint = origElementFromPoint;
+    });
+
+    it('reflects the card under the cursor once moved past the threshold', () => {
+      const { result } = setup();
+      const targetEl = makeCardElement({ playerId: 2, zone: Enriched.ZoneName.TABLE, cardId: 99 });
+      const origElementFromPoint = document.elementFromPoint;
+      document.elementFromPoint = () => targetEl;
+
+      act(() => {
+        result.current.handleBoardMouseDown({
+          button: 2,
+          clientX: 10,
+          clientY: 10,
+          target: makeCardElement({ playerId: 1, zone: Enriched.ZoneName.TABLE, cardId: 5 }),
+        } as unknown as React.MouseEvent<HTMLDivElement>);
+      });
+      act(() => fireMouseEvent('mousemove', { clientX: 30, clientY: 30 }));
+
+      expect(result.current.arrowTargetKey).toBe(`2-${Enriched.ZoneName.TABLE}-99`);
+
+      document.elementFromPoint = origElementFromPoint;
+    });
+
+    it('is null when the cursor is over the source card itself', () => {
+      const { result } = setup();
+      const sourceEl = makeCardElement({ playerId: 1, zone: Enriched.ZoneName.TABLE, cardId: 5 });
+      const origElementFromPoint = document.elementFromPoint;
+      document.elementFromPoint = () => sourceEl;
+
+      act(() => {
+        result.current.handleBoardMouseDown({
+          button: 2,
+          clientX: 10,
+          clientY: 10,
+          target: sourceEl,
+        } as unknown as React.MouseEvent<HTMLDivElement>);
+      });
+      act(() => fireMouseEvent('mousemove', { clientX: 30, clientY: 30 }));
+
+      expect(result.current.arrowTargetKey).toBeNull();
+
+      document.elementFromPoint = origElementFromPoint;
+    });
+
+    it('clears on mouseup', () => {
+      const { result } = setup();
+      const targetEl = makeCardElement({ playerId: 2, zone: Enriched.ZoneName.TABLE, cardId: 99 });
+      const origElementFromPoint = document.elementFromPoint;
+      document.elementFromPoint = () => targetEl;
+
+      act(() => {
+        result.current.handleBoardMouseDown({
+          button: 2,
+          clientX: 10,
+          clientY: 10,
+          target: makeCardElement({ playerId: 1, zone: Enriched.ZoneName.TABLE, cardId: 5 }),
+        } as unknown as React.MouseEvent<HTMLDivElement>);
+      });
+      act(() => fireMouseEvent('mousemove', { clientX: 30, clientY: 30 }));
+      expect(result.current.arrowTargetKey).not.toBeNull();
+
+      act(() => fireMouseEvent('mouseup', { button: 2, clientX: 30, clientY: 30 }));
+      expect(result.current.arrowTargetKey).toBeNull();
+
+      document.elementFromPoint = origElementFromPoint;
+    });
   });
 
   it('ESC cancels pending arrow state', () => {

@@ -15,6 +15,7 @@ export interface PlayerBoardProps {
   canAct?: boolean;
   canEditCounters?: boolean;
   arrowSourceKey?: string | null;
+  arrowTargetKey?: string | null;
   selectedCardKey?: string | null;
   onPlayerContextMenu?: (event: React.MouseEvent) => void;
   players?: PlayerSlotEntry[];
@@ -29,6 +30,7 @@ function PlayerBoard({
   canAct = false,
   canEditCounters = false,
   arrowSourceKey = null,
+  arrowTargetKey = null,
   selectedCardKey = null,
   onPlayerContextMenu,
   players,
@@ -54,6 +56,7 @@ function PlayerBoard({
         mirrored={mirrored}
         canAct={canAct}
         arrowSourceKey={arrowSourceKey}
+        arrowTargetKey={arrowTargetKey}
         selectedCardKey={selectedCardKey}
       />
       <Battlefield
@@ -62,6 +65,7 @@ function PlayerBoard({
         mirrored={mirrored}
         canAct={canAct}
         arrowSourceKey={arrowSourceKey}
+        arrowTargetKey={arrowTargetKey}
         selectedCardKey={selectedCardKey}
       />
     </div>

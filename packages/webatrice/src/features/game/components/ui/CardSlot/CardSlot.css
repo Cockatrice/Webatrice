@@ -94,6 +94,10 @@
   box-shadow: 0 0 0 3px var(--color-arrow-red), 0 0 16px var(--color-arrow-red-glow);
 }
 
+.card-slot--arrow-target {
+  box-shadow: 0 0 0 3px var(--color-arrow-red), 0 0 16px var(--color-arrow-red-glow);
+}
+
 .card-slot:focus {
   outline: none;
 }

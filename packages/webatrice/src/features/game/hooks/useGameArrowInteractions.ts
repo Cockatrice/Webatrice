@@ -40,6 +40,7 @@ export interface ArrowDragPreview {
 
 export interface GameArrowInteractions {
   arrowSourceKey: string | null;
+  arrowTargetKey: string | null;
   dragPreview: ArrowDragPreview | null;
   handleBoardMouseDown: (e: React.MouseEvent<HTMLDivElement>) => void;
   handleCardClick: (
@@ -91,6 +92,7 @@ export function useGameArrowInteractions({
 
   const [pending, setPending] = useState<Pending | null>(null);
   const [arrowDrag, setArrowDrag] = useState<ArrowDragState | null>(null);
+  const [arrowTargetKey, setArrowTargetKey] = useState<string | null>(null);
 
   // ESC cancels pending arrow/attach unless a MUI dialog has it first.
   useEffect(() => {
@@ -106,6 +108,7 @@ export function useGameArrowInteractions({
       }
       setPending(null);
       setArrowDrag(null);
+      setArrowTargetKey(null);
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
@@ -125,6 +128,25 @@ export function useGameArrowInteractions({
         const movedX = Math.abs(e.clientX - prev.startX);
         const movedY = Math.abs(e.clientY - prev.startY);
         const moved = prev.moved || movedX + movedY > ARROW_DRAG_THRESHOLD_PX;
+        if (moved) {
+          const el = document
+            .elementFromPoint(e.clientX, e.clientY)
+            ?.closest('[data-card-id]') as HTMLElement | null;
+          if (el) {
+            const tPlayerId = Number(el.getAttribute('data-card-owner'));
+            const tZone = el.getAttribute('data-card-zone') ?? '';
+            const tCardId = Number(el.getAttribute('data-card-id'));
+            if (Number.isFinite(tPlayerId) && tZone && Number.isFinite(tCardId)) {
+              const key = makeCardKey(tPlayerId, tZone, tCardId);
+              const sourceKey = makeCardKey(prev.sourcePlayerId, prev.sourceZone, prev.sourceCardId);
+              setArrowTargetKey(key === sourceKey ? null : key);
+            } else {
+              setArrowTargetKey(null);
+            }
+          } else {
+            setArrowTargetKey(null);
+          }
+        }
         return { ...prev, currentX: e.clientX, currentY: e.clientY, moved };
       });
     };
@@ -141,6 +163,7 @@ export function useGameArrowInteractions({
       const movedY = Math.abs(e.clientY - drag.startY);
       const moved = drag.moved || movedX + movedY > ARROW_DRAG_THRESHOLD_PX;
       setArrowDrag(null);
+      setArrowTargetKey(null);
       if (!moved || gameId == null) {
         // Short right-click with no drag: let the contextmenu handler run
         // (it will open the card menu).
@@ -176,23 +199,41 @@ export function useGameArrowInteractions({
       ) {
         return;
       }
-      // Local-hand arrow → non-hand auto-plays the card.
-      // See .github/instructions/webatrice-game.instructions.md#servatrice-game-event-quirks.
+      // Local-hand arrow → non-hand plays the card AND draws the arrow.
+      // Mirrors desktop arrow_item.cpp:223-282 — start_zone is rewritten to
+      // the post-play zone (TABLE or STACK) while start_card_id stays the
+      // hand-side id; Servatrice resolves it against the freshly-moved card.
       if (
         drag.sourceZone === Enriched.ZoneName.HAND &&
         drag.sourcePlayerId === game?.localPlayerId &&
         targetZone !== Enriched.ZoneName.HAND
       ) {
-        webClient.request.game.moveCard(gameId, {
-          startPlayerId: drag.sourcePlayerId,
-          startZone: drag.sourceZone,
-          cardsToMove: { card: [{ cardId: drag.sourceCardId }] },
-          targetPlayerId: drag.sourcePlayerId,
-          targetZone: Enriched.ZoneName.TABLE,
-          x: 0,
-          y: 0,
-          isReversed: false,
-        });
+        const sourceCard = game?.players[drag.sourcePlayerId]?.zones[Enriched.ZoneName.HAND]?.byId[drag.sourceCardId];
+        const arrowColor = arrowColorForModifiers(e);
+        if (sourceCard) {
+          void (async () => {
+            const postPlayZone = await playCardViaTableRow({
+              webClient,
+              gameId,
+              localPlayerId: drag.sourcePlayerId,
+              sourcePlayerId: drag.sourcePlayerId,
+              sourceZone: Enriched.ZoneName.HAND,
+              card: sourceCard,
+              faceDown: false,
+              isInverted: invertVerticalCoordinate,
+              tableZone: game?.players[drag.sourcePlayerId]?.zones[Enriched.ZoneName.TABLE],
+            });
+            webClient.request.game.createArrow(gameId, {
+              startPlayerId: drag.sourcePlayerId,
+              startZone: postPlayZone,
+              startCardId: drag.sourceCardId,
+              targetPlayerId,
+              targetZone,
+              targetCardId,
+              arrowColor,
+            });
+          })();
+        }
         return;
       }
       webClient.request.game.createArrow(gameId, {
@@ -212,7 +253,7 @@ export function useGameArrowInteractions({
       window.removeEventListener('mousemove', handleMove);
       window.removeEventListener('mouseup', handleUp);
     };
-  }, [arrowDrag, gameId, webClient, game?.localPlayerId]);
+  }, [arrowDrag, gameId, webClient, game, invertVerticalCoordinate]);
 
   const handleBoardMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     if (e.button !== 2) {
@@ -304,23 +345,38 @@ export function useGameArrowInteractions({
         setPending(null);
         return;
       }
-      // Local-hand arrow → non-hand auto-plays the card.
-      // See .github/instructions/webatrice-game.instructions.md#servatrice-game-event-quirks.
+      // Local-hand arrow → non-hand plays the card AND draws the arrow.
+      // Mirrors desktop arrow_item.cpp:223-282.
       if (
         src.sourceZone === Enriched.ZoneName.HAND &&
         src.sourcePlayerId === game?.localPlayerId &&
         zone !== Enriched.ZoneName.HAND
       ) {
-        webClient.request.game.moveCard(gameId, {
-          startPlayerId: src.sourcePlayerId,
-          startZone: src.sourceZone,
-          cardsToMove: { card: [{ cardId: src.sourceCardId }] },
-          targetPlayerId: src.sourcePlayerId,
-          targetZone: Enriched.ZoneName.TABLE,
-          x: 0,
-          y: 0,
-          isReversed: false,
-        });
+        const sourceCard = game?.players[src.sourcePlayerId]?.zones[Enriched.ZoneName.HAND]?.byId[src.sourceCardId];
+        if (sourceCard) {
+          void (async () => {
+            const postPlayZone = await playCardViaTableRow({
+              webClient,
+              gameId,
+              localPlayerId: src.sourcePlayerId,
+              sourcePlayerId: src.sourcePlayerId,
+              sourceZone: Enriched.ZoneName.HAND,
+              card: sourceCard,
+              faceDown: false,
+              isInverted: invertVerticalCoordinate,
+              tableZone: game?.players[src.sourcePlayerId]?.zones[Enriched.ZoneName.TABLE],
+            });
+            webClient.request.game.createArrow(gameId, {
+              startPlayerId: src.sourcePlayerId,
+              startZone: postPlayZone,
+              startCardId: src.sourceCardId,
+              targetPlayerId: ownerPlayerId,
+              targetZone: zone,
+              targetCardId: card.id,
+              arrowColor: ArrowColor.RED,
+            });
+          })();
+        }
         setPending(null);
         return;
       }
@@ -335,7 +391,7 @@ export function useGameArrowInteractions({
       });
       setPending(null);
     },
-    [gameId, game?.localPlayerId, pending, webClient],
+    [gameId, game, invertVerticalCoordinate, pending, webClient],
   );
 
   const handleCardDoubleClick = useCallback(
@@ -389,6 +445,7 @@ export function useGameArrowInteractions({
 
   return {
     arrowSourceKey,
+    arrowTargetKey,
     dragPreview,
     handleBoardMouseDown,
     handleCardClick,

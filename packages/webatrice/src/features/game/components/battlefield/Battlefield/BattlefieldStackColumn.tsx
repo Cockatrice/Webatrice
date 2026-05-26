@@ -53,6 +53,7 @@ export interface BattlefieldStackColumnProps {
   draggable: boolean;
   ownerPlayerId: number;
   arrowSourceKey: string | null;
+  arrowTargetKey: string | null;
   selectedCardKey: string | null;
 }
 
@@ -62,6 +63,7 @@ function BattlefieldStackColumn({
   draggable,
   ownerPlayerId,
   arrowSourceKey,
+  arrowTargetKey,
   selectedCardKey,
 }: BattlefieldStackColumnProps) {
   const { widthPx, heightPx } = computeStackFootprint(cards, attachmentsByParent);
@@ -98,6 +100,7 @@ function BattlefieldStackColumn({
               draggable={draggable}
               ownerPlayerId={ownerPlayerId}
               arrowSourceKey={arrowSourceKey}
+              arrowTargetKey={arrowTargetKey}
               selectedCardKey={selectedCardKey}
             />
           </div>

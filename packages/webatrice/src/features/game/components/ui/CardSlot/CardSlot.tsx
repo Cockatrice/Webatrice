@@ -13,6 +13,7 @@ export interface CardSlotProps {
   card: ServerInfo_Card;
   draggable?: boolean;
   isArrowSource?: boolean;
+  isArrowTarget?: boolean;
   isSelected?: boolean;
   ownerPlayerId?: number;
   zone?: string;
@@ -84,6 +85,7 @@ function CardSlot({
   card,
   draggable = false,
   isArrowSource = false,
+  isArrowTarget = false,
   isSelected = false,
   ownerPlayerId,
   zone,
@@ -118,6 +120,7 @@ function CardSlot({
     'card-slot--dragging': isDragging,
     'card-slot--selected': isSelected,
     'card-slot--arrow-source': isArrowSource,
+    'card-slot--arrow-target': isArrowTarget,
   });
 
   return (

@@ -151,7 +151,7 @@ describe('ZoneViewDialog', () => {
       },
     );
 
-    expect(screen.getByText('Face Down')).toBeInTheDocument();
+    expect(screen.getByLabelText('face-down card')).toBeInTheDocument();
     expect(screen.queryByAltText('Secret')).not.toBeInTheDocument();
   });
 

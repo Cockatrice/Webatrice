@@ -34,6 +34,10 @@ vi.mock('./components/right-sidebar/PlayerList/PlayerList', () => ({ default: ()
 vi.mock('./components/right-sidebar/PhaseBar/PhaseBar', () => ({ default: () => null }));
 vi.mock('./components/arrows/GameArrowOverlay/GameArrowOverlay', () => ({ default: () => null }));
 
+vi.mock('../../services/dexie/DexieDTOs/CardDTO', () => ({
+  CardDTO: { get: vi.fn(() => Promise.resolve(undefined)) },
+}));
+
 // Every test here renders the full <Game /> tree and drives it through RTL
 // queries — a genuinely heavy integration suite. The default 15s testTimeout
 // left no headroom on a loaded dev machine; 30s reflects the real cost.
@@ -250,12 +254,10 @@ describe('Game orchestration (M4–M6)', () => {
     expect(webClient.request.game.mulligan).toHaveBeenCalledWith(1, { number: 4 });
   });
 
-  it('Arrow-from-hand auto-plays the source card instead of sending a stale createArrow', async () => {
-    // Desktop parity (card_item.cpp:243-250): dragging an arrow from a
-    // local-hand card to a target outside the hand auto-plays the card.
-    // The server re-keys the card id on the move, so sending createArrow
-    // with the old hand cardId would be rejected. We resolve this as a
-    // play-card intent and skip the arrow command.
+  it('Arrow-from-hand plays the source card AND sends createArrow with rewritten startZone', async () => {
+    // Desktop parity (arrow_item.cpp:223-282): arrow-from-hand sends both
+    // moveCard and createArrow; the arrow's start_zone is rewritten to the
+    // post-play zone (TABLE or STACK) while start_card_id stays the hand id.
     const webClient = createMockWebClient();
     const state = buildGame({
       localId: 1,
@@ -287,11 +289,23 @@ describe('Game orchestration (M4–M6)', () => {
           startZone: Enriched.ZoneName.HAND,
           targetPlayerId: 1,
           targetZone: Enriched.ZoneName.TABLE,
-          cardsToMove: { card: [{ cardId: 10 }] },
+          cardsToMove: { card: [expect.objectContaining({ cardId: 10 })] },
         }),
       );
     });
-    expect(webClient.request.game.createArrow).not.toHaveBeenCalled();
+    await waitFor(() => {
+      expect(webClient.request.game.createArrow).toHaveBeenCalledWith(
+        1,
+        expect.objectContaining({
+          startPlayerId: 1,
+          startZone: Enriched.ZoneName.TABLE,
+          startCardId: 10,
+          targetPlayerId: 1,
+          targetZone: Enriched.ZoneName.TABLE,
+          targetCardId: 50,
+        }),
+      );
+    });
   });
 
   it('Mulligan choose-size: value outside [-handSize, handSize+deckSize] is rejected', async () => {

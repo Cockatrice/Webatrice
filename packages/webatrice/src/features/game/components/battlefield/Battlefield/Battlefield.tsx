@@ -10,6 +10,7 @@ export interface BattlefieldProps {
   mirrored?: boolean;
   canAct?: boolean;
   arrowSourceKey?: string | null;
+  arrowTargetKey?: string | null;
   selectedCardKey?: string | null;
 }
 
@@ -19,6 +20,7 @@ function Battlefield({
   mirrored = false,
   canAct = false,
   arrowSourceKey = null,
+  arrowTargetKey = null,
   selectedCardKey = null,
 }: BattlefieldProps) {
   const { rows, stackColumnsByRow, rowOrder, attachmentsByParent } = useBattlefield({
@@ -58,6 +60,7 @@ function Battlefield({
                 draggable={canAct}
                 ownerPlayerId={playerId}
                 arrowSourceKey={arrowSourceKey}
+                arrowTargetKey={arrowTargetKey}
                 selectedCardKey={selectedCardKey}
               />
             );

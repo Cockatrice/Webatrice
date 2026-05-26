@@ -13,6 +13,7 @@ export interface HandZoneProps {
   playerId: number;
   canAct?: boolean;
   arrowSourceKey?: string | null;
+  arrowTargetKey?: string | null;
   selectedCardKey?: string | null;
   onHandContextMenu?: (event: React.MouseEvent) => void;
 }
@@ -22,6 +23,7 @@ function HandZone({
   playerId,
   canAct = false,
   arrowSourceKey = null,
+  arrowTargetKey = null,
   selectedCardKey = null,
   onHandContextMenu,
 }: HandZoneProps) {
@@ -51,6 +53,7 @@ function HandZone({
               ownerPlayerId={playerId}
               zone={Enriched.ZoneName.HAND}
               isArrowSource={arrowSourceKey === key}
+              isArrowTarget={arrowTargetKey === key}
               isSelected={selectedCardKey === key}
               onMouseEnter={onCardHover}
               onFocus={onCardFocus}
