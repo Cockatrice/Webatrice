@@ -56,7 +56,6 @@ jobs:
               - 'package.json'
               - 'package-lock.json'
               - '.npmrc'
-              - '.changeset/**'
               - '.github/workflows/**'
 
   # tsc -b across the whole package graph is the cross-package contract gate.
@@ -120,9 +119,11 @@ jobs:
           npm run -w @cockatrice/datatrice build
 
       - name: Lint sockatrice
+        if: needs.changes.outputs.sockatriceGate == 'true'
         run: npm run -w @cockatrice/sockatrice lint
 
       - name: Lint datatrice
+        if: needs.changes.outputs.datatriceGate == 'true'
         run: npm run -w @cockatrice/datatrice lint
 
       - name: Lint app
