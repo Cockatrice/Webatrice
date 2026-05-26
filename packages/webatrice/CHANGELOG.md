@@ -1,5 +1,24 @@
 # @cockatrice/webatrice
 
+## 4.0.5
+
+### Patch Changes
+
+- 9ad35fb: Arrow heads now have a thin black outline so they stay visible against same-colored cards, and all arrow heads render above all arrow lines so a crossing arrow body never obscures another arrow's head.
+- 4773f73: Arrow interactions: targets now get a red outline on hover while drawing an arrow, matching the source card's outline so you can see exactly which card the arrow will land on. Arrows drawn from a card in hand to a card on the battlefield now actually create the arrow (in addition to playing the card from hand) — matching desktop Cockatrice behavior. Both right-click-drag and click-to-target paths are covered.
+- 7abdc95: Card preview gains a flip-to-info view. An info icon in the top corner of the in-game card preview now flips the card around its vertical axis with a subtle scale dip, revealing Cockatrice-style attributes (Name, P/T, Cost, CMC, Identity, Colors, Type, Side, Layout) plus oracle text sourced from the local Dexie card database. The flipped state persists across hover changes; the preview pane itself scrolls when text is long (thin scrollbar), and the card image now sizes from the available container space rather than hardcoded pixels.
+- a998d0e: Click a card to select it. Focused cards get a distinct blue outline and pin the right-sidebar CardPreview so you can move your mouse around without losing the preview. Works for cards in hand, on the battlefield (including attachments), on the stack, and inside library / graveyard / exile popups. Native focus model drives the behavior: clicking another card or anywhere outside clears the selection. Hovering a zone face (library / graveyard / exile) no longer flashes its top card into the preview pane — only cards themselves do.
+- 48d5206: Player-targeted arrows now anchor to the rim of the life counter instead of its center, so the arrowhead points at the life circle rather than sitting on top of it. The line endpoint is pushed outward by the arrowhead's tip overshoot so the visual apex clears the rim cleanly. Card-targeted arrows are unchanged.
+- 7112785: Player panel header is fully clickable: anywhere on the header opens the player dropdown (was previously only the name button), and the pointer cursor now covers the entire arrow-drop target area.
+- 6c8484f: Arrows can now be drawn from a card to a player. The player info panel header acts as the drop/click target during a right-click-drag or pending arrow click; the rendered line anchors to the life counter. Several supporting fixes were needed to make the round-trip work:
+
+  - proto2 field presence: `Command_CreateArrow` now omits `targetZone`/`targetCardId` for player targets so Servatrice routes the command via `has_target_zone()`/`has_target_card_id()` (omitting → player) rather than treating the empty defaults as a card lookup.
+  - Live `arrowCreated` reducer assigns the raw `ServerInfo_Arrow` proto into the store instead of `{ ...arrowInfo }`. Spreading a bufbuild proto2 message drops unset optional fields entirely, which caused live player-targeted arrows to land in state without `targetZone`/`targetCardId` and silently fail to render until the next game-state refresh.
+  - The cardMoved arrow-cleanup sweep now only runs on actual cross-zone moves, so repositioning a card within the battlefield no longer locally deletes its attached arrows.
+
+- 7ba0317: Removed the right-sidebar "Rotate 90°" button. The toggle was a CSS `transform: rotate(90deg)` on the whole board and was mis-attributed to desktop's `Player::actRotateLocal` — that desktop action actually rotates **player seating order**, which Webatrice already exposes via the slot-A/slot-B player dropdowns. The board no longer spins.
+- 6cc2d6f: Arrows created from the Cockatrice desktop client now render with a visible line, not just the arrowhead. Cockatrice's C++ color helper omits the alpha field on the wire, which bufbuild surfaces as `0`; the overlay now treats unset alpha as fully opaque.
+
 ## 4.0.4
 
 ### Patch Changes

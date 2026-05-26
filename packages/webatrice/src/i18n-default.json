@@ -363,6 +363,26 @@
       "room.sendMessage": "Send message"
     }
   },
+  "Login": {
+    "header": {
+      "title": "Login",
+      "subtitle": "A cross-platform virtual tabletop for multiplayer card games."
+    },
+    "footer": {
+      "registerPrompt": "Not registered yet?",
+      "registerAction": "Create an account",
+      "credit": "Cockatrice is an open source project",
+      "version": "Version"
+    },
+    "content": {
+      "subtitle1": "Play multiplayer card games online.",
+      "subtitle2": "Cross-platform virtual tabletop for multiplayer card games. Forever free."
+    },
+    "toasts": {
+      "passwordResetSuccessToast": "Password Reset Successfully",
+      "accountActivationSuccess": "Account Activated Successfully"
+    }
+  },
   "AccountActivationDialog": {
     "title": "Account Activation",
     "subtitle1": "Your account has not been activated yet.",
@@ -414,24 +434,19 @@
       "reset": "Reset Password"
     }
   },
-  "Login": {
-    "header": {
-      "title": "Login",
-      "subtitle": "A cross-platform virtual tabletop for multiplayer card games."
+  "LogSearchForm": {
+    "label": {
+      "userName": "Username",
+      "ipAddress": "IP Address",
+      "gameName": "Game Name",
+      "gameId": "GameID",
+      "message": "Message",
+      "rooms": "Rooms",
+      "games": "Games",
+      "chats": "Chats"
     },
-    "footer": {
-      "registerPrompt": "Not registered yet?",
-      "registerAction": "Create an account",
-      "credit": "Cockatrice is an open source project",
-      "version": "Version"
-    },
-    "content": {
-      "subtitle1": "Play multiplayer card games online.",
-      "subtitle2": "Cross-platform virtual tabletop for multiplayer card games. Forever free."
-    },
-    "toasts": {
-      "passwordResetSuccessToast": "Password Reset Successfully",
-      "accountActivationSuccess": "Account Activated Successfully"
+    "button": {
+      "search": "Search Logs"
     }
   },
   "Logs": {
@@ -450,21 +465,6 @@
     },
     "message": {
       "emptyFilter": "Enter at least one search field before submitting."
-    }
-  },
-  "LogSearchForm": {
-    "label": {
-      "userName": "Username",
-      "ipAddress": "IP Address",
-      "gameName": "Game Name",
-      "gameId": "GameID",
-      "message": "Message",
-      "rooms": "Rooms",
-      "games": "Games",
-      "chats": "Chats"
-    },
-    "button": {
-      "search": "Search Logs"
     }
   },
   "Player": {
