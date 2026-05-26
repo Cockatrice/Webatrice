@@ -73,7 +73,8 @@ export class GamePage {
   }
 
   async drawCard(): Promise<void> {
-    const deckStack = this.page.locator('[data-testid^="zone-stack-deck"]').first();
+    const localBoard = this.page.locator('[data-local-player]');
+    const deckStack = localBoard.locator('[data-testid="zone-stack-deck"]');
     await deckStack.click({ button: 'right' });
     const menu = this.page.getByTestId('zone-context-menu');
     await expect(menu).toBeVisible();

@@ -107,6 +107,7 @@ function Game() {
                         gameId={gameId!}
                         playerId={slots.slotBPlayerId}
                         mirrored
+                        isLocal={slots.slotBPlayerId === game.localPlayerId}
                         canAct={slotBAccess.canAct}
                         canEditCounters={slotBAccess.canAct}
                         arrowSourceKey={arrows.arrowSourceKey}
@@ -117,6 +118,7 @@ function Game() {
                     <PlayerBoard
                       gameId={gameId!}
                       playerId={slots.slotAPlayerId}
+                      isLocal={slots.slotAPlayerId === game.localPlayerId}
                       canAct={slotAAccess.canAct}
                       canEditCounters={slotAAccess.canAct}
                       arrowSourceKey={arrows.arrowSourceKey}

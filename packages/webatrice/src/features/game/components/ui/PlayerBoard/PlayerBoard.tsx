@@ -11,6 +11,7 @@ export interface PlayerBoardProps {
   gameId: number;
   playerId: number;
   mirrored?: boolean;
+  isLocal?: boolean;
   canAct?: boolean;
   canEditCounters?: boolean;
   arrowSourceKey?: string | null;
@@ -23,6 +24,7 @@ function PlayerBoard({
   gameId,
   playerId,
   mirrored = false,
+  isLocal = false,
   canAct = false,
   canEditCounters = false,
   arrowSourceKey = null,
@@ -34,6 +36,7 @@ function PlayerBoard({
     <div
       className={cx('player-board', { 'player-board--mirrored': mirrored })}
       data-testid={`player-board-${playerId}`}
+      data-local-player={isLocal ? '' : undefined}
     >
       <PlayerInfoPanel
         gameId={gameId}
