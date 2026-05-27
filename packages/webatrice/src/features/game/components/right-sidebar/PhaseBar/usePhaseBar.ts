@@ -3,7 +3,6 @@ import { games } from '@cockatrice/datatrice';
 import { useAppSelector } from '@app/store';
 import { CardAttribute } from '@cockatrice/sockatrice/generated';
 import { Enriched, Phase } from '@cockatrice/datatrice';
-import { useCurrentGame } from '../../../hooks/useCurrentGame';
 import { useGameAffordances } from '../../../hooks/useGameAffordances';
 
 export interface PhaseBar {
@@ -18,16 +17,9 @@ export interface PhaseBar {
 
 export function usePhaseBar(gameId: number | undefined): PhaseBar {
   const webClient = useWebClient();
-  const { game } = useCurrentGame(gameId);
   const { canPassTurn, canAdvancePhase } = useGameAffordances(gameId);
   const activePhase = useAppSelector((state) =>
     gameId != null ? games.Selectors.getActivePhase(state, gameId) : undefined,
-  );
-  const localPlayerId = game?.localPlayerId;
-  const tableCards = useAppSelector((state) =>
-    gameId != null && localPlayerId != null
-      ? games.Selectors.getCards(state, gameId, localPlayerId, Enriched.ZoneName.TABLE)
-      : undefined,
   );
 
   const handlePhaseClick = (phase: Phase) => {
@@ -46,19 +38,15 @@ export function usePhaseBar(gameId: number | undefined): PhaseBar {
 
   // Untap-step double-click → Untap All. See .github/instructions/webatrice-game.instructions.md#phase-model.
   const handleUntapAll = () => {
-    if (!canAdvancePhase || gameId == null || !tableCards) {
+    if (!canAdvancePhase || gameId == null) {
       return;
     }
-    for (const card of tableCards) {
-      if (card.tapped) {
-        webClient.request.game.setCardAttr(gameId, {
-          zone: Enriched.ZoneName.TABLE,
-          cardId: card.id,
-          attribute: CardAttribute.AttrTapped,
-          attrValue: '0',
-        });
-      }
-    }
+    webClient.request.game.setCardAttr(gameId, {
+      zone: Enriched.ZoneName.TABLE,
+      cardId: -1,
+      attribute: CardAttribute.AttrTapped,
+      attrValue: '0',
+    });
   };
 
   const handleDrawOne = () => {

@@ -6,6 +6,7 @@ import {
   CardAttribute,
   Event_DeleteArrowSchema,
   Event_GameStateChangedSchema,
+  Event_SetCardAttrSchema,
   ServerInfo_Card,
   ServerInfo_CardCounter,
   ServerInfo_CardCounterSchema,
@@ -22,6 +23,7 @@ import {
   formatArrowCreated,
   formatCardAttached,
   formatCardAttrChanged,
+  formatCardAttrChangedBulk,
   formatCardCounterChanged,
   formatCardDestroyed,
   formatCardFlipped,
@@ -229,11 +231,9 @@ export function registerGameListeners(mw: ListenerMiddlewareInstance<unknown>): 
       const { zoneName, cardId, attribute, attrValue } = data;
       const state = api.getState() as { games: GamesState };
       const game = state.games.games[gameId];
-      const card = game?.players[playerId]?.zones[zoneName]?.byId[cardId];
-      if (!game || !card) {
+      if (!game) {
         return;
       }
-      const cardName = card.name;
 
       let fields: Partial<ServerInfo_Card> | undefined;
       switch (attribute as CardAttribute) {
@@ -252,6 +252,29 @@ export function registerGameListeners(mw: ListenerMiddlewareInstance<unknown>): 
         case CardAttribute.AttrDoesntUntap:
           fields = { doesntUntap: attrValue === '1' }; break;
       }
+
+      if (!isFieldSet(data, Event_SetCardAttrSchema.field.cardId)) {
+        // Cockatrice bulk sentinel: server omits card_id when applying to every card in the zone.
+        const zone = game.players[playerId]?.zones[zoneName];
+        if (!zone) {
+          return;
+        }
+        if (fields) {
+          api.dispatch(Actions.cardFieldsUpdatedBulk({ gameId, playerId, zoneName, fields }));
+        }
+        const bulkMessage = formatCardAttrChangedBulk(game, playerId, data);
+        if (bulkMessage) {
+          api.dispatch(Actions.gameMessageAppended({ gameId, playerId, message: bulkMessage }));
+        }
+        return;
+      }
+
+      const card = game.players[playerId]?.zones[zoneName]?.byId[cardId];
+      if (!card) {
+        return;
+      }
+      const cardName = card.name;
+
       if (fields) {
         api.dispatch(Actions.cardFieldsUpdated({ gameId, playerId, zoneName, cardId, fields }));
       }

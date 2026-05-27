@@ -423,6 +423,75 @@ describe('cardFieldsUpdated', () => {
   });
 });
 
+describe('cardFieldsUpdatedBulk', () => {
+  function stateWithCards(cards: ServerInfo_Card[]) {
+    return makeState({
+      games: {
+        1: makeGameEntry({
+          players: {
+            1: makePlayerEntry({
+              zones: {
+                table: makeZoneEntry({ name: 'table', cards, cardCount: cards.length }),
+              },
+            }),
+          },
+        }),
+      },
+    });
+  }
+
+  it('applies the same field patch to every card in the zone (fresh byId per card)', () => {
+    const state = stateWithCards([
+      makeCard({ id: 1, tapped: true }),
+      makeCard({ id: 2, tapped: true }),
+      makeCard({ id: 3, tapped: true }),
+    ]);
+    const beforeCards = state.games[1].players[1].zones['table'].byId;
+    const result = gamesReducer(state, Actions.cardFieldsUpdatedBulk({
+      gameId: 1, playerId: 1, zoneName: 'table',
+      fields: { tapped: false },
+    }));
+    const afterZone = result.games[1].players[1].zones['table'];
+    expect(afterZone.byId[1].tapped).toBe(false);
+    expect(afterZone.byId[2].tapped).toBe(false);
+    expect(afterZone.byId[3].tapped).toBe(false);
+    // Each card is reassigned to a fresh object reference (Immer-safe pattern).
+    expect(afterZone.byId[1]).not.toBe(beforeCards[1]);
+    expect(afterZone.byId[2]).not.toBe(beforeCards[2]);
+    expect(afterZone.byId[3]).not.toBe(beforeCards[3]);
+  });
+
+  it('produces a new zone reference', () => {
+    const state = stateWithCards([makeCard({ id: 1, tapped: true })]);
+    const beforeZone = state.games[1].players[1].zones['table'];
+    const result = gamesReducer(state, Actions.cardFieldsUpdatedBulk({
+      gameId: 1, playerId: 1, zoneName: 'table',
+      fields: { tapped: false },
+    }));
+    expect(result.games[1].players[1].zones['table']).not.toBe(beforeZone);
+  });
+
+  it('no-ops when the zone is missing', () => {
+    const state = makeState();
+    const result = gamesReducer(state, Actions.cardFieldsUpdatedBulk({
+      gameId: 1, playerId: 1, zoneName: 'nonexistent',
+      fields: { tapped: false },
+    }));
+    expect(result).toBe(state);
+  });
+
+  it('no-ops on an empty zone (no cards to iterate)', () => {
+    const state = stateWithCards([]);
+    const beforeZone = state.games[1].players[1].zones['table'];
+    const result = gamesReducer(state, Actions.cardFieldsUpdatedBulk({
+      gameId: 1, playerId: 1, zoneName: 'table',
+      fields: { tapped: false },
+    }));
+    // Immer collapses no-actual-mutation cycles to the same reference.
+    expect(result.games[1].players[1].zones['table']).toBe(beforeZone);
+  });
+});
+
 describe('cardInsertedIntoZone', () => {
   function stateWithEmptyHand() {
     return makeState({

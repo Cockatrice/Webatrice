@@ -126,7 +126,7 @@ describe('useGameShortcuts', () => {
     expect(registrations.has('game.prevPhase')).toBe(true);
   });
 
-  it('untaps each tapped card on the local battlefield via setCardAttr', () => {
+  it('sends a single bulk setCardAttr with cardId -1 for untap-all', () => {
     const tableCards = [
       makeCard({ id: 1, tapped: true }),
       makeCard({ id: 2, tapped: false }),
@@ -136,18 +136,15 @@ describe('useGameShortcuts', () => {
 
     fire('game.untapAll');
 
-    expect(webClient.request.game.setCardAttr).toHaveBeenCalledTimes(2);
+    expect(webClient.request.game.setCardAttr).toHaveBeenCalledTimes(1);
     expect(webClient.request.game.setCardAttr).toHaveBeenCalledWith(
       1,
       expect.objectContaining({
-        cardId: 1,
+        zone: Enriched.ZoneName.TABLE,
+        cardId: -1,
         attribute: CardAttribute.AttrTapped,
         attrValue: '0',
       }),
-    );
-    expect(webClient.request.game.setCardAttr).toHaveBeenCalledWith(
-      1,
-      expect.objectContaining({ cardId: 3 }),
     );
   });
 

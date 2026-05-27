@@ -8,6 +8,7 @@ import {
   formatArrowCreated,
   formatCardAttached,
   formatCardAttrChanged,
+  formatCardAttrChangedBulk,
   formatCardCounterChanged,
   formatCardDestroyed,
   formatCardFlipped,
@@ -330,6 +331,31 @@ describe('formatCardAttrChanged', () => {
     const msg = formatCardAttrChanged(game, 1, {
       zoneName: 'table', cardId: 10, attribute: 9999 as CardAttribute, attrValue: '1',
     }, 'Bolt');
+    expect(msg).toBeNull();
+  });
+});
+
+describe('formatCardAttrChangedBulk', () => {
+  const game = gameWithTwoPlayers();
+
+  it('logs bulk untap as "untaps their permanents" (matches Cockatrice)', () => {
+    const msg = formatCardAttrChangedBulk(game, 1, {
+      zoneName: 'table', cardId: -1, attribute: CardAttribute.AttrTapped, attrValue: '0',
+    });
+    expect(msg).toBe('Alice untaps their permanents.');
+  });
+
+  it('logs bulk tap as "taps their permanents"', () => {
+    const msg = formatCardAttrChangedBulk(game, 1, {
+      zoneName: 'table', cardId: -1, attribute: CardAttribute.AttrTapped, attrValue: '1',
+    });
+    expect(msg).toBe('Alice taps their permanents.');
+  });
+
+  it('returns null for non-tap attributes (no bulk semantics)', () => {
+    const msg = formatCardAttrChangedBulk(game, 1, {
+      zoneName: 'table', cardId: -1, attribute: CardAttribute.AttrPT, attrValue: '2/2',
+    });
     expect(msg).toBeNull();
   });
 });
