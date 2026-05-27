@@ -76,23 +76,7 @@
   box-sizing: border-box;
   font-size: 12px;
   line-height: 1.4;
-  overflow-y: auto;
   overflow-x: hidden;
-  scrollbar-width: thin;
-  scrollbar-color: #2a3a60 transparent;
-}
-
-.card-preview__face--back::-webkit-scrollbar {
-  width: 6px;
-}
-
-.card-preview__face--back::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.card-preview__face--back::-webkit-scrollbar-thumb {
-  background: #2a3a60;
-  border-radius: 3px;
 }
 
 .card-preview__image {

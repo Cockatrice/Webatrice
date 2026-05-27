@@ -13,7 +13,6 @@ import AppShell from './AppShell';
 import { materialTheme } from './material-theme';
 
 import './i18n';
-import './colors.css';
 import './index.css';
 
 const AppWithMaterialTheme = () => {

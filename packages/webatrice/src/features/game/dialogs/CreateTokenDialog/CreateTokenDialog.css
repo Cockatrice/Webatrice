@@ -16,7 +16,6 @@
 .create-token-dialog__chooser-list {
   flex: 1 1 auto;
   min-height: 200px;
-  overflow-y: auto;
   border: 1px solid var(--border-subtle, #ddd);
   border-radius: 4px;
 }

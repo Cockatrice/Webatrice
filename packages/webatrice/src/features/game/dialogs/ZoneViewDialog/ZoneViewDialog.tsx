@@ -82,7 +82,7 @@ function ZoneViewDialog({
           <CloseIcon fontSize="small" />
         </IconButton>
       </div>
-      <div className="zone-view-dialog__body">
+      <div className="zone-view-dialog__body scrollable">
         {cards.length === 0 ? (
           <div className="zone-view-dialog__empty">
             {count > 0

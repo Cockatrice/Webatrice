@@ -129,11 +129,11 @@ const GameSelector = ({ room }: GameSelectorProps) => {
   };
 
   return (
-    <Paper className="game-selector overflow-scroll">
+    <Paper className="game-selector">
       <Typography className="game-selector__title" variant="subtitle2">
         Games shown: {counts.visible} / {counts.total}
       </Typography>
-      <div className="game-selector__games">
+      <div className="game-selector__games scrollable no-gutter">
         <OpenGames room={room} onActivateGame={handleActivate} />
       </div>
       <GameSelectorToolbar

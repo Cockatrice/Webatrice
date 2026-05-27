@@ -148,7 +148,7 @@ function SideboardDialog({
             <h3 className="sideboard-dialog__column-heading">
               Main deck ({deck.length})
             </h3>
-            <ul className="sideboard-dialog__list" data-testid="sideboard-dialog-deck">
+            <ul className="sideboard-dialog__list scrollable" data-testid="sideboard-dialog-deck">
               {deck.map((card, idx) => (
                 <li key={`${card.id}-${idx}`} className="sideboard-dialog__row">
                   <span className="sideboard-dialog__name">{card.name}</span>
@@ -179,7 +179,7 @@ function SideboardDialog({
             <h3 className="sideboard-dialog__column-heading">
               Sideboard ({sideboard.length})
             </h3>
-            <ul className="sideboard-dialog__list" data-testid="sideboard-dialog-sb">
+            <ul className="sideboard-dialog__list scrollable" data-testid="sideboard-dialog-sb">
               {sideboard.map((card, idx) => (
                 <li key={`${card.id}-${idx}`} className="sideboard-dialog__row">
                   <Tooltip title={`Move ${card.name} to main deck`}>

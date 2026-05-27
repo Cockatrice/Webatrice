@@ -18,8 +18,6 @@
   padding: 4px;
   overflow-x: scroll;
   overflow-y: hidden;
-  scrollbar-width: thin;
-  scrollbar-color: #2a8a4a #062a12;
 }
 
 .hand-zone--drop-over {

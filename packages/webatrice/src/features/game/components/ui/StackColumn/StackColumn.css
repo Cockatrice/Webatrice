@@ -24,6 +24,7 @@
 }
 
 .stack-column__cards {
+  --thin-scrollbar-gutter: stable both-edges;
   flex: 1 1 auto;
   min-height: 0;
   width: 100%;
@@ -32,11 +33,6 @@
   align-items: center;
   justify-content: safe center;
   gap: 3px;
-  overflow-x: hidden;
-  overflow-y: auto;
-  scrollbar-width: thin;
-  scrollbar-color: #a04040 #2a0c0c;
-  scrollbar-gutter: stable both-edges;
 }
 
 .stack-column--mirrored .stack-column__cards {

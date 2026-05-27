@@ -34,7 +34,7 @@ const Room = () => {
 
           bottom={(
             <div className="room-view__messages">
-              <Paper className="room-view__messages-content overflow-scroll">
+              <Paper className="room-view__messages-content scrollable no-gutter">
                 <ScrollToBottomOnChanges changes={roomMessages} content={(
                   <Messages messages={roomMessages} />
                 )} />
@@ -46,7 +46,7 @@ const Room = () => {
           )}
 
           side={(
-            <Paper className="room-view__side overflow-scroll">
+            <Paper className="room-view__side scrollable no-gutter">
               <div className="room-view__side-label">
                 Users in this room: {users.length}
               </div>

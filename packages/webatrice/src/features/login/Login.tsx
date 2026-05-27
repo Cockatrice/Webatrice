@@ -87,7 +87,7 @@ const Login = () => {
 
   return (
     <Layout showNav={false} noHeightLimit={true}>
-      <Root className={'login overflow-scroll ' + classes.root}>
+      <Root className={'login scrollable ' + classes.root}>
         {isConnected && <Navigate to={RouteEnum.SERVER} />}
 
         <div className="login__wrapper">

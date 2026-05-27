@@ -10,7 +10,7 @@ const Logs = () => {
   const { logs, onSubmit } = useLogs();
 
   return (
-    <div className="moderator-logs overflow-scroll">
+    <div className="moderator-logs scrollable">
       <AuthGuard />
       <ModGuard />
 

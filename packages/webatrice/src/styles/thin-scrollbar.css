@@ -1,0 +1,30 @@
+:root {
+  --thin-scrollbar-color: rgba(255, 255, 255, 0.3);
+  --thin-scrollbar-gutter: stable;
+}
+
+.scrollable {
+  overflow: auto;
+
+  scrollbar-width: thin;
+  scrollbar-color: var(--thin-scrollbar-color) transparent;
+  scrollbar-gutter: var(--thin-scrollbar-gutter);
+}
+
+.scrollable.no-gutter {
+  --thin-scrollbar-gutter: auto;
+}
+
+.scrollable::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.scrollable::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollable::-webkit-scrollbar-thumb {
+  background: var(--thin-scrollbar-color);
+  border-radius: 3px;
+}

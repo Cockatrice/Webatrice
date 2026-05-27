@@ -30,7 +30,7 @@ function Battlefield({
   });
 
   return (
-    <div className="battlefield" data-testid="battlefield">
+    <div className="battlefield scrollable" data-testid="battlefield">
       {rowOrder.map((rowIdx) => (
         <BattlefieldRow
           key={rowIdx}
