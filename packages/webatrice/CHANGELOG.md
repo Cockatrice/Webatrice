@@ -1,5 +1,12 @@
 # @cockatrice/webatrice
 
+## 4.0.6
+
+### Patch Changes
+
+- 5909c5b: Consolidated all thin-scrollbar styling into a single reusable `.scrollable` class (in `styles/thin-scrollbar.css`) driven by two CSS custom properties — `--thin-scrollbar-color` and `--thin-scrollbar-gutter` — plus a `.no-gutter` modifier for elements that shouldn't reserve gutter space. Every scrolling container in the app now opts in via this class: the five game-area scroll regions (card preview back, game log, hand zone, stack column, battlefield), the in-game dialogs (zone view, sideboard, create-token), and every page-level scroll surface (app routes, account, server, login, room, logs, game selector, settings panel). The old `.overflow-scroll` utility class and its scattered per-component `scrollbar-width` / `scrollbar-color` / `::-webkit-scrollbar*` rules are gone — scrollbars are now thin, translucent, and consistent across the app, with stable gutter (no layout shift) on the elements that need it.
+- 5909c5b: Right-sidebar scrollbars are now stable and visually consistent. The card preview no longer scrolls at the container level — when the flipped backside has long oracle text, the scrollbar lives inside the back face only, so flipping back to the front never reveals a stray scrollbar over the card image. The in-game GameLog gains the same thin dark scrollbar treatment so the two stacked panels read as one surface.
+
 ## 4.0.5
 
 ### Patch Changes
