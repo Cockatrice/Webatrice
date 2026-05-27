@@ -11,6 +11,7 @@
   overflow-x: hidden;
   scrollbar-width: thin;
   scrollbar-color: #2a3a60 transparent;
+  scrollbar-gutter: stable both-edges;
 }
 
 .card-preview::-webkit-scrollbar {

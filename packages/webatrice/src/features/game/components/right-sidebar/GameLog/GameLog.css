@@ -35,6 +35,22 @@
   display: flex;
   flex-direction: column;
   gap: 3px;
+  scrollbar-width: thin;
+  scrollbar-color: #2a3a60 transparent;
+  scrollbar-gutter: stable both-edges;
+}
+
+.game-log__messages::-webkit-scrollbar {
+  width: 6px;
+}
+
+.game-log__messages::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.game-log__messages::-webkit-scrollbar-thumb {
+  background: #2a3a60;
+  border-radius: 3px;
 }
 
 .game-log__empty {
