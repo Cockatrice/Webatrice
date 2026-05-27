@@ -132,7 +132,7 @@ function CreateTokenDialog({ isOpen, onSubmit, onCancel, predefinedTokenNames }:
               onChange={(e) => setSearch(e.target.value)}
               slotProps={{ htmlInput: { 'aria-label': 'Search tokens' } }}
             />
-            <div className="create-token-dialog__chooser-list">
+            <div className="create-token-dialog__chooser-list scrollable">
               {filteredTokens.length === 0 ? (
                 <div className="create-token-dialog__chooser-empty">
                   No predefined tokens available.

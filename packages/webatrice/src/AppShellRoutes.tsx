@@ -13,7 +13,7 @@ import { Settings } from '@app/features/settings';
 import { Initialize, Unsupported } from '@app/features/shell';
 
 const AppShellRoutes = () => (
-  <div className="AppShell-routes overflow-scroll">
+  <div className="AppShell-routes scrollable no-gutter">
     <Routes>
       <Route path='*' element={<Initialize />} />
 

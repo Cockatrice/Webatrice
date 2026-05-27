@@ -73,7 +73,7 @@ function CardPreview({ card }: CardPreviewProps) {
               )}
             </div>
             <div
-              className="card-preview__face card-preview__face--back"
+              className="card-preview__face card-preview__face--back scrollable"
               data-testid="card-preview-back"
             >
               <CardBackContent dto={dto} fallbackName={card?.name} />

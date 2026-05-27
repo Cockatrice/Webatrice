@@ -28,7 +28,7 @@ function GameLog({ gameId }: GameLogProps) {
           {formatElapsed(displaySeconds)}
         </div>
       )}
-      <div className="game-log__messages" ref={listRef} onScroll={handleMessagesScroll}>
+      <div className="game-log__messages scrollable" ref={listRef} onScroll={handleMessagesScroll}>
         {messages.length === 0 && (
           <div className="game-log__empty">no messages</div>
         )}

@@ -42,20 +42,20 @@ const Server = () => {
 
       <ThreePaneLayout
         top={(
-          <Paper className="serverRoomWrapper overflow-scroll">
+          <Paper className="serverRoomWrapper scrollable no-gutter">
             <RoomsList rooms={roomsList} joinedRooms={joinedRooms} />
           </Paper>
         )}
 
         bottom={(
-          <Paper className="serverMessage overflow-scroll">
+          <Paper className="serverMessage scrollable no-gutter">
             {/* message is sanitized via DOMPurify in websocket/events/session/serverMessage.ts */}
             <div className="serverMessage__content" dangerouslySetInnerHTML={{ __html: message }} />
           </Paper>
         )}
 
         side={(
-          <Paper className="server-rooms__side overflow-scroll">
+          <Paper className="server-rooms__side scrollable no-gutter">
             <div className="server-rooms__side-label">
               Users connected to server: {users.length}
             </div>

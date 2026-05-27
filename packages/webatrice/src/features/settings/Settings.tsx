@@ -28,7 +28,7 @@ const TabPanel = ({ children, value, index }: TabPanelProps) => (
     hidden={value !== index}
     id={`settings-tabpanel-${index}`}
     aria-labelledby={`settings-tab-${index}`}
-    className="settings__panel"
+    className="settings__panel scrollable"
   >
     {value === index && <Box>{children}</Box>}
   </div>

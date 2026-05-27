@@ -48,7 +48,7 @@ const Account = () => {
         </Paper>
       </div>
       <div className="account-column">
-        <Paper className="account-list overflow-scroll">
+        <Paper className="account-list scrollable">
           <div>
             Ignored Users Online: ?/{ignoreList.length}
           </div>
@@ -64,7 +64,7 @@ const Account = () => {
           </div>
         </Paper>
       </div>
-      <div className="account-column overflow-scroll">
+      <div className="account-column scrollable">
         <Paper className="account-details" style={{ margin: '0 0 5px 0' }}>
           {avatarUrl && <img src={avatarUrl} alt={name} />}
           <p><strong>{name}</strong></p>
