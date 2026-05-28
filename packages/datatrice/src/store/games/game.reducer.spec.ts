@@ -6,6 +6,7 @@ import {
   Event_GameJoinedSchema,
   Event_GameStateChangedSchema,
   Event_MoveCard,
+  Event_SetCardAttrSchema,
   ServerInfo_Card,
   ServerInfo_CardCounterSchema,
   ServerInfo_GameSchema,
@@ -1330,6 +1331,146 @@ describe('2E: CARD_ATTR_CHANGED', () => {
   it('AttrDoesntUntap (7) → card.doesntUntap = true when attrValue is "1"', () => {
     const result = dispatchAttr(stateWithCard(), CardAttribute.AttrDoesntUntap, '1');
     expect(cardsIn(result, 1, 1, 'table')[0].doesntUntap).toBe(true);
+  });
+
+  describe('bulk (card_id unset) — Cockatrice "untap all" wire format', () => {
+    // Servatrice omits card_id from Event_SetCardAttr for bulk operations:
+    //   if (cardId != -1) event.set_card_id(cardId);
+    // The listener detects this via isFieldSet, NOT by checking cardId === -1
+    // (bufbuild surfaces unset proto2 optionals as 0, never -1).
+
+    function stateWithThreeTappedCards() {
+      return makeState({
+        games: {
+          1: makeGameEntry({
+            players: {
+              1: makePlayerEntry({
+                properties: makePlayerProperties({ playerId: 1, userInfo: { name: 'Alice' } }),
+                zones: {
+                  table: makeZoneEntry({
+                    name: 'table',
+                    cards: [
+                      makeCard({ id: 1, tapped: true }),
+                      makeCard({ id: 2, tapped: true }),
+                      makeCard({ id: 3, tapped: true }),
+                    ],
+                    cardCount: 3,
+                  }),
+                },
+              }),
+            },
+          }),
+        },
+      });
+    }
+
+    function bulkEvent(attrValue: string) {
+      return create(Event_SetCardAttrSchema, {
+        zoneName: 'table',
+        attribute: CardAttribute.AttrTapped,
+        attrValue,
+        // cardId intentionally omitted — matches the wire reality from Servatrice
+      });
+    }
+
+    it('AttrTapped + "0" with cardId unset → untaps every card in the zone', () => {
+      const result = dispatchThroughStore(stateWithThreeTappedCards(), Actions.cardAttrChanged({
+        gameId: 1, playerId: 1,
+        data: bulkEvent('0'),
+      }));
+      const cards = cardsIn(result, 1, 1, 'table');
+      expect(cards.map(c => c.tapped)).toEqual([false, false, false]);
+    });
+
+    it('AttrTapped + "1" with cardId unset → taps every card in the zone', () => {
+      const state = makeState({
+        games: {
+          1: makeGameEntry({
+            players: {
+              1: makePlayerEntry({
+                properties: makePlayerProperties({ playerId: 1, userInfo: { name: 'Alice' } }),
+                zones: {
+                  table: makeZoneEntry({
+                    name: 'table',
+                    cards: [makeCard({ id: 1, tapped: false }), makeCard({ id: 2, tapped: false })],
+                    cardCount: 2,
+                  }),
+                },
+              }),
+            },
+          }),
+        },
+      });
+      const result = dispatchThroughStore(state, Actions.cardAttrChanged({
+        gameId: 1, playerId: 1,
+        data: bulkEvent('1'),
+      }));
+      expect(cardsIn(result, 1, 1, 'table').map(c => c.tapped)).toEqual([true, true]);
+    });
+
+    it('appends exactly one summary chat line ("untaps their permanents"), not one per card', () => {
+      const result = dispatchThroughStore(stateWithThreeTappedCards(), Actions.cardAttrChanged({
+        gameId: 1, playerId: 1,
+        data: bulkEvent('0'),
+      }));
+      const messages = result.games[1].messages;
+      expect(messages).toHaveLength(1);
+      expect(messages[0].message).toBe('Alice untaps their permanents.');
+    });
+
+    it('is a no-op when the named zone does not exist on the player', () => {
+      const event = create(Event_SetCardAttrSchema, {
+        zoneName: 'bogus',
+        attribute: CardAttribute.AttrTapped,
+        attrValue: '0',
+      });
+      const result = dispatchThroughStore(stateWithThreeTappedCards(), Actions.cardAttrChanged({
+        gameId: 1, playerId: 1,
+        data: event,
+      }));
+      expect(cardsIn(result, 1, 1, 'table').map(c => c.tapped)).toEqual([true, true, true]);
+      expect(result.games[1].messages).toHaveLength(0);
+    });
+
+    // Regression: a real card with id 0 must still be treated as a single-card update,
+    // not as the bulk sentinel. (Servatrice card ids start at 0.)
+    it('cardId=0 set explicitly is a single-card update, not bulk', () => {
+      const state = makeState({
+        games: {
+          1: makeGameEntry({
+            players: {
+              1: makePlayerEntry({
+                properties: makePlayerProperties({ playerId: 1, userInfo: { name: 'Alice' } }),
+                zones: {
+                  table: makeZoneEntry({
+                    name: 'table',
+                    cards: [
+                      makeCard({ id: 0, tapped: true, name: 'Bolt' }),
+                      makeCard({ id: 1, tapped: true }),
+                    ],
+                    cardCount: 2,
+                  }),
+                },
+              }),
+            },
+          }),
+        },
+      });
+      const event = create(Event_SetCardAttrSchema, {
+        zoneName: 'table',
+        cardId: 0,
+        attribute: CardAttribute.AttrTapped,
+        attrValue: '0',
+      });
+      const result = dispatchThroughStore(state, Actions.cardAttrChanged({
+        gameId: 1, playerId: 1, data: event,
+      }));
+      const cards = cardsIn(result, 1, 1, 'table');
+      // Only card 0 should be untapped — card 1 stays tapped.
+      expect(cards.map(c => c.tapped)).toEqual([false, true]);
+      // Chat line is the single-card form, not the bulk form.
+      expect(result.games[1].messages[0].message).toBe('Alice untaps Bolt.');
+    });
   });
 });
 

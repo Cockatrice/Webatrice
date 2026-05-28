@@ -1,7 +1,5 @@
 import { ShortcutScope, useShortcut } from '@app/feature-widgets/shortcuts';
 import { useWebClient } from '@cockatrice/datatrice/react';
-import { games } from '@cockatrice/datatrice';
-import { useAppSelector } from '@app/store';
 import { CardAttribute } from '@cockatrice/sockatrice/generated';
 import { Enriched } from '@cockatrice/datatrice';
 import { useCurrentGame } from './useCurrentGame';
@@ -27,29 +25,18 @@ export function useGameShortcuts({ gameId, onRequestConcede }: UseGameShortcutsA
   } = useGameAffordances(gameId);
   const inGame = hasLiveGame && isStarted;
 
-  const localPlayerId = game?.localPlayerId;
-  const tableCards = useAppSelector((state) =>
-    gameId != null && localPlayerId != null
-      ? games.Selectors.getCards(state, gameId, localPlayerId, Enriched.ZoneName.TABLE)
-      : undefined,
-  );
-
   useShortcut(
     'game.untapAll',
     () => {
-      if (!canAdvancePhase || gameId == null || !tableCards) {
+      if (!canAdvancePhase || gameId == null) {
         return;
       }
-      for (const card of tableCards) {
-        if (card.tapped) {
-          webClient.request.game.setCardAttr(gameId, {
-            zone: Enriched.ZoneName.TABLE,
-            cardId: card.id,
-            attribute: CardAttribute.AttrTapped,
-            attrValue: '0',
-          });
-        }
-      }
+      webClient.request.game.setCardAttr(gameId, {
+        zone: Enriched.ZoneName.TABLE,
+        cardId: -1,
+        attribute: CardAttribute.AttrTapped,
+        attrValue: '0',
+      });
     },
     { scope: ShortcutScope.GAME, enabled: inGame },
   );

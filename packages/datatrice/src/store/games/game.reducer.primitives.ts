@@ -135,6 +135,27 @@ export const primitiveReducers = {
     fields: Partial<ServerInfo_Card>;
   }>>,
 
+  // Bulk variant: apply the same field patch to every card in a zone in one
+  // pass. Used for Cockatrice's "card_id unset" Event_SetCardAttr (untap-all).
+  cardFieldsUpdatedBulk: ((state, action) => {
+    const { gameId, playerId, zoneName, fields } = action.payload;
+    const zone = state.games[gameId]?.players[playerId]?.zones[zoneName];
+    if (!zone) {
+      return;
+    }
+    for (const id of zone.order) {
+      const card = zone.byId[id];
+      if (card) {
+        zone.byId[id] = { ...card, ...fields };
+      }
+    }
+  }) as CaseReducer<GamesState, PayloadAction<{
+    gameId: number;
+    playerId: number;
+    zoneName: string;
+    fields: Partial<ServerInfo_Card>;
+  }>>,
+
   cardInsertedIntoZone: ((state, action) => {
     const { gameId, playerId, zoneName, card } = action.payload;
     const zone = state.games[gameId]?.players[playerId]?.zones[zoneName];

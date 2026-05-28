@@ -194,7 +194,7 @@ describe('PhaseBar', () => {
       });
     }
 
-    it('double-click on UNTAP dispatches setCardAttr AttrTapped=0 for every tapped card', () => {
+    it('double-click on UNTAP dispatches a single bulk setCardAttr with cardId=-1', () => {
       const webClient = createMockWebClient();
       renderWithProviders(<PhaseBar gameId={1} />, {
         preloadedState: stateWithTapped([
@@ -207,22 +207,18 @@ describe('PhaseBar', () => {
 
       fireEvent.doubleClick(screen.getByText('UNTAP'));
 
-      expect(webClient.request.game.setCardAttr).toHaveBeenCalledTimes(2);
+      expect(webClient.request.game.setCardAttr).toHaveBeenCalledTimes(1);
       expect(webClient.request.game.setCardAttr).toHaveBeenCalledWith(1, {
         zone: 'table',
-        cardId: 1,
-        attribute: CardAttribute.AttrTapped,
-        attrValue: '0',
-      });
-      expect(webClient.request.game.setCardAttr).toHaveBeenCalledWith(1, {
-        zone: 'table',
-        cardId: 3,
+        cardId: -1,
         attribute: CardAttribute.AttrTapped,
         attrValue: '0',
       });
     });
 
-    it('double-click on UNTAP is a no-op when no cards are tapped', () => {
+    // Matches Cockatrice's PhasesToolbar::actUntapAll — no client-side
+    // "is anything tapped?" check; the server is the source of truth.
+    it('double-click on UNTAP still sends the bulk command even when no cards are tapped', () => {
       const webClient = createMockWebClient();
       renderWithProviders(<PhaseBar gameId={1} />, {
         preloadedState: stateWithTapped([makeCard({ id: 1, tapped: false })]),
@@ -231,7 +227,12 @@ describe('PhaseBar', () => {
 
       fireEvent.doubleClick(screen.getByText('UNTAP'));
 
-      expect(webClient.request.game.setCardAttr).not.toHaveBeenCalled();
+      expect(webClient.request.game.setCardAttr).toHaveBeenCalledTimes(1);
+      expect(webClient.request.game.setCardAttr).toHaveBeenCalledWith(1, expect.objectContaining({
+        cardId: -1,
+        attribute: CardAttribute.AttrTapped,
+        attrValue: '0',
+      }));
     });
 
     it('double-click on DRAW dispatches drawCards({ number: 1 })', () => {

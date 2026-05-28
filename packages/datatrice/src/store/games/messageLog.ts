@@ -197,6 +197,22 @@ export function formatCardAttrChanged(
   }
 }
 
+export function formatCardAttrChangedBulk(
+  game: Enriched.GameEntry,
+  playerId: number,
+  data: Event_SetCardAttr,
+): string | null {
+  const actor = nameOf(game, playerId);
+  switch (data.attribute as CardAttribute) {
+    case CardAttribute.AttrTapped:
+      return data.attrValue === '1'
+        ? `${actor} taps their permanents.`
+        : `${actor} untaps their permanents.`;
+    default:
+      return null;
+  }
+}
+
 export function formatCardCounterChanged(
   game: Enriched.GameEntry,
   playerId: number,
