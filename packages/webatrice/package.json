@@ -1,6 +1,6 @@
 {
   "name": "@cockatrice/webatrice",
-  "version": "4.0.6",
+  "version": "4.0.7",
   "private": true,
   "scripts": {
     "start": "vite",
