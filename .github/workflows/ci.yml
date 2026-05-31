@@ -84,7 +84,7 @@ jobs:
       # Catches malformed `.changeset/*.md` (missing frontmatter, wrong bump
       # type) before they reach master and break `changesets/action`.
       - name: Validate changesets
-        run: npx changeset status
+        run: npx changeset status --since=origin/master
 
       - name: Init vendor submodule (sparse)
         run: npm run assets:submodule
