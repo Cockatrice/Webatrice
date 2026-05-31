@@ -78,7 +78,7 @@ test('connection persists across SPA navigation (rooms → room → rooms)', asy
   // /room/:roomId without a full-page reload, which would legitimately
   // drop the socket. `leaveRoom` uses the LeftNav logo NavLink for SPA
   // routing — the "don't reload" pattern documented on `RoomsPage`.
-  const firstJoinable = page.getByRole('button', { name: /^join$/i }).first();
+  const firstJoinable = page.locator('.rooms').getByRole('button', { name: /^join$/i }).first();
   await expect(firstJoinable).toBeVisible({ timeout: 15_000 });
   await firstJoinable.click();
   await rooms.waitForGameList();

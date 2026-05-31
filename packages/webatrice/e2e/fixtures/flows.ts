@@ -42,7 +42,7 @@ export async function registerAndReachRooms(page: Page): Promise<RegisteredSessi
 export async function registerAndJoinFirstRoom(page: Page): Promise<RegisteredSession> {
   const session = await registerAndReachRooms(page);
 
-  const firstJoinable = page.getByRole('button', { name: /^join$/i }).first();
+  const firstJoinable = page.locator('.rooms').getByRole('button', { name: /^join$/i }).first();
   await expect(firstJoinable).toBeVisible({ timeout: 15_000 });
   await firstJoinable.click();
   await session.rooms.waitForGameList();
