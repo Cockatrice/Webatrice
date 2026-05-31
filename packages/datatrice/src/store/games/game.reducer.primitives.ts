@@ -78,6 +78,30 @@ export const primitiveReducers = {
     card: ServerInfo_Card;
   }>>,
 
+  cardMovedInSameZone: ((state, action) => {
+    const { gameId, playerId, zoneName, cardId, toIndex, card } = action.payload;
+    const zone = state.games[gameId]?.players[playerId]?.zones[zoneName];
+    if (!zone) {
+      return;
+    }
+    const fromIdx = zone.order.indexOf(cardId);
+    if (fromIdx < 0) {
+      return;
+    }
+    zone.order.splice(fromIdx, 1);
+    delete zone.byId[cardId];
+    const clamped = Math.max(0, Math.min(toIndex, zone.order.length));
+    zone.order.splice(clamped, 0, card.id);
+    zone.byId[card.id] = card;
+  }) as CaseReducer<GamesState, PayloadAction<{
+    gameId: number;
+    playerId: number;
+    zoneName: string;
+    cardId: number;
+    toIndex: number;
+    card: ServerInfo_Card;
+  }>>,
+
   // Cross-player TABLE→TABLE gap-fill; rewrites child parent pointers.
   // See .github/instructions/datatrice-game.instructions.md#servatrice-game-event-quirks.
   cardAttachmentReparented: ((state, action) => {

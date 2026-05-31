@@ -32,7 +32,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: safe center;
-  gap: 3px;
+  gap: 8px;
 }
 
 .stack-column--mirrored .stack-column__cards {
@@ -43,4 +43,27 @@
   width: 64px;
   height: 88px;
   flex-shrink: 0;
+}
+
+/* Indicator sits centered in the 8px inter-card gap: 4px bar with 2px of
+   breathing room to each neighbor. */
+.stack-column__cards .card-slot--drop-before::before,
+.stack-column__cards .card-slot--drop-after::after {
+  content: '';
+  position: absolute;
+  left: 2px;
+  right: 2px;
+  height: 4px;
+  background: #fdfd96;
+  box-shadow: 0 0 8px #fff, 0 0 16px #fde047, 0 0 24px #f29c9c;
+  border-radius: 3px;
+  pointer-events: none;
+}
+
+.stack-column__cards .card-slot--drop-before::before {
+  top: -6px;
+}
+
+.stack-column__cards .card-slot--drop-after::after {
+  bottom: -6px;
 }

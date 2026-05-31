@@ -157,6 +157,75 @@ describe('cardMovedBetweenZones', () => {
   });
 });
 
+describe('cardMovedInSameZone', () => {
+  function makeFiveCardHand() {
+    const cards = [10, 11, 12, 13, 14].map((id) => makeCard({ id }));
+    return makeState({
+      games: {
+        1: makeGameEntry({
+          players: {
+            1: makePlayerEntry({
+              zones: { hand: makeZoneEntry({ name: 'hand', cards, cardCount: 5 }) },
+            }),
+          },
+        }),
+      },
+    });
+  }
+
+  it('moves a card from the front to a middle index', () => {
+    const result = gamesReducer(makeFiveCardHand(), Actions.cardMovedInSameZone({
+      gameId: 1, playerId: 1, zoneName: 'hand',
+      cardId: 10, toIndex: 2, card: makeCard({ id: 10 }),
+    }));
+    expect(cardsIn(result, 1, 1, 'hand').map(c => c.id)).toEqual([11, 12, 10, 13, 14]);
+    expect(result.games[1].players[1].zones['hand'].cardCount).toBe(5);
+  });
+
+  it('moves a card to the end (clamped toIndex)', () => {
+    const result = gamesReducer(makeFiveCardHand(), Actions.cardMovedInSameZone({
+      gameId: 1, playerId: 1, zoneName: 'hand',
+      cardId: 12, toIndex: 99, card: makeCard({ id: 12 }),
+    }));
+    expect(cardsIn(result, 1, 1, 'hand').map(c => c.id)).toEqual([10, 11, 13, 14, 12]);
+  });
+
+  it('moves a card to the front (toIndex 0)', () => {
+    const result = gamesReducer(makeFiveCardHand(), Actions.cardMovedInSameZone({
+      gameId: 1, playerId: 1, zoneName: 'hand',
+      cardId: 13, toIndex: 0, card: makeCard({ id: 13 }),
+    }));
+    expect(cardsIn(result, 1, 1, 'hand').map(c => c.id)).toEqual([13, 10, 11, 12, 14]);
+  });
+
+  it('supports renumbering: cardId and card.id differ', () => {
+    const result = gamesReducer(makeFiveCardHand(), Actions.cardMovedInSameZone({
+      gameId: 1, playerId: 1, zoneName: 'hand',
+      cardId: 11, toIndex: 3, card: makeCard({ id: 42, name: 'Renumbered' }),
+    }));
+    expect(cardsIn(result, 1, 1, 'hand').map(c => c.id)).toEqual([10, 12, 13, 42, 14]);
+    expect(result.games[1].players[1].zones['hand'].byId[11]).toBeUndefined();
+  });
+
+  it('no-ops when zone is missing', () => {
+    const state = makeState();
+    const result = gamesReducer(state, Actions.cardMovedInSameZone({
+      gameId: 999, playerId: 1, zoneName: 'hand',
+      cardId: 10, toIndex: 0, card: makeCard({ id: 10 }),
+    }));
+    expect(result).toBe(state);
+  });
+
+  it('no-ops when card is not present in the zone', () => {
+    const state = makeFiveCardHand();
+    const result = gamesReducer(state, Actions.cardMovedInSameZone({
+      gameId: 1, playerId: 1, zoneName: 'hand',
+      cardId: 999, toIndex: 0, card: makeCard({ id: 999 }),
+    }));
+    expect(cardsIn(result, 1, 1, 'hand').map(c => c.id)).toEqual([10, 11, 12, 13, 14]);
+  });
+});
+
 describe('cardAttachmentReparented', () => {
   function makeStateWithAttachedChildren() {
     const parent = makeCard({ id: 10, name: 'Creature' });
