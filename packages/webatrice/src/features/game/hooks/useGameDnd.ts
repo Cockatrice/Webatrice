@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
-import type { CollisionDetection, DragEndEvent } from '@dnd-kit/core';
+import { rectIntersection } from '@dnd-kit/core';
+import type { Collision, CollisionDetection, DragEndEvent } from '@dnd-kit/core';
 
 import { useWebClient } from '@cockatrice/datatrice/react';
 import type { WebClient } from '@cockatrice/sockatrice';
@@ -22,6 +23,26 @@ export interface GameDnd {
 export interface UseGameDndArgs {
   gameId: number | undefined;
 }
+
+// Reorder slots (small per-card droppables) are nested inside a much larger
+// zone-level droppable. Default rectIntersection's IoU ratio favors the zone
+// when the overlay outsizes a slot (e.g. 64x88 stack slots under a 146x204
+// overlay), so the slot never wins. Prefer reorder-slot collisions whenever
+// they exist; otherwise fall back to the full intersection set.
+function slotIntersection(
+  args: Parameters<CollisionDetection>[0],
+  intersections: Collision[],
+): Collision[] {
+  return intersections.filter((c) =>
+    args.droppableContainers.find((d) => d.id === c.id)?.data.current?.asReorderSlot === true,
+  );
+}
+
+const collisionDetection: CollisionDetection = (args) => {
+  const intersections = rectIntersection(args);
+  const slotHits = slotIntersection(args, intersections);
+  return slotHits.length > 0 ? slotHits : intersections;
+};
 
 interface DragSource {
   card: ServerInfo_Card;
@@ -177,5 +198,5 @@ export function useGameDnd({ gameId }: UseGameDndArgs): GameDnd {
     [gameId, webClient],
   );
 
-  return { handleDragEnd };
+  return { handleDragEnd, collisionDetection };
 }
