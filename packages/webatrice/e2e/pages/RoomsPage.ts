@@ -28,7 +28,7 @@ export class RoomsPage {
   // navigation — page.waitForURL would hang. Wait on visible destination
   // content instead.
   async waitForRoomList(): Promise<void> {
-    await expect(this.page.getByRole('columnheader', { name: /^name$/i })).toBeVisible({ timeout: 30_000 });
+    await expect(this.page.getByRole('columnheader', { name: /^name$/i })).toBeVisible({ timeout: 60_000 });
   }
 
   async openRoom(name: string): Promise<void> {

@@ -27,6 +27,7 @@ runs:
       with:
         path: |
           packages/sockatrice/dist
+          packages/sockatrice/src/generated
           packages/datatrice/dist
         key: ${{ steps.key.outputs.key }}
 
