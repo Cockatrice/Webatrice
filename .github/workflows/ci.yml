@@ -81,9 +81,10 @@ jobs:
       - name: Install packages
         uses: ./.github/actions/install-packages
 
-      # Catches malformed `.changeset/*.md` (missing frontmatter, wrong bump
+      # Catches missing or malformed `.changeset/*.md` (missing frontmatter, wrong bump
       # type) before they reach master and break `changesets/action`.
       - name: Validate changesets
+        if: github.event_name == 'pull_request'
         run: npx changeset status --since=origin/master
 
       - name: Init vendor submodule (sparse)
