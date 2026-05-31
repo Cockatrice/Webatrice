@@ -25,6 +25,7 @@ type DropShape = {
   sourceCard: ServerInfo_Card;
   sourcePlayerId: number;
   sourceZone: string;
+  sourceIndex?: number;
   targetPlayerId: number;
   targetZone: string;
   targetRow?: number;
@@ -32,6 +33,9 @@ type DropShape = {
   // Drop-point is expressed as the card center's x relative to the row's
   // content edge (same convention as gridMath.mapToGridX).
   pointerXInRow?: number;
+  // Hand/stack reorder: when set, the drop's "over" target is a CardSlot
+  // droppable (asReorderSlot=true) that resolves to a specific insertion index.
+  targetIndex?: number;
 };
 
 const ROW_LEFT = 500;
@@ -50,6 +54,7 @@ function buildEvent(d: DropShape): DragEndEvent {
           card: d.sourceCard,
           sourcePlayerId: d.sourcePlayerId,
           sourceZone: d.sourceZone,
+          sourceIndex: d.sourceIndex,
         },
       },
       rect: {
@@ -85,6 +90,9 @@ function buildEvent(d: DropShape): DragEndEvent {
           targetZone: d.targetZone,
           row: d.targetRow ?? 0,
           rowCards: d.rowCards ?? [],
+          ...(d.targetIndex != null
+            ? { targetIndex: d.targetIndex, asReorderSlot: true }
+            : {}),
         },
       },
       disabled: false,
@@ -281,7 +289,7 @@ describe('useGameDnd', () => {
       expect(args.targetZone).toBe(Enriched.ZoneName.GRAVE);
     });
 
-    it('skips dispatch for same-zone drops on non-TABLE zones', () => {
+    it('skips dispatch for same-zone hand drop on zone background (no slot resolved)', () => {
       const { webClient, handleDragEnd } = setupHook();
       const card = makeCard({ id: 80, x: 0, y: 0 });
       handleDragEnd(
@@ -289,9 +297,90 @@ describe('useGameDnd', () => {
           sourceCard: card,
           sourcePlayerId: 1,
           sourceZone: Enriched.ZoneName.HAND,
+          sourceIndex: 0,
           targetPlayerId: 1,
           targetZone: Enriched.ZoneName.HAND,
           targetRow: 0,
+        }),
+      );
+
+      expect(webClient.request.game.moveCard).not.toHaveBeenCalled();
+    });
+
+    it('skips dispatch for same-zone non-hand-or-stack drops (e.g. deck → deck)', () => {
+      const { webClient, handleDragEnd } = setupHook();
+      const card = makeCard({ id: 81, x: 0, y: 0 });
+      handleDragEnd(
+        buildEvent({
+          sourceCard: card,
+          sourcePlayerId: 1,
+          sourceZone: Enriched.ZoneName.DECK,
+          targetPlayerId: 1,
+          targetZone: Enriched.ZoneName.DECK,
+          targetRow: 0,
+        }),
+      );
+
+      expect(webClient.request.game.moveCard).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('hand/stack reorder', () => {
+    it('sends moveCard with x=targetIndex when dragging within the hand', () => {
+      const { webClient, handleDragEnd } = setupHook();
+      const card = makeCard({ id: 100, x: 0, y: 0 });
+      handleDragEnd(
+        buildEvent({
+          sourceCard: card,
+          sourcePlayerId: 1,
+          sourceZone: Enriched.ZoneName.HAND,
+          sourceIndex: 0,
+          targetPlayerId: 1,
+          targetZone: Enriched.ZoneName.HAND,
+          targetIndex: 3,
+        }),
+      );
+
+      expect(webClient.request.game.moveCard).toHaveBeenCalledTimes(1);
+      const args = webClient.request.game.moveCard.mock.calls[0][1];
+      expect(args.x).toBe(3);
+      expect(args.y).toBe(0);
+      expect(args.startZone).toBe(Enriched.ZoneName.HAND);
+      expect(args.targetZone).toBe(Enriched.ZoneName.HAND);
+    });
+
+    it('sends moveCard with x=targetIndex when dragging within the stack pile', () => {
+      const { webClient, handleDragEnd } = setupHook();
+      const card = makeCard({ id: 101 });
+      handleDragEnd(
+        buildEvent({
+          sourceCard: card,
+          sourcePlayerId: 2,
+          sourceZone: Enriched.ZoneName.STACK,
+          sourceIndex: 2,
+          targetPlayerId: 2,
+          targetZone: Enriched.ZoneName.STACK,
+          targetIndex: 0,
+        }),
+      );
+
+      const args = webClient.request.game.moveCard.mock.calls[0][1];
+      expect(args.x).toBe(0);
+      expect(args.targetZone).toBe(Enriched.ZoneName.STACK);
+    });
+
+    it('skips dispatch when targetIndex equals sourceIndex (drop on same slot)', () => {
+      const { webClient, handleDragEnd } = setupHook();
+      const card = makeCard({ id: 102 });
+      handleDragEnd(
+        buildEvent({
+          sourceCard: card,
+          sourcePlayerId: 1,
+          sourceZone: Enriched.ZoneName.HAND,
+          sourceIndex: 2,
+          targetPlayerId: 1,
+          targetZone: Enriched.ZoneName.HAND,
+          targetIndex: 2,
         }),
       );
 

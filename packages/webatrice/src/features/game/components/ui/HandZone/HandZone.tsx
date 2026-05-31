@@ -43,7 +43,7 @@ function HandZone({
       onContextMenu={handleZoneContextMenu}
     >
       <div className="hand-zone__cards scrollable">
-        {cards.map((card) => {
+        {cards.map((card, idx) => {
           const key = makeCardKey(playerId, Enriched.ZoneName.HAND, card.id);
           return (
             <CardSlot
@@ -52,6 +52,7 @@ function HandZone({
               draggable={canAct}
               ownerPlayerId={playerId}
               zone={Enriched.ZoneName.HAND}
+              dropIndex={idx}
               isArrowSource={arrowSourceKey === key}
               isArrowTarget={arrowTargetKey === key}
               isSelected={selectedCardKey === key}

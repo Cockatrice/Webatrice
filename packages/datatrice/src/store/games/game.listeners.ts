@@ -87,15 +87,32 @@ export function registerGameListeners(mw: ListenerMiddlewareInstance<unknown>): 
         }
         : buildEmptyCard(effectiveNewId, cardName, x, y, faceDown, newCardProviderId ?? '');
 
-      api.dispatch(Actions.cardMovedBetweenZones({
-        gameId,
-        fromPlayerId: startPlayerId,
-        fromZone: startZone,
-        fromCardId: resolvedCardId,
-        toPlayerId: targetPlayerId,
-        toZone: effectiveTargetZone,
-        card: movedCard,
-      }));
+      const sameZone =
+        startPlayerId === targetPlayerId && startZone === effectiveTargetZone;
+      const isPositionalReorderZone =
+        effectiveTargetZone === Enriched.ZoneName.HAND ||
+        effectiveTargetZone === Enriched.ZoneName.STACK;
+
+      if (sameZone && isPositionalReorderZone && resolvedCardId >= 0) {
+        api.dispatch(Actions.cardMovedInSameZone({
+          gameId,
+          playerId: startPlayerId,
+          zoneName: startZone,
+          cardId: resolvedCardId,
+          toIndex: x,
+          card: movedCard,
+        }));
+      } else {
+        api.dispatch(Actions.cardMovedBetweenZones({
+          gameId,
+          fromPlayerId: startPlayerId,
+          fromZone: startZone,
+          fromCardId: resolvedCardId,
+          toPlayerId: targetPlayerId,
+          toZone: effectiveTargetZone,
+          card: movedCard,
+        }));
+      }
 
       // Servatrice discards arrows server-side when a card changes zones but
       // does not emit Event_DeleteArrow, so client-side state would otherwise

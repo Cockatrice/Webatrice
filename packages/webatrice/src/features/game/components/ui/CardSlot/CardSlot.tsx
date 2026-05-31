@@ -17,6 +17,7 @@ export interface CardSlotProps {
   isSelected?: boolean;
   ownerPlayerId?: number;
   zone?: string;
+  dropIndex?: number;
   onClick?: (ownerPlayerId: number | undefined, zone: string | undefined, card: ServerInfo_Card) => void;
   onDoubleClick?: (ownerPlayerId: number | undefined, zone: string | undefined, card: ServerInfo_Card) => void;
   onContextMenu?: (ownerPlayerId: number | undefined, zone: string | undefined, card: ServerInfo_Card, event: React.MouseEvent) => void;
@@ -89,6 +90,7 @@ function CardSlot({
   isSelected = false,
   ownerPlayerId,
   zone,
+  dropIndex,
   onClick,
   onDoubleClick,
   onContextMenu,
@@ -96,11 +98,12 @@ function CardSlot({
   onFocus,
   onBlur,
 }: CardSlotProps) {
-  const { smallUrl, attributes, listeners, isDragging, rootRef } = useCardSlot({
+  const { smallUrl, attributes, listeners, isDragging, dropSide, rootRef } = useCardSlot({
     card,
     draggable,
     ownerPlayerId,
     zone,
+    dropIndex,
   });
 
   const handleClick = useCallback(() => onClick?.(ownerPlayerId, zone, card), [onClick, ownerPlayerId, zone, card]);
@@ -121,6 +124,8 @@ function CardSlot({
     'card-slot--selected': isSelected,
     'card-slot--arrow-source': isArrowSource,
     'card-slot--arrow-target': isArrowTarget,
+    'card-slot--drop-before': dropSide === 'before',
+    'card-slot--drop-after': dropSide === 'after',
   });
 
   return (

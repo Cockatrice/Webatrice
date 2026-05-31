@@ -1,6 +1,14 @@
 import { RefObject, useCallback, useMemo, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import {
+  KeyboardSensor,
+  PointerSensor,
+  rectIntersection,
+  useSensor,
+  useSensors,
+  type Collision,
+  type CollisionDetection,
+} from '@dnd-kit/core';
 
 import { ServerInfo_Card } from '@cockatrice/sockatrice/generated';
 import { createCardRegistry, makeCardKey, type CardRegistry } from '../utils/CardRegistry/CardRegistryContext';
@@ -12,6 +20,26 @@ import { useGameDnd, type GameDnd } from './useGameDnd';
 import { useGameLifecycleNavigation } from './useGameLifecycleNavigation';
 import { useGamePlayerSlots, type GamePlayerSlots } from './useGamePlayerSlots';
 import { useGameShortcuts } from './useGameShortcuts';
+
+// Reorder slots (small per-card droppables) are nested inside a much larger
+// zone-level droppable. Default rectIntersection's IoU ratio favors the zone
+// when the overlay outsizes a slot (e.g. 64x88 stack slots under a 146x204
+// overlay), so the slot never wins. Prefer reorder-slot collisions whenever
+// they exist; otherwise fall back to the full intersection set.
+function slotIntersection(
+  args: Parameters<CollisionDetection>[0],
+  intersections: Collision[],
+): Collision[] {
+  return intersections.filter((c) =>
+    args.droppableContainers.find((d) => d.id === c.id)?.data.current?.asReorderSlot === true,
+  );
+}
+
+const collisionDetection: CollisionDetection = (args) => {
+  const intersections = rectIntersection(args);
+  const slotHits = slotIntersection(args, intersections);
+  return slotHits.length > 0 ? slotHits : intersections;
+};
 
 export interface Game extends CurrentGame {
   boardRef: RefObject<HTMLDivElement>;
@@ -96,7 +124,11 @@ export function useGame(): Game {
     startPendingArrow: arrows.startPendingArrow,
     startPendingAttach: arrows.startPendingAttach,
   });
-  const dnd = useGameDnd({ gameId });
+  const dndBase = useGameDnd({ gameId });
+  const dnd = useMemo<GameDnd>(
+    () => ({ ...dndBase, collisionDetection }),
+    [dndBase],
+  );
 
   useGameShortcuts({ gameId, onRequestConcede: dialogs.openConcede });
 
