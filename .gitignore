@@ -5,6 +5,9 @@ node_modules
 .pnp
 .pnp.js
 
+# turborepo
+.turbo
+
 # AI generated docs
 .claude/settings.local.json
 /plans
