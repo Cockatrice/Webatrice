@@ -3,13 +3,20 @@ name: Deploy
 on:
   workflow_dispatch:
     inputs:
+      environment:
+        description: "Target environment"
+        required: true
+        default: stage
+        type: choice
+        options:
+          - stage
       tag:
         description: "Optional release tag to deploy (defaults to the latest release)"
         required: false
         type: string
 
 concurrency:
-  group: deploy-production
+  group: deploy-${{ inputs.environment }}
   cancel-in-progress: false
 
 permissions:
@@ -17,7 +24,10 @@ permissions:
 
 jobs:
   deploy:
-    name: Deploy to DigitalOcean droplet
+    name: Deploy to ${{ inputs.environment }}
+    # Scopes secrets + non-secret variables (e.g. SITE_URL) to the chosen
+    # environment. Each environment has its own SSH key, host, and site URL.
+    environment: ${{ inputs.environment }}
     runs-on: ubuntu-latest
 
     steps:
@@ -42,15 +52,25 @@ jobs:
           echo "Deploying release \`$RELEASE_TAG\`" >> "$GITHUB_STEP_SUMMARY"
           gh release download "$RELEASE_TAG" --pattern 'webatrice-*.tar.gz' --dir .
 
+      # Cryptographic chain back to release.yml's `actions/attest-build-provenance`
+      # step. Fails the deploy if the tarball isn't attested by this repo's
+      # release workflow.
+      - name: Verify build provenance
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh attestation verify webatrice-*.tar.gz --repo "$GITHUB_REPOSITORY"
+
       - name: Extract archive
         run: tar -xzf webatrice-*.tar.gz
 
       - name: Read release SHA
         id: sha
+        env:
+          SITE_URL: ${{ vars.SITE_URL }}
         run: |
           sha="$(cat build/.deploy-sha)"
           echo "sha=$sha" >> "$GITHUB_OUTPUT"
-          echo "Deploying commit \`$sha\` to webatrice.cockatrice.us" >> "$GITHUB_STEP_SUMMARY"
+          echo "Deploying commit \`$sha\` to $SITE_URL" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Set up SSH
         uses: shimataro/ssh-key-action@87a8f067114a8ce263df83e9ed5c849953548bc3  # v2.8.1
@@ -60,7 +80,32 @@ jobs:
           name: deploy_key
 
       - name: Sync release to droplet
+        env:
+          DEPLOY_USER: ${{ secrets.RR_BETA_SERVER_DEPLOY_USER }}
+          DEPLOY_HOST: ${{ secrets.RR_BETA_SERVER_DEPLOY_HOST }}
         run: |
           rsync -avz --delete \
-            -e "ssh -i ~/.ssh/deploy_key -p 4924 -o StrictHostKeyChecking=accept-new" \
-            ./build/ ${{ secrets.RR_BETA_SERVER_DEPLOY_USER }}@${{ secrets.RR_BETA_SERVER_DEPLOY_HOST }}:
+            -e "ssh -i ~/.ssh/deploy_key -p 4924 -o StrictHostKeyChecking=yes" \
+            ./build/ "$DEPLOY_USER@$DEPLOY_HOST:"
+
+      # Smoke test: confirm the live site is up and serving the SHA we just
+      # rsynced. Webatrice writes the commit SHA into src/server-props.json
+      # during prebuild; the same file is shipped in the tarball and served
+      # at /server-props.json. If the deploy succeeded, this curl returns it.
+      - name: Smoke test deployed site
+        env:
+          EXPECTED_SHA: ${{ steps.sha.outputs.sha }}
+          SITE_URL: ${{ vars.SITE_URL }}
+        run: |
+          set -eu
+          for i in $(seq 1 10); do
+            ACTUAL=$(curl -fsSL --max-time 10 "${SITE_URL%/}/server-props.json" 2>/dev/null | jq -r '.REACT_APP_VERSION // empty' || true)
+            if [ "$ACTUAL" = "$EXPECTED_SHA" ]; then
+              echo "Live site serving expected SHA $EXPECTED_SHA" >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            echo "Attempt $i: got '$ACTUAL', want '$EXPECTED_SHA' — retrying"
+            sleep 5
+          done
+          echo "Live site did not converge on expected SHA after 10 attempts" >&2
+          exit 1

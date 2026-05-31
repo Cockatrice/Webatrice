@@ -24,10 +24,9 @@ export interface CreateGameOptions {
 export class RoomsPage {
   constructor(private readonly page: Page) {}
 
-  // AppShell uses MemoryRouter, so window.location never tracks app
-  // navigation — page.waitForURL would hang. Wait on visible destination
-  // content instead.
   async waitForRoomList(): Promise<void> {
+    await expect(this.page.locator('span.LeftNav-server__indicator')).toBeVisible({ timeout: 30_000 });
+    await this.page.getByAltText('logo').click();
     await expect(this.page.getByRole('columnheader', { name: /^name$/i })).toBeVisible({ timeout: 30_000 });
   }
 

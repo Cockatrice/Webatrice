@@ -14,10 +14,8 @@ permissions:
   contents: read
 
 jobs:
-  # Path-filter outputs that drive downstream-aware gating. A "root" change
-  # (workspace config, lockfile, workflow file) is treated as touching
-  # everything since it affects every package.
   changes:
+    name: Detect changes
     runs-on: ubuntu-latest
     outputs:
       sockatrice: ${{ steps.filter.outputs.sockatrice }}
@@ -25,136 +23,143 @@ jobs:
       webatrice: ${{ steps.filter.outputs.webatrice }}
       proto: ${{ steps.filter.outputs.proto }}
       root: ${{ steps.filter.outputs.root }}
-      # The path-filter step outputs literal strings "true"/"false"; both are
-      # truthy in GHA expression evaluation, so a bare `||` chain on the raw
-      # outputs always returns the first value. Coerce to real booleans with
-      # `== 'true'` before OR'ing.
       sockatriceGate: ${{ steps.filter.outputs.sockatrice == 'true' || steps.filter.outputs.proto == 'true' || steps.filter.outputs.root == 'true' }}
       datatriceGate: ${{ steps.filter.outputs.sockatrice == 'true' || steps.filter.outputs.datatrice == 'true' || steps.filter.outputs.proto == 'true' || steps.filter.outputs.root == 'true' }}
+      documentation_only: ${{ steps.filter.outputs.nonDocs == 'false' }}
     steps:
-      - uses: actions/checkout@v6
-      - uses: dorny/paths-filter@v4
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+
+      - name: Filter changed paths
         id: filter
+        uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d  # v4.0.1
         with:
           filters: |
             sockatrice:
               - 'packages/sockatrice/**'
-              - '!packages/sockatrice/.github/instructions/**'
             datatrice:
               - 'packages/datatrice/**'
-              - '!packages/datatrice/.github/instructions/**'
             webatrice:
               - 'packages/webatrice/**'
-              - '!packages/webatrice/.github/instructions/**'
             proto:
               - 'vendor/cockatrice/libcockatrice_protocol/**'
-              - 'packages/sockatrice/buf.gen.yaml'
-              - 'packages/sockatrice/buf.gen.plugin.mjs'
+              - 'packages/sockatrice/buf.gen.*'
             root:
               - 'tsconfig.json'
               - 'tsconfig.base.json'
               - 'package.json'
               - 'package-lock.json'
               - '.npmrc'
-              - '.github/workflows/**'
+              - '.github/**'
+              - '!.github/instructions/**'
+            nonDocs:
+              - '**'
+              - '!**/*.md'
 
-  # tsc -b across the whole package graph is the cross-package contract gate.
-  # Always runs (cheap relative to e2e) on both node versions.
   typecheck:
     name: Typecheck (Node ${{ matrix.node_version }})
     needs: [changes]
+    if: needs.changes.outputs.documentation_only == 'false'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         node_version: ['24']
     steps:
-      - uses: actions/checkout@v6
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+        with:
+          fetch-depth: 0
 
-      - uses: actions/setup-node@v6
+      - name: Setup Node
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e  # v6.4.0
         with:
           node-version: ${{ matrix.node_version }}
           cache: npm
           cache-dependency-path: package-lock.json
 
-      - name: Install dependencies
-        run: npm clean-install
+      - name: Install packages
+        uses: ./.github/actions/install-packages
+
+      # Catches malformed `.changeset/*.md` (missing frontmatter, wrong bump
+      # type) before they reach master and break `changesets/action`.
+      - name: Validate changesets
+        run: npx changeset status --since=origin/master
+
+      - name: Init vendor submodule (sparse)
+        run: npm run assets:submodule
 
       - name: Generate proto bindings
         run: npm run -w @cockatrice/sockatrice proto:generate
 
-      - name: tsc -b (library graph)
+      - name: Typecheck library graph
         run: npx tsc -b packages/sockatrice/tsconfig.build.json packages/datatrice/tsconfig.build.json
 
-      - name: tsc --noEmit (app)
+      - name: Typecheck app
         run: npx tsc --noEmit -p packages/webatrice/tsconfig.json
 
-  # One lint pass per package. Each package keeps its own ESLint config and
-  # boundaries graph; we just invoke them serially. The library dist/ outputs
-  # must exist before linting the app, since eslint-import-resolver-typescript
-  # resolves `@cockatrice/sockatrice` via the workspace symlink to dist/.
   lint:
     name: Lint (Node ${{ matrix.node_version }})
     needs: [changes]
+    if: needs.changes.outputs.documentation_only == 'false'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         node_version: ['24']
     steps:
-      - uses: actions/checkout@v6
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
 
-      - uses: actions/setup-node@v6
+      - name: Setup Node
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e  # v6.4.0
         with:
           node-version: ${{ matrix.node_version }}
           cache: npm
           cache-dependency-path: package-lock.json
 
-      - name: Install dependencies
-        run: npm clean-install
+      - name: Install packages
+        uses: ./.github/actions/install-packages
 
-      - name: Build libraries (needed for app import resolution)
-        run: |
-          npm run -w @cockatrice/sockatrice build
-          npm run -w @cockatrice/datatrice build
+      - name: Build libraries
+        uses: ./.github/actions/build-libraries
 
-      - name: Lint sockatrice
+      - name: Sockatrice lint
         if: needs.changes.outputs.sockatriceGate == 'true'
         run: npm run -w @cockatrice/sockatrice lint
 
-      - name: Lint datatrice
+      - name: Datatrice lint
         if: needs.changes.outputs.datatriceGate == 'true'
         run: npm run -w @cockatrice/datatrice lint
 
-      - name: Lint app
+      - name: App lint
         run: npm run -w @cockatrice/webatrice lint
 
-  # Downstream-aware unit tests: a sockatrice change runs all three suites,
-  # a datatrice change runs datatrice + app, an app-only change runs just app.
   test:
     name: Unit tests (Node ${{ matrix.node_version }})
     needs: [changes]
+    if: needs.changes.outputs.documentation_only == 'false'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         node_version: ['24']
     steps:
-      - uses: actions/checkout@v6
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
 
-      - uses: actions/setup-node@v6
+      - name: Setup Node
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e  # v6.4.0
         with:
           node-version: ${{ matrix.node_version }}
           cache: npm
           cache-dependency-path: package-lock.json
 
-      - name: Install dependencies
-        run: npm clean-install
+      - name: Install packages
+        uses: ./.github/actions/install-packages
 
-      - name: Build libraries (app tests resolve @cockatrice/* via dist/)
-        run: |
-          npm run -w @cockatrice/sockatrice build
-          npm run -w @cockatrice/datatrice build
+      - name: Build libraries
+        uses: ./.github/actions/build-libraries
 
       - name: Sockatrice unit tests
         if: needs.changes.outputs.sockatriceGate == 'true'
@@ -167,112 +172,69 @@ jobs:
       - name: App unit tests
         run: npm run -w @cockatrice/webatrice test:coverage
 
-  # Same downstream-aware gating for integration suites.
   integration:
     name: Integration tests (Node ${{ matrix.node_version }})
     needs: [changes]
+    if: needs.changes.outputs.documentation_only == 'false'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         node_version: ['24']
     steps:
-      - uses: actions/checkout@v6
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
 
-      - uses: actions/setup-node@v6
+      - name: Setup Node
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e  # v6.4.0
         with:
           node-version: ${{ matrix.node_version }}
           cache: npm
           cache-dependency-path: package-lock.json
 
-      - name: Install dependencies
-        run: npm clean-install
+      - name: Install packages
+        uses: ./.github/actions/install-packages
 
-      - name: Build libraries (app integration resolves @cockatrice/* via dist/)
-        run: |
-          npm run -w @cockatrice/sockatrice build
-          npm run -w @cockatrice/datatrice build
+      - name: Build libraries
+        uses: ./.github/actions/build-libraries
 
-      - name: Sockatrice integration
+      - name: Sockatrice integration tests
         if: needs.changes.outputs.sockatriceGate == 'true'
         run: npm run -w @cockatrice/sockatrice test:integration:coverage
 
-      - name: Datatrice integration
+      - name: Datatrice integration tests
         if: needs.changes.outputs.datatriceGate == 'true'
         run: npm run -w @cockatrice/datatrice test:integration:coverage
 
-      - name: App integration
+      - name: App integration tests
         run: npm run -w @cockatrice/webatrice test:integration:coverage
 
-  # Library tsup builds + vite app build. Single node version (build is slow
-  # and the matrix would mostly catch the same issues as typecheck).
-  build:
-    needs: [changes]
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-
-      - uses: actions/setup-node@v6
-        with:
-          node-version: 24
-          cache: npm
-          cache-dependency-path: package-lock.json
-
-      - name: Install dependencies
-        run: npm clean-install
-
-      - name: Build sockatrice
-        if: needs.changes.outputs.sockatriceGate == 'true'
-        run: npm run -w @cockatrice/sockatrice build
-
-      - name: Build datatrice
-        if: needs.changes.outputs.datatriceGate == 'true'
-        run: |
-          [ -d packages/sockatrice/dist ] || npm run -w @cockatrice/sockatrice build
-          npm run -w @cockatrice/datatrice build
-
-      - name: Build app
-        run: |
-          [ -d packages/sockatrice/dist ] || npm run -w @cockatrice/sockatrice build
-          [ -d packages/datatrice/dist ] || npm run -w @cockatrice/datatrice build
-          npm run -w @cockatrice/webatrice build
-
-  # Fork point for the e2e sub-graph. Re-emits the gates the e2e jobs need so
-  # they hang off this node instead of `changes` directly — keeps the e2e lane
-  # visually separate from the validation/build lane in the Actions UI.
-  e2e:
-    needs: [changes]
-    runs-on: ubuntu-latest
-    outputs:
-      sockatriceGate: ${{ needs.changes.outputs.sockatriceGate }}
-    steps:
-      - run: echo "e2e gate"
-
-  # Sockatrice's WebSocket-level Docker e2e — only when sockatrice or the
-  # proto schema changed (expensive).
+  # Expensive (Docker spinup); gated on sockatriceGate.
   sockatrice-e2e:
     name: Sockatrice e2e (Servatrice)
-    needs: [e2e]
-    if: needs.e2e.outputs.sockatriceGate == 'true'
+    needs: [changes]
+    if: needs.changes.outputs.sockatriceGate == 'true' && needs.changes.outputs.documentation_only == 'false'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v6
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
 
-      - uses: actions/setup-node@v6
+      - name: Setup Node
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e  # v6.4.0
         with:
           node-version: 24
           cache: npm
           cache-dependency-path: package-lock.json
 
-      - name: Install dependencies
-        run: npm clean-install
+      # Doesn't touch webatrice; skip its prebuild step.
+      - name: Install packages (skip prebuild)
+        uses: ./.github/actions/install-packages
+        with:
+          prebuild-webatrice: 'false'
 
-      - name: Generate proto bindings
-        run: npm run -w @cockatrice/sockatrice proto:generate
-
-      - name: Build sockatrice
-        run: npm run -w @cockatrice/sockatrice build
+      - name: Build libraries
+        uses: ./.github/actions/build-libraries
 
       - name: Start Servatrice
         run: npm run -w @cockatrice/sockatrice test:e2e:up
@@ -280,9 +242,6 @@ jobs:
       - name: Run sockatrice e2e
         run: npm run -w @cockatrice/sockatrice test:e2e:run
 
-      - name: Tear down
-        if: always()
-        run: npm run -w @cockatrice/sockatrice test:e2e:down
 
       - name: Dump container logs on failure
         if: failure()
@@ -294,32 +253,44 @@ jobs:
           docker logs sockatrice-e2e-mysql-1 || true
           echo "::endgroup::"
 
-  # Webatrice Playwright + Servatrice e2e. Always runs (user direction:
-  # UI regressions matter regardless of which package the change touched).
+      - name: Tear down
+        if: always()
+        run: npm run -w @cockatrice/sockatrice test:e2e:down
+
   app-e2e:
     name: App e2e (Playwright + Servatrice)
-    needs: [e2e]
+    needs: [changes]
+    if: needs.changes.outputs.documentation_only == 'false'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v6
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
 
-      - uses: actions/setup-node@v6
+      - name: Setup Node
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e  # v6.4.0
         with:
           node-version: 24
           cache: npm
           cache-dependency-path: package-lock.json
 
-      - name: Install dependencies
-        run: npm clean-install
+      # `webatrice build` below triggers prebuild via its lifecycle hook.
+      - name: Install packages (skip prebuild)
+        uses: ./.github/actions/install-packages
+        with:
+          prebuild-webatrice: 'false'
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830  # v5.0.5
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
 
       - name: Install Playwright browsers
         run: npm run -w @cockatrice/webatrice test:e2e:install-browsers:linux
 
-      - name: Build libraries (vite resolves @cockatrice/* via dist/)
-        run: |
-          npm run -w @cockatrice/sockatrice build
-          npm run -w @cockatrice/datatrice build
+      - name: Build libraries
+        uses: ./.github/actions/build-libraries
 
       - name: Build app
         run: npm run -w @cockatrice/webatrice build
@@ -330,9 +301,6 @@ jobs:
       - name: Run Playwright tests
         run: npm run -w @cockatrice/webatrice test:e2e:run
 
-      - name: Tear down
-        if: always()
-        run: npm run -w @cockatrice/webatrice test:e2e:down
 
       - name: Dump container logs on failure
         if: failure()
@@ -344,12 +312,28 @@ jobs:
           docker logs webatrice-e2e-mysql-1 || true
           echo "::endgroup::"
 
+      - name: Tear down
+        if: always()
+        run: npm run -w @cockatrice/webatrice test:e2e:down
+
       - name: Upload Playwright report on failure
         if: failure()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
         with:
           name: playwright-report
           path: |
             packages/webatrice/playwright-report/
             packages/webatrice/test-results/
           retention-days: 7
+
+  ci-success:
+    name: CI Success
+    if: always()
+    needs: [changes, typecheck, lint, test, integration, sockatrice-e2e, app-e2e]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fail if any required job failed or was cancelled
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        run: exit 1
+      - name: Report success
+        run: echo "All required jobs passed or were skipped."

@@ -30,7 +30,6 @@ export async function registerAndReachRooms(page: Page): Promise<RegisteredSessi
   await login.addHost(E2E_HOST_LABEL, E2E_HOST.host, E2E_HOST.port);
   await login.selectHost(E2E_HOST_LABEL);
   await login.register(user.username, user.password);
-  await login.waitForRoomsView();
   await rooms.waitForRoomList();
 
   return { login, rooms, user };
@@ -42,7 +41,7 @@ export async function registerAndReachRooms(page: Page): Promise<RegisteredSessi
 export async function registerAndJoinFirstRoom(page: Page): Promise<RegisteredSession> {
   const session = await registerAndReachRooms(page);
 
-  const firstJoinable = page.getByRole('button', { name: /^join$/i }).first();
+  const firstJoinable = page.locator('.rooms').getByRole('button', { name: /^join$/i }).first();
   await expect(firstJoinable).toBeVisible({ timeout: 15_000 });
   await firstJoinable.click();
   await session.rooms.waitForGameList();

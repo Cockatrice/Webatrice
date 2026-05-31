@@ -24,6 +24,5 @@ test('register, login, known-host persisted, re-login', async ({ page }) => {
   await login.selectHost(E2E_HOST_LABEL);
 
   await login.login(user.username, user.password);
-  await login.waitForRoomsView();
   await rooms.waitForRoomList();
 });

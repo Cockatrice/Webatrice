@@ -1,0 +1,47 @@
+name: Build libraries (cached)
+description: |
+  Restores or builds @cockatrice/sockatrice and @cockatrice/datatrice dist/
+  from a content-addressed cache. Lazily initializes the vendor/cockatrice
+  submodule (sparse) only when the cache misses, so cache hits avoid the
+  submodule fetch entirely. Consumer must have run `npm clean-install` first.
+
+runs:
+  using: composite
+  steps:
+    # Content-addressed cache key from git plumbing. `git rev-parse HEAD:<path>`
+    # returns the tree/blob SHA without reading file contents — same content =
+    # same SHA, regardless of working-tree state.
+    - name: Compute cache key
+      id: key
+      shell: bash
+      run: |
+        SOCK=$(git rev-parse HEAD:packages/sockatrice)
+        DATA=$(git rev-parse HEAD:packages/datatrice)
+        LOCK=$(git rev-parse HEAD:package-lock.json)
+        VEND=$(git ls-tree HEAD vendor/cockatrice | awk '{print $3}')
+        echo "key=lib-dists-${{ runner.os }}-${VEND}-${SOCK}-${DATA}-${LOCK}" >> "$GITHUB_OUTPUT"
+
+    - name: Restore library dists cache
+      id: cache
+      uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830  # v5.0.5
+      with:
+        path: |
+          packages/sockatrice/dist
+          packages/sockatrice/src/generated
+          packages/datatrice/dist
+        key: ${{ steps.key.outputs.key }}
+
+    - name: Init vendor submodule (sparse)
+      if: steps.cache.outputs.cache-hit != 'true'
+      shell: bash
+      run: npm run assets:submodule
+
+    - name: Build sockatrice
+      if: steps.cache.outputs.cache-hit != 'true'
+      shell: bash
+      run: npm run -w @cockatrice/sockatrice build
+
+    - name: Build datatrice
+      if: steps.cache.outputs.cache-hit != 'true'
+      shell: bash
+      run: npm run -w @cockatrice/datatrice build

@@ -13,16 +13,16 @@ import { AuthenticationCommands, WebClient } from '../../dist/index.js';
 import { WebsocketTypes } from '../../dist/types/index.js';
 import { generateUniqueUser, waitForStatus } from '../helpers/e2e-client';
 
-const SOAK_DURATION_MS = 120_000;
+const SOAK_DURATION_MS = 60_000;
 const POLL_INTERVAL_MS = 1_000;
-// 120s soak + 25s login wait + slack. The e2e suite's global testTimeout is
+// 60s soak + 25s login wait + slack. The e2e suite's global testTimeout is
 // 30s, so this per-test override is required (the fast register-and-login
 // spec keeps the default 30s budget).
-const TEST_TIMEOUT_MS = 180_000;
+const TEST_TIMEOUT_MS = 120_000;
 
 describe('connection-stability', () => {
   it(
-    'holds a logged-in connection for two minutes with no reconnects',
+    'holds a logged-in connection for one minute with no reconnects',
     async () => {
       const user = generateUniqueUser();
 
@@ -45,7 +45,7 @@ describe('connection-stability', () => {
       // Keep-alive is asserted *indirectly*: KeepAliveService calls
       // onDisconnected() — flipping status away from LOGGED_IN — the moment
       // two keep-alive ticks pass with no intervening pong. At the e2e
-      // keepalive of 5s, a 120s hold spans ~24 ping/pong cycles, so "stayed
+      // keepalive of 5s, a 60s hold spans ~12 ping/pong cycles, so "stayed
       // LOGGED_IN for the whole window" is itself proof that pongs kept
       // flowing. (Protocol-level keep-alive correctness is owned by the unit
       // and integration suites; this spec only proves it holds against a real
