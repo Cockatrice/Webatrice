@@ -242,9 +242,6 @@ jobs:
       - name: Run sockatrice e2e
         run: npm run -w @cockatrice/sockatrice test:e2e:run
 
-      - name: Tear down
-        if: always()
-        run: npm run -w @cockatrice/sockatrice test:e2e:down
 
       - name: Dump container logs on failure
         if: failure()
@@ -256,9 +253,10 @@ jobs:
           docker logs sockatrice-e2e-mysql-1 || true
           echo "::endgroup::"
 
-  # Webatrice Playwright + Servatrice e2e. Runs for any non-docs change
-  # (user direction: UI regressions matter regardless of which package the
-  # change touched), but skipped for docs-only PRs.
+      - name: Tear down
+        if: always()
+        run: npm run -w @cockatrice/sockatrice test:e2e:down
+
   app-e2e:
     name: App e2e (Playwright + Servatrice)
     needs: [changes]
@@ -303,9 +301,6 @@ jobs:
       - name: Run Playwright tests
         run: npm run -w @cockatrice/webatrice test:e2e:run
 
-      - name: Tear down
-        if: always()
-        run: npm run -w @cockatrice/webatrice test:e2e:down
 
       - name: Dump container logs on failure
         if: failure()
@@ -316,6 +311,10 @@ jobs:
           echo "::group::mysql logs"
           docker logs webatrice-e2e-mysql-1 || true
           echo "::endgroup::"
+
+      - name: Tear down
+        if: always()
+        run: npm run -w @cockatrice/webatrice test:e2e:down
 
       - name: Upload Playwright report on failure
         if: failure()

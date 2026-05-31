@@ -112,11 +112,4 @@ export class LoginPage {
     await submit.click();
   }
 
-  // AppShell uses MemoryRouter, so `window.location` does not track
-  // navigation — `waitForURL('/server')` would hang forever. Wait on the
-  // rooms-list table header instead, which is what RoomsPage.waitForRoomList
-  // also keys off.
-  async waitForRoomsView(): Promise<void> {
-    await expect(this.page.getByRole('columnheader', { name: /^name$/i })).toBeVisible({ timeout: 60_000 });
-  }
 }
