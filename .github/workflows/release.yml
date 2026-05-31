@@ -1,59 +1,73 @@
 name: Release
 
-# Two release flows in one workflow, both Changesets-driven:
+# Sole owner of @cockatrice/sockatrice + @cockatrice/datatrice on GH Packages
+# and of the @cockatrice/webatrice@<v> GitHub Release that deploy.yml consumes.
+# Version PR maintenance lives in changesets.yml.
 #
-#   - libraries: Publishes @cockatrice/sockatrice + @cockatrice/datatrice to
-#     GitHub Packages. Runs automatically on every push to master (opens or
-#     updates a "Version Packages" PR when changesets are pending; publishes
-#     when that PR is merged). Can also be invoked manually with
-#     `target=libraries` for a re-run.
+# Detection signal is per-package CHANGELOG.md diff vs HEAD~1: only
+# `changeset version` writes those files, so a CHANGELOG change on master is
+# the precise signal that the package was in the Version PR just merged.
 #
-#   - app: Builds + tarballs @cockatrice/webatrice and creates the GitHub
-#     Release (and its git tag) that deploy.yml consumes. This job is the
-#     SOLE owner of the @cockatrice/webatrice@<version> release object.
-#     Changesets versions package.json via `privatePackages.version: true`
-#     but does NOT tag (`privatePackages.tag: false`) — that prevents
-#     changesets/action from creating an empty release that would collide
-#     with this job. Runs on push to master (idempotent — exits early when
-#     a release at the current package.json version already exists) or
-#     manually via workflow_dispatch with target=app.
+# No workflow_dispatch — recovery from a failed publish is "Re-run all jobs"
+# in the Actions UI.
 
 on:
-  push:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
     branches: [master]
-  workflow_dispatch:
-    inputs:
-      target:
-        description: 'What to release'
-        required: true
-        default: 'libraries'
-        type: choice
-        options:
-          - libraries
-          - app
 
 permissions:
   contents: read
 
+concurrency:
+  group: release
+  cancel-in-progress: false
+
 jobs:
+  detect:
+    name: Detect released packages
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    outputs:
+      sockatriceReleased: ${{ steps.filter.outputs.sockatriceReleased }}
+      datatriceReleased: ${{ steps.filter.outputs.datatriceReleased }}
+      webatriceReleased: ${{ steps.filter.outputs.webatriceReleased }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          # depth 2 so HEAD~1 exists for the paths-filter diff base
+          fetch-depth: 2
+          persist-credentials: false
+
+      - name: Filter released CHANGELOGs
+        id: filter
+        uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d  # v4.0.1
+        with:
+          base: HEAD~1
+          filters: |
+            sockatriceReleased: ['packages/sockatrice/CHANGELOG.md']
+            datatriceReleased: ['packages/datatrice/CHANGELOG.md']
+            webatriceReleased: ['packages/webatrice/CHANGELOG.md']
+
   libraries:
-    name: Publish libraries (Changesets)
-    if: ${{ github.event_name == 'push' || github.event.inputs.target == 'libraries' }}
+    name: Publish libraries
+    needs: [detect]
+    if: ${{ needs.detect.outputs.sockatriceReleased == 'true' || needs.detect.outputs.datatriceReleased == 'true' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
-      pull-requests: write
       packages: write
       id-token: write
     steps:
       - name: Checkout (with submodules)
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
         with:
+          ref: ${{ github.event.workflow_run.head_sha }}
           fetch-depth: 0
           submodules: true
-          # CHANGESETS_TOKEN (PAT) lets the "Version Packages" PR trigger CI on
-          # itself; default GITHUB_TOKEN cannot. See workflows-audit.md (release-1).
-          token: ${{ secrets.CHANGESETS_TOKEN }}
 
       - name: Setup Node
         uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e  # v6.4.0
@@ -64,111 +78,104 @@ jobs:
           registry-url: https://npm.pkg.github.com
           scope: '@cockatrice'
 
-      - name: Install dependencies
-        run: npm clean-install
+      - name: Install packages (skip prebuild)
+        uses: ./.github/actions/install-packages
+        with:
+          prebuild-webatrice: 'false'
 
-      # Changesets publishes in package-graph order, not topological build
-      # order — datatrice's prepack tsup dts build resolves
-      # @cockatrice/sockatrice/types through the workspace symlink, so
-      # sockatrice's dist/ must exist before datatrice publishes.
-      - name: Pre-build libraries (sockatrice → datatrice)
-        run: |
-          npm run -w @cockatrice/sockatrice build
-          npm run -w @cockatrice/datatrice build
+      # datatrice's prepack dts build resolves @cockatrice/sockatrice/types
+      # through the workspace symlink, so sockatrice's dist/ must exist first.
+      - name: Build libraries
+        uses: ./.github/actions/build-libraries
 
-      - name: Create Release PR or publish to GitHub Packages
+      - name: Publish to GitHub Packages
+        id: changesets
         uses: changesets/action@63a615b9cd06ba9a3e6d13796c7fbcb080a60a0b  # v1.8.0
         with:
           publish: npx changeset publish
         env:
-          # CHANGESETS_TOKEN for opening/updating the Version Packages PR.
-          GITHUB_TOKEN: ${{ secrets.CHANGESETS_TOKEN }}
-          # Repo-scoped GITHUB_TOKEN for publishing to GH Packages.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Sigstore provenance attestation on the published tarballs.
           NPM_CONFIG_PROVENANCE: true
 
+      - name: Summarize published libraries
+        if: steps.changesets.outputs.published == 'true'
+        env:
+          PUBLISHED: ${{ steps.changesets.outputs.publishedPackages }}
+        run: |
+          {
+            echo "### Published libraries"
+            echo ""
+            echo "$PUBLISHED" | jq -r '.[] | "- \(.name)@\(.version)"'
+          } >> "$GITHUB_STEP_SUMMARY"
+
   app:
-    name: Build & release Webatrice app
-    needs: [libraries]
-    if: |
-      (github.event_name == 'workflow_dispatch' && github.event.inputs.target == 'app') ||
-      (github.event_name == 'push' && github.ref == 'refs/heads/master')
+    name: Release app
+    needs: [detect]
+    if: ${{ needs.detect.outputs.webatriceReleased == 'true' }}
     runs-on: ubuntu-latest
-    concurrency:
-      group: release-app
-      cancel-in-progress: false
     permissions:
       contents: write
+      attestations: write
+      id-token: write
     steps:
-      - name: Checkout (with submodules)
+      - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
         with:
-          submodules: recursive
-          fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-      # Read the Webatrice version from its package.json (Changesets sets it
-      # via the Version Packages PR merge). Check whether a release at that
-      # tag already exists — if so, skip; this keeps the push-trigger
-      # idempotent across master pushes that don't bump Webatrice.
-      - name: Check if Webatrice needs release
-        id: check
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          VERSION=$(node -p "require('./packages/webatrice/package.json').version")
-          TAG="@cockatrice/webatrice@${VERSION}"
-          echo "Webatrice version is ${VERSION}; checking for existing release ${TAG}"
-          if gh release view "$TAG" >/dev/null 2>&1; then
-            echo "Release already exists; skipping"
-            echo "skip=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "Release needed"
-            echo "skip=false" >> "$GITHUB_OUTPUT"
-            echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
-            echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
-          fi
+          ref: ${{ github.event.workflow_run.head_sha }}
+          persist-credentials: false
 
       - name: Setup Node
-        if: steps.check.outputs.skip != 'true'
         uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e  # v6.4.0
         with:
           node-version: 24
           cache: npm
           cache-dependency-path: package-lock.json
 
-      - name: Install dependencies
-        if: steps.check.outputs.skip != 'true'
-        run: npm clean-install
+      # `webatrice build` below triggers prebuild via its lifecycle hook.
+      - name: Install packages (skip prebuild)
+        uses: ./.github/actions/install-packages
+        with:
+          prebuild-webatrice: 'false'
 
-      - name: Build libraries (vite resolves @cockatrice/* via dist/)
-        if: steps.check.outputs.skip != 'true'
-        run: |
-          npm run -w @cockatrice/sockatrice build
-          npm run -w @cockatrice/datatrice build
+      - name: Build libraries
+        uses: ./.github/actions/build-libraries
 
       - name: Build app
-        if: steps.check.outputs.skip != 'true'
         run: npm run -w @cockatrice/webatrice build
 
-      - name: Stamp commit SHA into build
-        if: steps.check.outputs.skip != 'true'
-        run: echo "$GITHUB_SHA" > packages/webatrice/build/.deploy-sha
-
-      - name: Package build directory
-        if: steps.check.outputs.skip != 'true'
-        id: package
+      # GITHUB_SHA is the workflow's trigger SHA, not necessarily the SHA we
+      # checked out (workflow_run can diverge); read from the checkout.
+      - name: Build release artifact
+        id: meta
         run: |
-          ARCHIVE="webatrice-${{ steps.check.outputs.version }}.tar.gz"
+          VERSION=$(node -p "require('./packages/webatrice/package.json').version")
+          ARCHIVE="webatrice-${VERSION}.tar.gz"
+          git rev-parse HEAD > packages/webatrice/build/.deploy-sha
           tar -czf "$ARCHIVE" -C packages/webatrice build
-          echo "archive=${ARCHIVE}" >> "$GITHUB_OUTPUT"
+          {
+            echo "tag=@cockatrice/webatrice@${VERSION}"
+            echo "archive=${ARCHIVE}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32  # v4.1.0
+        with:
+          subject-path: ${{ steps.meta.outputs.archive }}
 
       - name: Create GitHub Release
-        if: steps.check.outputs.skip != 'true'
         uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda  # v3.0.0
         with:
-          tag_name: ${{ steps.check.outputs.tag }}
-          name: ${{ steps.check.outputs.tag }}
+          tag_name: ${{ steps.meta.outputs.tag }}
+          name: ${{ steps.meta.outputs.tag }}
           generate_release_notes: true
-          files: ${{ steps.package.outputs.archive }}
+          files: ${{ steps.meta.outputs.archive }}
+
+      - name: Summarize app release
+        run: |
+          {
+            echo "### Released app"
+            echo ""
+            echo "- ${{ steps.meta.outputs.tag }} ([release](${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ steps.meta.outputs.tag }}))"
+            echo "- Commit: \`$(git rev-parse HEAD)\`"
+          } >> "$GITHUB_STEP_SUMMARY"

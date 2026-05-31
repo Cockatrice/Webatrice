@@ -1,0 +1,24 @@
+name: Install packages
+description: |
+  Runs `npm clean-install --ignore-scripts` plus, by default, webatrice's
+  prebuild script which generates packages/webatrice/src/i18n-default.json
+  and server-props.json (both imported by webatrice src). Pass
+  `prebuild-webatrice: false` for jobs that don't touch webatrice.
+
+inputs:
+  prebuild-webatrice:
+    description: Also run @cockatrice/webatrice's prebuild script.
+    required: false
+    default: 'true'
+
+runs:
+  using: composite
+  steps:
+    - name: Install dependencies
+      shell: bash
+      run: npm clean-install --ignore-scripts
+
+    - name: Run webatrice prebuild
+      if: inputs.prebuild-webatrice == 'true'
+      shell: bash
+      run: npm run -w @cockatrice/webatrice prebuild
