@@ -83,6 +83,7 @@ function Game() {
       <CardRegistryContext.Provider value={cardRegistry}>
         <DndContext
           sensors={sensors}
+          collisionDetection={dnd.collisionDetection}
           onDragStart={arrows.cancelPendingOnDragStart}
           onDragEnd={dnd.handleDragEnd}
         >

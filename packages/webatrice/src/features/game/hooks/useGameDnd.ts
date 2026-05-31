@@ -1,7 +1,9 @@
 import { useCallback } from 'react';
-import type { DragEndEvent } from '@dnd-kit/core';
+import { rectIntersection } from '@dnd-kit/core';
+import type { Collision, CollisionDetection, DragEndEvent } from '@dnd-kit/core';
 
 import { useWebClient } from '@cockatrice/datatrice/react';
+import type { WebClient } from '@cockatrice/sockatrice';
 import { ServerInfo_Card } from '@cockatrice/sockatrice/generated';
 import { Enriched } from '@cockatrice/datatrice';
 import {
@@ -15,10 +17,95 @@ import {
 
 export interface GameDnd {
   handleDragEnd: (event: DragEndEvent) => void;
+  collisionDetection: CollisionDetection;
 }
 
 export interface UseGameDndArgs {
   gameId: number | undefined;
+}
+
+// Reorder slots (small per-card droppables) are nested inside a much larger
+// zone-level droppable. Default rectIntersection's IoU ratio favors the zone
+// when the overlay outsizes a slot (e.g. 64x88 stack slots under a 146x204
+// overlay), so the slot never wins. Prefer reorder-slot collisions whenever
+// they exist; otherwise fall back to the full intersection set.
+function slotIntersection(
+  args: Parameters<CollisionDetection>[0],
+  intersections: Collision[],
+): Collision[] {
+  return intersections.filter((c) =>
+    args.droppableContainers.find((d) => d.id === c.id)?.data.current?.asReorderSlot === true,
+  );
+}
+
+const collisionDetection: CollisionDetection = (args) => {
+  const intersections = rectIntersection(args);
+  const slotHits = slotIntersection(args, intersections);
+  return slotHits.length > 0 ? slotHits : intersections;
+};
+
+interface DragSource {
+  card: ServerInfo_Card;
+  sourcePlayerId: number;
+  sourceZone: string;
+  sourceIndex?: number;
+}
+
+interface DragTarget {
+  targetPlayerId: number;
+  targetZone: string;
+  row?: number;
+  rowCards?: ServerInfo_Card[];
+  targetIndex?: number;
+  asReorderSlot?: boolean;
+}
+
+type DropContext =
+  | { kind: 'reorder'; source: DragSource; target: DragTarget; targetIndex: number }
+  | { kind: 'table'; source: DragSource; target: DragTarget; targetRow: number; sameRow: boolean }
+  | { kind: 'cross-zone'; source: DragSource; target: DragTarget }
+  | { kind: 'noop' };
+
+function classifyDrop(event: DragEndEvent): DropContext {
+  if (!event.over || !event.active.data.current) {
+    return { kind: 'noop' };
+  }
+  const source = event.active.data.current as DragSource;
+  const target = event.over.data.current as DragTarget;
+
+  const sameZone =
+    source.sourcePlayerId === target.targetPlayerId &&
+    source.sourceZone === target.targetZone;
+  const sourceIsHandOrStack =
+    source.sourceZone === Enriched.ZoneName.HAND ||
+    source.sourceZone === Enriched.ZoneName.STACK;
+
+  if (sameZone && sourceIsHandOrStack) {
+    if (!target.asReorderSlot || target.targetIndex == null) {
+      return { kind: 'noop' };
+    }
+    if (source.sourceIndex === target.targetIndex) {
+      return { kind: 'noop' };
+    }
+    return { kind: 'reorder', source, target, targetIndex: target.targetIndex };
+  }
+
+  if (target.targetZone === Enriched.ZoneName.TABLE) {
+    const targetRow = target.row ?? 0;
+    const sameRow =
+      sameZone &&
+      source.sourceZone === Enriched.ZoneName.TABLE &&
+      (source.card.y ?? 0) === targetRow;
+    return { kind: 'table', source, target, targetRow, sameRow };
+  }
+
+  if (sameZone) {
+    // Same-zone drops outside HAND/STACK (e.g. deck → deck) are no-ops; the
+    // TABLE case above already routed table reorders.
+    return { kind: 'noop' };
+  }
+
+  return { kind: 'cross-zone', source, target };
 }
 
 // Drop point = card center at release (matches desktop scene position).
@@ -32,84 +119,84 @@ function computePointerXInRow(event: DragEndEvent): number {
   return cardCenterX - overRect.left - MARGIN_LEFT_PX;
 }
 
+// Battlefield grid math; see .github/instructions/webatrice-game.instructions.md#battlefield-grid.
+function resolveTableGridX(
+  event: DragEndEvent,
+  source: DragSource,
+  target: DragTarget,
+  sameRow: boolean,
+): number | null {
+  const rowCards = target.rowCards ?? [];
+  // Same-row reorder: exclude the dragged card from occupancy so closestGridPoint can return its own slot.
+  const neighbors = sameRow ? rowCards.filter((c) => c.id !== source.card.id) : rowCards;
+  const pointerXInRow = computePointerXInRow(event);
+  const stackCounts = stackCountsForRow(neighbors);
+  // Effective card width derived from laneHeight so grid math tracks zoom (cards render via CSS aspect-ratio).
+  const overRect = event.over?.rect;
+  const { width: effectiveCardWidth, offsetX: effectiveOffsetX } =
+    effectiveCardDimensions(overRect?.height ?? 0);
+  const rawGridX = mapToGridX(
+    pointerXInRow,
+    stackCounts,
+    effectiveCardWidth,
+    effectiveOffsetX,
+    PADDING_X_PX,
+  );
+  const occupied = new Set(neighbors.map((c) => c.x ?? 0));
+  return closestGridPoint(rawGridX, occupied);
+}
+
+function sendMoveCard(
+  webClient: WebClient,
+  gameId: number,
+  source: DragSource,
+  target: DragTarget,
+  x: number,
+  y: number,
+): void {
+  webClient.request.game.moveCard(gameId, {
+    startPlayerId: source.sourcePlayerId,
+    startZone: source.sourceZone,
+    cardsToMove: { card: [{ cardId: source.card.id }] },
+    targetPlayerId: target.targetPlayerId,
+    targetZone: target.targetZone,
+    x,
+    y,
+    isReversed: false,
+  });
+}
+
 export function useGameDnd({ gameId }: UseGameDndArgs): GameDnd {
   const webClient = useWebClient();
 
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
-      if (!gameId || !event.over || !event.active.data.current) {
+      if (!gameId) {
         return;
       }
-      const source = event.active.data.current as {
-        card: ServerInfo_Card;
-        sourcePlayerId: number;
-        sourceZone: string;
-      };
-      const target = event.over.data.current as {
-        targetPlayerId: number;
-        targetZone: string;
-        row?: number;
-        rowCards?: ServerInfo_Card[];
-      };
-
-      // Drag-drop never attaches; desktop attaches via right-click menu only.
-      const sameZone =
-        source.sourcePlayerId === target.targetPlayerId &&
-        source.sourceZone === target.targetZone;
-      // Non-TABLE same-zone drops are no-ops.
-      if (sameZone && source.sourceZone !== Enriched.ZoneName.TABLE) {
-        return;
-      }
-
-      const targetRow = target.row ?? 0;
-      const targetIsTable = target.targetZone === Enriched.ZoneName.TABLE;
-      const sameRowOnTable =
-        sameZone && source.sourceZone === Enriched.ZoneName.TABLE && (source.card.y ?? 0) === targetRow;
-
-      // gridX via stack/subposition packing; non-TABLE → x=0. See .github/instructions/webatrice-game.instructions.md#battlefield-grid.
-      let gridX = 0;
-      if (targetIsTable) {
-        const rowCards = target.rowCards ?? [];
-        // Same-row reorder: exclude the dragged card from occupancy so closestGridPoint can return its own slot.
-        const neighbors = sameRowOnTable
-          ? rowCards.filter((c) => c.id !== source.card.id)
-          : rowCards;
-        const pointerXInRow = computePointerXInRow(event);
-        const stackCounts = stackCountsForRow(neighbors);
-        // Effective card width derived from laneHeight so grid math tracks zoom (cards render via CSS aspect-ratio).
-        const { width: effectiveCardWidth, offsetX: effectiveOffsetX } =
-          effectiveCardDimensions(event.over.rect.height);
-        const rawGridX = mapToGridX(
-          pointerXInRow,
-          stackCounts,
-          effectiveCardWidth,
-          effectiveOffsetX,
-          PADDING_X_PX,
-        );
-        const occupied = new Set(neighbors.map((c) => c.x ?? 0));
-        const resolved = closestGridPoint(rawGridX, occupied);
-        // Fully-occupied stack: silent reject. See .github/instructions/webatrice-game.instructions.md#battlefield-grid.
-        if (resolved == null) {
+      const ctx = classifyDrop(event);
+      switch (ctx.kind) {
+        case 'reorder':
+          sendMoveCard(webClient, gameId, ctx.source, ctx.target, ctx.targetIndex, 0);
+          return;
+        case 'table': {
+          const gridX = resolveTableGridX(event, ctx.source, ctx.target, ctx.sameRow);
+          // Fully-occupied stack: silent reject.
+          if (gridX == null) {
+            return;
+          }
+          sendMoveCard(webClient, gameId, ctx.source, ctx.target, gridX, ctx.targetRow);
           return;
         }
-        gridX = resolved;
+        case 'cross-zone':
+          sendMoveCard(webClient, gameId, ctx.source, ctx.target, 0, 0);
+          return;
+        case 'noop':
+          return;
       }
-
-      // targetRow is already the logical wire y; no re-inversion here.
-      // See .github/instructions/webatrice-game.instructions.md#battlefield-grid.
-      webClient.request.game.moveCard(gameId, {
-        startPlayerId: source.sourcePlayerId,
-        startZone: source.sourceZone,
-        cardsToMove: { card: [{ cardId: source.card.id }] },
-        targetPlayerId: target.targetPlayerId,
-        targetZone: target.targetZone,
-        x: gridX,
-        y: targetIsTable ? targetRow : 0,
-        isReversed: false,
-      });
     },
     [gameId, webClient],
   );
 
-  return { handleDragEnd };
+  return { handleDragEnd, collisionDetection };
 }

@@ -14,7 +14,7 @@
   flex-direction: row;
   align-items: center;
   justify-content: safe center;
-  gap: 4px;
+  gap: 8px;
   padding: 4px;
   overflow-x: scroll;
   overflow-y: hidden;
@@ -23,4 +23,27 @@
 .hand-zone--drop-over {
   background: #126a2d;
   box-shadow: inset 0 0 0 2px #4de078;
+}
+
+/* Indicator sits centered in the 8px inter-card gap: 4px bar with 2px of
+   breathing room to each neighbor. */
+.hand-zone__cards .card-slot--drop-before::before,
+.hand-zone__cards .card-slot--drop-after::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  width: 4px;
+  background: #fdfd96;
+  box-shadow: 0 0 8px #fff, 0 0 16px #fde047, 0 0 24px #7cf2a4;
+  border-radius: 3px;
+  pointer-events: none;
+}
+
+.hand-zone__cards .card-slot--drop-before::before {
+  left: -6px;
+}
+
+.hand-zone__cards .card-slot--drop-after::after {
+  right: -6px;
 }

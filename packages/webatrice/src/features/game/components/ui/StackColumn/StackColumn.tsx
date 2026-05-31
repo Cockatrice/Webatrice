@@ -52,7 +52,7 @@ function StackColumn({
       data-testid={`stack-column-${playerId}`}
     >
       <div className="stack-column__cards scrollable" data-testid={`stack-column-cards-${playerId}`}>
-        {cards.map((card) => {
+        {cards.map((card, idx) => {
           const key = makeCardKey(playerId, Enriched.ZoneName.STACK, card.id);
           return (
             <CardSlot
@@ -61,6 +61,7 @@ function StackColumn({
               draggable={canAct}
               ownerPlayerId={playerId}
               zone={Enriched.ZoneName.STACK}
+              dropIndex={idx}
               isArrowSource={arrowSourceKey === key}
               isArrowTarget={arrowTargetKey === key}
               isSelected={selectedCardKey === key}

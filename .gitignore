@@ -10,6 +10,7 @@ node_modules
 
 # AI generated docs
 .claude/settings.local.json
+.claude/worktrees
 /plans
 
 # misc
