@@ -1,0 +1,48 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "globalDependencies": [
+    "tsconfig.base.json",
+    "vendor/cockatrice/libcockatrice_protocol/**/*.proto"
+  ],
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "inputs": [
+        "src/**",
+        "tsconfig.json",
+        "tsconfig.build.json",
+        "tsup.config.ts",
+        "vite.config.ts",
+        "index.html",
+        "public/**",
+        "prebuild.js",
+        "buf.gen.yaml"
+      ],
+      "outputs": ["dist/**", "build/**", "src/generated/**"]
+    },
+    "dev": {
+      "dependsOn": ["^build"],
+      "cache": false,
+      "persistent": true
+    },
+    "typecheck": {
+      "dependsOn": ["^build"],
+      "inputs": ["src/**", "tsconfig.json", "tsconfig.build.json"],
+      "outputs": []
+    },
+    "lint": {
+      "inputs": ["src/**", "eslint.config.*"],
+      "outputs": []
+    },
+    "test": {
+      "dependsOn": ["^build"],
+      "inputs": ["src/**", "vitest.config.*"],
+      "outputs": []
+    },
+    "test:integration": {
+      "dependsOn": ["^build"],
+      "inputs": ["src/**", "integration/**", "vitest.integration.config.ts"],
+      "outputs": []
+    }
+  }
+}

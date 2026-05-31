@@ -88,7 +88,7 @@ All forms use `useForm` + `zodResolver` + `<Controller>`. Patterns enforced acro
 
 ## Build pipeline
 
-`npm start` / `npm run build` chain a `prestart`/`prebuild` hook that runs [prebuild.js](../../packages/webatrice/prebuild.js): writes `src/server-props.json` (gitignored — git SHA, build metadata), merges `**/*.i18n.json` → `src/i18n-default.json` (**committed; duplicate keys throw at build time**), and copies country flags from the Cockatrice submodule via `vendor/cockatrice` sparse-checkout. Full file table in [README.md § Generated files](../../README.md#generated-files).
+`npm start` / `npm run build` chain a `predev`/`prebuild` hook that runs [prebuild.js](../../packages/webatrice/prebuild.js): writes `src/server-props.json` (gitignored — git SHA, build metadata), merges `**/*.i18n.json` → `src/i18n-default.json` (**committed; duplicate keys throw at build time**), and copies country flags from the Cockatrice submodule via `vendor/cockatrice` sparse-checkout. Full file table in [README.md § Generated files](../../README.md#generated-files).
 
 ## i18n
 

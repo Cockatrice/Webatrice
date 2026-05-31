@@ -23,13 +23,13 @@ npm install
 npm start
 ```
 
-`npm install` initializes the `vendor/cockatrice` git submodule (sparse-checked-out to `libcockatrice_protocol/` for Sockatrice's proto generation) via the `prepare` hook. `servatrice.sql` no longer lives in the submodule — the e2e stack extracts it from the pinned `ghcr.io/cockatrice/servatrice` image at compose time. `npm start` boots the Vite dev server and opens a browser tab at [http://localhost:5173](http://localhost:5173) automatically (configured via `server.open` in `vite.config.ts`). The first start runs `prebuild.js` via the `prestart` hook to merge i18n catalogs, so give it a moment.
+`npm install` initializes the `vendor/cockatrice` git submodule (sparse-checked-out to `libcockatrice_protocol/` for Sockatrice's proto generation) via the `prepare` hook. `servatrice.sql` no longer lives in the submodule — the e2e stack extracts it from the pinned `ghcr.io/cockatrice/servatrice` image at compose time. `npm start` runs Turborepo (`turbo run dev`), which builds the `@cockatrice/*` packages in dependency order, then boots the Vite dev server and opens a browser tab at [http://localhost:5173](http://localhost:5173) automatically (configured via `server.open` in `vite.config.ts`). The first start runs `prebuild.js` via webatrice's `predev` hook to merge i18n catalogs, so give it a moment.
 
 ## Scripts
 
 ### Dev & build
 
-- `npm start` — start the Vite dev server (runs `prebuild.js` first via `prestart`)
+- `npm start` — build packages in dependency order + start the Vite dev server via Turborepo (`turbo run dev`; runs `prebuild.js` first via `predev`)
 - `npm run build` — production build into `build/` (also runs the prebuild hooks)
 - `npm run preview` — serve the built `build/` output locally to smoke-test a production build
 
