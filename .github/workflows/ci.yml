@@ -209,39 +209,6 @@ jobs:
       - name: App integration tests
         run: npm run -w @cockatrice/webatrice test:integration:coverage
 
-  build:
-    name: Build application (Node ${{ matrix.node_version }})
-    needs: [changes]
-    if: needs.changes.outputs.documentation_only == 'false'
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        node_version: ['24']
-    steps:
-      - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
-
-      - name: Setup Node
-        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e  # v6.4.0
-        with:
-          node-version: ${{ matrix.node_version }}
-          cache: npm
-          cache-dependency-path: package-lock.json
-
-      # `webatrice build` triggers prebuild via its lifecycle hook, so skip
-      # install-packages' default prebuild step.
-      - name: Install packages (skip prebuild)
-        uses: ./.github/actions/install-packages
-        with:
-          prebuild-webatrice: 'false'
-
-      - name: Build libraries
-        uses: ./.github/actions/build-libraries
-
-      - name: Build app
-        run: npm run -w @cockatrice/webatrice build
-
   # Expensive (Docker spinup); gated on sockatriceGate.
   sockatrice-e2e:
     name: Sockatrice e2e (Servatrice)
@@ -363,7 +330,7 @@ jobs:
   ci-success:
     name: CI Success
     if: always()
-    needs: [changes, typecheck, lint, test, integration, build, sockatrice-e2e, app-e2e]
+    needs: [changes, typecheck, lint, test, integration, sockatrice-e2e, app-e2e]
     runs-on: ubuntu-latest
     steps:
       - name: Fail if any required job failed or was cancelled
