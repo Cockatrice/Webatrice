@@ -3,7 +3,6 @@ import { cx } from '@app/utils';
 import Battlefield from '../../battlefield/Battlefield/Battlefield';
 import PlayerInfoPanel from '../../right-sidebar/PlayerInfoPanel/PlayerInfoPanel';
 import StackColumn from '../StackColumn/StackColumn';
-import { PlayerSlotEntry } from '../../../hooks/useGamePlayerSlots';
 import { EMPTY_SELECTION } from '../../../utils/selection';
 
 import './PlayerBoard.css';
@@ -20,8 +19,6 @@ export interface PlayerBoardProps {
   selectedCardKeys?: ReadonlySet<string>;
   onPlayerContextMenu?: (event: React.MouseEvent) => void;
   onPlayerClick?: (playerId: number) => boolean;
-  players?: PlayerSlotEntry[];
-  onSelectPlayer?: (playerId: number) => void;
 }
 
 function PlayerBoard({
@@ -36,8 +33,6 @@ function PlayerBoard({
   selectedCardKeys = EMPTY_SELECTION,
   onPlayerContextMenu,
   onPlayerClick,
-  players,
-  onSelectPlayer,
 }: PlayerBoardProps) {
   return (
     <div
@@ -52,8 +47,6 @@ function PlayerBoard({
         arrowTargetKey={arrowTargetKey}
         onContextMenu={onPlayerContextMenu}
         onPlayerClick={onPlayerClick}
-        players={players}
-        onSelectPlayer={onSelectPlayer}
       />
       <StackColumn
         gameId={gameId}

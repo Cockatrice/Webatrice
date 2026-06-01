@@ -1,12 +1,8 @@
-import { useState } from 'react';
-import { Menu, MenuItem } from '@mui/material';
-
 import { cx } from '@app/utils';
 import { ServerInfo_Counter } from '@cockatrice/sockatrice/generated';
 import { Enriched } from '@cockatrice/datatrice';
 import ZoneStack from '../../ui/ZoneStack/ZoneStack';
 import { useGameInteraction } from '../../ui/GameInteractionContext';
-import { PlayerSlotEntry } from '../../../hooks/useGamePlayerSlots';
 import { makePlayerKey, useRegisterCardRef } from '../../../utils/CardRegistry/CardRegistryContext';
 
 import { counterCssColor, usePlayerInfoPanel } from './usePlayerInfoPanel';
@@ -29,8 +25,6 @@ export interface PlayerInfoPanelProps {
   arrowTargetKey?: string | null;
   onContextMenu?: (event: React.MouseEvent) => void;
   onPlayerClick?: (playerId: number) => boolean;
-  players?: PlayerSlotEntry[];
-  onSelectPlayer?: (playerId: number) => void;
 }
 
 function PlayerInfoPanel({
@@ -40,10 +34,7 @@ function PlayerInfoPanel({
   arrowTargetKey,
   onContextMenu,
   onPlayerClick,
-  players,
-  onSelectPlayer,
 }: PlayerInfoPanelProps) {
-  const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
   const { onZoneClick, onZoneContextMenu } = useGameInteraction();
   const { player, isHost, lifeCounter, otherCounters, handleIncrement } = usePlayerInfoPanel({
     gameId,
@@ -111,16 +102,6 @@ function PlayerInfoPanel({
         data-arrow-target-kind="player"
         data-arrow-target-player-id={playerId}
         onClickCapture={handleHeaderClickCapture}
-        onClick={
-          players && onSelectPlayer && players.length > 1
-            ? (e) => setMenuAnchor(e.currentTarget)
-            : undefined
-        }
-        data-testid={
-          players && onSelectPlayer && players.length > 1
-            ? `player-info-name-select-${playerId}`
-            : undefined
-        }
       >
         {isHost && (
           <span
@@ -131,40 +112,13 @@ function PlayerInfoPanel({
             ♛
           </span>
         )}
-        {players && onSelectPlayer && players.length > 1 ? (
-          <span className="player-info-panel__name">
-            <span className="player-info-panel__name-text">{name}</span>
-            <span className="player-info-panel__name-caret" aria-hidden>▾</span>
-          </span>
-        ) : (
-          <span className="player-info-panel__name">{name}</span>
-        )}
+        <span className="player-info-panel__name">{name}</span>
         {lifeCounter && (
           <ul className="player-info-panel__life-slot" ref={registerLifeCounterRef}>
             {renderCounterCircle(lifeCounter, 'player-info-panel__counter--life')}
           </ul>
         )}
       </div>
-      {players && onSelectPlayer && players.length > 1 && (
-        <Menu
-          anchorEl={menuAnchor}
-          open={menuAnchor != null}
-          onClose={() => setMenuAnchor(null)}
-        >
-          {players.map((p) => (
-            <MenuItem
-              key={p.playerId}
-              selected={p.playerId === playerId}
-              onClick={() => {
-                onSelectPlayer(p.playerId);
-                setMenuAnchor(null);
-              }}
-            >
-              {p.name}
-            </MenuItem>
-          ))}
-        </Menu>
-      )}
 
       {conceded && <div className="player-info-panel__flag">Conceded</div>}
       {!conceded && ready && <div className="player-info-panel__flag player-info-panel__flag--ready">Ready</div>}

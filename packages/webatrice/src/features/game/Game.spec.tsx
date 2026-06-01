@@ -5,6 +5,7 @@ import { createMockWebClient, makeStoreState, renderWithProviders, connectedStat
 import {
   makeCard,
   makeGameEntry,
+  makeGameInfo,
   makePlayerEntry,
   makePlayerProperties,
   makeZoneEntry,
@@ -27,6 +28,7 @@ interface BuildGameOpts {
   started?: boolean;
   spectator?: boolean;
   judge?: boolean;
+  omniscient?: boolean;
   localReadyStart?: boolean;
   graveCards?: ReturnType<typeof makeCard>[];
 }
@@ -38,6 +40,7 @@ function buildGame({
   started = true,
   spectator = false,
   judge = false,
+  omniscient = false,
   localReadyStart = false,
   graveCards = [],
 }: BuildGameOpts) {
@@ -77,6 +80,7 @@ function buildGame({
           judge,
           started,
           players,
+          info: makeGameInfo({ spectatorsOmniscient: omniscient }),
         }),
       },
     },
@@ -108,35 +112,52 @@ describe('Game container', () => {
     expect(screen.queryByTestId('game-empty')).not.toBeInTheDocument();
   });
 
-  it('renders both player name selectors whenever there is a seated player', () => {
+  it('renders the local player\'s hand as a single bottom bar by default', () => {
     renderWithProviders(<Game />, {
       preloadedState: buildGame({ localId: 1, opponentIds: [2] }),
     });
 
-    expect(screen.getByTestId('player-info-name-select-1')).toBeInTheDocument();
-    expect(screen.getByTestId('player-info-name-select-2')).toBeInTheDocument();
+    // Non-omniscient: only the local hand is visible, rendered as one bottom bar.
+    expect(screen.getAllByTestId('hand-zone')).toHaveLength(1);
   });
 
-  it('renders both name selectors in a 3+ player game', () => {
+  it('renders an inline hand per board when the game is omniscient', () => {
+    renderWithProviders(<Game />, {
+      preloadedState: buildGame({ localId: 1, opponentIds: [2], omniscient: true }),
+    });
+
+    // Both seated hands are visible, so each board carries its own inline hand.
+    expect(screen.getAllByTestId('hand-zone')).toHaveLength(2);
+  });
+
+  it('renders only the local board for a lone player', () => {
+    renderWithProviders(<Game />, {
+      preloadedState: buildGame({ localId: 1, opponentIds: [] }),
+    });
+
+    expect(screen.getByTestId('player-board-1')).toBeInTheDocument();
+    expect(screen.queryByTestId('player-board-2')).not.toBeInTheDocument();
+    expect(screen.getByTestId('hand-zone')).toBeInTheDocument();
+  });
+
+  it('renders every seated board in a 3-player game', () => {
     renderWithProviders(<Game />, {
       preloadedState: buildGame({ localId: 1, opponentIds: [2, 3] }),
     });
 
-    expect(screen.getByTestId('player-info-name-select-1')).toBeInTheDocument();
-    expect(screen.getByTestId('player-info-name-select-2')).toBeInTheDocument();
-  });
-
-  it('defaults slot A to the local player and slot B to an opponent', () => {
-    renderWithProviders(<Game />, {
-      preloadedState: buildGame({ localId: 1, opponentIds: [2, 3] }),
-    });
-
-    // Slot A defaults to localPlayerId=1 (bottom board); slot B defaults to
-    // the first non-local seated player (id 2). Player 3 is reachable via
-    // the slot B dropdown.
     expect(screen.getByTestId('player-board-1')).toBeInTheDocument();
     expect(screen.getByTestId('player-board-2')).toBeInTheDocument();
-    expect(screen.queryByTestId('player-board-3')).not.toBeInTheDocument();
+    expect(screen.getByTestId('player-board-3')).toBeInTheDocument();
+  });
+
+  it('stacks 3 players with the local board upright on the bottom and opponents mirrored', () => {
+    renderWithProviders(<Game />, {
+      preloadedState: buildGame({ localId: 1, opponentIds: [2, 3] }),
+    });
+
+    expect(screen.getByTestId('player-board-1')).not.toHaveClass('player-board--mirrored');
+    expect(screen.getByTestId('player-board-2')).toHaveClass('player-board--mirrored');
+    expect(screen.getByTestId('player-board-3')).toHaveClass('player-board--mirrored');
   });
 
   it('mirrors the opponent board and leaves the local board upright', () => {

@@ -133,24 +133,6 @@ describe('useGame', () => {
     expect(result.current.deckSelectOpen).toBe(false);
   });
 
-  it('shows both hand zones to spectators only when the game is omniscient', () => {
-    const omniscient = setup({ spectator: true, spectatorsOmniscient: true });
-    expect(omniscient.result.current.isSpectator).toBe(true);
-    expect(omniscient.result.current.showSlotAHand).toBe(true);
-    expect(omniscient.result.current.showSlotBHand).toBe(true);
-
-    const blind = setup({ spectator: true, spectatorsOmniscient: false });
-    expect(blind.result.current.showSlotAHand).toBe(false);
-    expect(blind.result.current.showSlotBHand).toBe(false);
-  });
-
-  it('shows the local hand to seated players, and the opponent hand only when omniscient', () => {
-    const normal = setup({ spectator: false, spectatorsOmniscient: false });
-    expect(normal.result.current.showSlotAHand).toBe(true);
-    expect(normal.result.current.showSlotBHand).toBe(false);
-
-    const omniscient = setup({ spectator: false, spectatorsOmniscient: true });
-    expect(omniscient.result.current.showSlotAHand).toBe(true);
-    expect(omniscient.result.current.showSlotBHand).toBe(true);
-  });
+  // Hand visibility (bar vs inline, omniscient reveal) is owned by the board
+  // view-model and covered in useGameBoardLayout.spec.ts.
 });
