@@ -81,6 +81,7 @@ function setup(opts: SetupOpts = {}) {
         isSpectator,
         startPendingArrow,
         startPendingAttach,
+        collapseUnlessSelected: vi.fn(),
       }),
     { wrapper: Wrapper },
   );

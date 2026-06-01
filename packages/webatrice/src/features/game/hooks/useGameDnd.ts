@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { rectIntersection } from '@dnd-kit/core';
-import type { Collision, CollisionDetection, DragEndEvent } from '@dnd-kit/core';
+import type { Collision, CollisionDetection, DragEndEvent, DragStartEvent } from '@dnd-kit/core';
 
 import { useWebClient } from '@cockatrice/datatrice/react';
 import type { WebClient } from '@cockatrice/sockatrice';
@@ -16,12 +16,19 @@ import {
 } from '../components/battlefield/Battlefield/gridMath';
 
 export interface GameDnd {
+  handleDragStart: (event: DragStartEvent) => void;
   handleDragEnd: (event: DragEndEvent) => void;
   collisionDetection: CollisionDetection;
 }
 
 export interface UseGameDndArgs {
   gameId: number | undefined;
+  cancelPendingArrow: () => void;
+  collapseUnlessSelected: (
+    ownerPlayerId: number | undefined,
+    zone: string | undefined,
+    card: ServerInfo_Card,
+  ) => void;
 }
 
 // Reorder slots (small per-card droppables) are nested inside a much larger
@@ -166,8 +173,21 @@ function sendMoveCard(
   });
 }
 
-export function useGameDnd({ gameId }: UseGameDndArgs): GameDnd {
+export function useGameDnd({ gameId, cancelPendingArrow, collapseUnlessSelected }: UseGameDndArgs): GameDnd {
   const webClient = useWebClient();
+
+  // Cancel any pending arrow, then collapse the selection to the dragged card
+  // unless it's already part of it (so a drag on a selected card keeps the set).
+  const handleDragStart = useCallback(
+    (event: DragStartEvent) => {
+      cancelPendingArrow();
+      const source = event.active.data.current as DragSource | undefined;
+      if (source?.card) {
+        collapseUnlessSelected(source.sourcePlayerId, source.sourceZone, source.card);
+      }
+    },
+    [cancelPendingArrow, collapseUnlessSelected],
+  );
 
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
@@ -198,5 +218,5 @@ export function useGameDnd({ gameId }: UseGameDndArgs): GameDnd {
     [gameId, webClient],
   );
 
-  return { handleDragEnd, collisionDetection };
+  return { handleDragStart, handleDragEnd, collisionDetection };
 }

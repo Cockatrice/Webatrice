@@ -117,13 +117,52 @@ function makeWebClient() {
 function setupHook() {
   const webClient = makeWebClient();
   mockUseWebClient.mockReturnValue(webClient);
-  const { result } = renderHook(() => useGameDnd({ gameId: 42 }));
-  return { webClient, handleDragEnd: result.current.handleDragEnd };
+  const cancelPendingArrow = vi.fn();
+  const collapseUnlessSelected = vi.fn();
+  const { result } = renderHook(() =>
+    useGameDnd({ gameId: 42, cancelPendingArrow, collapseUnlessSelected }),
+  );
+  return {
+    webClient,
+    cancelPendingArrow,
+    collapseUnlessSelected,
+    handleDragStart: result.current.handleDragStart,
+    handleDragEnd: result.current.handleDragEnd,
+  };
+}
+
+function buildStartEvent(source: {
+  card: ServerInfo_Card;
+  sourcePlayerId: number;
+  sourceZone: string;
+}) {
+  return { active: { id: source.card.id, data: { current: source } } } as unknown as Parameters<
+    ReturnType<typeof useGameDnd>['handleDragStart']
+  >[0];
 }
 
 describe('useGameDnd', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  describe('handleDragStart', () => {
+    it('cancels the pending arrow and collapses the selection to the dragged card', () => {
+      const { handleDragStart, cancelPendingArrow, collapseUnlessSelected } = setupHook();
+      const card = makeCard({ id: 7 });
+      handleDragStart(buildStartEvent({ card, sourcePlayerId: 1, sourceZone: Enriched.ZoneName.TABLE }));
+
+      expect(cancelPendingArrow).toHaveBeenCalledTimes(1);
+      expect(collapseUnlessSelected).toHaveBeenCalledWith(1, Enriched.ZoneName.TABLE, card);
+    });
+
+    it('still cancels the pending arrow when the drag carries no card data', () => {
+      const { handleDragStart, cancelPendingArrow, collapseUnlessSelected } = setupHook();
+      handleDragStart({ active: { id: 1, data: { current: undefined } } } as never);
+
+      expect(cancelPendingArrow).toHaveBeenCalledTimes(1);
+      expect(collapseUnlessSelected).not.toHaveBeenCalled();
+    });
   });
 
   describe('drops on battlefield', () => {

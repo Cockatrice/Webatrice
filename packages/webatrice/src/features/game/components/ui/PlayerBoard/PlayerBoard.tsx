@@ -4,6 +4,7 @@ import Battlefield from '../../battlefield/Battlefield/Battlefield';
 import PlayerInfoPanel from '../../right-sidebar/PlayerInfoPanel/PlayerInfoPanel';
 import StackColumn from '../StackColumn/StackColumn';
 import { PlayerSlotEntry } from '../../../hooks/useGamePlayerSlots';
+import { EMPTY_SELECTION } from '../../../utils/selection';
 
 import './PlayerBoard.css';
 
@@ -16,7 +17,7 @@ export interface PlayerBoardProps {
   canEditCounters?: boolean;
   arrowSourceKey?: string | null;
   arrowTargetKey?: string | null;
-  selectedCardKey?: string | null;
+  selectedCardKeys?: ReadonlySet<string>;
   onPlayerContextMenu?: (event: React.MouseEvent) => void;
   onPlayerClick?: (playerId: number) => boolean;
   players?: PlayerSlotEntry[];
@@ -32,7 +33,7 @@ function PlayerBoard({
   canEditCounters = false,
   arrowSourceKey = null,
   arrowTargetKey = null,
-  selectedCardKey = null,
+  selectedCardKeys = EMPTY_SELECTION,
   onPlayerContextMenu,
   onPlayerClick,
   players,
@@ -61,7 +62,7 @@ function PlayerBoard({
         canAct={canAct}
         arrowSourceKey={arrowSourceKey}
         arrowTargetKey={arrowTargetKey}
-        selectedCardKey={selectedCardKey}
+        selectedCardKeys={selectedCardKeys}
       />
       <Battlefield
         gameId={gameId}
@@ -70,7 +71,7 @@ function PlayerBoard({
         canAct={canAct}
         arrowSourceKey={arrowSourceKey}
         arrowTargetKey={arrowTargetKey}
-        selectedCardKey={selectedCardKey}
+        selectedCardKeys={selectedCardKeys}
       />
     </div>
   );

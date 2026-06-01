@@ -1,6 +1,7 @@
 import BattlefieldRow from './BattlefieldRow';
 import BattlefieldStackColumn from './BattlefieldStackColumn';
 import { useBattlefield } from './useBattlefield';
+import { EMPTY_SELECTION } from '../../../utils/selection';
 
 import './Battlefield.css';
 
@@ -11,7 +12,7 @@ export interface BattlefieldProps {
   canAct?: boolean;
   arrowSourceKey?: string | null;
   arrowTargetKey?: string | null;
-  selectedCardKey?: string | null;
+  selectedCardKeys?: ReadonlySet<string>;
 }
 
 function Battlefield({
@@ -21,7 +22,7 @@ function Battlefield({
   canAct = false,
   arrowSourceKey = null,
   arrowTargetKey = null,
-  selectedCardKey = null,
+  selectedCardKeys = EMPTY_SELECTION,
 }: BattlefieldProps) {
   const { rows, stackColumnsByRow, rowOrder, attachmentsByParent } = useBattlefield({
     gameId,
@@ -30,7 +31,7 @@ function Battlefield({
   });
 
   return (
-    <div className="battlefield scrollable" data-testid="battlefield">
+    <div className="battlefield scrollable" data-testid="battlefield" data-zone-box-select="">
       {rowOrder.map((rowIdx) => (
         <BattlefieldRow
           key={rowIdx}
@@ -61,7 +62,7 @@ function Battlefield({
                 ownerPlayerId={playerId}
                 arrowSourceKey={arrowSourceKey}
                 arrowTargetKey={arrowTargetKey}
-                selectedCardKey={selectedCardKey}
+                selectedCardKeys={selectedCardKeys}
               />
             );
           })}

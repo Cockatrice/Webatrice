@@ -1,16 +1,19 @@
-import { RefObject, useCallback, useMemo, useRef, useState } from 'react';
+import { RefObject, useMemo, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 
 import { ServerInfo_Card } from '@cockatrice/sockatrice/generated';
-import { createCardRegistry, makeCardKey, type CardRegistry } from '../utils/CardRegistry/CardRegistryContext';
+import { createCardRegistry, type CardRegistry } from '../utils/CardRegistry/CardRegistryContext';
+import { resolveSelectedCards, type SelectedCard } from '../utils/selection';
 import { useCurrentGame, type CurrentGame } from './useCurrentGame';
 import { useGameAccess, type GameAccess } from './useGameAccess';
 import { useGameArrowInteractions, type GameArrowInteractions } from './useGameArrowInteractions';
+import { useGameBoxSelection, type BoxSelectPreview } from './useGameBoxSelection';
 import { useGameDialogs, type GameDialogs } from './useGameDialogs';
 import { useGameDnd, type GameDnd } from './useGameDnd';
 import { useGameLifecycleNavigation } from './useGameLifecycleNavigation';
 import { useGamePlayerSlots, type GamePlayerSlots } from './useGamePlayerSlots';
+import { useGameSelection, type GameSelection } from './useGameSelection';
 import { useGameShortcuts } from './useGameShortcuts';
 
 export interface Game extends CurrentGame {
@@ -21,9 +24,13 @@ export interface Game extends CurrentGame {
   hoveredCard: ServerInfo_Card | null;
   setHoveredCard: (card: ServerInfo_Card | null) => void;
   previewCard: ServerInfo_Card | null;
-  selectedCardKey: string | null;
+  selectedCardKeys: ReadonlySet<string>;
+  selectedCards: readonly SelectedCard[];
   onCardFocus: (ownerPlayerId: number | undefined, zone: string | undefined, card: ServerInfo_Card) => void;
   onCardBlur: (ownerPlayerId: number | undefined, zone: string | undefined, card: ServerInfo_Card) => void;
+  collapseUnlessSelected: GameSelection['collapseUnlessSelected'];
+  handleGameMouseDown: (e: React.MouseEvent<HTMLDivElement>) => void;
+  boxSelectPreview: BoxSelectPreview | null;
   localAccess: GameAccess;
   slotAAccess: GameAccess;
   slotBAccess: GameAccess;
@@ -54,39 +61,33 @@ export function useGame(): Game {
     useSensor(KeyboardSensor),
   );
   const [hoveredCard, setHoveredCard] = useState<ServerInfo_Card | null>(null);
-  const [selection, setSelection] = useState<{ key: string; card: ServerInfo_Card } | null>(null);
-
-  const onCardFocus = useCallback(
-    (ownerPlayerId: number | undefined, zone: string | undefined, card: ServerInfo_Card) => {
-      if (ownerPlayerId == null || zone == null) {
-        return;
-      }
-      setSelection({ key: makeCardKey(ownerPlayerId, zone, card.id), card });
-    },
-    [],
+  const selection = useGameSelection();
+  const previewCard = selection.focused?.card ?? hoveredCard;
+  const selectedCards = useMemo(
+    () => (game ? resolveSelectedCards(game, selection.selectedCardKeys) : []),
+    [game, selection.selectedCardKeys],
   );
-  const onCardBlur = useCallback(
-    (ownerPlayerId: number | undefined, zone: string | undefined, card: ServerInfo_Card) => {
-      if (ownerPlayerId == null || zone == null) {
-        return;
-      }
-      const blurredKey = makeCardKey(ownerPlayerId, zone, card.id);
-      // Defer so a sibling card's focus (which fires after blur) wins.
-      queueMicrotask(() => {
-        setSelection((prev) => (prev?.key === blurredKey ? null : prev));
-      });
-    },
-    [],
-  );
-  const previewCard = selection?.card ?? hoveredCard;
-  const selectedCardKey = selection?.key ?? null;
 
   const slots = useGamePlayerSlots(game);
   const localAccess = useGameAccess(gameId, game?.localPlayerId);
   const slotAAccess = useGameAccess(gameId, slots.slotAPlayerId);
   const slotBAccess = useGameAccess(gameId, slots.slotBPlayerId);
 
-  const arrows = useGameArrowInteractions({ gameId, game, containerRef: gameRef, cardRegistry });
+  const arrows = useGameArrowInteractions({
+    gameId,
+    game,
+    containerRef: gameRef,
+    cardRegistry,
+    selectedCards,
+    collapseUnlessSelected: selection.collapseUnlessSelected,
+  });
+  const box = useGameBoxSelection({
+    selectedCardKeys: selection.selectedCardKeys,
+    setSelectedCardKeys: selection.setSelectedCardKeys,
+    clearSelection: selection.clearSelection,
+    clearFocused: selection.clearFocused,
+    pendingActive: arrows.pending,
+  });
   const dialogs = useGameDialogs({
     gameId,
     game,
@@ -95,8 +96,13 @@ export function useGame(): Game {
     isSpectator,
     startPendingArrow: arrows.startPendingArrow,
     startPendingAttach: arrows.startPendingAttach,
+    collapseUnlessSelected: selection.collapseUnlessSelected,
   });
-  const dnd = useGameDnd({ gameId });
+  const dnd = useGameDnd({
+    gameId,
+    cancelPendingArrow: arrows.cancelPendingOnDragStart,
+    collapseUnlessSelected: selection.collapseUnlessSelected,
+  });
 
   useGameShortcuts({ gameId, onRequestConcede: dialogs.openConcede });
 
@@ -133,9 +139,13 @@ export function useGame(): Game {
     hoveredCard,
     setHoveredCard,
     previewCard,
-    selectedCardKey,
-    onCardFocus,
-    onCardBlur,
+    selectedCardKeys: selection.selectedCardKeys,
+    selectedCards,
+    onCardFocus: selection.onCardFocus,
+    onCardBlur: selection.onCardBlur,
+    collapseUnlessSelected: selection.collapseUnlessSelected,
+    handleGameMouseDown: box.handleGameMouseDown,
+    boxSelectPreview: box.previewRect,
     localAccess,
     slotAAccess,
     slotBAccess,

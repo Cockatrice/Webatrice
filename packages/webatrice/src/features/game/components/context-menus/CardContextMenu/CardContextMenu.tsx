@@ -3,6 +3,7 @@ import MenuItem from '@mui/material/MenuItem';
 import Divider from '@mui/material/Divider';
 
 import { ServerInfo_Card } from '@cockatrice/sockatrice/generated';
+import type { SelectedCard } from '../../../utils/selection';
 import {
   COUNTER_TYPE_COUNT,
   COUNTER_TYPE_LABELS,
@@ -22,6 +23,7 @@ export interface CardContextMenuProps {
   card: ServerInfo_Card | null;
   ownerPlayerId: number | null;
   sourceZone: string | null;
+  selectedCards?: readonly SelectedCard[];
   onClose: () => void;
   onRequestSetPT: () => void;
   onRequestSetAnnotation: () => void;

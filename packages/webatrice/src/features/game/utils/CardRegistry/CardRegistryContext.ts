@@ -10,6 +10,26 @@ export function makePlayerKey(playerId: number): CardKey {
   return `player:${playerId}`;
 }
 
+// Inverse of makeCardKey. The zone segment can itself contain hyphens, so split
+// on the first and last '-' only; the middle is the zone. Returns null for keys
+// that aren't card keys (e.g. makePlayerKey output).
+export function parseCardKey(
+  key: CardKey,
+): { playerId: number; zone: string; cardId: number } | null {
+  const first = key.indexOf('-');
+  const last = key.lastIndexOf('-');
+  if (first < 0 || last <= first) {
+    return null;
+  }
+  const playerId = Number(key.slice(0, first));
+  const zone = key.slice(first + 1, last);
+  const cardId = Number(key.slice(last + 1));
+  if (!Number.isFinite(playerId) || !Number.isFinite(cardId) || zone === '') {
+    return null;
+  }
+  return { playerId, zone, cardId };
+}
+
 export interface CardRegistry {
   register(key: CardKey, el: HTMLElement): void;
   unregister(key: CardKey): void;

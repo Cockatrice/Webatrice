@@ -189,6 +189,14 @@ export interface UseGameDialogsArgs {
   isSpectator: boolean;
   startPendingArrow: (source: StartPendingSource) => void;
   startPendingAttach: (source: StartPendingSource) => void;
+  // Applies the collapse-unless-selected rule before opening the card menu, so a
+  // right-click on an unselected card collapses to it while a right-click on a
+  // selected card preserves the multi-selection for bulk actions.
+  collapseUnlessSelected: (
+    ownerPlayerId: number | undefined,
+    zone: string | undefined,
+    card: ServerInfo_Card,
+  ) => void;
 }
 
 export function useGameDialogs({
@@ -199,6 +207,7 @@ export function useGameDialogs({
   isSpectator,
   startPendingArrow,
   startPendingAttach,
+  collapseUnlessSelected,
 }: UseGameDialogsArgs): GameDialogs {
   const webClient = useWebClient();
   const { value: settings } = useSettings();
@@ -255,6 +264,8 @@ export function useGameDialogs({
         return;
       }
       event.preventDefault();
+      // Collapse to this card unless it's already part of the selection.
+      collapseUnlessSelected(sourcePlayerId, sourceZone, card);
       closeAllContextMenus();
       setCardMenu({
         card,
@@ -263,7 +274,7 @@ export function useGameDialogs({
         anchorPosition: { top: event.clientY, left: event.clientX },
       });
     },
-    [closeAllContextMenus],
+    [closeAllContextMenus, collapseUnlessSelected],
   );
 
   const handleZoneContextMenu = useCallback(

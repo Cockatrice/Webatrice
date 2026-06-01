@@ -18,7 +18,7 @@ export interface AttachmentStackProps {
   draggable: boolean;
   arrowSourceKey: string | null;
   arrowTargetKey: string | null;
-  selectedCardKey: string | null;
+  selectedCardKeys: ReadonlySet<string>;
 }
 
 function AttachmentStack({
@@ -28,7 +28,7 @@ function AttachmentStack({
   ownerPlayerId,
   arrowSourceKey,
   arrowTargetKey,
-  selectedCardKey,
+  selectedCardKeys,
 }: AttachmentStackProps) {
   const { onCardHover, onCardClick, onCardContextMenu, onCardDoubleClick, onCardFocus, onCardBlur } = useGameInteraction();
   const parentKey = makeCardKey(ownerPlayerId, Enriched.ZoneName.TABLE, parent.id);
@@ -54,7 +54,7 @@ function AttachmentStack({
           zone={Enriched.ZoneName.TABLE}
           isArrowSource={arrowSourceKey === parentKey}
           isArrowTarget={arrowTargetKey === parentKey}
-          isSelected={selectedCardKey === parentKey}
+          isSelected={selectedCardKeys.has(parentKey)}
           onMouseEnter={onCardHover}
           onFocus={onCardFocus}
           onBlur={onCardBlur}
@@ -85,7 +85,7 @@ function AttachmentStack({
               zone={Enriched.ZoneName.TABLE}
               isArrowSource={arrowSourceKey === childKey}
               isArrowTarget={arrowTargetKey === childKey}
-              isSelected={selectedCardKey === childKey}
+              isSelected={selectedCardKeys.has(childKey)}
               onMouseEnter={onCardHover}
               onFocus={onCardFocus}
               onBlur={onCardBlur}

@@ -48,6 +48,11 @@
   font-style: italic;
 }
 
+/* Box-select surfaces: never let a drag start a native text selection. */
+[data-zone-box-select] {
+  user-select: none;
+}
+
 .card-slot:focus-visible,
 .zone-stack:focus-visible,
 .battlefield__row:focus-visible,

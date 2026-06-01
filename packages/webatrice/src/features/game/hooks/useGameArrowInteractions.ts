@@ -6,6 +6,8 @@ import { CardAttribute, ServerInfo_Card } from '@cockatrice/sockatrice/generated
 import { Enriched, GameEntry } from '@cockatrice/datatrice';
 import { ArrowColor, ColorRGBA, rgbaToCss } from '@app/types';
 import { makeCardKey, makePlayerKey, type CardRegistry } from '../utils/CardRegistry/CardRegistryContext';
+import { dispatchBulkTap } from '../utils/bulkCardActions';
+import { bulkTargetsFor, type SelectedCard } from '../utils/selection';
 
 import { playCardViaTableRow } from './playCard';
 
@@ -42,6 +44,8 @@ export interface GameArrowInteractions {
   arrowSourceKey: string | null;
   arrowTargetKey: string | null;
   dragPreview: ArrowDragPreview | null;
+  // True while an arrow/attach is pending (used to gate box-select + clicks).
+  pending: boolean;
   handleBoardMouseDown: (e: React.MouseEvent<HTMLDivElement>) => void;
   handleCardClick: (
     ownerPlayerId: number | undefined,
@@ -60,6 +64,14 @@ export interface UseGameArrowInteractionsArgs {
   game: GameEntry | undefined;
   containerRef: RefObject<HTMLDivElement>;
   cardRegistry: CardRegistry;
+  // Resolved multi-selection + the collapse-unless-selected helper, so click and
+  // double-click apply the collapse rule and bulk-tap a preserved selection.
+  selectedCards: readonly SelectedCard[];
+  collapseUnlessSelected: (
+    ownerPlayerId: number | undefined,
+    zone: string | undefined,
+    card: ServerInfo_Card,
+  ) => void;
 }
 
 function arrowColorForModifiers(e: {
@@ -86,6 +98,8 @@ export function useGameArrowInteractions({
   game,
   containerRef,
   cardRegistry,
+  selectedCards,
+  collapseUnlessSelected,
 }: UseGameArrowInteractionsArgs): GameArrowInteractions {
   const webClient = useWebClient();
   const { value: settings } = useSettings();
@@ -343,6 +357,8 @@ export function useGameArrowInteractions({
       }
 
       if (!pending) {
+        // No pending arrow → plain selection click: collapse-unless-selected.
+        collapseUnlessSelected(ownerPlayerId, zone, card);
         return;
       }
       const src = pending.source;
@@ -418,11 +434,11 @@ export function useGameArrowInteractions({
       });
       setPending(null);
     },
-    [gameId, game, invertVerticalCoordinate, pending, webClient],
+    [gameId, game, invertVerticalCoordinate, pending, webClient, collapseUnlessSelected],
   );
 
   const handleCardDoubleClick = useCallback(
-    (_sourcePlayerId: number | undefined, sourceZone: string | undefined, card: ServerInfo_Card) => {
+    (sourcePlayerId: number | undefined, sourceZone: string | undefined, card: ServerInfo_Card) => {
       if (gameId == null || sourceZone == null) {
         return;
       }
@@ -430,6 +446,16 @@ export function useGameArrowInteractions({
       if (pending) {
         return;
       }
+      // Double-clicking a card that's part of a multi-selection bulk-taps the
+      // TABLE subset (Cockatrice collective rule); the selection is preserved.
+      if (sourceZone === Enriched.ZoneName.TABLE && sourcePlayerId != null) {
+        const bulk = bulkTargetsFor(selectedCards, makeCardKey(sourcePlayerId, sourceZone, card.id));
+        if (bulk.length) {
+          dispatchBulkTap(webClient, gameId, bulk.filter((t) => t.zone === Enriched.ZoneName.TABLE));
+          return;
+        }
+      }
+      collapseUnlessSelected(sourcePlayerId, sourceZone, card);
       if (sourceZone === Enriched.ZoneName.TABLE) {
         webClient.request.game.setCardAttr(gameId, {
           zone: sourceZone,
@@ -455,7 +481,7 @@ export function useGameArrowInteractions({
         });
       }
     },
-    [gameId, game, invertVerticalCoordinate, pending, webClient],
+    [gameId, game, invertVerticalCoordinate, pending, webClient, selectedCards, collapseUnlessSelected],
   );
 
   // Returns true iff a pending arrow was resolved against this player. Callers
@@ -497,6 +523,7 @@ export function useGameArrowInteractions({
     arrowSourceKey,
     arrowTargetKey,
     dragPreview,
+    pending: pending != null,
     handleBoardMouseDown,
     handleCardClick,
     handleCardDoubleClick,
