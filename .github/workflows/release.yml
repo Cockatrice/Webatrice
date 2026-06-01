@@ -67,6 +67,7 @@ jobs:
       contents: write
       packages: write
       id-token: write
+      attestations: write
     steps:
       - name: Checkout (with submodules)
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
@@ -102,7 +103,23 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_CONFIG_PROVENANCE: true
+
+      - name: Pack published libraries for attestation
+        id: pack
+        if: steps.changesets.outputs.published == 'true'
+        env:
+          PUBLISHED: ${{ steps.changesets.outputs.publishedPackages }}
+        run: |
+          mkdir -p attest
+          echo "$PUBLISHED" | jq -r '.[].name' | while read -r name; do
+            npm pack -w "$name" --pack-destination attest
+          done
+
+      - name: Attest build provenance
+        if: steps.changesets.outputs.published == 'true'
+        uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32  # v4.1.0
+        with:
+          subject-path: 'attest/*.tgz'
 
       - name: Summarize published libraries
         if: steps.changesets.outputs.published == 'true'
