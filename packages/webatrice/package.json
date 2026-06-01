@@ -8,6 +8,7 @@
     "build": "vite build",
     "lint": "eslint src",
     "lint:fix": "eslint src --fix",
+    "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:coverage": "npm run test -- --coverage",
     "test:watch": "vitest",
