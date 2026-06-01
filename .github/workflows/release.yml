@@ -167,14 +167,11 @@ jobs:
       - name: Build app
         run: npm run -w @cockatrice/webatrice build
 
-      # GITHUB_SHA is the workflow's trigger SHA, not necessarily the SHA we
-      # checked out (workflow_run can diverge); read from the checkout.
       - name: Build release artifact
         id: meta
         run: |
           VERSION=$(node -p "require('./packages/webatrice/package.json').version")
           ARCHIVE="webatrice-${VERSION}.tar.gz"
-          git rev-parse HEAD > packages/webatrice/build/.deploy-sha
           tar -czf "$ARCHIVE" -C packages/webatrice build
           {
             echo "tag=@cockatrice/webatrice@${VERSION}"

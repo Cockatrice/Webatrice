@@ -7,7 +7,7 @@ const ROOT_DIR = './src';
 const PUBLIC_DIR = './public';
 
 const i18nDefaultFile = `${ROOT_DIR}/i18n-default.json`;
-const serverPropsFile = `${ROOT_DIR}/server-props.json`;
+const versionFile = `${PUBLIC_DIR}/version.txt`;
 
 const i18nFileRegex = /\.i18n\.json$/;
 
@@ -19,15 +19,15 @@ const i18nOnly = process.argv.indexOf('-i18nOnly') > -1;
     return;
   }
 
-  await createServerProps();
+  await createVersionFile();
   await createI18NDefault();
 })();
 
-async function createServerProps() {
+// Vite copies public/ verbatim into build/, so this lands at build/version.txt
+// and is served at /version.txt in both dev and production.
+async function createVersionFile() {
   try {
-    fse.outputFile(serverPropsFile, JSON.stringify({
-      REACT_APP_VERSION: await getCommitHash(),
-    }));
+    await fse.outputFile(versionFile, `${await getCommitHash()}\n`);
   } catch (e) {
     console.error(e);
     process.exitCode = 1;
