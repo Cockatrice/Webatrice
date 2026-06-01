@@ -85,7 +85,7 @@ jobs:
           DEPLOY_HOST: ${{ secrets.RR_BETA_SERVER_DEPLOY_HOST }}
         run: |
           rsync -avz --delete \
-            -e "ssh -i ~/.ssh/deploy_key -p 4924 -o StrictHostKeyChecking=yes" \
+            -e "ssh -i ~/.ssh/deploy_key -p 4924 -o StrictHostKeyChecking=accept-new" \
             ./build/ "$DEPLOY_USER@$DEPLOY_HOST:"
 
       # Smoke test: confirm the live site is up and serving the SHA we just
