@@ -52,7 +52,7 @@ function StackColumn({
       })}
       data-testid={`stack-column-${playerId}`}
     >
-      <div className="stack-column__cards scrollable" data-testid={`stack-column-cards-${playerId}`}>
+      <div className="stack-column__cards scrollable" data-testid={`stack-column-cards-${playerId}`} data-zone-box-select="">
         {cards.map((card, idx) => {
           const key = makeCardKey(playerId, Enriched.ZoneName.STACK, card.id);
           return (

@@ -55,6 +55,21 @@ function rectsIntersect(
   );
 }
 
+function clampToZone(drag: BoxDragState | null): BoxSelectPreview | null {
+  if (!drag || !drag.moved) {
+    return null;
+  }
+  const zone = drag.originZoneEl.getBoundingClientRect();
+  const left = Math.max(Math.min(drag.startX, drag.currentX), zone.left);
+  const top = Math.max(Math.min(drag.startY, drag.currentY), zone.top);
+  const right = Math.min(Math.max(drag.startX, drag.currentX), zone.right);
+  const bottom = Math.min(Math.max(drag.startY, drag.currentY), zone.bottom);
+  if (right <= left || bottom <= top) {
+    return null;
+  }
+  return { left, top, width: right - left, height: bottom - top };
+}
+
 function keysInBand(drag: BoxDragState, x: number, y: number): Set<string> {
   const band = {
     left: Math.min(drag.startX, x),
@@ -152,6 +167,8 @@ export function useGameBoxSelection({
       if (!originZoneEl) {
         return;
       }
+      // Stop the browser starting a native text selection over card text.
+      e.preventDefault();
       const additive = e.ctrlKey || e.shiftKey;
       // Non-additive: clear at drag-start. A plain click that never crosses the
       // threshold therefore clears the selection (falls out of this).
@@ -175,15 +192,7 @@ export function useGameBoxSelection({
     [clearSelection, clearFocused],
   );
 
-  const previewRect: BoxSelectPreview | null =
-    drag && drag.moved
-      ? {
-        left: Math.min(drag.startX, drag.currentX),
-        top: Math.min(drag.startY, drag.currentY),
-        width: Math.abs(drag.currentX - drag.startX),
-        height: Math.abs(drag.currentY - drag.startY),
-      }
-      : null;
+  const previewRect = clampToZone(drag);
 
   return { handleGameMouseDown, previewRect };
 }

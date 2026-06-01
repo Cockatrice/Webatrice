@@ -43,7 +43,7 @@ function HandZone({
       data-testid="hand-zone"
       onContextMenu={handleZoneContextMenu}
     >
-      <div className="hand-zone__cards scrollable">
+      <div className="hand-zone__cards scrollable" data-zone-box-select="">
         {cards.map((card, idx) => {
           const key = makeCardKey(playerId, Enriched.ZoneName.HAND, card.id);
           return (

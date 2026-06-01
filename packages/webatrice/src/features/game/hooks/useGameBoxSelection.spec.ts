@@ -5,29 +5,32 @@ import { makeCardKey } from '../utils/CardRegistry/CardRegistryContext';
 import { EMPTY_SELECTION } from '../utils/selection';
 import { useGameBoxSelection, type UseGameBoxSelectionArgs } from './useGameBoxSelection';
 
+type Rect = { left: number; top: number; right: number; bottom: number };
+
+function stubRect(r: Rect): DOMRect {
+  return { ...r, width: r.right - r.left, height: r.bottom - r.top, x: r.left, y: r.top, toJSON: () => ({}) } as DOMRect;
+}
+
 // A card element with the data-* attrs the hit-test reads, positioned via a
 // stubbed getBoundingClientRect.
 function makeCard(
   zone: Element,
-  { playerId, zoneName, cardId, rect }: {
-    playerId: number;
-    zoneName: string;
-    cardId: number;
-    rect: { left: number; top: number; right: number; bottom: number };
-  },
+  { playerId, zoneName, cardId, rect }: { playerId: number; zoneName: string; cardId: number; rect: Rect },
 ): void {
   const el = document.createElement('div');
   el.setAttribute('data-card-id', String(cardId));
   el.setAttribute('data-card-owner', String(playerId));
   el.setAttribute('data-card-zone', zoneName);
-  el.getBoundingClientRect = () =>
-    ({ ...rect, width: rect.right - rect.left, height: rect.bottom - rect.top, x: rect.left, y: rect.top, toJSON: () => ({}) }) as DOMRect;
+  el.getBoundingClientRect = () => stubRect(rect);
   zone.appendChild(el);
 }
 
-function makeZone(): HTMLElement {
+function makeZone(rect?: Rect): HTMLElement {
   const el = document.createElement('div');
   el.setAttribute('data-zone-box-select', '');
+  if (rect) {
+    el.getBoundingClientRect = () => stubRect(rect);
+  }
   document.body.appendChild(el);
   return el;
 }
@@ -40,6 +43,7 @@ function mouseDownOn(target: Element, init: Partial<MouseEventInit> = {}): React
     ctrlKey: false,
     shiftKey: false,
     target,
+    preventDefault: vi.fn(),
     ...init,
   } as unknown as React.MouseEvent<HTMLDivElement>;
 }
@@ -163,6 +167,43 @@ describe('useGameBoxSelection', () => {
     act(() => fireMouseMove(12, 12)); // 2+2 px, below 4px threshold
 
     expect(setSelectedCardKeys).not.toHaveBeenCalled();
+  });
+
+  it('prevents the default mousedown so the browser does not start a text selection', () => {
+    const battlefield = makeZone();
+    const { result } = setup();
+    const e = mouseDownOn(battlefield, { clientX: 10, clientY: 10 });
+    act(() => {
+      result.current.handleGameMouseDown(e);
+    });
+    expect(e.preventDefault).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not preventDefault when the press is not on a box-select surface', () => {
+    const loose = document.createElement('div');
+    document.body.appendChild(loose);
+    const { result } = setup();
+    const e = mouseDownOn(loose, { clientX: 10, clientY: 10 });
+    act(() => {
+      result.current.handleGameMouseDown(e);
+    });
+    expect(e.preventDefault).not.toHaveBeenCalled();
+  });
+
+  it('clamps the preview rectangle to the origin zone bounds (display-only)', () => {
+    const battlefield = makeZone({ left: 0, top: 0, right: 100, bottom: 100 });
+    makeCard(battlefield, { playerId: 1, zoneName: 'table', cardId: 5, rect: { left: 20, top: 20, right: 60, bottom: 80 } });
+
+    const { result, setSelectedCardKeys } = setup();
+    act(() => {
+      result.current.handleGameMouseDown(mouseDownOn(battlefield, { clientX: 10, clientY: 10 }));
+    });
+    // Drag far past the zone's right/bottom edge (zone ends at 100,100).
+    act(() => fireMouseMove(500, 500));
+
+    expect(result.current.previewRect).toEqual({ left: 10, top: 10, width: 90, height: 90 });
+    // Selection is unaffected by the clamp — the in-zone card still selects.
+    expect(lastKeys(setSelectedCardKeys).has(makeCardKey(1, 'table', 5))).toBe(true);
   });
 
   it('Escape clears the selection, unless a MUI dialog owns the key', () => {
