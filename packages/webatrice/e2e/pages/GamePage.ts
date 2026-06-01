@@ -48,7 +48,7 @@ export class GamePage {
   async waitForBoard(): Promise<void> {
     await expect(this.container).toBeVisible({ timeout: 30_000 });
     await expect(this.rightPanel).toBeVisible();
-    await expect(this.page.locator('.game__board-inner')).toBeVisible({ timeout: 30_000 });
+    await expect(this.page.locator('.game__board-grid')).toBeVisible({ timeout: 30_000 });
     // DeckSelectDialog (a MUI modal) aria-hides its siblings while open, so
     // locators inside turn-controls match nothing until it is dismissed. Gate
     // on dismissal (= game.started && local readyStart, per useGame.ts
@@ -90,7 +90,7 @@ export class GamePage {
   }
 
   async attackWith(cardName: string): Promise<void> {
-    const board = this.page.locator('.game__board-inner');
+    const board = this.page.locator('.game__board-grid');
     const card = board.locator('[data-testid="card-slot"]', { hasText: cardName }).first();
     await expect(card).toBeVisible();
     await card.dblclick();
