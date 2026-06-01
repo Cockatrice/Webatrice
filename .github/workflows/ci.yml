@@ -57,8 +57,9 @@ jobs:
               - '**'
               - '!**/*.md'
             changesetTouched:
-              - added|modified: '.changeset/*.md'
-              - '!.changeset/README.md'
+              - added|modified:
+                  - '.changeset/*.md'
+                  - '!.changeset/README.md'
 
   typecheck:
     name: Typecheck (Node ${{ matrix.node_version }})
