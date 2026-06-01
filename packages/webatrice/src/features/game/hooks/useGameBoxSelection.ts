@@ -99,7 +99,9 @@ export function useGameBoxSelection({
   clearFocused,
   pendingActive,
 }: UseGameBoxSelectionArgs): GameBoxSelection {
-  // dragRef is authoritative for the move handler; drag state drives previewRect.
+  // dragRef is read synchronously by the window mousemove handler so it can call
+  // setSelectedCardKeys without nesting that setter inside a setDrag updater
+  // (a React no-no). drag state exists only to drive previewRect re-renders.
   const dragRef = useRef<BoxDragState | null>(null);
   const [drag, setDrag] = useState<BoxDragState | null>(null);
 

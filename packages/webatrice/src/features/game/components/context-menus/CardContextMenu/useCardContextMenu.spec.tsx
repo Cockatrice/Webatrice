@@ -100,6 +100,57 @@ describe('useCardContextMenu', () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
+  it('bulk-taps the TABLE subset when the menu card is part of a ≥2 selection', () => {
+    const menuCard = makeCard({ id: 9, tapped: false });
+    const { result, webClient } = setup({
+      card: menuCard,
+      ownerPlayerId: 1,
+      sourceZone: Enriched.ZoneName.TABLE,
+      selectedCards: [
+        { ownerPlayerId: 1, zone: Enriched.ZoneName.TABLE, card: menuCard },
+        { ownerPlayerId: 1, zone: Enriched.ZoneName.TABLE, card: makeCard({ id: 10, tapped: false }) },
+      ],
+    });
+
+    act(() => {
+      result.current.handleTapToggle();
+    });
+
+    // Both untapped TABLE cards get a tap command (collective rule).
+    expect(webClient.request.game.setCardAttr).toHaveBeenCalledTimes(2);
+    expect(webClient.request.game.setCardAttr).toHaveBeenCalledWith(
+      1,
+      expect.objectContaining({ cardId: 9, attrValue: '1' }),
+    );
+    expect(webClient.request.game.setCardAttr).toHaveBeenCalledWith(
+      1,
+      expect.objectContaining({ cardId: 10, attrValue: '1' }),
+    );
+  });
+
+  it('falls back to single-card tap when the menu card is not in the selection', () => {
+    const { result, webClient } = setup({
+      card: makeCard({ id: 9, tapped: false }),
+      ownerPlayerId: 1,
+      sourceZone: Enriched.ZoneName.TABLE,
+      // A multi-selection that does NOT include the right-clicked card.
+      selectedCards: [
+        { ownerPlayerId: 1, zone: Enriched.ZoneName.TABLE, card: makeCard({ id: 1 }) },
+        { ownerPlayerId: 1, zone: Enriched.ZoneName.TABLE, card: makeCard({ id: 2 }) },
+      ],
+    });
+
+    act(() => {
+      result.current.handleTapToggle();
+    });
+
+    expect(webClient.request.game.setCardAttr).toHaveBeenCalledTimes(1);
+    expect(webClient.request.game.setCardAttr).toHaveBeenCalledWith(
+      1,
+      expect.objectContaining({ cardId: 9 }),
+    );
+  });
+
   it('handleMove dispatches moveCard with the target zone + coordinates and the local player as actor', () => {
     const { result, webClient } = setup({
       card: makeCard({ id: 13 }),

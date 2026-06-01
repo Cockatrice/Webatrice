@@ -7,7 +7,7 @@ import { Enriched, GameEntry } from '@cockatrice/datatrice';
 import { ArrowColor, ColorRGBA, rgbaToCss } from '@app/types';
 import { makeCardKey, makePlayerKey, type CardRegistry } from '../utils/CardRegistry/CardRegistryContext';
 import { dispatchBulkTap } from '../utils/bulkCardActions';
-import { resolveSelectedCards } from '../utils/selection';
+import { bulkTargetsFor, type SelectedCard } from '../utils/selection';
 
 import { playCardViaTableRow } from './playCard';
 
@@ -64,9 +64,9 @@ export interface UseGameArrowInteractionsArgs {
   game: GameEntry | undefined;
   containerRef: RefObject<HTMLDivElement>;
   cardRegistry: CardRegistry;
-  // Current multi-selection + the collapse-unless-selected helper, so click and
+  // Resolved multi-selection + the collapse-unless-selected helper, so click and
   // double-click apply the collapse rule and bulk-tap a preserved selection.
-  selectedCardKeys: ReadonlySet<string>;
+  selectedCards: readonly SelectedCard[];
   collapseUnlessSelected: (
     ownerPlayerId: number | undefined,
     zone: string | undefined,
@@ -98,7 +98,7 @@ export function useGameArrowInteractions({
   game,
   containerRef,
   cardRegistry,
-  selectedCardKeys,
+  selectedCards,
   collapseUnlessSelected,
 }: UseGameArrowInteractionsArgs): GameArrowInteractions {
   const webClient = useWebClient();
@@ -448,18 +448,12 @@ export function useGameArrowInteractions({
       }
       // Double-clicking a card that's part of a multi-selection bulk-taps the
       // TABLE subset (Cockatrice collective rule); the selection is preserved.
-      if (
-        sourceZone === Enriched.ZoneName.TABLE &&
-        sourcePlayerId != null &&
-        game != null &&
-        selectedCardKeys.size > 1 &&
-        selectedCardKeys.has(makeCardKey(sourcePlayerId, sourceZone, card.id))
-      ) {
-        const tableTargets = resolveSelectedCards(game, selectedCardKeys).filter(
-          (t) => t.zone === Enriched.ZoneName.TABLE,
-        );
-        dispatchBulkTap(webClient, gameId, tableTargets);
-        return;
+      if (sourceZone === Enriched.ZoneName.TABLE && sourcePlayerId != null) {
+        const bulk = bulkTargetsFor(selectedCards, makeCardKey(sourcePlayerId, sourceZone, card.id));
+        if (bulk.length) {
+          dispatchBulkTap(webClient, gameId, bulk.filter((t) => t.zone === Enriched.ZoneName.TABLE));
+          return;
+        }
       }
       collapseUnlessSelected(sourcePlayerId, sourceZone, card);
       if (sourceZone === Enriched.ZoneName.TABLE) {
@@ -487,7 +481,7 @@ export function useGameArrowInteractions({
         });
       }
     },
-    [gameId, game, invertVerticalCoordinate, pending, webClient, selectedCardKeys, collapseUnlessSelected],
+    [gameId, game, invertVerticalCoordinate, pending, webClient, selectedCards, collapseUnlessSelected],
   );
 
   // Returns true iff a pending arrow was resolved against this player. Callers

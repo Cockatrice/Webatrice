@@ -4,6 +4,7 @@ import { KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/c
 
 import { ServerInfo_Card } from '@cockatrice/sockatrice/generated';
 import { createCardRegistry, type CardRegistry } from '../utils/CardRegistry/CardRegistryContext';
+import { resolveSelectedCards, type SelectedCard } from '../utils/selection';
 import { useCurrentGame, type CurrentGame } from './useCurrentGame';
 import { useGameAccess, type GameAccess } from './useGameAccess';
 import { useGameArrowInteractions, type GameArrowInteractions } from './useGameArrowInteractions';
@@ -24,6 +25,7 @@ export interface Game extends CurrentGame {
   setHoveredCard: (card: ServerInfo_Card | null) => void;
   previewCard: ServerInfo_Card | null;
   selectedCardKeys: ReadonlySet<string>;
+  selectedCards: readonly SelectedCard[];
   onCardFocus: (ownerPlayerId: number | undefined, zone: string | undefined, card: ServerInfo_Card) => void;
   onCardBlur: (ownerPlayerId: number | undefined, zone: string | undefined, card: ServerInfo_Card) => void;
   collapseUnlessSelected: GameSelection['collapseUnlessSelected'];
@@ -61,6 +63,10 @@ export function useGame(): Game {
   const [hoveredCard, setHoveredCard] = useState<ServerInfo_Card | null>(null);
   const selection = useGameSelection();
   const previewCard = selection.focused?.card ?? hoveredCard;
+  const selectedCards = useMemo(
+    () => (game ? resolveSelectedCards(game, selection.selectedCardKeys) : []),
+    [game, selection.selectedCardKeys],
+  );
 
   const slots = useGamePlayerSlots(game);
   const localAccess = useGameAccess(gameId, game?.localPlayerId);
@@ -72,7 +78,7 @@ export function useGame(): Game {
     game,
     containerRef: gameRef,
     cardRegistry,
-    selectedCardKeys: selection.selectedCardKeys,
+    selectedCards,
     collapseUnlessSelected: selection.collapseUnlessSelected,
   });
   const box = useGameBoxSelection({
@@ -92,7 +98,11 @@ export function useGame(): Game {
     startPendingAttach: arrows.startPendingAttach,
     collapseUnlessSelected: selection.collapseUnlessSelected,
   });
-  const dnd = useGameDnd({ gameId });
+  const dnd = useGameDnd({
+    gameId,
+    cancelPendingArrow: arrows.cancelPendingOnDragStart,
+    collapseUnlessSelected: selection.collapseUnlessSelected,
+  });
 
   useGameShortcuts({ gameId, onRequestConcede: dialogs.openConcede });
 
@@ -130,6 +140,7 @@ export function useGame(): Game {
     setHoveredCard,
     previewCard,
     selectedCardKeys: selection.selectedCardKeys,
+    selectedCards,
     onCardFocus: selection.onCardFocus,
     onCardBlur: selection.onCardBlur,
     collapseUnlessSelected: selection.collapseUnlessSelected,

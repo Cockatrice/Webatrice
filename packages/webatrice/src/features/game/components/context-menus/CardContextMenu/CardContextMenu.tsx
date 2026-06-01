@@ -23,7 +23,7 @@ export interface CardContextMenuProps {
   card: ServerInfo_Card | null;
   ownerPlayerId: number | null;
   sourceZone: string | null;
-  bulkTargets?: ReadonlyArray<SelectedCard>;
+  selectedCards?: readonly SelectedCard[];
   onClose: () => void;
   onRequestSetPT: () => void;
   onRequestSetAnnotation: () => void;

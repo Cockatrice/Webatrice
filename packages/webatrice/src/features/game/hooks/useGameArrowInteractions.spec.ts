@@ -57,7 +57,7 @@ function setup({
         game: { ...game, info: { ...game.info, gameId: 1 } },
         containerRef: boardRef,
         cardRegistry,
-        selectedCardKeys: new Set<string>(),
+        selectedCards: [],
         collapseUnlessSelected: vi.fn(),
       }),
     { wrapper: Wrapper },

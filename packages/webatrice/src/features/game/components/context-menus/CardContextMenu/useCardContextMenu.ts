@@ -2,7 +2,8 @@ import { useWebClient } from '@cockatrice/datatrice/react';
 import { CardAttribute, ServerInfo_Card } from '@cockatrice/sockatrice/generated';
 import { Enriched } from '@cockatrice/datatrice';
 import { dispatchBulkMove, dispatchBulkTap } from '../../../utils/bulkCardActions';
-import type { SelectedCard } from '../../../utils/selection';
+import { bulkTargetsFor, type SelectedCard } from '../../../utils/selection';
+import { makeCardKey } from '../../../utils/CardRegistry/CardRegistryContext';
 interface MoveTarget {
   label: string;
   zone: string;
@@ -52,9 +53,9 @@ export interface UseCardContextMenuArgs {
   card: ServerInfo_Card | null;
   ownerPlayerId: number | null;
   sourceZone: string | null;
-  // The full multi-selection when the right-clicked card is part of it (size ≥ 2);
-  // empty otherwise. Tap/Move act on the whole set when present.
-  bulkTargets?: ReadonlyArray<SelectedCard>;
+  // The current multi-selection, resolved to live cards. The menu acts on the
+  // whole set only when the right-clicked card is part of a ≥2 selection.
+  selectedCards?: readonly SelectedCard[];
   onClose: () => void;
   onRequestSetPT: () => void;
   onRequestSetAnnotation: () => void;
@@ -65,7 +66,7 @@ export interface UseCardContextMenuArgs {
   onRequestMoveToLibraryAt: () => void;
 }
 
-const EMPTY_BULK_TARGETS: ReadonlyArray<SelectedCard> = [];
+const EMPTY_SELECTED_CARDS: readonly SelectedCard[] = [];
 
 export function useCardContextMenu({
   gameId,
@@ -73,7 +74,7 @@ export function useCardContextMenu({
   card,
   ownerPlayerId,
   sourceZone,
-  bulkTargets = EMPTY_BULK_TARGETS,
+  selectedCards = EMPTY_SELECTED_CARDS,
   onClose,
   onRequestSetPT,
   onRequestSetAnnotation,
@@ -86,6 +87,11 @@ export function useCardContextMenu({
   const webClient = useWebClient();
 
   const ready = card != null && ownerPlayerId != null && sourceZone != null && localPlayerId != null;
+
+  // The set the menu acts on, or empty when this is a single-card interaction.
+  const bulkTargets = ready
+    ? bulkTargetsFor(selectedCards, makeCardKey(ownerPlayerId!, sourceZone!, card!.id))
+    : EMPTY_SELECTED_CARDS;
 
   // Card-menu affordance gates. See .github/instructions/webatrice-game.instructions.md#dialog-parity.
   const isOwnedByLocal = ready && ownerPlayerId === localPlayerId;

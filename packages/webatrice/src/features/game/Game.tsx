@@ -1,11 +1,10 @@
-import { useCallback, useMemo } from 'react';
-import { DndContext, type DragStartEvent } from '@dnd-kit/core';
+import { useMemo } from 'react';
+import { DndContext } from '@dnd-kit/core';
 
 import { AuthGuard } from '@app/components';
 import { Layout } from '@app/feature-wrappers/layout';
 import { ConfirmDialog, PromptDialog } from '@app/dialogs';
 import { Enriched } from '@cockatrice/datatrice';
-import { ServerInfo_Card } from '@cockatrice/sockatrice/generated';
 import GameArrowOverlay from './components/arrows/GameArrowOverlay/GameArrowOverlay';
 import BoxSelectOverlay from './components/ui/BoxSelectOverlay/BoxSelectOverlay';
 import CardContextMenu from './components/context-menus/CardContextMenu/CardContextMenu';
@@ -25,13 +24,10 @@ import RollDieDialog from './dialogs/RollDieDialog/RollDieDialog';
 import SideboardDialog, { cardsFromZone } from './dialogs/SideboardDialog/SideboardDialog';
 import ZoneViewDialog from './dialogs/ZoneViewDialog/ZoneViewDialog';
 import { useGame } from './hooks/useGame';
-import { CardRegistryContext, makeCardKey } from './utils/CardRegistry/CardRegistryContext';
-import { resolveSelectedCards, type SelectedCard } from './utils/selection';
+import { CardRegistryContext } from './utils/CardRegistry/CardRegistryContext';
 import { GameInteractionProvider } from './components/ui/GameInteractionContext';
 
 import './Game.css';
-
-const EMPTY_BULK_TARGETS: ReadonlyArray<SelectedCard> = [];
 
 function Game() {
   const g = useGame();
@@ -46,9 +42,9 @@ function Game() {
     setHoveredCard,
     previewCard,
     selectedCardKeys,
+    selectedCards,
     onCardFocus,
     onCardBlur,
-    collapseUnlessSelected,
     handleGameMouseDown,
     boxSelectPreview,
     slotAAccess,
@@ -85,35 +81,6 @@ function Game() {
     ],
   );
 
-  // Drag-start: cancel any pending arrow, then apply the collapse rule so the
-  // dragged card becomes the selection unless it's already part of it.
-  const handleDragStart = useCallback(
-    (event: DragStartEvent) => {
-      arrows.cancelPendingOnDragStart();
-      const data = event.active.data.current as
-        | { card: ServerInfo_Card; sourcePlayerId?: number; sourceZone?: string }
-        | undefined;
-      if (data?.card) {
-        collapseUnlessSelected(data.sourcePlayerId, data.sourceZone, data.card);
-      }
-    },
-    [arrows, collapseUnlessSelected],
-  );
-
-  // Bulk targets for the card menu: only when the right-clicked card is part of
-  // a multi-selection (size ≥ 2). Empty otherwise → menu acts on the one card.
-  const bulkTargets = useMemo<ReadonlyArray<SelectedCard>>(() => {
-    const menu = dialogs.cardMenu;
-    if (!game || !menu || selectedCardKeys.size < 2) {
-      return EMPTY_BULK_TARGETS;
-    }
-    const menuKey = makeCardKey(menu.sourcePlayerId, menu.sourceZone, menu.card.id);
-    if (!selectedCardKeys.has(menuKey)) {
-      return EMPTY_BULK_TARGETS;
-    }
-    return resolveSelectedCards(game, selectedCardKeys);
-  }, [game, dialogs.cardMenu, selectedCardKeys]);
-
   return (
     <Layout>
       <AuthGuard />
@@ -121,30 +88,30 @@ function Game() {
         <DndContext
           sensors={sensors}
           collisionDetection={dnd.collisionDetection}
-          onDragStart={handleDragStart}
+          onDragStart={dnd.handleDragStart}
           onDragEnd={dnd.handleDragEnd}
         >
-          <div
-            className="game"
-            data-testid="game-container"
-            ref={gameRef}
-            onMouseDown={handleGameMouseDown}
-          >
-            <PhaseBar gameId={gameId} />
-
+          <GameInteractionProvider value={interactionHandlers}>
             <div
-              className="game__board"
-              ref={boardRef}
-              onMouseDown={arrows.handleBoardMouseDown}
+              className="game"
+              data-testid="game-container"
+              ref={gameRef}
+              onMouseDown={handleGameMouseDown}
             >
-              {!game && (
-                <div className="game__empty" data-testid="game-empty">
-                  No active game. Join a game from a room to see the board.
-                </div>
-              )}
+              <PhaseBar gameId={gameId} />
 
-              {game && slots.slotAPlayerId != null && (
-                <GameInteractionProvider value={interactionHandlers}>
+              <div
+                className="game__board"
+                ref={boardRef}
+                onMouseDown={arrows.handleBoardMouseDown}
+              >
+                {!game && (
+                  <div className="game__empty" data-testid="game-empty">
+                  No active game. Join a game from a room to see the board.
+                  </div>
+                )}
+
+                {game && slots.slotAPlayerId != null && (
                   <div
                     className={
                       'game__board-inner' +
@@ -213,186 +180,180 @@ function Game() {
                       />
                     )}
                   </div>
-                </GameInteractionProvider>
-              )}
-            </div>
+                )}
+              </div>
 
-            <RightPanel
-              gameId={gameId}
-              hoveredCard={previewCard}
-              onRequestRollDie={dialogs.openRollDie}
-              onRequestConcede={dialogs.openConcede}
-              onRequestUnconcede={dialogs.openUnconcede}
-              onRequestGameInfo={dialogs.openGameInfo}
-            />
-
-            <GameArrowOverlay gameId={gameId} containerRef={gameRef} dragPreview={arrows.dragPreview} />
-
-            <BoxSelectOverlay preview={boxSelectPreview} />
-
-            <DeckSelectDialog isOpen={deckSelectOpen} gameId={gameId} />
-
-            {dialogs.zoneViews.map((v, idx) => (
-              <ZoneViewDialog
-                key={`${v.playerId}-${v.zoneName}`}
-                isOpen
+              <RightPanel
                 gameId={gameId}
-                playerId={v.playerId}
-                zoneName={v.zoneName}
-                handleClose={() => dialogs.handleCloseZoneView(v.playerId, v.zoneName)}
-                initialPosition={{ x: 80 + idx * 36, y: 80 + idx * 36 }}
-                selectedCardKeys={selectedCardKeys}
-                onCardHover={setHoveredCard}
-                onCardFocus={onCardFocus}
-                onCardBlur={onCardBlur}
-                onCardClick={interactionHandlers.onCardClick}
-                onCardContextMenu={interactionHandlers.onCardContextMenu}
-                onCardDoubleClick={interactionHandlers.onCardDoubleClick}
+                hoveredCard={previewCard}
+                onRequestRollDie={dialogs.openRollDie}
+                onRequestConcede={dialogs.openConcede}
+                onRequestUnconcede={dialogs.openUnconcede}
+                onRequestGameInfo={dialogs.openGameInfo}
               />
-            ))}
 
-            <CardContextMenu
-              isOpen={dialogs.cardMenu != null}
-              anchorPosition={dialogs.cardMenu?.anchorPosition ?? null}
-              gameId={gameId ?? 0}
-              localPlayerId={game?.localPlayerId ?? null}
-              card={dialogs.cardMenu?.card ?? null}
-              ownerPlayerId={dialogs.cardMenu?.sourcePlayerId ?? null}
-              sourceZone={dialogs.cardMenu?.sourceZone ?? null}
-              bulkTargets={bulkTargets}
-              onClose={dialogs.closeCardMenu}
-              onRequestSetPT={dialogs.handleRequestSetPT}
-              onRequestSetAnnotation={dialogs.handleRequestSetAnnotation}
-              onRequestSetCounter={dialogs.handleRequestSetCardCounter}
-              onRequestDrawArrow={dialogs.handleRequestDrawArrow}
-              onRequestAttach={dialogs.handleRequestAttach}
-              onRequestPlay={dialogs.handleRequestPlayFromCardMenu}
-              onRequestMoveToLibraryAt={dialogs.handleRequestMoveToLibraryAt}
-            />
+              <GameArrowOverlay gameId={gameId} containerRef={gameRef} dragPreview={arrows.dragPreview} />
 
-            <ZoneContextMenu
-              isOpen={dialogs.zoneMenu != null}
-              anchorPosition={dialogs.zoneMenu?.anchorPosition ?? null}
-              gameId={gameId ?? 0}
-              playerId={dialogs.zoneMenu?.playerId ?? null}
-              zoneName={dialogs.zoneMenu?.zoneName ?? null}
-              onClose={dialogs.closeZoneMenu}
-              onRequestDrawN={dialogs.handleRequestDrawN}
-              onRequestDumpN={dialogs.handleRequestDumpN}
-              onRequestRevealTopN={dialogs.handleRequestRevealTopN}
-              onRequestRevealZone={dialogs.handleRequestRevealZone}
-              onRequestUndoDraw={dialogs.handleRequestUndoDraw}
-              onRequestDrawBottom={dialogs.handleRequestDrawBottom}
-              onRequestMoveTopCardToZone={dialogs.handleRequestMoveTopCardToZone}
-              onRequestPlayTop={dialogs.handleRequestPlayTop}
-              onRequestMoveTopNToZone={dialogs.handleRequestMoveTopNToZone}
-              onRequestShuffleTopN={dialogs.handleRequestShuffleTopN}
-              onRequestShuffleBottomN={dialogs.handleRequestShuffleBottomN}
-              onRequestViewZone={dialogs.handleRequestViewZone}
-              onRequestMoveAllFromZoneToDeck={dialogs.handleRequestMoveAllFromZoneToDeck}
-              onRequestMoveAllFromZoneTo={dialogs.handleRequestMoveAllFromZoneTo}
-              onRequestRevealRandomFromZone={dialogs.handleRequestRevealRandomFromZone}
-            />
+              <BoxSelectOverlay preview={boxSelectPreview} />
 
-            <PlayerContextMenu
-              isOpen={dialogs.playerMenu != null}
-              anchorPosition={dialogs.playerMenu}
-              onClose={dialogs.closePlayerMenu}
-              onRequestCreateToken={dialogs.openCreateToken}
-              onRequestViewSideboard={dialogs.openSideboard}
-            />
+              <DeckSelectDialog isOpen={deckSelectOpen} gameId={gameId} />
 
-            <HandContextMenu
-              isOpen={dialogs.handMenu != null}
-              anchorPosition={dialogs.handMenu}
-              gameId={gameId ?? 0}
-              handSize={localPlayer?.zones[Enriched.ZoneName.HAND]?.cardCount ?? 0}
-              onClose={dialogs.closeHandMenu}
-              onRequestChooseMulligan={dialogs.handleRequestChooseMulligan}
-              onRequestRevealHand={dialogs.handleRequestRevealHand}
-              onRequestRevealRandom={dialogs.handleRequestRevealRandom}
-              onRequestViewHand={dialogs.handleRequestViewHand}
-              onRequestSortHandBy={dialogs.handleRequestSortHandBy}
-              onRequestMoveHandToDeck={dialogs.handleRequestMoveHandToDeck}
-              onRequestMoveHandToZone={dialogs.handleRequestMoveHandToZone}
-            />
+              {dialogs.zoneViews.map((v, idx) => (
+                <ZoneViewDialog
+                  key={`${v.playerId}-${v.zoneName}`}
+                  isOpen
+                  gameId={gameId}
+                  playerId={v.playerId}
+                  zoneName={v.zoneName}
+                  handleClose={() => dialogs.handleCloseZoneView(v.playerId, v.zoneName)}
+                  initialPosition={{ x: 80 + idx * 36, y: 80 + idx * 36 }}
+                  selectedCardKeys={selectedCardKeys}
+                />
+              ))}
 
-            {dialogs.prompt && (
-              <PromptDialog
-                isOpen
-                title={dialogs.prompt.title}
-                label={dialogs.prompt.label}
-                initialValue={dialogs.prompt.initialValue}
-                helperText={dialogs.prompt.helperText}
-                validate={dialogs.prompt.validate}
-                onSubmit={dialogs.prompt.onSubmit}
-                onCancel={dialogs.closePrompt}
+              <CardContextMenu
+                isOpen={dialogs.cardMenu != null}
+                anchorPosition={dialogs.cardMenu?.anchorPosition ?? null}
+                gameId={gameId ?? 0}
+                localPlayerId={game?.localPlayerId ?? null}
+                card={dialogs.cardMenu?.card ?? null}
+                ownerPlayerId={dialogs.cardMenu?.sourcePlayerId ?? null}
+                sourceZone={dialogs.cardMenu?.sourceZone ?? null}
+                selectedCards={selectedCards}
+                onClose={dialogs.closeCardMenu}
+                onRequestSetPT={dialogs.handleRequestSetPT}
+                onRequestSetAnnotation={dialogs.handleRequestSetAnnotation}
+                onRequestSetCounter={dialogs.handleRequestSetCardCounter}
+                onRequestDrawArrow={dialogs.handleRequestDrawArrow}
+                onRequestAttach={dialogs.handleRequestAttach}
+                onRequestPlay={dialogs.handleRequestPlayFromCardMenu}
+                onRequestMoveToLibraryAt={dialogs.handleRequestMoveToLibraryAt}
               />
-            )}
 
-            <RollDieDialog
-              isOpen={dialogs.rollDieOpen}
-              lastSides={dialogs.lastDieSides}
-              lastCount={dialogs.lastDieCount}
-              onSubmit={dialogs.handleRollDieSubmit}
-              onCancel={dialogs.closeRollDie}
-            />
-
-            <CreateTokenDialog
-              isOpen={dialogs.createTokenOpen}
-              onSubmit={dialogs.handleCreateTokenSubmit}
-              onCancel={dialogs.closeCreateToken}
-            />
-
-            <SideboardDialog
-              isOpen={dialogs.sideboardOpen}
-              playerName={localPlayer?.properties.userInfo?.name ?? ''}
-              deckCards={cardsFromZone(localPlayer?.zones[Enriched.ZoneName.DECK])}
-              sideboardCards={cardsFromZone(localPlayer?.zones[Enriched.ZoneName.SIDEBOARD])}
-              isLocked={localPlayer?.properties.sideboardLocked ?? false}
-              onSubmit={dialogs.handleSideboardSubmit}
-              onCancel={dialogs.closeSideboard}
-              onToggleLock={dialogs.handleToggleSideboardLock}
-            />
-
-            {dialogs.revealState && (
-              <RevealCardsDialog
-                isOpen
-                title={dialogs.revealState.title}
-                zoneLabel={dialogs.revealState.zoneLabel}
-                showCountInput={dialogs.revealState.showCountInput}
-                defaultCount={dialogs.revealState.defaultCount}
-                players={slots.revealPlayers}
-                onSubmit={dialogs.revealState.onSubmit}
-                onCancel={dialogs.closeReveal}
+              <ZoneContextMenu
+                isOpen={dialogs.zoneMenu != null}
+                anchorPosition={dialogs.zoneMenu?.anchorPosition ?? null}
+                gameId={gameId ?? 0}
+                playerId={dialogs.zoneMenu?.playerId ?? null}
+                zoneName={dialogs.zoneMenu?.zoneName ?? null}
+                onClose={dialogs.closeZoneMenu}
+                onRequestDrawN={dialogs.handleRequestDrawN}
+                onRequestDumpN={dialogs.handleRequestDumpN}
+                onRequestRevealTopN={dialogs.handleRequestRevealTopN}
+                onRequestRevealZone={dialogs.handleRequestRevealZone}
+                onRequestUndoDraw={dialogs.handleRequestUndoDraw}
+                onRequestDrawBottom={dialogs.handleRequestDrawBottom}
+                onRequestMoveTopCardToZone={dialogs.handleRequestMoveTopCardToZone}
+                onRequestPlayTop={dialogs.handleRequestPlayTop}
+                onRequestMoveTopNToZone={dialogs.handleRequestMoveTopNToZone}
+                onRequestShuffleTopN={dialogs.handleRequestShuffleTopN}
+                onRequestShuffleBottomN={dialogs.handleRequestShuffleBottomN}
+                onRequestViewZone={dialogs.handleRequestViewZone}
+                onRequestMoveAllFromZoneToDeck={dialogs.handleRequestMoveAllFromZoneToDeck}
+                onRequestMoveAllFromZoneTo={dialogs.handleRequestMoveAllFromZoneTo}
+                onRequestRevealRandomFromZone={dialogs.handleRequestRevealRandomFromZone}
               />
-            )}
 
-            <ConfirmDialog
-              isOpen={dialogs.concedeConfirm === 'concede'}
-              title="Concede this game?"
-              message="You'll stay seated as a spectator until you click Unconcede or Leave Game. Others will see you as conceded."
-              confirmLabel="Concede"
-              destructive
-              onConfirm={dialogs.confirmConcede}
-              onCancel={dialogs.closeConcedeConfirm}
-            />
+              <PlayerContextMenu
+                isOpen={dialogs.playerMenu != null}
+                anchorPosition={dialogs.playerMenu}
+                onClose={dialogs.closePlayerMenu}
+                onRequestCreateToken={dialogs.openCreateToken}
+                onRequestViewSideboard={dialogs.openSideboard}
+              />
 
-            <ConfirmDialog
-              isOpen={dialogs.concedeConfirm === 'unconcede'}
-              title="Rejoin the game?"
-              message="This undoes your concede and puts you back into the active player rotation."
-              confirmLabel="Unconcede"
-              onConfirm={dialogs.confirmUnconcede}
-              onCancel={dialogs.closeConcedeConfirm}
-            />
+              <HandContextMenu
+                isOpen={dialogs.handMenu != null}
+                anchorPosition={dialogs.handMenu}
+                gameId={gameId ?? 0}
+                handSize={localPlayer?.zones[Enriched.ZoneName.HAND]?.cardCount ?? 0}
+                onClose={dialogs.closeHandMenu}
+                onRequestChooseMulligan={dialogs.handleRequestChooseMulligan}
+                onRequestRevealHand={dialogs.handleRequestRevealHand}
+                onRequestRevealRandom={dialogs.handleRequestRevealRandom}
+                onRequestViewHand={dialogs.handleRequestViewHand}
+                onRequestSortHandBy={dialogs.handleRequestSortHandBy}
+                onRequestMoveHandToDeck={dialogs.handleRequestMoveHandToDeck}
+                onRequestMoveHandToZone={dialogs.handleRequestMoveHandToZone}
+              />
 
-            <GameInfoDialog
-              isOpen={dialogs.gameInfoOpen}
-              gameId={gameId}
-              onClose={dialogs.closeGameInfo}
-            />
-          </div>
+              {dialogs.prompt && (
+                <PromptDialog
+                  isOpen
+                  title={dialogs.prompt.title}
+                  label={dialogs.prompt.label}
+                  initialValue={dialogs.prompt.initialValue}
+                  helperText={dialogs.prompt.helperText}
+                  validate={dialogs.prompt.validate}
+                  onSubmit={dialogs.prompt.onSubmit}
+                  onCancel={dialogs.closePrompt}
+                />
+              )}
+
+              <RollDieDialog
+                isOpen={dialogs.rollDieOpen}
+                lastSides={dialogs.lastDieSides}
+                lastCount={dialogs.lastDieCount}
+                onSubmit={dialogs.handleRollDieSubmit}
+                onCancel={dialogs.closeRollDie}
+              />
+
+              <CreateTokenDialog
+                isOpen={dialogs.createTokenOpen}
+                onSubmit={dialogs.handleCreateTokenSubmit}
+                onCancel={dialogs.closeCreateToken}
+              />
+
+              <SideboardDialog
+                isOpen={dialogs.sideboardOpen}
+                playerName={localPlayer?.properties.userInfo?.name ?? ''}
+                deckCards={cardsFromZone(localPlayer?.zones[Enriched.ZoneName.DECK])}
+                sideboardCards={cardsFromZone(localPlayer?.zones[Enriched.ZoneName.SIDEBOARD])}
+                isLocked={localPlayer?.properties.sideboardLocked ?? false}
+                onSubmit={dialogs.handleSideboardSubmit}
+                onCancel={dialogs.closeSideboard}
+                onToggleLock={dialogs.handleToggleSideboardLock}
+              />
+
+              {dialogs.revealState && (
+                <RevealCardsDialog
+                  isOpen
+                  title={dialogs.revealState.title}
+                  zoneLabel={dialogs.revealState.zoneLabel}
+                  showCountInput={dialogs.revealState.showCountInput}
+                  defaultCount={dialogs.revealState.defaultCount}
+                  players={slots.revealPlayers}
+                  onSubmit={dialogs.revealState.onSubmit}
+                  onCancel={dialogs.closeReveal}
+                />
+              )}
+
+              <ConfirmDialog
+                isOpen={dialogs.concedeConfirm === 'concede'}
+                title="Concede this game?"
+                message="You'll stay seated as a spectator until you click Unconcede or Leave Game. Others will see you as conceded."
+                confirmLabel="Concede"
+                destructive
+                onConfirm={dialogs.confirmConcede}
+                onCancel={dialogs.closeConcedeConfirm}
+              />
+
+              <ConfirmDialog
+                isOpen={dialogs.concedeConfirm === 'unconcede'}
+                title="Rejoin the game?"
+                message="This undoes your concede and puts you back into the active player rotation."
+                confirmLabel="Unconcede"
+                onConfirm={dialogs.confirmUnconcede}
+                onCancel={dialogs.closeConcedeConfirm}
+              />
+
+              <GameInfoDialog
+                isOpen={dialogs.gameInfoOpen}
+                gameId={gameId}
+                onClose={dialogs.closeGameInfo}
+              />
+            </div>
+          </GameInteractionProvider>
 
           <CardDragOverlayHost />
         </DndContext>
