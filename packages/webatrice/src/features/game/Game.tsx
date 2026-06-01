@@ -15,7 +15,7 @@ import PhaseBar from './components/right-sidebar/PhaseBar/PhaseBar';
 import RightPanel from './components/right-sidebar/RightPanel/RightPanel';
 import { CardDragOverlayHost } from './components/ui/CardDragOverlay/CardDragOverlay';
 import HandZone from './components/ui/HandZone/HandZone';
-import PlayerBoard from './components/ui/PlayerBoard/PlayerBoard';
+import GameBoardCell from './components/ui/GameBoardCell/GameBoardCell';
 import CreateTokenDialog from './dialogs/CreateTokenDialog/CreateTokenDialog';
 import DeckSelectDialog from './dialogs/DeckSelectDialog/DeckSelectDialog';
 import GameInfoDialog from './dialogs/GameInfoDialog/GameInfoDialog';
@@ -47,12 +47,8 @@ function Game() {
     onCardBlur,
     handleGameMouseDown,
     boxSelectPreview,
-    slotAAccess,
-    slotBAccess,
     deckSelectOpen,
-    showSlotAHand,
-    showSlotBHand,
-    slots,
+    layout,
     arrows,
     dialogs,
     dnd,
@@ -111,75 +107,39 @@ function Game() {
                   </div>
                 )}
 
-                {game && slots.slotAPlayerId != null && (
+                {game && layout.cells.length > 0 && (
                   <div
-                    className={
-                      'game__board-inner' +
-                      (showSlotAHand ? '' : ' game__board-inner--no-hand-a') +
-                      (showSlotBHand ? '' : ' game__board-inner--no-hand-b')
-                    }
+                    className="game__board-grid"
+                    style={{
+                      gridTemplateColumns: `repeat(${layout.columns}, minmax(0, 1fr))`,
+                      gridTemplateRows: `repeat(${layout.rows}, minmax(0, 1fr))`,
+                    }}
                   >
-                    {showSlotBHand && slots.slotBPlayerId != null && (
-                      <HandZone
+                    {layout.cells.map((cell) => (
+                      <GameBoardCell
+                        key={cell.playerId}
+                        cell={cell}
                         gameId={gameId!}
-                        playerId={slots.slotBPlayerId}
-                        canAct={slotBAccess.canAct}
                         arrowSourceKey={arrows.arrowSourceKey}
                         arrowTargetKey={arrows.arrowTargetKey}
                         selectedCardKeys={selectedCardKeys}
-                        onHandContextMenu={
-                          slots.slotBPlayerId === game.localPlayerId
-                            ? dialogs.handleHandContextMenu
-                            : undefined
-                        }
-                      />
-                    )}
-                    {slots.slotBPlayerId != null && (
-                      <PlayerBoard
-                        gameId={gameId!}
-                        playerId={slots.slotBPlayerId}
-                        mirrored
-                        isLocal={slots.slotBPlayerId === game.localPlayerId}
-                        canAct={slotBAccess.canAct}
-                        canEditCounters={slotBAccess.canAct}
-                        arrowSourceKey={arrows.arrowSourceKey}
-                        arrowTargetKey={arrows.arrowTargetKey}
-                        selectedCardKeys={selectedCardKeys}
+                        onPlayerContextMenu={dialogs.handlePlayerContextMenu}
                         onPlayerClick={arrows.handlePlayerClick}
-                        players={slots.players}
-                        onSelectPlayer={slots.setSlotBPlayerId}
+                        onHandContextMenu={dialogs.handleHandContextMenu}
                       />
-                    )}
-                    <PlayerBoard
-                      gameId={gameId!}
-                      playerId={slots.slotAPlayerId}
-                      isLocal={slots.slotAPlayerId === game.localPlayerId}
-                      canAct={slotAAccess.canAct}
-                      canEditCounters={slotAAccess.canAct}
-                      arrowSourceKey={arrows.arrowSourceKey}
-                      arrowTargetKey={arrows.arrowTargetKey}
-                      selectedCardKeys={selectedCardKeys}
-                      onPlayerContextMenu={dialogs.handlePlayerContextMenu}
-                      onPlayerClick={arrows.handlePlayerClick}
-                      players={slots.players}
-                      onSelectPlayer={slots.setSlotAPlayerId}
-                    />
-                    {showSlotAHand && (
-                      <HandZone
-                        gameId={gameId!}
-                        playerId={slots.slotAPlayerId}
-                        canAct={slotAAccess.canAct}
-                        arrowSourceKey={arrows.arrowSourceKey}
-                        arrowTargetKey={arrows.arrowTargetKey}
-                        selectedCardKeys={selectedCardKeys}
-                        onHandContextMenu={
-                          slots.slotAPlayerId === game.localPlayerId
-                            ? dialogs.handleHandContextMenu
-                            : undefined
-                        }
-                      />
-                    )}
+                    ))}
                   </div>
+                )}
+                {game && layout.bottomHand && (
+                  <HandZone
+                    gameId={gameId!}
+                    playerId={layout.bottomHand.playerId}
+                    canAct={layout.bottomHand.canAct}
+                    arrowSourceKey={arrows.arrowSourceKey}
+                    arrowTargetKey={arrows.arrowTargetKey}
+                    selectedCardKeys={selectedCardKeys}
+                    onHandContextMenu={dialogs.handleHandContextMenu}
+                  />
                 )}
               </div>
 
@@ -322,7 +282,7 @@ function Game() {
                   zoneLabel={dialogs.revealState.zoneLabel}
                   showCountInput={dialogs.revealState.showCountInput}
                   defaultCount={dialogs.revealState.defaultCount}
-                  players={slots.revealPlayers}
+                  players={layout.players}
                   onSubmit={dialogs.revealState.onSubmit}
                   onCancel={dialogs.closeReveal}
                 />

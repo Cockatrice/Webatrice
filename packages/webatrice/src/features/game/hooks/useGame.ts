@@ -12,7 +12,7 @@ import { useGameBoxSelection, type BoxSelectPreview } from './useGameBoxSelectio
 import { useGameDialogs, type GameDialogs } from './useGameDialogs';
 import { useGameDnd, type GameDnd } from './useGameDnd';
 import { useGameLifecycleNavigation } from './useGameLifecycleNavigation';
-import { useGamePlayerSlots, type GamePlayerSlots } from './useGamePlayerSlots';
+import { useGameBoardLayout, type GameBoardLayout } from './useGameBoardLayout';
 import { useGameSelection, type GameSelection } from './useGameSelection';
 import { useGameShortcuts } from './useGameShortcuts';
 
@@ -32,12 +32,8 @@ export interface Game extends CurrentGame {
   handleGameMouseDown: (e: React.MouseEvent<HTMLDivElement>) => void;
   boxSelectPreview: BoxSelectPreview | null;
   localAccess: GameAccess;
-  slotAAccess: GameAccess;
-  slotBAccess: GameAccess;
   deckSelectOpen: boolean;
-  showSlotAHand: boolean;
-  showSlotBHand: boolean;
-  slots: GamePlayerSlots;
+  layout: GameBoardLayout;
   arrows: GameArrowInteractions;
   dialogs: GameDialogs;
   dnd: GameDnd;
@@ -68,10 +64,8 @@ export function useGame(): Game {
     [game, selection.selectedCardKeys],
   );
 
-  const slots = useGamePlayerSlots(game);
+  const layout = useGameBoardLayout(game);
   const localAccess = useGameAccess(gameId, game?.localPlayerId);
-  const slotAAccess = useGameAccess(gameId, slots.slotAPlayerId);
-  const slotBAccess = useGameAccess(gameId, slots.slotBPlayerId);
 
   const arrows = useGameArrowInteractions({
     gameId,
@@ -115,21 +109,6 @@ export function useGame(): Game {
     !current.isJudge &&
     !localPlayer.properties.readyStart;
 
-  // A seated player always sees their own hand. Other hands render only when
-  // the server has marked the game omniscient (spectators_see_everything),
-  // which is what gates whether the server sends face-up cards in the first place.
-  const omniscient = game?.info?.spectatorsOmniscient === true;
-  const isOwnSeat = (pid: number | null | undefined) =>
-    !isSpectator && pid != null && game != null && pid === game.localPlayerId;
-  const showSlotAHand =
-    game != null &&
-    slots.slotAPlayerId != null &&
-    (isOwnSeat(slots.slotAPlayerId) || omniscient);
-  const showSlotBHand =
-    game != null &&
-    slots.slotBPlayerId != null &&
-    (isOwnSeat(slots.slotBPlayerId) || omniscient);
-
   return {
     ...current,
     boardRef,
@@ -147,12 +126,8 @@ export function useGame(): Game {
     handleGameMouseDown: box.handleGameMouseDown,
     boxSelectPreview: box.previewRect,
     localAccess,
-    slotAAccess,
-    slotBAccess,
     deckSelectOpen,
-    showSlotAHand,
-    showSlotBHand,
-    slots,
+    layout,
     arrows,
     dialogs,
     dnd,

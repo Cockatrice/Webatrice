@@ -1,0 +1,17 @@
+.game__board-cell {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+}
+
+.game__board-cell > .player-board {
+  flex: 1;
+  min-height: 0;
+}
+
+/* Mirrored boards (every row above the bottom) place their inline hand above the
+   board so cards face inward, table-style. */
+.game__board-cell--mirrored > .hand-zone {
+  order: -1;
+}

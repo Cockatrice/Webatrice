@@ -19,23 +19,13 @@
   overflow: hidden;
 }
 
-.game__board-inner {
+/* Adaptive board grid: one cell per seated player. grid-template-columns/rows are
+   set inline from the layout (1 column for ≤3 players, 2 for ≥4). Each cell's own
+   styles live with the GameBoardCell component. */
+.game__board-grid {
   flex: 1;
   min-height: 0;
   display: grid;
-  grid-template-rows: 176px minmax(0, 1fr) minmax(0, 1fr) 176px;
-}
-
-.game__board-inner--no-hand-b {
-  grid-template-rows: minmax(0, 1fr) minmax(0, 1fr) 176px;
-}
-
-.game__board-inner--no-hand-a {
-  grid-template-rows: 176px minmax(0, 1fr) minmax(0, 1fr);
-}
-
-.game__board-inner--no-hand-a.game__board-inner--no-hand-b {
-  grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
 }
 
 .game__empty {
