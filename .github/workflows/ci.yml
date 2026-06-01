@@ -26,6 +26,7 @@ jobs:
       sockatriceGate: ${{ steps.filter.outputs.sockatrice == 'true' || steps.filter.outputs.proto == 'true' || steps.filter.outputs.root == 'true' }}
       datatriceGate: ${{ steps.filter.outputs.sockatrice == 'true' || steps.filter.outputs.datatrice == 'true' || steps.filter.outputs.proto == 'true' || steps.filter.outputs.root == 'true' }}
       documentation_only: ${{ steps.filter.outputs.nonDocs == 'false' }}
+      changesetTouched: ${{ steps.filter.outputs.changesetTouched }}
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
@@ -55,6 +56,9 @@ jobs:
             nonDocs:
               - '**'
               - '!**/*.md'
+            changesetTouched:
+              - added|modified: '.changeset/*.md'
+              - '!.changeset/README.md'
 
   typecheck:
     name: Typecheck (Node ${{ matrix.node_version }})
@@ -81,10 +85,13 @@ jobs:
       - name: Install packages
         uses: ./.github/actions/install-packages
 
-      # Catches missing or malformed `.changeset/*.md` (missing frontmatter, wrong bump
-      # type) before they reach master and break `changesets/action`.
+      # Catches missing or malformed `.changeset/*.md` (missing frontmatter,
+      # wrong bump type) before they reach master and break `changesets/action`.
+      # Gated on pull_request + changesetTouched: skips master pushes (prebuild
+      # dirties the working tree) and the Version Packages PR (which only
+      # consumes changesets — no additions to validate).
       - name: Validate changesets
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' && needs.changes.outputs.changesetTouched == 'true'
         run: npx changeset status --since=origin/master
 
       - name: Init vendor submodule (sparse)
