@@ -92,8 +92,12 @@ jobs:
 
       # datatrice's prepack dts build resolves @cockatrice/sockatrice/types
       # through the workspace symlink, so sockatrice's dist/ must exist first.
+      # Build fresh (no cache): a publish must never consume a stale or partial
+      # cached dist — a declaration-less dist fails datatrice's prepack dts build.
       - name: Build libraries
         uses: ./.github/actions/build-libraries
+        with:
+          cache: 'false'
 
       - name: Publish to GitHub Packages
         id: changesets
@@ -161,8 +165,12 @@ jobs:
         with:
           prebuild-webatrice: 'false'
 
+      # Build fresh (no cache) — same rationale as the publish job: the released
+      # artifact must be built from source, not a possibly-stale cached dist.
       - name: Build libraries
         uses: ./.github/actions/build-libraries
+        with:
+          cache: 'false'
 
       - name: Build app
         run: npm run -w @cockatrice/webatrice build
