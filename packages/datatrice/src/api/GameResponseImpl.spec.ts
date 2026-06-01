@@ -21,6 +21,7 @@ import {
   Event_SetCardCounterSchema,
   Event_SetCounterSchema,
   Event_ShuffleSchema,
+  ServerInfo_CardSchema,
   ServerInfo_PlayerPropertiesSchema,
 } from '@cockatrice/sockatrice/generated';
 import { Actions as GameActions } from '../store/games/game.actions';
@@ -200,6 +201,15 @@ describe('GameResponseImpl', () => {
     const data = create(Event_RevealCardsSchema, {});
     impl.cardsRevealed(7, 3, data);
     expect(dispatch).toHaveBeenCalledWith(GameActions.cardsRevealed({ gameId: 7, playerId: 3, data }));
+  });
+
+  it('zoneViewRevealed dispatches the zoneViewRevealed action', () => {
+    const { impl, dispatch } = setup();
+    const cards = [create(ServerInfo_CardSchema, { id: 0, name: 'Forest' })];
+    impl.zoneViewRevealed(7, 3, 'deck', cards);
+    expect(dispatch).toHaveBeenCalledWith(
+      GameActions.zoneViewRevealed({ gameId: 7, playerId: 3, zoneName: 'deck', cards }),
+    );
   });
 
   it('zoneShuffled dispatches the zoneShuffled action', () => {

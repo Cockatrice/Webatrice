@@ -64,3 +64,14 @@
   color: #6a7488;
   font-style: italic;
 }
+
+.zone-view-dialog__footer {
+  display: flex;
+  align-items: center;
+  padding: 4px 14px 6px;
+  background: #17223d;
+  border-top: 1px solid #233a68;
+  border-radius: 0 0 6px 6px;
+  color: #c8d4ef;
+  font-size: 13px;
+}

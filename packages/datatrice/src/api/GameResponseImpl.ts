@@ -19,6 +19,7 @@ import {
   Event_SetCardCounter,
   Event_SetCounter,
   Event_Shuffle,
+  ServerInfo_Card,
   ServerInfo_PlayerProperties,
 } from '@cockatrice/sockatrice/generated';
 import type { WebsocketTypes } from '@cockatrice/sockatrice/types';
@@ -118,6 +119,10 @@ export class GameResponseImpl implements WebsocketTypes.IGameResponse {
 
   cardsRevealed(gameId: number, playerId: number, data: Event_RevealCards): void {
     this.store.dispatch(GameActions.cardsRevealed({ gameId, playerId, data }));
+  }
+
+  zoneViewRevealed(gameId: number, playerId: number, zoneName: string, cards: ServerInfo_Card[]): void {
+    this.store.dispatch(GameActions.zoneViewRevealed({ gameId, playerId, zoneName, cards }));
   }
 
   zoneShuffled(gameId: number, playerId: number, data: Event_Shuffle): void {

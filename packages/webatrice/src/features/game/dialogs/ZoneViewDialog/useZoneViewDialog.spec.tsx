@@ -68,6 +68,30 @@ describe('useZoneViewDialog', () => {
     expect(result.current.title).toBe('Trajer Graveyard (2)');
   });
 
+  it('prefers the revealed dump snapshot over the zone byId cards (hidden deck)', () => {
+    const { Wrapper } = setup({
+      name: Enriched.ZoneName.DECK,
+      cards: [],
+      cardCount: 3,
+      revealedCards: [makeCard({ id: 0, name: 'Forest' }), makeCard({ id: 1, name: 'Island' })],
+    });
+
+    const { result } = renderHook(
+      () =>
+        useZoneViewDialog({
+          gameId: 1,
+          playerId: 1,
+          zoneName: Enriched.ZoneName.DECK,
+          initialPosition: { x: 0, y: 0 },
+        }),
+      { wrapper: Wrapper },
+    );
+
+    expect(result.current.cards.map(c => c.name)).toEqual(['Forest', 'Island']);
+    // Count still reflects the server-reported zone size.
+    expect(result.current.count).toBe(3);
+  });
+
   it('falls back to an empty result when gameId or playerId is undefined (no current game)', () => {
     const { Wrapper } = setup({ name: Enriched.ZoneName.GRAVE, cardCount: 0 });
 

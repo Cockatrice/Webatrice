@@ -39,6 +39,7 @@ import type {
   ServerInfo_Warning,
   ServerInfo_DeckStorage_TreeItem,
   ServerInfo_ReplayMatch,
+  ServerInfo_Card,
 } from '../generated';
 
 import type { StatusEnum } from './StatusEnum';
@@ -148,6 +149,7 @@ export interface IGameResponse {
   counterDeleted(gameId: number, playerId: number, data: Event_DelCounter): void;
   cardsDrawn(gameId: number, playerId: number, data: Event_DrawCards): void;
   cardsRevealed(gameId: number, playerId: number, data: Event_RevealCards): void;
+  zoneViewRevealed(gameId: number, playerId: number, zoneName: string, cards: ServerInfo_Card[]): void;
   zoneShuffled(gameId: number, playerId: number, data: Event_Shuffle): void;
   dieRolled(gameId: number, playerId: number, data: Event_RollDie): void;
   activePlayerSet(gameId: number, activePlayerId: number): void;

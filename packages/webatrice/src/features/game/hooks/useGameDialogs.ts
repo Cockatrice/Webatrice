@@ -1,9 +1,10 @@
 import { useCallback, useState } from 'react';
 
 import { useSettings } from '@app/hooks';
+import { useAppDispatch } from '@app/store';
 import { useWebClient } from '@cockatrice/datatrice/react';
 import { CardAttribute, ServerInfo_Card } from '@cockatrice/sockatrice/generated';
-import { Enriched, GameEntry, PlayerEntry } from '@cockatrice/datatrice';
+import { Enriched, GameEntry, PlayerEntry, games } from '@cockatrice/datatrice';
 import { CardDTO } from '../../../services/dexie/DexieDTOs/CardDTO';
 import { COUNTER_TYPE_LABELS } from '../components/ui/CardSlot/counterColors';
 import { DEFAULT_DIE_COUNT, DEFAULT_DIE_SIDES } from '../dialogs/RollDieDialog/RollDieDialog';
@@ -87,7 +88,7 @@ export interface GameDialogs {
   // Zone-view dialog stack
   zoneViews: ZoneViewTarget[];
   handleZoneClick: (playerId: number, zoneName: string) => void;
-  handleCloseZoneView: (playerId: number, zoneName: string) => void;
+  handleCloseZoneView: (playerId: number, zoneName: string, shuffleOnClose?: boolean) => void;
 
   // Prompt dialog
   prompt: PromptState | null;
@@ -210,6 +211,7 @@ export function useGameDialogs({
   collapseUnlessSelected,
 }: UseGameDialogsArgs): GameDialogs {
   const webClient = useWebClient();
+  const dispatch = useAppDispatch();
   const { value: settings } = useSettings();
   const invertVerticalCoordinate = settings?.invertVerticalCoordinate ?? false;
 
@@ -229,19 +231,36 @@ export function useGameDialogs({
   const [gameInfoOpen, setGameInfoOpen] = useState(false);
 
   const handleZoneClick = useCallback((playerId: number, zoneName: string) => {
-    setZoneViews((prev) => {
-      if (prev.some((v) => v.playerId === playerId && v.zoneName === zoneName)) {
-        return prev;
-      }
-      return [...prev, { playerId, zoneName }];
-    });
-  }, []);
+    const alreadyOpen = zoneViews.some((v) => v.playerId === playerId && v.zoneName === zoneName);
+    setZoneViews((prev) =>
+      alreadyOpen ? prev : [...prev, { playerId, zoneName }],
+    );
+    // Reveal the deck's hidden cards: dump the local player's library and let the
+    // Response_DumpZone card list flow into the store (read back via getRevealedCards).
+    // Re-opening an already-open view is a no-op (don't re-dump), matching desktop.
+    if (
+      !alreadyOpen &&
+      gameId != null &&
+      playerId === game?.localPlayerId &&
+      zoneName === Enriched.ZoneName.DECK
+    ) {
+      webClient.request.game.dumpZone(gameId, { playerId, zoneName, numberCards: -1, isReversed: false });
+    }
+  }, [zoneViews, gameId, game, webClient]);
 
-  const handleCloseZoneView = useCallback((playerId: number, zoneName: string) => {
+  const handleCloseZoneView = useCallback((playerId: number, zoneName: string, shuffleOnClose?: boolean) => {
     setZoneViews((prev) =>
       prev.filter((v) => !(v.playerId === playerId && v.zoneName === zoneName)),
     );
-  }, []);
+    // Closing a deck view shuffles the library (desktop "shuffle on close") and discards the
+    // revealed snapshot so a later view re-dumps fresh.
+    if (gameId != null && playerId === game?.localPlayerId && zoneName === Enriched.ZoneName.DECK) {
+      if (shuffleOnClose) {
+        webClient.request.game.shuffle(gameId, { zoneName, start: 0, end: -1 });
+      }
+      dispatch(games.Actions.zoneViewCleared({ gameId, playerId, zoneName }));
+    }
+  }, [gameId, game, webClient, dispatch]);
 
   // Mutual exclusion: only one in-game context menu is open at a time.
   // Each `handle*ContextMenu` calls this before opening its own menu so the

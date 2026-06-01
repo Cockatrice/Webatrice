@@ -533,6 +533,23 @@ describe('game', () => {
     }));
     expect(getMockResponse().game.zoneDumped).toHaveBeenCalled();
 
+    // The dump's card list arrives in the command's Response_DumpZone (not the event) and is
+    // routed to the store via zoneViewRevealed.
+    deliverMessage(buildResponseMessage(buildResponse({
+      cmdId: findLastGameCommand(Data.Command_DumpZone_ext).cmdId,
+      responseCode: Data.Response_ResponseCode.RespOk,
+      ext: Data.Response_DumpZone_ext,
+      value: create(Data.Response_DumpZoneSchema, {
+        zoneInfo: create(Data.ServerInfo_ZoneSchema, {
+          name: 'deck',
+          cardList: [create(Data.ServerInfo_CardSchema, { id: 0, name: 'Forest' })],
+        }),
+      }),
+    })));
+    expect(getMockResponse().game.zoneViewRevealed).toHaveBeenCalledWith(
+      42, 1, 'deck', expect.arrayContaining([expect.objectContaining({ name: 'Forest' })]),
+    );
+
     GameCommands.changeZoneProperties(42, { zoneName: 'deck', alwaysRevealTopCard: true });
     expect(findLastGameCommand(Data.Command_ChangeZoneProperties_ext).value.alwaysRevealTopCard).toBe(true);
 

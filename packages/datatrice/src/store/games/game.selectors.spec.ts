@@ -122,6 +122,30 @@ describe('Selectors', () => {
     expect(Selectors.getCards(rootState(state), 1, 1, 'nonexistent')).toEqual([]);
   });
 
+  it('getRevealedCards → returns the zone.revealedCards snapshot', () => {
+    const cards = [makeCard({ id: 0 }), makeCard({ id: 1 })];
+    const state = makeState({
+      games: {
+        1: makeGameEntry({
+          players: { 1: makePlayerEntry({ zones: { deck: makeZoneEntry({ name: 'deck', cards: [] }) } }) },
+        }),
+      },
+    });
+    state.games[1].players[1].zones['deck'].revealedCards = cards;
+    expect(Selectors.getRevealedCards(rootState(state), 1, 1, 'deck')).toBe(cards);
+  });
+
+  it('getRevealedCards → returns [] when no revealed snapshot is present', () => {
+    const state = makeState({
+      games: {
+        1: makeGameEntry({
+          players: { 1: makePlayerEntry({ zones: { deck: makeZoneEntry({ name: 'deck', cards: [] }) } }) },
+        }),
+      },
+    });
+    expect(Selectors.getRevealedCards(rootState(state), 1, 1, 'deck')).toEqual([]);
+  });
+
   it('getCounters → returns counters map for a player', () => {
     const counter = makeCounter({ id: 2 });
     const state = makeState({

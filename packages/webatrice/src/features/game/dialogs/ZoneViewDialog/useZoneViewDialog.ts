@@ -41,11 +41,19 @@ export function useZoneViewDialog({
   zoneName,
   initialPosition,
 }: UseZoneViewDialogArgs): ZoneViewDialog {
-  const cards = useAppSelector((state) =>
+  const zoneCards = useAppSelector((state) =>
     gameId != null && playerId != null && zoneName != null
       ? games.Selectors.getCards(state, gameId, playerId, zoneName)
       : EMPTY_CARDS,
   );
+  // Hidden zones (the deck) hold no card data in byId; their face-up contents arrive via
+  // Response_DumpZone and are stored separately. Prefer the revealed snapshot when present.
+  const revealedCards = useAppSelector((state) =>
+    gameId != null && playerId != null && zoneName != null
+      ? games.Selectors.getRevealedCards(state, gameId, playerId, zoneName)
+      : EMPTY_CARDS,
+  );
+  const cards = revealedCards.length > 0 ? revealedCards : zoneCards;
   const zone = useAppSelector((state) =>
     gameId != null && playerId != null && zoneName != null
       ? games.Selectors.getZone(state, gameId, playerId, zoneName)
