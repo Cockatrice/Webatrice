@@ -97,9 +97,11 @@ jobs:
           SITE_URL: ${{ vars.SITE_URL }}
         run: |
           set -eu
+          echo "Polling ${SITE_URL%/}/version.txt for SHA $EXPECTED_SHA"
           for i in $(seq 1 10); do
             ACTUAL=$(curl -fsSL --max-time 10 "${SITE_URL%/}/version.txt" 2>/dev/null | tr -d '\n' || true)
             if [ "$ACTUAL" = "$EXPECTED_SHA" ]; then
+              echo "Attempt $i: live site serving expected SHA $EXPECTED_SHA"
               echo "Live site serving expected SHA $EXPECTED_SHA" >> "$GITHUB_STEP_SUMMARY"
               exit 0
             fi

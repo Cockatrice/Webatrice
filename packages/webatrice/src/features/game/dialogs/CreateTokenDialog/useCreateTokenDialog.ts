@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 
-import { TokenDTO } from '@app/services';
+import { TokenDTO, dexieService } from '@app/services';
 
 import type { CreateTokenSubmit } from './CreateTokenDialog';
 
@@ -112,18 +112,14 @@ export function useCreateTokenDialog({
       return;
     }
     let cancelled = false;
-    // Best-effort load of the token library. On failure the chooser renders
-    // empty and freeform creation still works.
-    import('@app/services').then(({ dexieService }) => {
-      dexieService.tokens.toArray().then((tokens: TokenDTO[]) => {
-        if (!cancelled) {
-          setAvailableTokens(tokens);
-        }
-      }).catch(() => {
-        if (!cancelled) {
-          setAvailableTokens([]);
-        }
-      });
+    dexieService.tokens.toArray().then((tokens: TokenDTO[]) => {
+      if (!cancelled) {
+        setAvailableTokens(tokens);
+      }
+    }).catch(() => {
+      if (!cancelled) {
+        setAvailableTokens([]);
+      }
     });
     return () => {
       cancelled = true;

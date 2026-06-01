@@ -77,6 +77,35 @@ export default defineConfig({
   publicDir: 'public',
   build: {
     outDir: 'build',
+    rollupOptions: {
+      output: {
+        // Split heavy, stable third-party libraries out of the entry chunk so
+        // it stays under the 500 kB warning limit and vendor code caches across
+        // deploys. Order matters: more specific matches come first (e.g.
+        // react-i18next is matched by i18n before the generic react bucket).
+        manualChunks(id) {
+          if (!id.includes('node_modules')) {
+            return undefined;
+          }
+          if (id.includes('@mui') || id.includes('@emotion')) {
+            return 'vendor-mui';
+          }
+          if (id.includes('@dnd-kit')) {
+            return 'vendor-dnd';
+          }
+          if (id.includes('i18next')) {
+            return 'vendor-i18n';
+          }
+          if (id.includes('@bufbuild') || id.includes('@cockatrice')) {
+            return 'vendor-cockatrice';
+          }
+          if (id.includes('redux') || id.includes('/react') || id.includes('react-')) {
+            return 'vendor-react';
+          }
+          return 'vendor';
+        },
+      },
+    },
   },
   server: {
     open: true,
