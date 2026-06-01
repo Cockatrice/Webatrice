@@ -1,11 +1,13 @@
-import { useMemo } from 'react';
-import { DndContext } from '@dnd-kit/core';
+import { useCallback, useMemo } from 'react';
+import { DndContext, type DragStartEvent } from '@dnd-kit/core';
 
 import { AuthGuard } from '@app/components';
 import { Layout } from '@app/feature-wrappers/layout';
 import { ConfirmDialog, PromptDialog } from '@app/dialogs';
 import { Enriched } from '@cockatrice/datatrice';
+import { ServerInfo_Card } from '@cockatrice/sockatrice/generated';
 import GameArrowOverlay from './components/arrows/GameArrowOverlay/GameArrowOverlay';
+import BoxSelectOverlay from './components/ui/BoxSelectOverlay/BoxSelectOverlay';
 import CardContextMenu from './components/context-menus/CardContextMenu/CardContextMenu';
 import HandContextMenu from './components/context-menus/HandContextMenu/HandContextMenu';
 import PlayerContextMenu from './components/context-menus/PlayerContextMenu/PlayerContextMenu';
@@ -23,10 +25,13 @@ import RollDieDialog from './dialogs/RollDieDialog/RollDieDialog';
 import SideboardDialog, { cardsFromZone } from './dialogs/SideboardDialog/SideboardDialog';
 import ZoneViewDialog from './dialogs/ZoneViewDialog/ZoneViewDialog';
 import { useGame } from './hooks/useGame';
-import { CardRegistryContext } from './utils/CardRegistry/CardRegistryContext';
+import { CardRegistryContext, makeCardKey } from './utils/CardRegistry/CardRegistryContext';
+import { resolveSelectedCards, type SelectedCard } from './utils/selection';
 import { GameInteractionProvider } from './components/ui/GameInteractionContext';
 
 import './Game.css';
+
+const EMPTY_BULK_TARGETS: ReadonlyArray<SelectedCard> = [];
 
 function Game() {
   const g = useGame();
@@ -40,9 +45,12 @@ function Game() {
     sensors,
     setHoveredCard,
     previewCard,
-    selectedCardKey,
+    selectedCardKeys,
     onCardFocus,
     onCardBlur,
+    collapseUnlessSelected,
+    handleGameMouseDown,
+    boxSelectPreview,
     slotAAccess,
     slotBAccess,
     deckSelectOpen,
@@ -77,6 +85,35 @@ function Game() {
     ],
   );
 
+  // Drag-start: cancel any pending arrow, then apply the collapse rule so the
+  // dragged card becomes the selection unless it's already part of it.
+  const handleDragStart = useCallback(
+    (event: DragStartEvent) => {
+      arrows.cancelPendingOnDragStart();
+      const data = event.active.data.current as
+        | { card: ServerInfo_Card; sourcePlayerId?: number; sourceZone?: string }
+        | undefined;
+      if (data?.card) {
+        collapseUnlessSelected(data.sourcePlayerId, data.sourceZone, data.card);
+      }
+    },
+    [arrows, collapseUnlessSelected],
+  );
+
+  // Bulk targets for the card menu: only when the right-clicked card is part of
+  // a multi-selection (size ≥ 2). Empty otherwise → menu acts on the one card.
+  const bulkTargets = useMemo<ReadonlyArray<SelectedCard>>(() => {
+    const menu = dialogs.cardMenu;
+    if (!game || !menu || selectedCardKeys.size < 2) {
+      return EMPTY_BULK_TARGETS;
+    }
+    const menuKey = makeCardKey(menu.sourcePlayerId, menu.sourceZone, menu.card.id);
+    if (!selectedCardKeys.has(menuKey)) {
+      return EMPTY_BULK_TARGETS;
+    }
+    return resolveSelectedCards(game, selectedCardKeys);
+  }, [game, dialogs.cardMenu, selectedCardKeys]);
+
   return (
     <Layout>
       <AuthGuard />
@@ -84,10 +121,15 @@ function Game() {
         <DndContext
           sensors={sensors}
           collisionDetection={dnd.collisionDetection}
-          onDragStart={arrows.cancelPendingOnDragStart}
+          onDragStart={handleDragStart}
           onDragEnd={dnd.handleDragEnd}
         >
-          <div className="game" data-testid="game-container" ref={gameRef}>
+          <div
+            className="game"
+            data-testid="game-container"
+            ref={gameRef}
+            onMouseDown={handleGameMouseDown}
+          >
             <PhaseBar gameId={gameId} />
 
             <div
@@ -117,7 +159,7 @@ function Game() {
                         canAct={slotBAccess.canAct}
                         arrowSourceKey={arrows.arrowSourceKey}
                         arrowTargetKey={arrows.arrowTargetKey}
-                        selectedCardKey={selectedCardKey}
+                        selectedCardKeys={selectedCardKeys}
                         onHandContextMenu={
                           slots.slotBPlayerId === game.localPlayerId
                             ? dialogs.handleHandContextMenu
@@ -135,7 +177,7 @@ function Game() {
                         canEditCounters={slotBAccess.canAct}
                         arrowSourceKey={arrows.arrowSourceKey}
                         arrowTargetKey={arrows.arrowTargetKey}
-                        selectedCardKey={selectedCardKey}
+                        selectedCardKeys={selectedCardKeys}
                         onPlayerClick={arrows.handlePlayerClick}
                         players={slots.players}
                         onSelectPlayer={slots.setSlotBPlayerId}
@@ -149,7 +191,7 @@ function Game() {
                       canEditCounters={slotAAccess.canAct}
                       arrowSourceKey={arrows.arrowSourceKey}
                       arrowTargetKey={arrows.arrowTargetKey}
-                      selectedCardKey={selectedCardKey}
+                      selectedCardKeys={selectedCardKeys}
                       onPlayerContextMenu={dialogs.handlePlayerContextMenu}
                       onPlayerClick={arrows.handlePlayerClick}
                       players={slots.players}
@@ -162,7 +204,7 @@ function Game() {
                         canAct={slotAAccess.canAct}
                         arrowSourceKey={arrows.arrowSourceKey}
                         arrowTargetKey={arrows.arrowTargetKey}
-                        selectedCardKey={selectedCardKey}
+                        selectedCardKeys={selectedCardKeys}
                         onHandContextMenu={
                           slots.slotAPlayerId === game.localPlayerId
                             ? dialogs.handleHandContextMenu
@@ -186,6 +228,8 @@ function Game() {
 
             <GameArrowOverlay gameId={gameId} containerRef={gameRef} dragPreview={arrows.dragPreview} />
 
+            <BoxSelectOverlay preview={boxSelectPreview} />
+
             <DeckSelectDialog isOpen={deckSelectOpen} gameId={gameId} />
 
             {dialogs.zoneViews.map((v, idx) => (
@@ -197,10 +241,13 @@ function Game() {
                 zoneName={v.zoneName}
                 handleClose={() => dialogs.handleCloseZoneView(v.playerId, v.zoneName)}
                 initialPosition={{ x: 80 + idx * 36, y: 80 + idx * 36 }}
-                selectedCardKey={selectedCardKey}
+                selectedCardKeys={selectedCardKeys}
                 onCardHover={setHoveredCard}
                 onCardFocus={onCardFocus}
                 onCardBlur={onCardBlur}
+                onCardClick={interactionHandlers.onCardClick}
+                onCardContextMenu={interactionHandlers.onCardContextMenu}
+                onCardDoubleClick={interactionHandlers.onCardDoubleClick}
               />
             ))}
 
@@ -212,6 +259,7 @@ function Game() {
               card={dialogs.cardMenu?.card ?? null}
               ownerPlayerId={dialogs.cardMenu?.sourcePlayerId ?? null}
               sourceZone={dialogs.cardMenu?.sourceZone ?? null}
+              bulkTargets={bulkTargets}
               onClose={dialogs.closeCardMenu}
               onRequestSetPT={dialogs.handleRequestSetPT}
               onRequestSetAnnotation={dialogs.handleRequestSetAnnotation}

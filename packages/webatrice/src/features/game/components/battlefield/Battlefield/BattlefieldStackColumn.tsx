@@ -54,7 +54,7 @@ export interface BattlefieldStackColumnProps {
   ownerPlayerId: number;
   arrowSourceKey: string | null;
   arrowTargetKey: string | null;
-  selectedCardKey: string | null;
+  selectedCardKeys: ReadonlySet<string>;
 }
 
 function BattlefieldStackColumn({
@@ -64,7 +64,7 @@ function BattlefieldStackColumn({
   ownerPlayerId,
   arrowSourceKey,
   arrowTargetKey,
-  selectedCardKey,
+  selectedCardKeys,
 }: BattlefieldStackColumnProps) {
   const { widthPx, heightPx } = computeStackFootprint(cards, attachmentsByParent);
   const slotHeightPct = roundPercent((CARD_HEIGHT_PX * 100) / heightPx);
@@ -101,7 +101,7 @@ function BattlefieldStackColumn({
               ownerPlayerId={ownerPlayerId}
               arrowSourceKey={arrowSourceKey}
               arrowTargetKey={arrowTargetKey}
-              selectedCardKey={selectedCardKey}
+              selectedCardKeys={selectedCardKeys}
             />
           </div>
         );

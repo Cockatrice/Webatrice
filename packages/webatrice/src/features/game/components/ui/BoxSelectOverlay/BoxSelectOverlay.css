@@ -1,0 +1,11 @@
+.box-select-overlay {
+  position: fixed;
+  /* Above the zone-view dialog (z-index: 1200) so a band drawn inside a dialog
+     paints over its cards. */
+  z-index: 1300;
+  pointer-events: none;
+  border: 1px solid var(--color-selection, #5fb3ff);
+  background: var(--color-selection-glow, rgba(95, 179, 255, 0.55));
+  opacity: 0.35;
+  border-radius: 2px;
+}

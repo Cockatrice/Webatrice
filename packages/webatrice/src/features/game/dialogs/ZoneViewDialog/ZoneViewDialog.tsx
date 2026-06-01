@@ -6,6 +6,7 @@ import { ServerInfo_Card } from '@cockatrice/sockatrice/generated';
 
 import CardSlot from '../../components/ui/CardSlot/CardSlot';
 import { makeCardKey } from '../../utils/CardRegistry/CardRegistryContext';
+import { EMPTY_SELECTION } from '../../utils/selection';
 import { useZoneViewDialog } from './useZoneViewDialog';
 
 import './ZoneViewDialog.css';
@@ -17,10 +18,13 @@ export interface ZoneViewDialogProps {
   zoneName: string | undefined;
   handleClose: () => void;
   initialPosition?: { x: number; y: number };
-  selectedCardKey?: string | null;
+  selectedCardKeys?: ReadonlySet<string>;
   onCardHover?: (card: ServerInfo_Card) => void;
   onCardFocus?: (ownerPlayerId: number | undefined, zone: string | undefined, card: ServerInfo_Card) => void;
   onCardBlur?: (ownerPlayerId: number | undefined, zone: string | undefined, card: ServerInfo_Card) => void;
+  onCardClick?: (ownerPlayerId: number | undefined, zone: string | undefined, card: ServerInfo_Card) => void;
+  onCardContextMenu?: (ownerPlayerId: number | undefined, zone: string | undefined, card: ServerInfo_Card, event: React.MouseEvent) => void;
+  onCardDoubleClick?: (ownerPlayerId: number | undefined, zone: string | undefined, card: ServerInfo_Card) => void;
 }
 
 const DEFAULT_POSITION = { x: 80, y: 80 };
@@ -32,10 +36,13 @@ function ZoneViewDialog({
   zoneName,
   handleClose,
   initialPosition = DEFAULT_POSITION,
-  selectedCardKey = null,
+  selectedCardKeys = EMPTY_SELECTION,
   onCardHover,
   onCardFocus,
   onCardBlur,
+  onCardClick,
+  onCardContextMenu,
+  onCardDoubleClick,
 }: ZoneViewDialogProps) {
   const { cards, count, title, position, handlePointerDown, handlePointerMove, handlePointerUp } =
     useZoneViewDialog({ gameId, playerId, zoneName, initialPosition });
@@ -82,7 +89,7 @@ function ZoneViewDialog({
           <CloseIcon fontSize="small" />
         </IconButton>
       </div>
-      <div className="zone-view-dialog__body scrollable">
+      <div className="zone-view-dialog__body scrollable" data-zone-box-select="">
         {cards.length === 0 ? (
           <div className="zone-view-dialog__empty">
             {count > 0
@@ -102,10 +109,13 @@ function ZoneViewDialog({
                     card={card}
                     ownerPlayerId={playerId}
                     zone={zoneName}
-                    isSelected={key != null && selectedCardKey === key}
+                    isSelected={key != null && selectedCardKeys.has(key)}
                     onMouseEnter={onCardHover}
                     onFocus={onCardFocus}
                     onBlur={onCardBlur}
+                    onClick={onCardClick}
+                    onContextMenu={onCardContextMenu}
+                    onDoubleClick={onCardDoubleClick}
                   />
                 </div>
               );

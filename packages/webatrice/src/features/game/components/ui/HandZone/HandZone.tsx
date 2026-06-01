@@ -3,6 +3,7 @@ import { cx } from '@app/utils';
 
 import CardSlot from '../CardSlot/CardSlot';
 import { makeCardKey } from '../../../utils/CardRegistry/CardRegistryContext';
+import { EMPTY_SELECTION } from '../../../utils/selection';
 import { useGameInteraction } from '../GameInteractionContext';
 import { useHandZone } from './useHandZone';
 
@@ -14,7 +15,7 @@ export interface HandZoneProps {
   canAct?: boolean;
   arrowSourceKey?: string | null;
   arrowTargetKey?: string | null;
-  selectedCardKey?: string | null;
+  selectedCardKeys?: ReadonlySet<string>;
   onHandContextMenu?: (event: React.MouseEvent) => void;
 }
 
@@ -24,7 +25,7 @@ function HandZone({
   canAct = false,
   arrowSourceKey = null,
   arrowTargetKey = null,
-  selectedCardKey = null,
+  selectedCardKeys = EMPTY_SELECTION,
   onHandContextMenu,
 }: HandZoneProps) {
   const { onCardHover, onCardClick, onCardContextMenu, onCardDoubleClick, onCardFocus, onCardBlur } = useGameInteraction();
@@ -55,7 +56,7 @@ function HandZone({
               dropIndex={idx}
               isArrowSource={arrowSourceKey === key}
               isArrowTarget={arrowTargetKey === key}
-              isSelected={selectedCardKey === key}
+              isSelected={selectedCardKeys.has(key)}
               onMouseEnter={onCardHover}
               onFocus={onCardFocus}
               onBlur={onCardBlur}

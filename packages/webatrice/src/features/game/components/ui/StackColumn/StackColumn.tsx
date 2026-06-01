@@ -7,6 +7,7 @@ import { cx } from '@app/utils';
 
 import CardSlot from '../CardSlot/CardSlot';
 import { makeCardKey } from '../../../utils/CardRegistry/CardRegistryContext';
+import { EMPTY_SELECTION } from '../../../utils/selection';
 import { useGameInteraction } from '../GameInteractionContext';
 
 import './StackColumn.css';
@@ -18,7 +19,7 @@ export interface StackColumnProps {
   canAct?: boolean;
   arrowSourceKey?: string | null;
   arrowTargetKey?: string | null;
-  selectedCardKey?: string | null;
+  selectedCardKeys?: ReadonlySet<string>;
 }
 
 function StackColumn({
@@ -28,7 +29,7 @@ function StackColumn({
   canAct = false,
   arrowSourceKey = null,
   arrowTargetKey = null,
-  selectedCardKey = null,
+  selectedCardKeys = EMPTY_SELECTION,
 }: StackColumnProps) {
   const { onCardHover, onCardClick, onCardContextMenu, onCardDoubleClick, onCardFocus, onCardBlur } = useGameInteraction();
   const zone = useAppSelector((state) =>
@@ -64,7 +65,7 @@ function StackColumn({
               dropIndex={idx}
               isArrowSource={arrowSourceKey === key}
               isArrowTarget={arrowTargetKey === key}
-              isSelected={selectedCardKey === key}
+              isSelected={selectedCardKeys.has(key)}
               onMouseEnter={onCardHover}
               onFocus={onCardFocus}
               onBlur={onCardBlur}

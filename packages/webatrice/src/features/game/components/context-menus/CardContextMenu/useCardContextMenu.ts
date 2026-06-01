@@ -1,6 +1,8 @@
 import { useWebClient } from '@cockatrice/datatrice/react';
 import { CardAttribute, ServerInfo_Card } from '@cockatrice/sockatrice/generated';
 import { Enriched } from '@cockatrice/datatrice';
+import { dispatchBulkMove, dispatchBulkTap } from '../../../utils/bulkCardActions';
+import type { SelectedCard } from '../../../utils/selection';
 interface MoveTarget {
   label: string;
   zone: string;
@@ -50,6 +52,9 @@ export interface UseCardContextMenuArgs {
   card: ServerInfo_Card | null;
   ownerPlayerId: number | null;
   sourceZone: string | null;
+  // The full multi-selection when the right-clicked card is part of it (size ≥ 2);
+  // empty otherwise. Tap/Move act on the whole set when present.
+  bulkTargets?: ReadonlyArray<SelectedCard>;
   onClose: () => void;
   onRequestSetPT: () => void;
   onRequestSetAnnotation: () => void;
@@ -60,12 +65,15 @@ export interface UseCardContextMenuArgs {
   onRequestMoveToLibraryAt: () => void;
 }
 
+const EMPTY_BULK_TARGETS: ReadonlyArray<SelectedCard> = [];
+
 export function useCardContextMenu({
   gameId,
   localPlayerId,
   card,
   ownerPlayerId,
   sourceZone,
+  bulkTargets = EMPTY_BULK_TARGETS,
   onClose,
   onRequestSetPT,
   onRequestSetAnnotation,
@@ -116,7 +124,12 @@ export function useCardContextMenu({
     if (!ready) {
       return;
     }
-    setAttr(CardAttribute.AttrTapped, card!.tapped ? '0' : '1');
+    const tableTargets = bulkTargets.filter((t) => t.zone === Enriched.ZoneName.TABLE);
+    if (tableTargets.length > 1) {
+      dispatchBulkTap(webClient, gameId, tableTargets);
+    } else {
+      setAttr(CardAttribute.AttrTapped, card!.tapped ? '0' : '1');
+    }
     onClose();
   };
 
@@ -188,16 +201,25 @@ export function useCardContextMenu({
       return;
     }
     // targetPlayerId = local (acting player), per desktop actMoveCardTo*.
-    webClient.request.game.moveCard(gameId, {
-      startPlayerId: ownerPlayerId!,
-      startZone: sourceZone!,
-      cardsToMove: { card: [{ cardId: card!.id }] },
-      targetPlayerId: localPlayerId!,
-      targetZone: target.zone,
-      x: target.x,
-      y: target.y,
-      isReversed: false,
-    });
+    if (bulkTargets.length > 1) {
+      dispatchBulkMove(webClient, gameId, bulkTargets, {
+        targetPlayerId: localPlayerId!,
+        targetZone: target.zone,
+        x: target.x,
+        y: target.y,
+      });
+    } else {
+      webClient.request.game.moveCard(gameId, {
+        startPlayerId: ownerPlayerId!,
+        startZone: sourceZone!,
+        cardsToMove: { card: [{ cardId: card!.id }] },
+        targetPlayerId: localPlayerId!,
+        targetZone: target.zone,
+        x: target.x,
+        y: target.y,
+        isReversed: false,
+      });
+    }
     onClose();
   };
 
