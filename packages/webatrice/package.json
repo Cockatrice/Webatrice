@@ -3,11 +3,12 @@
   "version": "4.0.7",
   "private": true,
   "scripts": {
-    "start": "vite",
+    "dev": "vite",
     "preview": "vite preview",
     "build": "vite build",
     "lint": "eslint src",
     "lint:fix": "eslint src --fix",
+    "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:coverage": "npm run test -- --coverage",
     "test:watch": "vitest",
@@ -23,7 +24,7 @@
     "golden": "npm run lint && npm run test && npm run test:integration",
     "golden:coverage": "npm run lint && npm run test:coverage && npm run test:integration:coverage",
     "prebuild": "node prebuild.js",
-    "prestart": "node prebuild.js",
+    "predev": "node prebuild.js",
     "translate": "node prebuild.js -i18nOnly"
   },
   "dependencies": {

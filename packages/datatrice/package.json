@@ -41,7 +41,7 @@
   ],
   "scripts": {
     "build": "tsup",
-    "watch": "tsup --watch --no-dts",
+    "dev": "tsup --watch --no-dts",
     "typecheck": "tsc -p tsconfig.build.json --noEmit",
     "lint": "eslint src",
     "lint:fix": "eslint src --fix",
