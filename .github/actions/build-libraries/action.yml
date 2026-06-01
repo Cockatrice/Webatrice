@@ -1,9 +1,20 @@
-name: Build libraries (cached)
+name: Build libraries
 description: |
-  Restores or builds @cockatrice/sockatrice and @cockatrice/datatrice dist/
-  from a content-addressed cache. Lazily initializes the vendor/cockatrice
-  submodule (sparse) only when the cache misses, so cache hits avoid the
+  Builds @cockatrice/sockatrice and @cockatrice/datatrice dist/, optionally
+  served from a content-addressed cache. Lazily initializes the vendor/cockatrice
+  submodule (sparse) only when a build actually runs, so cache hits avoid the
   submodule fetch entirely. Consumer must have run `npm clean-install` first.
+
+  Set `cache: 'false'` to always build from source and never read or write the
+  shared cache — required for publish/release, where a stale or partial cached
+  dist (e.g. a build cancelled between tsup and the declaration pass) would
+  silently ship a declaration-less dist. CI test jobs leave it on (they only
+  need the runtime JS, which the cache serves fine).
+
+inputs:
+  cache:
+    description: Restore/save the dist cache. 'false' forces a fresh build.
+    default: 'true'
 
 runs:
   using: composite
@@ -12,6 +23,7 @@ runs:
     # returns the tree/blob SHA without reading file contents — same content =
     # same SHA, regardless of working-tree state.
     - name: Compute cache key
+      if: inputs.cache == 'true'
       id: key
       shell: bash
       run: |
@@ -22,6 +34,7 @@ runs:
         echo "key=lib-dists-${{ runner.os }}-${VEND}-${SOCK}-${DATA}-${LOCK}" >> "$GITHUB_OUTPUT"
 
     - name: Restore library dists cache
+      if: inputs.cache == 'true'
       id: cache
       uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5.0.5
       with:
@@ -31,6 +44,8 @@ runs:
           packages/datatrice/dist
         key: ${{ steps.key.outputs.key }}
 
+    # When cache is disabled the Restore step is skipped, so cache-hit is the
+    # empty string and every build step below runs — a fresh build from source.
     - name: Init vendor submodule (sparse)
       if: steps.cache.outputs.cache-hit != 'true'
       shell: bash
