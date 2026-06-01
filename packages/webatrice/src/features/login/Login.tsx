@@ -6,8 +6,8 @@ import Paper from '@mui/material/Paper';
 import Typography from '@mui/material/Typography';
 
 import { LanguageDropdown } from '@app/components';
+import { useVersion } from '@app/hooks';
 import { Images } from '@app/images';
-import { serverProps } from '@app/services';
 import { Layout } from '@app/feature-wrappers/layout';
 import { RouteEnum } from '@app/types';
 import RegistrationDialog from './dialogs/RegistrationDialog/RegistrationDialog';
@@ -84,6 +84,7 @@ const Login = () => {
     openRegistrationDialog,
     closeActivateAccountDialog,
   } = useLogin();
+  const version = useVersion();
 
   return (
     <Layout showNav={false} noHeightLimit={true}>
@@ -122,9 +123,9 @@ const Login = () => {
                   {t('Login.footer.credit')} - {new Date().getUTCFullYear()}
                 </Typography>
 
-                {serverProps.REACT_APP_VERSION && (
+                {version && (
                   <Typography variant="subtitle2">
-                    {t('Login.footer.version')}: {serverProps.REACT_APP_VERSION}
+                    {t('Login.footer.version')}: {version}
                   </Typography>
                 )}
 

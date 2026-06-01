@@ -1,5 +1,5 @@
-# generated ./src files
-/src/server-props.json
+# generated files
+/public/version.txt
 
 # testing
 /coverage

@@ -4,3 +4,4 @@ export * from './useLocaleSort';
 export * from './useReduxEffect';
 export * from './useSettings';
 export * from './useSharedStore';
+export * from './useVersion';

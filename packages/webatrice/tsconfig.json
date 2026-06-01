@@ -38,9 +38,5 @@
   },
   "include": [
     "src"
-  ],
-  "references": [
-    { "path": "../sockatrice/tsconfig.build.json" },
-    { "path": "../datatrice/tsconfig.build.json" }
   ]
 }

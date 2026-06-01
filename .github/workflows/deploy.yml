@@ -68,7 +68,7 @@ jobs:
         env:
           SITE_URL: ${{ vars.SITE_URL }}
         run: |
-          sha="$(cat build/.deploy-sha)"
+          sha="$(tr -d '\n' < build/version.txt)"
           echo "sha=$sha" >> "$GITHUB_OUTPUT"
           echo "Deploying commit \`$sha\` to $SITE_URL" >> "$GITHUB_STEP_SUMMARY"
 
@@ -89,9 +89,8 @@ jobs:
             ./build/ "$DEPLOY_USER@$DEPLOY_HOST:"
 
       # Smoke test: confirm the live site is up and serving the SHA we just
-      # rsynced. Webatrice writes the commit SHA into src/server-props.json
-      # during prebuild; the same file is shipped in the tarball and served
-      # at /server-props.json. If the deploy succeeded, this curl returns it.
+      # rsynced. prebuild.js writes the commit SHA into public/version.txt,
+      # which Vite copies to build/ and the server exposes at /version.txt.
       - name: Smoke test deployed site
         env:
           EXPECTED_SHA: ${{ steps.sha.outputs.sha }}
@@ -99,7 +98,7 @@ jobs:
         run: |
           set -eu
           for i in $(seq 1 10); do
-            ACTUAL=$(curl -fsSL --max-time 10 "${SITE_URL%/}/server-props.json" 2>/dev/null | jq -r '.REACT_APP_VERSION // empty' || true)
+            ACTUAL=$(curl -fsSL --max-time 10 "${SITE_URL%/}/version.txt" 2>/dev/null | tr -d '\n' || true)
             if [ "$ACTUAL" = "$EXPECTED_SHA" ]; then
               echo "Live site serving expected SHA $EXPECTED_SHA" >> "$GITHUB_STEP_SUMMARY"
               exit 0
