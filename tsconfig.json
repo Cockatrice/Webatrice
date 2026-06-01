@@ -1,7 +1,0 @@
-{
-  "files": [],
-  "references": [
-    { "path": "./packages/sockatrice/tsconfig.build.json" },
-    { "path": "./packages/datatrice/tsconfig.build.json" }
-  ]
-}

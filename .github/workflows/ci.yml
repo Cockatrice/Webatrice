@@ -46,7 +46,6 @@ jobs:
               - 'vendor/cockatrice/libcockatrice_protocol/**'
               - 'packages/sockatrice/buf.gen.*'
             root:
-              - 'tsconfig.json'
               - 'tsconfig.base.json'
               - 'package.json'
               - 'package-lock.json'
@@ -99,11 +98,9 @@ jobs:
       - name: Generate proto bindings
         run: npm run -w @cockatrice/sockatrice proto:generate
 
-      - name: Typecheck library graph
-        run: npx tsc -b packages/sockatrice/tsconfig.build.json packages/datatrice/tsconfig.build.json
 
-      - name: Typecheck app
-        run: npx tsc --noEmit -p packages/webatrice/tsconfig.json
+      - name: Typecheck
+        run: npm run typecheck
 
   lint:
     name: Lint (Node ${{ matrix.node_version }})
