@@ -84,6 +84,10 @@ export interface ZoneEntry {
   byId: { [cardId: number]: ServerInfo_Card };
   alwaysRevealTopCard: boolean;
   alwaysLookAtTopCard: boolean;
+  // Transient dump-zone view (e.g. "View library"): the face-up card list returned by
+  // Response_DumpZone. Kept apart from byId/order because HiddenZone dumps reference cards
+  // by list index (0..N-1), which would collide with real card ids. Cleared when the view closes.
+  revealedCards?: ServerInfo_Card[];
 }
 
 export interface GameMessage {

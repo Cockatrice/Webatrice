@@ -1757,6 +1757,53 @@ describe('2I: Zone operations', () => {
     expect(stored.counterList).not.toBe(revealedCard.counterList);
   });
 
+  it('ZONE_VIEW_REVEALED → stores the dump card list on zone.revealedCards', () => {
+    const state = makeState({
+      games: {
+        1: makeGameEntry({
+          players: {
+            1: makePlayerEntry({
+              zones: { deck: makeZoneEntry({ name: 'deck', cards: [], cardCount: 3 }) },
+            }),
+          },
+        }),
+      },
+    });
+
+    const cards = [makeCard({ id: 0, name: 'Forest' }), makeCard({ id: 1, name: 'Island' })];
+    const result = gamesReducer(state, Actions.zoneViewRevealed({
+      gameId: 1, playerId: 1, zoneName: 'deck', cards,
+    }));
+
+    expect(result.games[1].players[1].zones['deck'].revealedCards).toBe(cards);
+  });
+
+  it('ZONE_VIEW_CLEARED → removes zone.revealedCards', () => {
+    const state = makeState({
+      games: {
+        1: makeGameEntry({
+          players: {
+            1: makePlayerEntry({
+              zones: { deck: makeZoneEntry({ name: 'deck', cards: [], cardCount: 3 }) },
+            }),
+          },
+        }),
+      },
+    });
+    state.games[1].players[1].zones['deck'].revealedCards = [makeCard({ id: 0 })];
+
+    const result = gamesReducer(state, Actions.zoneViewCleared({ gameId: 1, playerId: 1, zoneName: 'deck' }));
+
+    expect(result.games[1].players[1].zones['deck'].revealedCards).toBeUndefined();
+  });
+
+  it('ZONE_VIEW_REVEALED with unknown zone → state unchanged', () => {
+    const state = makeState();
+    expect(gamesReducer(state, Actions.zoneViewRevealed({
+      gameId: 1, playerId: 1, zoneName: 'nonexistent', cards: [],
+    }))).toBe(state);
+  });
+
   it('ZONE_PROPERTIES_CHANGED → sets alwaysRevealTopCard and alwaysLookAtTopCard', () => {
     const state = makeState();
     const result = gamesReducer(state, Actions.zonePropertiesChanged({

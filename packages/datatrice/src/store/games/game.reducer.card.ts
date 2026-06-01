@@ -12,6 +12,7 @@ import {
   Event_RevealCards,
   Event_SetCardAttr,
   Event_SetCardCounter,
+  ServerInfo_Card,
 } from '@cockatrice/sockatrice/generated';
 import { GamesState } from './game.interfaces';
 import { pushEventMessage } from './game.reducer.helpers';
@@ -82,6 +83,29 @@ export const cardReducers = {
       zone.byId[revealedCard.id] = { ...revealedCard, counterList: [...revealedCard.counterList] };
     }
   }) as CaseReducer<GamesState, PayloadAction<{ gameId: number; playerId: number; data: Event_RevealCards }>>,
+
+  zoneViewRevealed: ((state, action) => {
+    const { gameId, playerId, zoneName, cards } = action.payload;
+    const zone = state.games[gameId]?.players[playerId]?.zones[zoneName];
+    if (!zone) {
+      return;
+    }
+    // Store the Response_DumpZone card list verbatim (face-up, list-index ids). Do not spread the
+    // protobuf messages — that would drop unset optional fields.
+    zone.revealedCards = cards;
+  }) as CaseReducer<
+    GamesState,
+    PayloadAction<{ gameId: number; playerId: number; zoneName: string; cards: ServerInfo_Card[] }>
+  >,
+
+  zoneViewCleared: ((state, action) => {
+    const { gameId, playerId, zoneName } = action.payload;
+    const zone = state.games[gameId]?.players[playerId]?.zones[zoneName];
+    if (!zone) {
+      return;
+    }
+    delete zone.revealedCards;
+  }) as CaseReducer<GamesState, PayloadAction<{ gameId: number; playerId: number; zoneName: string }>>,
 
   zonePropertiesChanged: ((state, action) => {
     const { gameId, playerId, data } = action.payload;

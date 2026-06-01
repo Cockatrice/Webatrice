@@ -205,7 +205,7 @@ function Game() {
                   gameId={gameId}
                   playerId={v.playerId}
                   zoneName={v.zoneName}
-                  handleClose={() => dialogs.handleCloseZoneView(v.playerId, v.zoneName)}
+                  handleClose={(shuffleOnClose) => dialogs.handleCloseZoneView(v.playerId, v.zoneName, shuffleOnClose)}
                   initialPosition={{ x: 80 + idx * 36, y: 80 + idx * 36 }}
                   selectedCardKeys={selectedCardKeys}
                 />

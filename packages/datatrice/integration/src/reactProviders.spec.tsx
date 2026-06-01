@@ -4,7 +4,7 @@ import { createSlice, type Reducer } from '@reduxjs/toolkit';
 import { WebClient } from '@cockatrice/sockatrice';
 import { WebsocketTypes } from '@cockatrice/sockatrice/types';
 
-import { 
+import {
   DatatriceProvider,
   WebClientProvider,
   useWebClient,

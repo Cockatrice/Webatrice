@@ -147,11 +147,23 @@ describe('Game commands — delegate to WebClient.instance.protobuf.sendGameComm
     );
   });
 
-  it('dumpZone sends Command_DumpZone', () => {
+  it('dumpZone sends Command_DumpZone with a Response_DumpZone handler', () => {
     dumpZone(gameId, { playerId: 2, zoneName: 'library' });
     expect(WebClient.instance.protobuf.sendGameCommand).toHaveBeenCalledWith(
-      gameId, Command_DumpZone_ext, expect.objectContaining({ playerId: 2, zoneName: 'library' })
+      gameId,
+      Command_DumpZone_ext,
+      expect.objectContaining({ playerId: 2, zoneName: 'library' }),
+      expect.objectContaining({ onSuccess: expect.any(Function) }),
     );
+  });
+
+  it('dumpZone onSuccess routes the revealed cards to response.game.zoneViewRevealed', () => {
+    dumpZone(gameId, { playerId: 2, zoneName: 'deck' });
+    const calls = vi.mocked(WebClient.instance.protobuf.sendGameCommand).mock.calls;
+    const options = calls[calls.length - 1][3] as { onSuccess: (resp: unknown) => void };
+    const cards = [{ id: 0, name: 'Forest' }];
+    options.onSuccess({ zoneInfo: { cardList: cards } });
+    expect(WebClient.instance.response.game.zoneViewRevealed).toHaveBeenCalledWith(gameId, 2, 'deck', cards);
   });
 
   it('flipCard sends Command_FlipCard', () => {

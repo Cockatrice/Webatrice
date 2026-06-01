@@ -1,6 +1,10 @@
-import { useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import IconButton from '@mui/material/IconButton';
 import CloseIcon from '@mui/icons-material/Close';
+import FormControlLabel from '@mui/material/FormControlLabel';
+import Checkbox from '@mui/material/Checkbox';
+
+import { Enriched } from '@cockatrice/datatrice';
 
 import CardSlot from '../../components/ui/CardSlot/CardSlot';
 import { makeCardKey } from '../../utils/CardRegistry/CardRegistryContext';
@@ -15,7 +19,7 @@ export interface ZoneViewDialogProps {
   gameId: number | undefined;
   playerId: number | undefined;
   zoneName: string | undefined;
-  handleClose: () => void;
+  handleClose: (shuffleOnClose?: boolean) => void;
   initialPosition?: { x: number; y: number };
   selectedCardKeys?: ReadonlySet<string>;
 }
@@ -36,18 +40,26 @@ function ZoneViewDialog({
   const { cards, count, title, position, handlePointerDown, handlePointerMove, handlePointerUp } =
     useZoneViewDialog({ gameId, playerId, zoneName, initialPosition });
 
+  // "Shuffle on close" applies to the library only (desktop parity); defaults on.
+  const isDeck = zoneName === Enriched.ZoneName.DECK;
+  const [shuffleOnClose, setShuffleOnClose] = useState(true);
+  const onClose = useCallback(
+    () => handleClose(isDeck ? shuffleOnClose : false),
+    [handleClose, isDeck, shuffleOnClose],
+  );
+
   useEffect(() => {
     if (!isOpen) {
       return;
     }
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
-        handleClose();
+        onClose();
       }
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [isOpen, handleClose]);
+  }, [isOpen, onClose]);
 
   if (!isOpen) {
     return null;
@@ -70,7 +82,7 @@ function ZoneViewDialog({
       >
         <span className="zone-view-dialog__title">{title}</span>
         <IconButton
-          onClick={handleClose}
+          onClick={() => onClose()}
           size="small"
           aria-label="close zone view"
           className="zone-view-dialog__close"
@@ -112,6 +124,20 @@ function ZoneViewDialog({
           </div>
         )}
       </div>
+      {isDeck && (
+        <div className="zone-view-dialog__footer">
+          <FormControlLabel
+            control={
+              <Checkbox
+                size="small"
+                checked={shuffleOnClose}
+                onChange={(e) => setShuffleOnClose(e.target.checked)}
+              />
+            }
+            label="Shuffle on close"
+          />
+        </div>
+      )}
     </div>
   );
 }

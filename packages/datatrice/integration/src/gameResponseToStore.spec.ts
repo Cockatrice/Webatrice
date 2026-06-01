@@ -244,6 +244,17 @@ describe('integration: game chat and table events', () => {
     expect(messages.some(m => m.message.includes('looks at 4 card(s)'))).toBe(true);
   });
 
+  it('zoneViewRevealed stores the revealed library cards for the dialog to read', () => {
+    const { store, response } = seedGame();
+    const cards = [
+      create(ServerInfo_CardSchema, { id: 0, name: 'Forest' }),
+      create(ServerInfo_CardSchema, { id: 1, name: 'Island' }),
+    ];
+    response.game.zoneViewRevealed(GAME_ID, 1, 'deck', cards);
+    const revealed = games.Selectors.getRevealedCards(store.getState(), GAME_ID, 1, 'deck');
+    expect(revealed.map(c => c.name)).toEqual(['Forest', 'Island']);
+  });
+
   it('zonePropertiesChanged flips alwaysRevealTopCard and logs it', () => {
     const { store, response } = seedGame();
     response.game.zonePropertiesChanged(GAME_ID, 1, create(Event_ChangeZonePropertiesSchema, {

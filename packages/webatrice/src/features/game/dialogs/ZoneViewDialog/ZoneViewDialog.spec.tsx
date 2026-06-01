@@ -190,4 +190,53 @@ describe('ZoneViewDialog', () => {
     expect(panel).toHaveStyle({ left: '200px', top: '150px' });
     expect(panel).toHaveAttribute('role', 'dialog');
   });
+
+  it('renders the revealed library cards for the deck even though byId is empty', () => {
+    const state = stateWith({ name: Enriched.ZoneName.DECK, cardCount: 2, cards: [] });
+    state.games.games[1].players[1].zones[Enriched.ZoneName.DECK].revealedCards = [
+      makeCard({ id: 0, name: 'Forest' }),
+      makeCard({ id: 1, name: 'Island' }),
+    ];
+    renderWithProviders(
+      <ZoneViewDialog isOpen gameId={1} playerId={1} zoneName={Enriched.ZoneName.DECK} handleClose={() => {}} />,
+      { preloadedState: state },
+    );
+
+    expect(screen.getByAltText('Forest')).toBeInTheDocument();
+    expect(screen.getByAltText('Island')).toBeInTheDocument();
+  });
+
+  it('shows a "Shuffle on close" checkbox (default checked) for the library and passes the flag on close', () => {
+    const handleClose = vi.fn();
+    renderWithProviders(
+      <ZoneViewDialog isOpen gameId={1} playerId={1} zoneName={Enriched.ZoneName.DECK} handleClose={handleClose} />,
+      { preloadedState: stateWith({ name: Enriched.ZoneName.DECK, cardCount: 0 }) },
+    );
+
+    expect(screen.getByRole('checkbox', { name: /shuffle on close/i })).toBeChecked();
+
+    fireEvent.click(screen.getByRole('button', { name: /close zone view/i }));
+    expect(handleClose).toHaveBeenCalledWith(true);
+  });
+
+  it('passes shuffleOnClose=false when the library checkbox is unchecked', () => {
+    const handleClose = vi.fn();
+    renderWithProviders(
+      <ZoneViewDialog isOpen gameId={1} playerId={1} zoneName={Enriched.ZoneName.DECK} handleClose={handleClose} />,
+      { preloadedState: stateWith({ name: Enriched.ZoneName.DECK, cardCount: 0 }) },
+    );
+
+    fireEvent.click(screen.getByRole('checkbox', { name: /shuffle on close/i }));
+    fireEvent.click(screen.getByRole('button', { name: /close zone view/i }));
+    expect(handleClose).toHaveBeenCalledWith(false);
+  });
+
+  it('does not show the shuffle-on-close checkbox for non-deck zones', () => {
+    renderWithProviders(
+      <ZoneViewDialog isOpen gameId={1} playerId={1} zoneName={Enriched.ZoneName.GRAVE} handleClose={() => {}} />,
+      { preloadedState: stateWith({ name: Enriched.ZoneName.GRAVE, cardCount: 0 }) },
+    );
+
+    expect(screen.queryByRole('checkbox', { name: /shuffle on close/i })).not.toBeInTheDocument();
+  });
 });

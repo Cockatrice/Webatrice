@@ -117,6 +117,7 @@ const game = {
   counterDeleted: vi.fn(),
   cardsDrawn: vi.fn(),
   cardsRevealed: vi.fn(),
+  zoneViewRevealed: vi.fn(),
   zoneShuffled: vi.fn(),
   dieRolled: vi.fn(),
   activePlayerSet: vi.fn(),

@@ -111,6 +111,14 @@ export const Selectors = {
     return zone ? materializeZoneCards(zone) : EMPTY_ARRAY;
   },
 
+  getRevealedCards: (
+    { games }: State,
+    gameId: number,
+    playerId: number,
+    zoneName: string
+  ): ServerInfo_Card[] =>
+    games.games[gameId]?.players[playerId]?.zones[zoneName]?.revealedCards ?? EMPTY_ARRAY,
+
   getAttachmentsByParent: (
     { games }: State,
     gameId: number,

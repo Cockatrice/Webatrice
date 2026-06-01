@@ -27,6 +27,8 @@ export const Types = {
   COUNTER_DELETED: a.counterDeleted.type,
   CARDS_DRAWN: a.cardsDrawn.type,
   CARDS_REVEALED: a.cardsRevealed.type,
+  ZONE_VIEW_REVEALED: a.zoneViewRevealed.type,
+  ZONE_VIEW_CLEARED: a.zoneViewCleared.type,
   ZONE_SHUFFLED: a.zoneShuffled.type,
   DIE_ROLLED: a.dieRolled.type,
   ACTIVE_PLAYER_SET: a.activePlayerSet.type,

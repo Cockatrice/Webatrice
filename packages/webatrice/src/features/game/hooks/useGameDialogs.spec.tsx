@@ -248,4 +248,92 @@ describe('useGameDialogs', () => {
     );
     expect(result.current.revealState).toBeNull();
   });
+
+  it('opening the local library view dumps the deck (numberCards -1) to reveal its cards', () => {
+    const { result, webClient } = setup({ localPlayerId: 1 });
+
+    act(() => {
+      result.current.handleZoneClick(1, Enriched.ZoneName.DECK);
+    });
+
+    expect(result.current.zoneViews).toEqual([{ playerId: 1, zoneName: Enriched.ZoneName.DECK }]);
+    expect(webClient.request.game.dumpZone).toHaveBeenCalledWith(
+      1,
+      { playerId: 1, zoneName: Enriched.ZoneName.DECK, numberCards: -1, isReversed: false },
+    );
+  });
+
+  it('does not re-dump when re-opening an already-open library view', () => {
+    const { result, webClient } = setup({ localPlayerId: 1 });
+
+    act(() => {
+      result.current.handleZoneClick(1, Enriched.ZoneName.DECK);
+    });
+    act(() => {
+      result.current.handleZoneClick(1, Enriched.ZoneName.DECK);
+    });
+
+    expect(result.current.zoneViews).toHaveLength(1);
+    expect(webClient.request.game.dumpZone).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not dump non-deck zones (graveyard view reads existing state)', () => {
+    const { result, webClient } = setup({ localPlayerId: 1 });
+
+    act(() => {
+      result.current.handleZoneClick(1, Enriched.ZoneName.GRAVE);
+    });
+
+    expect(result.current.zoneViews).toHaveLength(1);
+    expect(webClient.request.game.dumpZone).not.toHaveBeenCalled();
+  });
+
+  it('closing a library view with shuffle-on-close shuffles the deck and clears the revealed snapshot', () => {
+    const { result, webClient } = setup({ localPlayerId: 1 });
+    const dispatchSpy = vi.spyOn(games.Actions, 'zoneViewCleared');
+
+    act(() => {
+      result.current.handleZoneClick(1, Enriched.ZoneName.DECK);
+    });
+    act(() => {
+      result.current.handleCloseZoneView(1, Enriched.ZoneName.DECK, true);
+    });
+
+    expect(result.current.zoneViews).toHaveLength(0);
+    expect(webClient.request.game.shuffle).toHaveBeenCalledWith(
+      1,
+      { zoneName: Enriched.ZoneName.DECK, start: 0, end: -1 },
+    );
+    expect(dispatchSpy).toHaveBeenCalledWith({ gameId: 1, playerId: 1, zoneName: Enriched.ZoneName.DECK });
+    dispatchSpy.mockRestore();
+  });
+
+  it('closing a library view without shuffle-on-close clears but does not shuffle', () => {
+    const { result, webClient } = setup({ localPlayerId: 1 });
+
+    act(() => {
+      result.current.handleZoneClick(1, Enriched.ZoneName.DECK);
+    });
+    act(() => {
+      result.current.handleCloseZoneView(1, Enriched.ZoneName.DECK, false);
+    });
+
+    expect(webClient.request.game.shuffle).not.toHaveBeenCalled();
+  });
+
+  it('closing a non-deck view neither shuffles nor clears', () => {
+    const { result, webClient } = setup({ localPlayerId: 1 });
+    const dispatchSpy = vi.spyOn(games.Actions, 'zoneViewCleared');
+
+    act(() => {
+      result.current.handleZoneClick(1, Enriched.ZoneName.GRAVE);
+    });
+    act(() => {
+      result.current.handleCloseZoneView(1, Enriched.ZoneName.GRAVE, true);
+    });
+
+    expect(webClient.request.game.shuffle).not.toHaveBeenCalled();
+    expect(dispatchSpy).not.toHaveBeenCalled();
+    dispatchSpy.mockRestore();
+  });
 });
