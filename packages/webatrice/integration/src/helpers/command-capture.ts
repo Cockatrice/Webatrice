@@ -94,6 +94,28 @@ export function findLastGameCommand<V>(
   );
 }
 
+// Collects every outbound game command matching the extension, in send order.
+// Use when a single gesture fans out to multiple commands (e.g. a collective
+// bulk tap emits one setCardAttr per affected card).
+export function findAllGameCommands<V>(
+  ext: GenExtension<GameCmd, V>
+): Array<{ container: CommandContainer; value: V; cmdId: number; gameId: number }> {
+  const matches: Array<{ container: CommandContainer; value: V; cmdId: number; gameId: number }> = [];
+  for (const container of captureAllOutbound()) {
+    for (const gameCmd of container.gameCommand ?? []) {
+      if (hasExtension(gameCmd, ext)) {
+        matches.push({
+          container,
+          value: getExtension(gameCmd, ext),
+          cmdId: Number(container.cmdId),
+          gameId: container.gameId ?? 0,
+        });
+      }
+    }
+  }
+  return matches;
+}
+
 export function findLastAdminCommand<V>(
   ext: GenExtension<AdminCmd, V>
 ): { container: CommandContainer; value: V; cmdId: number } {
