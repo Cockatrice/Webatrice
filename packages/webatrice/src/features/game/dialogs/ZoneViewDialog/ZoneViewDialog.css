@@ -44,6 +44,11 @@
   padding: 12px;
 }
 
+.zone-view-dialog__body--drop-over {
+  outline: 2px dashed #4a78c8;
+  outline-offset: -4px;
+}
+
 .zone-view-dialog__grid {
   display: grid;
   grid-template-columns: repeat(6, 100px);

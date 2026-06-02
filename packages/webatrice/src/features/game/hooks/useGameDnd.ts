@@ -1,6 +1,12 @@
 import { useCallback } from 'react';
-import { rectIntersection } from '@dnd-kit/core';
-import type { Collision, CollisionDetection, DragEndEvent, DragStartEvent } from '@dnd-kit/core';
+import { pointerWithin, rectIntersection } from '@dnd-kit/core';
+import type {
+  Collision,
+  CollisionDetection,
+  DragEndEvent,
+  DragStartEvent,
+  DroppableContainer,
+} from '@dnd-kit/core';
 
 import { useWebClient } from '@cockatrice/datatrice/react';
 import type { WebClient } from '@cockatrice/sockatrice';
@@ -14,6 +20,7 @@ import {
   mapToGridX,
   stackCountsForRow,
 } from '../components/battlefield/Battlefield/gridMath';
+import { moveTargetPlayerId } from '../utils/moveTarget';
 
 export interface GameDnd {
   handleDragStart: (event: DragStartEvent) => void;
@@ -45,9 +52,40 @@ function slotIntersection(
   );
 }
 
+// A droppable lives "in a popup" when its node is inside a floating
+// ZoneViewDialog (position:fixed, z-index:1200 — see ZoneViewDialog.css). Such a
+// popup is visually stacked above the board, but dnd-kit collision is purely
+// geometric: board droppables rendered underneath a popup would otherwise
+// compete with — and beat — the popup's own droppables (its body + the reorder
+// slots of the cards it renders).
+function isInPopup(container: DroppableContainer | undefined): boolean {
+  return !!container?.node.current?.closest('.zone-view-dialog');
+}
+
+// Scope collisions to the layer the pointer is actually over so drops respect a
+// popup's z-order. If the pointer is within an open popup, only that popup's
+// droppables are eligible (a board card dropped onto the popup routes into the
+// popup's zone); otherwise popup droppables are excluded and the board/hand/
+// stack droppables win (a card dropped on visible board lands there even if a
+// popup overlaps elsewhere on screen).
+//
+// Limitation: with multiple overlapping popups open at once the scoped set spans
+// every popup under the pointer rather than only the topmost. Acceptable today —
+// the flows close each popup before opening the next.
+function scopeToPointerLayer(
+  args: Parameters<CollisionDetection>[0],
+): Parameters<CollisionDetection>[0] {
+  const overPopup = pointerWithin(args).some((c) =>
+    isInPopup(args.droppableContainers.find((d) => d.id === c.id)),
+  );
+  const droppableContainers = args.droppableContainers.filter((c) => isInPopup(c) === overPopup);
+  return { ...args, droppableContainers };
+}
+
 const collisionDetection: CollisionDetection = (args) => {
-  const intersections = rectIntersection(args);
-  const slotHits = slotIntersection(args, intersections);
+  const scoped = scopeToPointerLayer(args);
+  const intersections = rectIntersection(scoped);
+  const slotHits = slotIntersection(scoped, intersections);
   return slotHits.length > 0 ? slotHits : intersections;
 };
 
@@ -83,14 +121,11 @@ function classifyDrop(event: DragEndEvent): DropContext {
   const sameZone =
     source.sourcePlayerId === target.targetPlayerId &&
     source.sourceZone === target.targetZone;
-  const sourceIsHandOrStack =
-    source.sourceZone === Enriched.ZoneName.HAND ||
-    source.sourceZone === Enriched.ZoneName.STACK;
 
-  if (sameZone && sourceIsHandOrStack) {
-    if (!target.asReorderSlot || target.targetIndex == null) {
-      return { kind: 'noop' };
-    }
+  // Any same-zone drop onto a per-card reorder slot is a reorder (hand, stack,
+  // and zone-view popups like library/grave/exile). Table cards aren't reorder
+  // slots, so table reorders fall through to the grid path below.
+  if (sameZone && target.asReorderSlot && target.targetIndex != null) {
     if (source.sourceIndex === target.targetIndex) {
       return { kind: 'noop' };
     }
@@ -107,12 +142,21 @@ function classifyDrop(event: DragEndEvent): DropContext {
   }
 
   if (sameZone) {
-    // Same-zone drops outside HAND/STACK (e.g. deck → deck) are no-ops; the
-    // TABLE case above already routed table reorders.
+    // Same-zone drops that didn't hit a reorder slot are no-ops; the TABLE case
+    // above already routed table reorders.
     return { kind: 'noop' };
   }
 
-  return { kind: 'cross-zone', source, target };
+  // Cross-zone here is always a non-table destination (TABLE handled above), so
+  // the move routes to the card's owner tree (see moveTargetPlayerId).
+  return {
+    kind: 'cross-zone',
+    source,
+    target: {
+      ...target,
+      targetPlayerId: moveTargetPlayerId(source.sourcePlayerId, target.targetZone, target.targetPlayerId),
+    },
+  };
 }
 
 // Drop point = card center at release (matches desktop scene position).

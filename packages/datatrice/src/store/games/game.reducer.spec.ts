@@ -382,6 +382,120 @@ describe('2C: CARD_MOVED', () => {
     expect(result.games[1].players[1].zones['table'].cardCount).toBe(1);
   });
 
+  it('prunes the open library snapshot (revealedCards) when a card moves out of the deck', () => {
+    const state = makeState({
+      games: {
+        1: makeGameEntry({
+          players: {
+            1: makePlayerEntry({
+              zones: {
+                deck: makeZoneEntry({ name: 'deck', cards: [], cardCount: 3 }),
+                hand: makeZoneEntry({ name: 'hand', cardCount: 0 }),
+              },
+            }),
+          },
+        }),
+      },
+    });
+    state.games[1].players[1].zones['deck'].revealedCards = [
+      makeCard({ id: 0, name: 'Forest' }),
+      makeCard({ id: 1, name: 'Island' }),
+      makeCard({ id: 2, name: 'Mountain' }),
+    ];
+
+    // Server reports the moved card's index via `position` for a HiddenZone source.
+    const result = dispatchCardMoved(state, Actions.cardMoved({
+      gameId: 1,
+      playerId: 1,
+      data: {
+        cardId: 100,
+        cardName: 'Island',
+        startPlayerId: 1,
+        startZone: 'deck',
+        position: 1,
+        targetPlayerId: 1,
+        targetZone: 'hand',
+        x: 0,
+        y: 0,
+        newCardId: -1,
+        faceDown: false,
+        newCardProviderId: '',
+      },
+    }));
+
+    const revealed = result.games[1].players[1].zones['deck'].revealedCards!;
+    expect(revealed.map((c) => c.name)).toEqual(['Forest', 'Mountain']);
+    expect(revealed.map((c) => c.id)).toEqual([0, 1]);
+  });
+
+  it('reorders the library snapshot (does not prune) on a same-zone deck move', () => {
+    const state = makeState({
+      games: {
+        1: makeGameEntry({
+          players: {
+            1: makePlayerEntry({
+              zones: { deck: makeZoneEntry({ name: 'deck', cards: [], cardCount: 3 }) },
+            }),
+          },
+        }),
+      },
+    });
+    state.games[1].players[1].zones['deck'].revealedCards = [
+      makeCard({ id: 0, name: 'Forest' }),
+      makeCard({ id: 1, name: 'Island' }),
+      makeCard({ id: 2, name: 'Mountain' }),
+    ];
+
+    // Same-zone (move-out=false) deck move with a resolvable card: routes to a
+    // snapshot reorder (position=from, x=to), never a prune. Empty target_zone
+    // mirrors the wire (server omits it when start === target).
+    const result = dispatchCardMoved(state, Actions.cardMoved({
+      gameId: 1,
+      playerId: 1,
+      data: {
+        cardId: 2, cardName: 'Mountain', startPlayerId: 1, startZone: 'deck', position: 2,
+        targetPlayerId: 1, targetZone: '', x: 0, y: 0, newCardId: -1, faceDown: false, newCardProviderId: '',
+      },
+    }));
+
+    const revealed = result.games[1].players[1].zones['deck'].revealedCards!;
+    // Mountain moved to front; nothing pruned (length stays 3); ids re-indexed.
+    expect(revealed.map((c) => c.name)).toEqual(['Mountain', 'Forest', 'Island']);
+    expect(revealed.map((c) => c.id)).toEqual([0, 1, 2]);
+  });
+
+  it('reorders a graveyard card to the dropped index (not appended to the end)', () => {
+    const state = makeState({
+      games: {
+        1: makeGameEntry({
+          players: {
+            1: makePlayerEntry({
+              zones: {
+                grave: makeZoneEntry({
+                  name: 'grave',
+                  cards: [makeCard({ id: 10 }), makeCard({ id: 11 }), makeCard({ id: 12 })],
+                  cardCount: 3,
+                }),
+              },
+            }),
+          },
+        }),
+      },
+    });
+
+    const result = dispatchCardMoved(state, Actions.cardMoved({
+      gameId: 1,
+      playerId: 1,
+      data: {
+        cardId: 12, cardName: '', startPlayerId: 1, startZone: 'grave', position: 2,
+        targetPlayerId: 1, targetZone: '', x: 0, y: 0, newCardId: -1, faceDown: false, newCardProviderId: '',
+      },
+    }));
+
+    // id 12 reordered to the front, not pushed to the end by the cross-zone path.
+    expect(result.games[1].players[1].zones['grave'].order).toEqual([12, 10, 11]);
+  });
+
   it('moves card by position index when cardId < 0', () => {
     const card = makeCard({ id: 11 });
     const state = makeState({
@@ -1801,6 +1915,100 @@ describe('2I: Zone operations', () => {
     const state = makeState();
     expect(gamesReducer(state, Actions.zoneViewRevealed({
       gameId: 1, playerId: 1, zoneName: 'nonexistent', cards: [],
+    }))).toBe(state);
+  });
+
+  function deckViewState(revealed: ReturnType<typeof makeCard>[]) {
+    const state = makeState({
+      games: {
+        1: makeGameEntry({
+          players: {
+            1: makePlayerEntry({
+              zones: { deck: makeZoneEntry({ name: 'deck', cards: [], cardCount: revealed.length }) },
+            }),
+          },
+        }),
+      },
+    });
+    state.games[1].players[1].zones['deck'].revealedCards = revealed;
+    return state;
+  }
+
+  it('ZONE_VIEW_CARD_REMOVED → drops the card at position and re-indexes survivors', () => {
+    const state = deckViewState([
+      makeCard({ id: 0, name: 'Forest' }),
+      makeCard({ id: 1, name: 'Island' }),
+      makeCard({ id: 2, name: 'Mountain' }),
+      makeCard({ id: 3, name: 'Plains' }),
+    ]);
+
+    const result = gamesReducer(state, Actions.zoneViewCardRemoved({
+      gameId: 1, playerId: 1, zoneName: 'deck', position: 1,
+    }));
+
+    const revealed = result.games[1].players[1].zones['deck'].revealedCards!;
+    // Island (pos 1) removed; remaining cards re-indexed to 0..n-1, names preserved.
+    expect(revealed.map((c) => c.id)).toEqual([0, 1, 2]);
+    expect(revealed.map((c) => c.name)).toEqual(['Forest', 'Mountain', 'Plains']);
+  });
+
+  it('ZONE_VIEW_CARD_REMOVED → drops the snapshot when the last card leaves', () => {
+    const state = deckViewState([makeCard({ id: 0, name: 'Forest' })]);
+
+    const result = gamesReducer(state, Actions.zoneViewCardRemoved({
+      gameId: 1, playerId: 1, zoneName: 'deck', position: 0,
+    }));
+
+    expect(result.games[1].players[1].zones['deck'].revealedCards).toBeUndefined();
+  });
+
+  it('ZONE_VIEW_CARD_REMOVED → no-op for out-of-range position', () => {
+    const state = deckViewState([makeCard({ id: 0, name: 'Forest' })]);
+
+    const result = gamesReducer(state, Actions.zoneViewCardRemoved({
+      gameId: 1, playerId: 1, zoneName: 'deck', position: 5,
+    }));
+
+    expect(result.games[1].players[1].zones['deck'].revealedCards?.map((c) => c.name)).toEqual(['Forest']);
+  });
+
+  it('ZONE_VIEW_CARD_REORDERED → moves the entry and re-indexes survivors', () => {
+    const state = deckViewState([
+      makeCard({ id: 0, name: 'Forest' }),
+      makeCard({ id: 1, name: 'Island' }),
+      makeCard({ id: 2, name: 'Mountain' }),
+    ]);
+
+    const result = gamesReducer(state, Actions.zoneViewCardReordered({
+      gameId: 1, playerId: 1, zoneName: 'deck', fromPosition: 0, toPosition: 2,
+    }));
+
+    const revealed = result.games[1].players[1].zones['deck'].revealedCards!;
+    expect(revealed.map((c) => c.name)).toEqual(['Island', 'Mountain', 'Forest']);
+    expect(revealed.map((c) => c.id)).toEqual([0, 1, 2]);
+  });
+
+  it('ZONE_VIEW_CARD_REORDERED → no-op for out-of-range fromPosition', () => {
+    const state = deckViewState([makeCard({ id: 0, name: 'Forest' })]);
+    expect(gamesReducer(state, Actions.zoneViewCardReordered({
+      gameId: 1, playerId: 1, zoneName: 'deck', fromPosition: 5, toPosition: 0,
+    }))).toBe(state);
+  });
+
+  it('ZONE_VIEW_CARD_REMOVED → no-op when the zone has no revealed snapshot', () => {
+    const state = makeState({
+      games: {
+        1: makeGameEntry({
+          players: {
+            1: makePlayerEntry({
+              zones: { deck: makeZoneEntry({ name: 'deck', cards: [], cardCount: 3 }) },
+            }),
+          },
+        }),
+      },
+    });
+    expect(gamesReducer(state, Actions.zoneViewCardRemoved({
+      gameId: 1, playerId: 1, zoneName: 'deck', position: 0,
     }))).toBe(state);
   });
 

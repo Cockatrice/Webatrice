@@ -128,7 +128,52 @@ function setupHook() {
     collapseUnlessSelected,
     handleDragStart: result.current.handleDragStart,
     handleDragEnd: result.current.handleDragEnd,
+    collisionDetection: result.current.collisionDetection,
   };
+}
+
+function clientRect(left: number, top: number, width: number, height: number) {
+  return { left, top, width, height, right: left + width, bottom: top + height } as any;
+}
+
+function makeContainer(id: string, node: HTMLElement, data: Record<string, unknown> = {}) {
+  return { id, node: { current: node }, data: { current: data } } as any;
+}
+
+// Build the args dnd-kit hands a CollisionDetection: a popup body droppable
+// (node inside a `.zone-view-dialog`) overlapping a larger board-row droppable
+// underneath it. The dragged card overlaps both; only `pointer` decides which
+// layer should own the drop.
+function buildCollisionArgs(pointer: { x: number; y: number }) {
+  document.body.innerHTML = '';
+  const dialog = document.createElement('div');
+  dialog.className = 'zone-view-dialog';
+  const popupBody = document.createElement('div');
+  dialog.appendChild(popupBody);
+  const boardRow = document.createElement('div');
+  document.body.append(dialog, boardRow);
+
+  const popupRect = clientRect(60, 60, 400, 300); // floating overlay
+  const boardRect = clientRect(0, 0, 800, 600); // board underneath, larger
+
+  const popup = makeContainer('zoneview-1-rfg', popupBody, { targetZone: Enriched.ZoneName.EXILE });
+  const board = makeContainer('battlefield-1-0', boardRow, {
+    targetPlayerId: 1,
+    targetZone: Enriched.ZoneName.TABLE,
+    row: 0,
+  });
+
+  const draggedRect = clientRect(pointer.x - 50, pointer.y - 70, 100, 140);
+  return {
+    active: { id: 99, rect: { current: { translated: draggedRect, initial: null } } },
+    collisionRect: draggedRect,
+    droppableRects: new Map<string, any>([
+      ['zoneview-1-rfg', popupRect],
+      ['battlefield-1-0', boardRect],
+    ]),
+    droppableContainers: [popup, board],
+    pointerCoordinates: pointer,
+  } as any;
 }
 
 function buildStartEvent(source: {
@@ -304,6 +349,28 @@ describe('useGameDnd', () => {
 
       expect(webClient.request.game.moveCard.mock.calls[0][1].y).toBe(2);
     });
+
+    it('keeps the dropped-on player as target for cross-player TABLE moves (control-change)', () => {
+      // Unlike non-table zones, the table accepts cross-player moves — dropping
+      // a card onto another player's battlefield is a legal control-change, so
+      // the target must stay the dropped-on player, not the source owner.
+      const { webClient, handleDragEnd } = setupHook();
+      const dragging = makeCard({ id: 62, x: 0, y: 0 });
+      handleDragEnd(
+        buildEvent({
+          sourceCard: dragging,
+          sourcePlayerId: 1,
+          sourceZone: Enriched.ZoneName.HAND,
+          targetPlayerId: 2,
+          targetZone: Enriched.ZoneName.TABLE,
+          targetRow: 0,
+          rowCards: [],
+          pointerXInRow: 0,
+        }),
+      );
+
+      expect(webClient.request.game.moveCard.mock.calls[0][1].targetPlayerId).toBe(2);
+    });
   });
 
   describe('non-TABLE drops', () => {
@@ -325,6 +392,29 @@ describe('useGameDnd', () => {
       const args = webClient.request.game.moveCard.mock.calls[0][1];
       expect(args.x).toBe(0);
       expect(args.y).toBe(0);
+      expect(args.targetZone).toBe(Enriched.ZoneName.GRAVE);
+    });
+
+    it('routes a foreign-owned card to its OWNER tree, not the dropped-on zone owner', () => {
+      // A controlled card sits in its owner's tree (player 2). Dropping it on
+      // the local player's (player 1) graveyard stack must target player 2 —
+      // Servatrice rejects cross-player non-table moves, so the destination is
+      // always the card's source tree.
+      const { webClient, handleDragEnd } = setupHook();
+      const card = makeCard({ id: 71, x: 0, y: 0 });
+      handleDragEnd(
+        buildEvent({
+          sourceCard: card,
+          sourcePlayerId: 2,
+          sourceZone: Enriched.ZoneName.TABLE,
+          targetPlayerId: 1,
+          targetZone: Enriched.ZoneName.GRAVE,
+        }),
+      );
+
+      const args = webClient.request.game.moveCard.mock.calls[0][1];
+      expect(args.startPlayerId).toBe(2);
+      expect(args.targetPlayerId).toBe(2);
       expect(args.targetZone).toBe(Enriched.ZoneName.GRAVE);
     });
 
@@ -408,6 +498,29 @@ describe('useGameDnd', () => {
       expect(args.targetZone).toBe(Enriched.ZoneName.STACK);
     });
 
+    it('reorders within a zone-view popup (e.g. library) via a reorder slot', () => {
+      // Popup cards expose reorder slots (dropIndex), so any same-zone drop onto
+      // a slot is a reorder — not just hand/stack.
+      const { webClient, handleDragEnd } = setupHook();
+      const card = makeCard({ id: 103 });
+      handleDragEnd(
+        buildEvent({
+          sourceCard: card,
+          sourcePlayerId: 5,
+          sourceZone: Enriched.ZoneName.DECK,
+          sourceIndex: 1,
+          targetPlayerId: 5,
+          targetZone: Enriched.ZoneName.DECK,
+          targetIndex: 4,
+        }),
+      );
+
+      expect(webClient.request.game.moveCard).toHaveBeenCalledTimes(1);
+      const args = webClient.request.game.moveCard.mock.calls[0][1];
+      expect(args.x).toBe(4);
+      expect(args.targetZone).toBe(Enriched.ZoneName.DECK);
+    });
+
     it('skips dispatch when targetIndex equals sourceIndex (drop on same slot)', () => {
       const { webClient, handleDragEnd } = setupHook();
       const card = makeCard({ id: 102 });
@@ -424,6 +537,25 @@ describe('useGameDnd', () => {
       );
 
       expect(webClient.request.game.moveCard).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('collisionDetection (popup z-order)', () => {
+    it('lets the popup win when the pointer is over it, even though a board droppable also intersects', () => {
+      const { collisionDetection } = setupHook();
+      const collisions = collisionDetection(buildCollisionArgs({ x: 200, y: 150 }));
+      // Pointer inside the popup overlay → only the popup's droppable is eligible,
+      // so the board row rendered underneath can't steal the drop.
+      expect(collisions.map((c) => c.id)).toEqual(['zoneview-1-rfg']);
+    });
+
+    it('excludes popup droppables when the pointer is outside every popup', () => {
+      const { collisionDetection } = setupHook();
+      const collisions = collisionDetection(buildCollisionArgs({ x: 600, y: 500 }));
+      // Pointer over visible board (clear of the popup) → board wins, popup excluded.
+      const ids = collisions.map((c) => c.id);
+      expect(ids).toContain('battlefield-1-0');
+      expect(ids).not.toContain('zoneview-1-rfg');
     });
   });
 

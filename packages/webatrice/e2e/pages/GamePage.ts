@@ -117,4 +117,66 @@ export class GamePage {
   async isSpectator(): Promise<boolean> {
     return (await this.spectatingTag.count()) > 0;
   }
+
+  // ---- Zones / cards / popups (added for the popup-drag + zone-move specs) ----
+
+  // The local player's board carries the `data-local-player` attribute
+  // (PlayerBoard.tsx); opponents are the other `player-board-*` nodes.
+  get localBoard(): Locator {
+    return this.page.locator('[data-local-player]');
+  }
+
+  get opponentBoard(): Locator {
+    return this.page.locator('[data-testid^="player-board-"]:not([data-local-player])').first();
+  }
+
+  zoneStack(zoneName: string, board: Locator = this.localBoard): Locator {
+    return board.locator(`[data-testid="zone-stack-${zoneName}"]`);
+  }
+
+  // First battlefield row of a board — the drop target for a card move/give.
+  battlefieldRow(board: Locator = this.localBoard): Locator {
+    return board.locator('[data-testid^="battlefield-row-"]').first();
+  }
+
+  cardsOnBoard(board: Locator = this.localBoard): Locator {
+    return board.locator('[data-testid="card-slot"]');
+  }
+
+  // Reads the numeric badge a ZoneStack renders (`.zone-stack__count`).
+  async zoneStackCount(zoneName: string, board: Locator = this.localBoard): Promise<number> {
+    const text = await this.zoneStack(zoneName, board).locator('.zone-stack__count').innerText();
+    return Number(text.trim());
+  }
+
+  // The ZoneViewDialog is a role="dialog" whose aria-label is
+  // "<player> <ZoneLabel> (<count>)", so match by the zone label text.
+  zoneView(zoneLabel: RegExp): Locator {
+    return this.page.getByRole('dialog', { name: zoneLabel });
+  }
+
+  zoneViewCards(dialog: Locator): Locator {
+    return dialog.locator('[data-testid^="zone-view-card-"]');
+  }
+
+  // The draggable header of a zone-view popup (drag it to reposition the popup).
+  zoneViewHeader(dialog: Locator): Locator {
+    return dialog.locator('.zone-view-dialog__header');
+  }
+
+  // Click the local zone stack to open its popup, then wait for the dialog.
+  async openZoneView(zoneName: string, zoneLabel: RegExp): Promise<Locator> {
+    await this.zoneStack(zoneName).click();
+    const dialog = this.zoneView(zoneLabel);
+    await expect(dialog).toBeVisible({ timeout: 15_000 });
+    return dialog;
+  }
+
+  // Right-click a card and pick a move item from its context menu.
+  async moveViaCardMenu(card: Locator, item: RegExp): Promise<void> {
+    await card.click({ button: 'right' });
+    const menu = this.page.getByTestId('card-context-menu');
+    await expect(menu).toBeVisible();
+    await menu.getByRole('menuitem', { name: item }).click();
+  }
 }
