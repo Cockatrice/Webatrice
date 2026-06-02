@@ -304,6 +304,28 @@ describe('useGameDnd', () => {
 
       expect(webClient.request.game.moveCard.mock.calls[0][1].y).toBe(2);
     });
+
+    it('keeps the dropped-on player as target for cross-player TABLE moves (control-change)', () => {
+      // Unlike non-table zones, the table accepts cross-player moves — dropping
+      // a card onto another player's battlefield is a legal control-change, so
+      // the target must stay the dropped-on player, not the source owner.
+      const { webClient, handleDragEnd } = setupHook();
+      const dragging = makeCard({ id: 62, x: 0, y: 0 });
+      handleDragEnd(
+        buildEvent({
+          sourceCard: dragging,
+          sourcePlayerId: 1,
+          sourceZone: Enriched.ZoneName.HAND,
+          targetPlayerId: 2,
+          targetZone: Enriched.ZoneName.TABLE,
+          targetRow: 0,
+          rowCards: [],
+          pointerXInRow: 0,
+        }),
+      );
+
+      expect(webClient.request.game.moveCard.mock.calls[0][1].targetPlayerId).toBe(2);
+    });
   });
 
   describe('non-TABLE drops', () => {
@@ -325,6 +347,29 @@ describe('useGameDnd', () => {
       const args = webClient.request.game.moveCard.mock.calls[0][1];
       expect(args.x).toBe(0);
       expect(args.y).toBe(0);
+      expect(args.targetZone).toBe(Enriched.ZoneName.GRAVE);
+    });
+
+    it('routes a foreign-owned card to its OWNER tree, not the dropped-on zone owner', () => {
+      // A controlled card sits in its owner's tree (player 2). Dropping it on
+      // the local player's (player 1) graveyard stack must target player 2 —
+      // Servatrice rejects cross-player non-table moves, so the destination is
+      // always the card's source tree.
+      const { webClient, handleDragEnd } = setupHook();
+      const card = makeCard({ id: 71, x: 0, y: 0 });
+      handleDragEnd(
+        buildEvent({
+          sourceCard: card,
+          sourcePlayerId: 2,
+          sourceZone: Enriched.ZoneName.TABLE,
+          targetPlayerId: 1,
+          targetZone: Enriched.ZoneName.GRAVE,
+        }),
+      );
+
+      const args = webClient.request.game.moveCard.mock.calls[0][1];
+      expect(args.startPlayerId).toBe(2);
+      expect(args.targetPlayerId).toBe(2);
       expect(args.targetZone).toBe(Enriched.ZoneName.GRAVE);
     });
 
@@ -406,6 +451,29 @@ describe('useGameDnd', () => {
       const args = webClient.request.game.moveCard.mock.calls[0][1];
       expect(args.x).toBe(0);
       expect(args.targetZone).toBe(Enriched.ZoneName.STACK);
+    });
+
+    it('reorders within a zone-view popup (e.g. library) via a reorder slot', () => {
+      // Popup cards expose reorder slots (dropIndex), so any same-zone drop onto
+      // a slot is a reorder — not just hand/stack.
+      const { webClient, handleDragEnd } = setupHook();
+      const card = makeCard({ id: 103 });
+      handleDragEnd(
+        buildEvent({
+          sourceCard: card,
+          sourcePlayerId: 5,
+          sourceZone: Enriched.ZoneName.DECK,
+          sourceIndex: 1,
+          targetPlayerId: 5,
+          targetZone: Enriched.ZoneName.DECK,
+          targetIndex: 4,
+        }),
+      );
+
+      expect(webClient.request.game.moveCard).toHaveBeenCalledTimes(1);
+      const args = webClient.request.game.moveCard.mock.calls[0][1];
+      expect(args.x).toBe(4);
+      expect(args.targetZone).toBe(Enriched.ZoneName.DECK);
     });
 
     it('skips dispatch when targetIndex equals sourceIndex (drop on same slot)', () => {

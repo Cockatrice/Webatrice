@@ -87,13 +87,27 @@ export function registerGameListeners(mw: ListenerMiddlewareInstance<unknown>): 
         }
         : buildEmptyCard(effectiveNewId, cardName, x, y, faceDown, newCardProviderId ?? '');
 
+      // Capture before the move dispatch: if an open zone-view (deck) snapshot
+      // holds this zone, the moved card must be pruned from it (see below).
+      const hadRevealedSnapshot = !!sourceZone.revealedCards;
+
       const sameZone =
         startPlayerId === targetPlayerId && startZone === effectiveTargetZone;
       const isPositionalReorderZone =
         effectiveTargetZone === Enriched.ZoneName.HAND ||
-        effectiveTargetZone === Enriched.ZoneName.STACK;
+        effectiveTargetZone === Enriched.ZoneName.STACK ||
+        effectiveTargetZone === Enriched.ZoneName.GRAVE ||
+        effectiveTargetZone === Enriched.ZoneName.EXILE;
 
-      if (sameZone && isPositionalReorderZone && resolvedCardId >= 0) {
+      if (sameZone && hadRevealedSnapshot && position >= 0) {
+        api.dispatch(Actions.zoneViewCardReordered({
+          gameId,
+          playerId: startPlayerId,
+          zoneName: startZone,
+          fromPosition: position,
+          toPosition: x,
+        }));
+      } else if (sameZone && isPositionalReorderZone && resolvedCardId >= 0) {
         api.dispatch(Actions.cardMovedInSameZone({
           gameId,
           playerId: startPlayerId,
@@ -111,6 +125,21 @@ export function registerGameListeners(mw: ListenerMiddlewareInstance<unknown>): 
           toPlayerId: targetPlayerId,
           toZone: effectiveTargetZone,
           card: movedCard,
+        }));
+      }
+
+      // Keep an open "View library" snapshot in sync: when a card leaves a zone
+      // that's being viewed, drop it from revealedCards and re-index the rest,
+      // mirroring Cockatrice's live view (ZoneViewZoneLogic::removeCard). The
+      // snapshot is deck-only (HiddenZone), so the event's `position` is the
+      // index to prune. Same-zone reorders don't move the card out, so skip.
+      const movedOut = startPlayerId !== targetPlayerId || startZone !== effectiveTargetZone;
+      if (hadRevealedSnapshot && movedOut && position >= 0) {
+        api.dispatch(Actions.zoneViewCardRemoved({
+          gameId,
+          playerId: startPlayerId,
+          zoneName: startZone,
+          position,
         }));
       }
 

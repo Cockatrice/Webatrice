@@ -1,5 +1,5 @@
 import { CaseReducer, PayloadAction } from '@reduxjs/toolkit';
-import { isFieldSet } from '@bufbuild/protobuf';
+import { clone, isFieldSet } from '@bufbuild/protobuf';
 import {
   Event_AttachCard,
   Event_ChangeZoneProperties,
@@ -13,10 +13,26 @@ import {
   Event_SetCardAttr,
   Event_SetCardCounter,
   ServerInfo_Card,
+  ServerInfo_CardSchema,
 } from '@cockatrice/sockatrice/generated';
 import { GamesState } from './game.interfaces';
 import { pushEventMessage } from './game.reducer.helpers';
 import { formatZonePropertiesChanged } from './messageLog';
+
+// Re-index a zone-view (HiddenZone/deck) snapshot so each card's id equals its
+// list position, mirroring Cockatrice's ZoneViewZoneLogic::updateCardIds. Clone
+// schema-aware to change the id — spreading a proto2 message drops unset optional
+// fields. Only entries whose id changed are cloned.
+function reindexRevealed(cards: ServerInfo_Card[]): ServerInfo_Card[] {
+  return cards.map((card, i) => {
+    if (card.id === i) {
+      return card;
+    }
+    const reindexed = clone(ServerInfo_CardSchema, card);
+    reindexed.id = i;
+    return reindexed;
+  });
+}
 
 export const cardReducers = {
   cardMoved: (() => {}) as CaseReducer<
@@ -106,6 +122,48 @@ export const cardReducers = {
     }
     delete zone.revealedCards;
   }) as CaseReducer<GamesState, PayloadAction<{ gameId: number; playerId: number; zoneName: string }>>,
+
+  // Prune a card from the open zone-view snapshot when it moves out, mirroring
+  // Cockatrice's live view (ZoneViewZoneLogic::removeCard → updateCardIds). The
+  // snapshot only ever holds a HiddenZone (deck) dump whose ids are list indices,
+  // so after removing `position` we re-index the survivors to their new 0..n-1
+  // slots. Empty snapshot is dropped (popup falls back to empty).
+  zoneViewCardRemoved: ((state, action) => {
+    const { gameId, playerId, zoneName, position } = action.payload;
+    const zone = state.games[gameId]?.players[playerId]?.zones[zoneName];
+    if (!zone || !zone.revealedCards || position < 0 || position >= zone.revealedCards.length) {
+      return;
+    }
+    const remaining = zone.revealedCards.filter((_, i) => i !== position);
+    if (remaining.length === 0) {
+      delete zone.revealedCards;
+    } else {
+      zone.revealedCards = reindexRevealed(remaining);
+    }
+  }) as CaseReducer<
+    GamesState,
+    PayloadAction<{ gameId: number; playerId: number; zoneName: string; position: number }>
+  >,
+
+  // Reorder a card within the open zone-view (deck/library) snapshot. The deck is
+  // a HiddenZone whose real display is revealedCards (byId/order are empty), so a
+  // same-zone drag reorders the snapshot and re-indexes it — never byId. from/to
+  // are the event's `position` (pre-move index) and `x` (post-move index).
+  zoneViewCardReordered: ((state, action) => {
+    const { gameId, playerId, zoneName, fromPosition, toPosition } = action.payload;
+    const zone = state.games[gameId]?.players[playerId]?.zones[zoneName];
+    if (!zone || !zone.revealedCards || fromPosition < 0 || fromPosition >= zone.revealedCards.length) {
+      return;
+    }
+    const next = [...zone.revealedCards];
+    const [moved] = next.splice(fromPosition, 1);
+    const clampedTo = Math.max(0, Math.min(toPosition, next.length));
+    next.splice(clampedTo, 0, moved);
+    zone.revealedCards = reindexRevealed(next);
+  }) as CaseReducer<
+    GamesState,
+    PayloadAction<{ gameId: number; playerId: number; zoneName: string; fromPosition: number; toPosition: number }>
+  >,
 
   zonePropertiesChanged: ((state, action) => {
     const { gameId, playerId, data } = action.payload;

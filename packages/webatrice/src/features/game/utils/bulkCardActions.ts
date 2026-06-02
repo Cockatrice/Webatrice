@@ -2,6 +2,7 @@ import { CardAttribute } from '@cockatrice/sockatrice/generated';
 import type { useWebClient } from '@cockatrice/datatrice/react';
 
 import type { SelectedCard } from './selection';
+import { moveTargetPlayerId } from './moveTarget';
 
 type GameWebClient = ReturnType<typeof useWebClient>;
 
@@ -53,12 +54,14 @@ export function dispatchBulkMove(
       groups.set(groupKey, [t]);
     }
   });
+  // Non-table moves route to each group's own owner tree; TABLE keeps
+  // dest.targetPlayerId (a legal cross-player control-change). See moveTargetPlayerId.
   groups.forEach((group) => {
     webClient.request.game.moveCard(gameId, {
       startPlayerId: group[0].ownerPlayerId,
       startZone: group[0].zone,
       cardsToMove: { card: group.map((t) => ({ cardId: t.card.id })) },
-      targetPlayerId: dest.targetPlayerId,
+      targetPlayerId: moveTargetPlayerId(group[0].ownerPlayerId, dest.targetZone, dest.targetPlayerId),
       targetZone: dest.targetZone,
       x: dest.x,
       y: dest.y,

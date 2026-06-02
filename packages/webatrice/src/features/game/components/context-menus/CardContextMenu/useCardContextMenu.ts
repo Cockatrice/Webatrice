@@ -2,6 +2,7 @@ import { useWebClient } from '@cockatrice/datatrice/react';
 import { CardAttribute, ServerInfo_Card } from '@cockatrice/sockatrice/generated';
 import { Enriched } from '@cockatrice/datatrice';
 import { dispatchBulkMove, dispatchBulkTap } from '../../../utils/bulkCardActions';
+import { moveTargetPlayerId } from '../../../utils/moveTarget';
 import { bulkTargetsFor, type SelectedCard } from '../../../utils/selection';
 import { makeCardKey } from '../../../utils/CardRegistry/CardRegistryContext';
 interface MoveTarget {
@@ -206,7 +207,8 @@ export function useCardContextMenu({
     if (!ready) {
       return;
     }
-    // targetPlayerId = local (acting player), per desktop actMoveCardTo*.
+    // Non-table moves route to the card's owner tree; TABLE keeps the local
+    // player (a legal cross-player control-change). See moveTargetPlayerId.
     if (bulkTargets.length > 1) {
       dispatchBulkMove(webClient, gameId, bulkTargets, {
         targetPlayerId: localPlayerId!,
@@ -219,7 +221,7 @@ export function useCardContextMenu({
         startPlayerId: ownerPlayerId!,
         startZone: sourceZone!,
         cardsToMove: { card: [{ cardId: card!.id }] },
-        targetPlayerId: localPlayerId!,
+        targetPlayerId: moveTargetPlayerId(ownerPlayerId!, target.zone, localPlayerId!),
         targetZone: target.zone,
         x: target.x,
         y: target.y,

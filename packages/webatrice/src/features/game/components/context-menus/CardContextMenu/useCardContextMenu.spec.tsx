@@ -151,7 +151,10 @@ describe('useCardContextMenu', () => {
     );
   });
 
-  it('handleMove dispatches moveCard with the target zone + coordinates and the local player as actor', () => {
+  it('handleMove routes a non-table move to the card owner (not the local actor)', () => {
+    // Card owned by player 2, acted on by local player 1. Servatrice only
+    // accepts a non-table move into the card's own tree, so "Send to Hand"
+    // must target the owner (2), not the local player.
     const { result, webClient } = setup({
       card: makeCard({ id: 13 }),
       ownerPlayerId: 2,
@@ -169,10 +172,32 @@ describe('useCardContextMenu', () => {
         startPlayerId: 2,
         startZone: Enriched.ZoneName.TABLE,
         cardsToMove: { card: [{ cardId: 13 }] },
-        targetPlayerId: 1,
+        targetPlayerId: 2,
         targetZone: Enriched.ZoneName.HAND,
         x: -1,
         y: 0,
+      }),
+    );
+  });
+
+  it('handleMove keeps the local player as target for a TABLE move (control-change)', () => {
+    const { result, webClient } = setup({
+      card: makeCard({ id: 14 }),
+      ownerPlayerId: 2,
+      localPlayerId: 1,
+      sourceZone: Enriched.ZoneName.GRAVE,
+    });
+
+    act(() => {
+      result.current.handleMove(CARD_MOVE_TARGETS[1]); // Send to Battlefield
+    });
+
+    expect(webClient.request.game.moveCard).toHaveBeenCalledWith(
+      1,
+      expect.objectContaining({
+        startPlayerId: 2,
+        targetPlayerId: 1,
+        targetZone: Enriched.ZoneName.TABLE,
       }),
     );
   });

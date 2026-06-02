@@ -14,6 +14,7 @@ import {
   mapToGridX,
   stackCountsForRow,
 } from '../components/battlefield/Battlefield/gridMath';
+import { moveTargetPlayerId } from '../utils/moveTarget';
 
 export interface GameDnd {
   handleDragStart: (event: DragStartEvent) => void;
@@ -83,14 +84,11 @@ function classifyDrop(event: DragEndEvent): DropContext {
   const sameZone =
     source.sourcePlayerId === target.targetPlayerId &&
     source.sourceZone === target.targetZone;
-  const sourceIsHandOrStack =
-    source.sourceZone === Enriched.ZoneName.HAND ||
-    source.sourceZone === Enriched.ZoneName.STACK;
 
-  if (sameZone && sourceIsHandOrStack) {
-    if (!target.asReorderSlot || target.targetIndex == null) {
-      return { kind: 'noop' };
-    }
+  // Any same-zone drop onto a per-card reorder slot is a reorder (hand, stack,
+  // and zone-view popups like library/grave/exile). Table cards aren't reorder
+  // slots, so table reorders fall through to the grid path below.
+  if (sameZone && target.asReorderSlot && target.targetIndex != null) {
     if (source.sourceIndex === target.targetIndex) {
       return { kind: 'noop' };
     }
@@ -107,12 +105,21 @@ function classifyDrop(event: DragEndEvent): DropContext {
   }
 
   if (sameZone) {
-    // Same-zone drops outside HAND/STACK (e.g. deck → deck) are no-ops; the
-    // TABLE case above already routed table reorders.
+    // Same-zone drops that didn't hit a reorder slot are no-ops; the TABLE case
+    // above already routed table reorders.
     return { kind: 'noop' };
   }
 
-  return { kind: 'cross-zone', source, target };
+  // Cross-zone here is always a non-table destination (TABLE handled above), so
+  // the move routes to the card's owner tree (see moveTargetPlayerId).
+  return {
+    kind: 'cross-zone',
+    source,
+    target: {
+      ...target,
+      targetPlayerId: moveTargetPlayerId(source.sourcePlayerId, target.targetZone, target.targetPlayerId),
+    },
+  };
 }
 
 // Drop point = card center at release (matches desktop scene position).
