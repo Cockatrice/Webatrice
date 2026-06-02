@@ -1,7 +1,6 @@
 vi.mock('../../WebClient');
 
 import { WebClient } from '../../WebClient';
-import { create, setExtension } from '@bufbuild/protobuf';
 import {
   Command_AttachCard_ext,
   Command_ChangeZoneProperties_ext,
@@ -13,13 +12,11 @@ import {
   Command_DelCounter_ext,
   Command_DeleteArrow_ext,
   Command_DrawCards_ext,
-  Command_DrawCardsSchema,
   Command_DumpZone_ext,
   Command_FlipCard_ext,
   Command_GameSay_ext,
   Command_IncCardCounter_ext,
   Command_IncCounter_ext,
-  Command_Judge_ext,
   Command_KickFromGame_ext,
   Command_LeaveGame_ext,
   Command_MoveCard_ext,
@@ -38,7 +35,6 @@ import {
   Command_Shuffle_ext,
   Command_UndoDraw_ext,
   Command_Unconcede_ext,
-  GameCommandSchema,
 } from '../../generated';
 
 import { attachCard } from './attachCard';
@@ -74,7 +70,6 @@ import { setSideboardPlan } from './setSideboardPlan';
 import { shuffle } from './shuffle';
 import { undoDraw } from './undoDraw';
 import { unconcede } from './unconcede';
-import { judge } from './judge';
 
 const gameId = 1;
 
@@ -82,7 +77,7 @@ describe('Game commands — delegate to WebClient.instance.protobuf.sendGameComm
   it('attachCard sends Command_AttachCard', () => {
     attachCard(gameId, { cardId: 10, startZone: 'hand' });
     expect(WebClient.instance.protobuf.sendGameCommand).toHaveBeenCalledWith(
-      gameId, Command_AttachCard_ext, expect.objectContaining({ cardId: 10, startZone: 'hand' })
+      gameId, Command_AttachCard_ext, expect.objectContaining({ cardId: 10, startZone: 'hand' }), { judgeTargetId: undefined }
     );
   });
 
@@ -169,7 +164,7 @@ describe('Game commands — delegate to WebClient.instance.protobuf.sendGameComm
   it('flipCard sends Command_FlipCard', () => {
     flipCard(gameId, { cardId: 7, faceDown: false });
     expect(WebClient.instance.protobuf.sendGameCommand).toHaveBeenCalledWith(
-      gameId, Command_FlipCard_ext, expect.objectContaining({ cardId: 7, faceDown: false })
+      gameId, Command_FlipCard_ext, expect.objectContaining({ cardId: 7, faceDown: false }), { judgeTargetId: undefined }
     );
   });
 
@@ -183,7 +178,7 @@ describe('Game commands — delegate to WebClient.instance.protobuf.sendGameComm
   it('incCardCounter sends Command_IncCardCounter', () => {
     incCardCounter(gameId, { cardId: 5, counterId: 1 });
     expect(WebClient.instance.protobuf.sendGameCommand).toHaveBeenCalledWith(
-      gameId, Command_IncCardCounter_ext, expect.objectContaining({ cardId: 5, counterId: 1 })
+      gameId, Command_IncCardCounter_ext, expect.objectContaining({ cardId: 5, counterId: 1 }), { judgeTargetId: undefined }
     );
   });
 
@@ -210,7 +205,7 @@ describe('Game commands — delegate to WebClient.instance.protobuf.sendGameComm
     moveCard(gameId, { startZone: 'hand', targetZone: 'graveyard' });
     expect(WebClient.instance.protobuf.sendGameCommand).toHaveBeenCalledWith(
       gameId, Command_MoveCard_ext,
-      expect.objectContaining({ startZone: 'hand', targetZone: 'graveyard' })
+      expect.objectContaining({ startZone: 'hand', targetZone: 'graveyard' }), { judgeTargetId: undefined }
     );
   });
 
@@ -236,7 +231,7 @@ describe('Game commands — delegate to WebClient.instance.protobuf.sendGameComm
   it('revealCards sends Command_RevealCards', () => {
     revealCards(gameId, { zoneName: 'hand', cardId: [1, 2] });
     expect(WebClient.instance.protobuf.sendGameCommand).toHaveBeenCalledWith(
-      gameId, Command_RevealCards_ext, expect.objectContaining({ zoneName: 'hand', cardId: [1, 2] })
+      gameId, Command_RevealCards_ext, expect.objectContaining({ zoneName: 'hand', cardId: [1, 2] }), { judgeTargetId: undefined }
     );
   });
 
@@ -256,14 +251,14 @@ describe('Game commands — delegate to WebClient.instance.protobuf.sendGameComm
     setCardAttr(gameId, { zone: 'play', cardId: 5, attrValue: '2' });
     expect(WebClient.instance.protobuf.sendGameCommand).toHaveBeenCalledWith(
       gameId, Command_SetCardAttr_ext,
-      expect.objectContaining({ zone: 'play', cardId: 5, attrValue: '2' })
+      expect.objectContaining({ zone: 'play', cardId: 5, attrValue: '2' }), { judgeTargetId: undefined }
     );
   });
 
   it('setCardCounter sends Command_SetCardCounter', () => {
     setCardCounter(gameId, { cardId: 5, counterId: 1 });
     expect(WebClient.instance.protobuf.sendGameCommand).toHaveBeenCalledWith(
-      gameId, Command_SetCardCounter_ext, expect.objectContaining({ cardId: 5, counterId: 1 })
+      gameId, Command_SetCardCounter_ext, expect.objectContaining({ cardId: 5, counterId: 1 }), { judgeTargetId: undefined }
     );
   });
 
@@ -312,15 +307,23 @@ describe('Game commands — delegate to WebClient.instance.protobuf.sendGameComm
     );
   });
 
-  it('judge sends Command_Judge with targetId and wrapped gameCommand array', () => {
-    const targetId = 3;
-    const innerCmd = create(GameCommandSchema);
-    setExtension(innerCmd, Command_DrawCards_ext, create(Command_DrawCardsSchema, { number: 2 }));
-    judge(gameId, targetId, innerCmd);
+  it('setCardAttr forwards judgeTargetId via options (judge acting on a foreign card)', () => {
+    setCardAttr(gameId, { zone: 'play', cardId: 5, attrValue: '1' }, 3);
     expect(WebClient.instance.protobuf.sendGameCommand).toHaveBeenCalledWith(
       gameId,
-      Command_Judge_ext,
-      expect.objectContaining({ targetId: 3, gameCommand: expect.any(Array) })
+      Command_SetCardAttr_ext,
+      expect.objectContaining({ zone: 'play', cardId: 5 }),
+      { judgeTargetId: 3 },
+    );
+  });
+
+  it('moveCard forwards judgeTargetId via options', () => {
+    moveCard(gameId, { startZone: 'grave', targetZone: 'hand' }, 4);
+    expect(WebClient.instance.protobuf.sendGameCommand).toHaveBeenCalledWith(
+      gameId,
+      Command_MoveCard_ext,
+      expect.objectContaining({ startZone: 'grave', targetZone: 'hand' }),
+      { judgeTargetId: 4 },
     );
   });
 });

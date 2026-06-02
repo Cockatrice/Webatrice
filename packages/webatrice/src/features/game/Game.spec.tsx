@@ -368,7 +368,7 @@ describe('Game container', () => {
         cardId: 7,
         attribute: CardAttribute.AttrTapped,
         attrValue: '1',
-      });
+      }, undefined); // own card → no Command_Judge wrap
     });
 
     it('right-clicking a local card opens the card context menu', () => {
@@ -479,7 +479,7 @@ describe('Game container', () => {
         cardId: 7,
         attribute: CardAttribute.AttrPT,
         attrValue: '3/3',
-      });
+      }, undefined); // own card → no judge wrap
     });
   });
 

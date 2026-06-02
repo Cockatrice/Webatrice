@@ -588,9 +588,6 @@ describe('game', () => {
     GameCommands.setActivePhase(42, { phase: 2 });
     expect(findLastGameCommand(Data.Command_SetActivePhase_ext).value.phase).toBe(2);
 
-    GameCommands.judge(42, 1, create(Data.GameCommandSchema));
-    expect(findLastGameCommand(Data.Command_Judge_ext).value.targetId).toBe(1);
-
     GameCommands.unconcede(42);
     expect(() => findLastGameCommand(Data.Command_Unconcede_ext)).not.toThrow();
 

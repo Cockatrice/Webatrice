@@ -76,7 +76,7 @@ describe('CardContextMenu', () => {
       zone: Enriched.ZoneName.TABLE,
       cardId: 10,
       faceDown: true,
-    });
+    }, undefined);
     expect(onClose).toHaveBeenCalled();
   });
 
@@ -94,7 +94,7 @@ describe('CardContextMenu', () => {
       cardId: 5,
       attribute: CardAttribute.AttrTapped,
       attrValue: '1',
-    });
+    }, undefined);
   });
 
   it('shows Untap label and sends "0" when the card is already tapped', () => {
@@ -112,7 +112,7 @@ describe('CardContextMenu', () => {
       cardId: 5,
       attribute: CardAttribute.AttrTapped,
       attrValue: '0',
-    });
+    }, undefined);
   });
 
   it('toggles Face Down and shows Face Up when already face-down', () => {
@@ -130,7 +130,7 @@ describe('CardContextMenu', () => {
       cardId: 5,
       attribute: CardAttribute.AttrFaceDown,
       attrValue: '0',
-    });
+    }, undefined);
   });
 
   it('toggles Doesn\'t Untap and shows Allow Untap when already set', () => {
@@ -148,7 +148,7 @@ describe('CardContextMenu', () => {
       cardId: 5,
       attribute: CardAttribute.AttrDoesntUntap,
       attrValue: '0',
-    });
+    }, undefined);
   });
 
   it('requests the PT prompt via parent callback', () => {
@@ -202,7 +202,7 @@ describe('CardContextMenu', () => {
       x: -1,
       y: 0,
       isReversed: false,
-    });
+    }, undefined);
   });
 
   it('hides mutator items (tap, flip, move, counters, P/T) for opponent-owned cards (desktop parity)', () => {
@@ -244,7 +244,7 @@ describe('CardContextMenu', () => {
     expect(webClient.request.game.moveCard).toHaveBeenCalledWith(1, expect.objectContaining({
       startPlayerId: 1,
       targetPlayerId: 1,
-    }));
+    }), undefined);
   });
 
   it('moves to library top vs bottom with distinct x values', () => {
@@ -258,13 +258,13 @@ describe('CardContextMenu', () => {
     expect(webClient.request.game.moveCard).toHaveBeenLastCalledWith(1, expect.objectContaining({
       targetZone: Enriched.ZoneName.DECK,
       x: 0,
-    }));
+    }), undefined);
 
     fireEvent.click(screen.getByText('Send to Library (bottom)'));
     expect(webClient.request.game.moveCard).toHaveBeenLastCalledWith(1, expect.objectContaining({
       targetZone: Enriched.ZoneName.DECK,
       x: -1,
-    }));
+    }), undefined);
   });
 
   // Per-counter actions live three levels deep: Counters ▸ {label} ▸
@@ -290,7 +290,7 @@ describe('CardContextMenu', () => {
       cardId: 9,
       counterId: 0,
       counterDelta: 1,
-    });
+    }, undefined);
   });
 
   it('adds a B-type counter via incCardCounter (+1 on id 1)', () => {
@@ -308,7 +308,7 @@ describe('CardContextMenu', () => {
       cardId: 9,
       counterId: 1,
       counterDelta: 1,
-    });
+    }, undefined);
   });
 
   it('disables Remove Counter when card has no counters of that type', () => {
@@ -342,7 +342,7 @@ describe('CardContextMenu', () => {
       cardId: 9,
       counterId: 0,
       counterDelta: -1,
-    });
+    }, undefined);
   });
 
   it('defers "Set Counter…" to the parent callback with the matching id', () => {
@@ -427,7 +427,7 @@ describe('CardContextMenu', () => {
       expect(webClient.request.game.attachCard).toHaveBeenCalledWith(1, {
         startZone: Enriched.ZoneName.TABLE,
         cardId: 11,
-      });
+      }, undefined);
       expect(onClose).toHaveBeenCalled();
     });
 

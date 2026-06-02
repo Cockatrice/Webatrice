@@ -7,7 +7,7 @@ vi.mock('@bufbuild/protobuf', async (importOriginal) => ({
   setExtension: vi.fn(),
 }));
 
-import { create, fromBinary, hasExtension, getExtension } from '@bufbuild/protobuf';
+import { create, fromBinary, hasExtension, getExtension, setExtension } from '@bufbuild/protobuf';
 import type { GenExtension } from '@bufbuild/protobuf/codegenv2';
 
 import { ProtobufService, type EventRegistries } from './ProtobufService';
@@ -27,6 +27,7 @@ import type {
   SessionEvent,
 } from '../generated';
 import {
+  Command_Judge_ext,
   CommandContainerSchema,
   ResponseSchema,
   ServerMessageSchema,
@@ -252,6 +253,41 @@ describe('ProtobufService', () => {
       const storedCb = (service as ProtobufInternal).pendingCommands.get(1)!;
       expect(() => storedCb(create(ResponseSchema))).not.toThrow();
     });
+
+    it('wraps the inner command in Command_Judge when judgeTargetId is set', () => {
+      vi.mocked(setExtension).mockClear();
+      const service = makeService();
+      service.sendGameCommand(7, gameExt, {}, { judgeTargetId: 3 });
+      // The wrap path sets the Command_Judge extension carrying target_id=owner.
+      expect(setExtension).toHaveBeenCalledWith(
+        expect.anything(),
+        Command_Judge_ext,
+        expect.objectContaining({ targetId: 3 }),
+      );
+    });
+
+    it('does not wrap in Command_Judge when judgeTargetId is absent', () => {
+      vi.mocked(setExtension).mockClear();
+      const service = makeService();
+      service.sendGameCommand(7, gameExt, {});
+      expect(setExtension).not.toHaveBeenCalledWith(
+        expect.anything(),
+        Command_Judge_ext,
+        expect.anything(),
+      );
+    });
+
+    it('wraps for judgeTargetId 0 (player 0 is a valid target, not falsy-skipped)', () => {
+      vi.mocked(setExtension).mockClear();
+      const service = makeService();
+      service.sendGameCommand(7, gameExt, {}, { judgeTargetId: 0 });
+      expect(setExtension).toHaveBeenCalledWith(
+        expect.anything(),
+        Command_Judge_ext,
+        expect.objectContaining({ targetId: 0 }),
+      );
+    });
+
   });
 
   describe('sendModeratorCommand', () => {

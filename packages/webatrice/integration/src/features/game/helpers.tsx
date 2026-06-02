@@ -19,6 +19,7 @@ export function buildEventGameJoined(args: {
   gameId: number;
   localPlayerId: number;
   hostId: number;
+  judge?: boolean;
 }): Event_GameJoined {
   return create(Event_GameJoinedSchema, {
     gameInfo: create(ServerInfo_GameSchema, {
@@ -31,7 +32,7 @@ export function buildEventGameJoined(args: {
     hostId: args.hostId,
     playerId: args.localPlayerId,
     spectator: false,
-    judge: false,
+    judge: args.judge ?? false,
     resuming: false,
   });
 }
@@ -42,6 +43,7 @@ export interface TableCardSeed {
   x: number;
   y: number;
   tapped?: boolean;
+  faceDown?: boolean;
 }
 
 export interface BuildGameStateOptions {
@@ -84,6 +86,7 @@ export function buildEventGameStateChanged(
                 x: c.x,
                 y: c.y,
                 tapped: c.tapped ?? false,
+                faceDown: c.faceDown ?? false,
               }),
             ),
           }),

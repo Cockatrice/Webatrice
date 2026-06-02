@@ -2,6 +2,8 @@ import { create, fromBinary, hasExtension, getExtension, setExtension, toBinary 
 import type { GenExtension } from '@bufbuild/protobuf/codegenv2';
 
 import {
+  Command_Judge_ext,
+  Command_JudgeSchema,
   CommandContainerSchema,
   GameCommandSchema,
   SessionCommandSchema,
@@ -62,6 +64,12 @@ export class ProtobufService {
   ): void {
     const gameCmd = create(GameCommandSchema);
     setExtension(gameCmd, ext, value);
+
+    if (options?.judgeTargetId !== undefined) {
+      this.sendJudgeCommand(gameId, gameCmd, options);
+      return;
+    }
+
     const cmd = create(CommandContainerSchema, { gameId, gameCommand: [gameCmd] });
     this.dispatchCommand(ext.typeName, cmd, options);
   }
@@ -109,6 +117,23 @@ export class ProtobufService {
     setExtension(adminCmd, ext, value);
     const cmd = create(CommandContainerSchema, { adminCommand: [adminCmd] });
     this.dispatchCommand(ext.typeName, cmd, options);
+  }
+
+  // Internal: wraps an already-built game command in Command_Judge so the server
+  // runs it as options.judgeTargetId. Only reached from sendGameCommand, which has
+  // already narrowed judgeTargetId to a defined player id.
+  private sendJudgeCommand<R = unknown>(
+    gameId: number,
+    gameCmd: GameCommand,
+    options: CommandOptions<R>,
+  ): void {
+    const judgeCmd = create(GameCommandSchema);
+    setExtension(judgeCmd, Command_Judge_ext, create(Command_JudgeSchema, {
+      targetId: options.judgeTargetId, gameCommand: [gameCmd],
+    }));
+
+    const cmd = create(CommandContainerSchema, { gameId, gameCommand: [judgeCmd] });
+    this.dispatchCommand(Command_Judge_ext.typeName, cmd, options);
   }
 
   private dispatchCommand<R>(typeName: string, cmd: CommandContainer, options?: CommandOptions<R>): void {

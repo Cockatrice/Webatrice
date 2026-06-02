@@ -291,6 +291,7 @@ describe('Game orchestration (M4–M6)', () => {
           targetZone: Enriched.ZoneName.TABLE,
           cardsToMove: { card: [expect.objectContaining({ cardId: 10 })] },
         }),
+        undefined,
       );
     });
     await waitFor(() => {

@@ -11,6 +11,8 @@ import { DEFAULT_DIE_COUNT, DEFAULT_DIE_SIDES } from '../dialogs/RollDieDialog/R
 import type { SideboardPlanMove } from '../dialogs/SideboardDialog/SideboardDialog';
 import type { GameAccess } from './useGameAccess';
 import { playCardViaTableRow } from './playCard';
+import { useJudgeTarget } from './useJudgeTarget';
+import { moveTargetPlayerId } from '../utils/moveTarget';
 
 export interface AnchorPosition {
   top: number;
@@ -212,6 +214,7 @@ export function useGameDialogs({
 }: UseGameDialogsArgs): GameDialogs {
   const webClient = useWebClient();
   const dispatch = useAppDispatch();
+  const judgeTarget = useJudgeTarget(gameId);
   const { value: settings } = useSettings();
   const invertVerticalCoordinate = settings?.invertVerticalCoordinate ?? false;
 
@@ -358,11 +361,11 @@ export function useGameDialogs({
           cardId: menu.card.id,
           attribute: CardAttribute.AttrPT,
           attrValue: value,
-        });
+        }, judgeTarget(menu.sourcePlayerId));
         setPrompt(null);
       },
     });
-  }, [cardMenu, gameId, webClient]);
+  }, [cardMenu, judgeTarget, gameId, webClient]);
 
   const handleRequestSetAnnotation = useCallback(() => {
     const menu = cardMenu;
@@ -379,11 +382,11 @@ export function useGameDialogs({
           cardId: menu.card.id,
           attribute: CardAttribute.AttrAnnotation,
           attrValue: value,
-        });
+        }, judgeTarget(menu.sourcePlayerId));
         setPrompt(null);
       },
     });
-  }, [cardMenu, gameId, webClient]);
+  }, [cardMenu, judgeTarget, gameId, webClient]);
 
   const handleRequestSetCardCounter = useCallback((counterId: number) => {
     const menu = cardMenu;
@@ -403,11 +406,11 @@ export function useGameDialogs({
           cardId: menu.card.id,
           counterId,
           counterValue: Number(value),
-        });
+        }, judgeTarget(menu.sourcePlayerId));
         setPrompt(null);
       },
     });
-  }, [cardMenu, gameId, webClient]);
+  }, [cardMenu, judgeTarget, gameId, webClient]);
 
   const handleRequestDrawArrow = useCallback(() => {
     const menu = cardMenu;
@@ -437,23 +440,24 @@ export function useGameDialogs({
   const handleRequestPlayFromCardMenu = useCallback(
     (faceDown: boolean) => {
       const menu = cardMenu;
-      if (!menu || gameId == null || game?.localPlayerId == null) {
+      if (!menu || gameId == null || game == null) {
         return;
       }
-      const localPlayerId = game.localPlayerId;
+      // A judge playing a foreign card wraps as the owner and lands it on the
+      // owner's table; own cards send bare (judgeTarget → undefined). See useJudgeTarget.
       void playCardViaTableRow({
         webClient,
         gameId,
-        localPlayerId,
         sourcePlayerId: menu.sourcePlayerId,
         sourceZone: menu.sourceZone,
         card: menu.card,
         faceDown,
         isInverted: invertVerticalCoordinate,
-        tableZone: game.players[localPlayerId]?.zones[Enriched.ZoneName.TABLE],
+        tableZone: game.players[menu.sourcePlayerId]?.zones[Enriched.ZoneName.TABLE],
+        judgeTargetId: judgeTarget(menu.sourcePlayerId),
       });
     },
-    [cardMenu, game, gameId, invertVerticalCoordinate, webClient],
+    [cardMenu, game, gameId, invertVerticalCoordinate, judgeTarget, webClient],
   );
 
   const handleRequestMoveToLibraryAt = useCallback(() => {
@@ -468,20 +472,22 @@ export function useGameDialogs({
       initialValue: '1',
       validate: (v) => (/^[1-9]\d*$/.test(v) ? null : 'Enter a positive integer'),
       onSubmit: (value) => {
+        // Non-table move routes to the card's owner tree; a judge moving a foreign
+        // card wraps as the owner, own cards send bare. See moveTargetPlayerId / useJudgeTarget.
         webClient.request.game.moveCard(gameId, {
           startPlayerId: menu.sourcePlayerId,
           startZone: menu.sourceZone,
           cardsToMove: { card: [{ cardId: menu.card.id }] },
-          targetPlayerId: game.localPlayerId,
+          targetPlayerId: moveTargetPlayerId(menu.sourcePlayerId, Enriched.ZoneName.DECK, game.localPlayerId),
           targetZone: Enriched.ZoneName.DECK,
           x: Math.max(0, Number(value) - 1),
           y: 0,
           isReversed: false,
-        });
+        }, judgeTarget(menu.sourcePlayerId));
         setPrompt(null);
       },
     });
-  }, [cardMenu, game, gameId, webClient]);
+  }, [cardMenu, game, gameId, judgeTarget, webClient]);
 
   const handleRequestDrawN = useCallback(() => {
     if (gameId == null) {

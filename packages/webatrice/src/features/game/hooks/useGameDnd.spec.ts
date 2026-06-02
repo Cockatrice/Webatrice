@@ -114,13 +114,15 @@ function makeWebClient() {
   } as any;
 }
 
-function setupHook() {
+function setupHook(
+  { judgeTarget = () => undefined }: { judgeTarget?: (ownerPlayerId: number) => number | undefined } = {},
+) {
   const webClient = makeWebClient();
   mockUseWebClient.mockReturnValue(webClient);
   const cancelPendingArrow = vi.fn();
   const collapseUnlessSelected = vi.fn();
   const { result } = renderHook(() =>
-    useGameDnd({ gameId: 42, cancelPendingArrow, collapseUnlessSelected }),
+    useGameDnd({ gameId: 42, judgeTarget, cancelPendingArrow, collapseUnlessSelected }),
   );
   return {
     webClient,
@@ -451,6 +453,54 @@ describe('useGameDnd', () => {
       );
 
       expect(webClient.request.game.moveCard).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('judge override (drag)', () => {
+    it('wraps a judge dragging a foreign card to a non-table zone in Command_Judge (target=owner)', () => {
+      // Judge resolver: foreign owner wraps as itself, own (player 1) stays bare.
+      const { webClient, handleDragEnd } = setupHook({ judgeTarget: (o) => (o === 1 ? undefined : o) });
+      const card = makeCard({ id: 200, x: 0, y: 0 });
+      handleDragEnd(
+        buildEvent({
+          sourceCard: card,
+          sourcePlayerId: 2, // foreign card; local judge is player 1
+          sourceZone: Enriched.ZoneName.TABLE,
+          targetPlayerId: 2,
+          targetZone: Enriched.ZoneName.GRAVE,
+        }),
+      );
+
+      expect(webClient.request.game.moveCard).toHaveBeenCalledWith(
+        42,
+        expect.objectContaining({
+          startPlayerId: 2,
+          targetPlayerId: 2, // non-table routes to the owner tree
+          targetZone: Enriched.ZoneName.GRAVE,
+        }),
+        2, // judge wrap target = owner
+      );
+    });
+
+    it('sends bare (no Command_Judge) when a judge drags their own card', () => {
+      const { webClient, handleDragEnd } = setupHook({ judgeTarget: (o) => (o === 1 ? undefined : o) });
+      const card = makeCard({ id: 201, x: 0, y: 0 });
+      handleDragEnd(
+        buildEvent({
+          sourceCard: card,
+          sourcePlayerId: 1, // own card
+          sourceZone: Enriched.ZoneName.TABLE,
+          targetPlayerId: 1,
+          targetZone: Enriched.ZoneName.GRAVE,
+        }),
+      );
+
+      // Own card → judgeTargetId is undefined (unwrapped).
+      expect(webClient.request.game.moveCard).toHaveBeenCalledWith(
+        42,
+        expect.objectContaining({ startPlayerId: 1, targetZone: Enriched.ZoneName.GRAVE }),
+        undefined,
+      );
     });
   });
 
