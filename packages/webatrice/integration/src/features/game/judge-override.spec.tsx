@@ -2,7 +2,7 @@ import { act, fireEvent, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { getExtension, hasExtension } from '@bufbuild/protobuf';
 
-import { Command_Judge_ext, Command_MoveCard_ext } from '@cockatrice/sockatrice/generated';
+import { Command_Judge_ext, Command_MoveCard_ext, Command_RevealCards_ext } from '@cockatrice/sockatrice/generated';
 import { games } from '@cockatrice/datatrice';
 
 import { Game } from '@app/features/game';
@@ -17,7 +17,9 @@ const GAME_ID = 42;
 
 // Seats the local user as a JUDGE (player 1) and seeds an opponent-owned card
 // (player 2) on the board, so a right-click on it can drive the real menu.
-async function renderJudgeBoardWithOpponentCard(): Promise<HTMLElement> {
+async function renderJudgeBoardWithOpponentCard(
+  { faceDown = false }: { faceDown?: boolean } = {},
+): Promise<HTMLElement> {
   connectRaw();
   renderFeatureScreen(<Game />);
 
@@ -27,7 +29,7 @@ async function renderJudgeBoardWithOpponentCard(): Promise<HTMLElement> {
     }));
     store.dispatch(games.Actions.gameStateChanged({
       gameId: GAME_ID,
-      data: buildEventGameStateChanged([1, 2], 1, { tableCardsByPlayer: { 2: [{ id: 77, x: 0, y: 0 }] } }),
+      data: buildEventGameStateChanged([1, 2], 1, { tableCardsByPlayer: { 2: [{ id: 77, x: 0, y: 0, faceDown }] } }),
     }));
   });
 
@@ -61,5 +63,30 @@ describe('Judge override — owner-routing command shape', () => {
     expect(move.targetZone).toBe('grave');
     expect(move.targetPlayerId).toBe(2); // non-table routes to the owner tree
     expect(move.cardsToMove?.card[0]?.cardId).toBe(77);
+  });
+
+  it('a judge "Peek" on an opponent face-down card wraps RevealCards(player_id=judge) in Command_Judge(target=owner)', async () => {
+    const board = await renderJudgeBoardWithOpponentCard({ faceDown: true });
+    const slot = board.querySelector('[data-card-id="77"] [data-testid="card-slot"]')
+      ?? board.querySelector('[data-card-id="77"]');
+    fireEvent.contextMenu(slot as HTMLElement);
+
+    // Peek is gated on canPeek = canActOnCard && TABLE && faceDown — available
+    // here only because the local user is a judge on a foreign face-down card.
+    const menu = await screen.findByTestId('card-context-menu');
+    fireEvent.click(within(menu).getByText('Peek'));
+
+    // Reveal-to-self runs as the owner (Command_Judge target_id=owner) while the
+    // inner RevealCards keeps player_id = the judge, so the card is shown to the
+    // judge. Mirrors Cockatrice's PlayerActions cmPeek + judge wrap.
+    const wrapped = findLastGameCommand(Command_Judge_ext);
+    expect(wrapped.value.targetId).toBe(2);
+
+    const inner = wrapped.value.gameCommand[0];
+    expect(hasExtension(inner, Command_RevealCards_ext)).toBe(true);
+    const reveal = getExtension(inner, Command_RevealCards_ext);
+    expect(reveal.playerId).toBe(1); // revealed to the judge
+    expect(reveal.zoneName).toBe('table');
+    expect(reveal.cardId).toEqual([77]);
   });
 });

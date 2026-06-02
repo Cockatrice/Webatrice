@@ -108,9 +108,9 @@ export function useCardContextMenu({
   const canActOnCard = ready && (isOwnedByLocal || judgeTargetId !== undefined);
   const isAttached = ready && (card!.attachCardId ?? -1) >= 0;
   const canAttach = ready && sourceZone === Enriched.ZoneName.TABLE;
-  // Play stays own-card-only: the play path (playCard.ts) targets the local
-  // player and isn't judge-wrapped yet, so it's not safe on a foreign card.
-  const canPlay = ready && isOwnedByLocal && sourceZone !== Enriched.ZoneName.TABLE;
+  // A judge may play a foreign card onto its owner's table (playCard.ts targets the
+  // owner and judge-wraps), matching Cockatrice's getLocalOrJudge() play gate.
+  const canPlay = ready && canActOnCard && sourceZone !== Enriched.ZoneName.TABLE;
   const canPeek =
     ready && canActOnCard && sourceZone === Enriched.ZoneName.TABLE && (card!.faceDown ?? false);
 

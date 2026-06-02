@@ -233,6 +233,7 @@ describe('useCardContextMenu', () => {
         targetPlayerId: 1,
         targetZone: Enriched.ZoneName.TABLE,
       }),
+      undefined, // non-judge actor → no judge wrap
     );
   });
 
@@ -280,6 +281,14 @@ describe('useCardContextMenu', () => {
     it('canActOnCard is false for a non-judge on a foreign card', () => {
       const { result } = setup({ ownerPlayerId: 2, localPlayerId: 1 });
       expect(result.current.canActOnCard).toBe(false);
+    });
+
+    it('canPlay opens for a judge on a foreign non-table card (parity with getLocalOrJudge)', () => {
+      const { result } = setup(
+        { ownerPlayerId: 2, localPlayerId: 1, sourceZone: Enriched.ZoneName.HAND },
+        { judge: true },
+      );
+      expect(result.current.canPlay).toBe(true);
     });
 
     it('handleMove wraps a judge non-table move in Command_Judge (target=owner)', () => {

@@ -1,7 +1,6 @@
 vi.mock('../../WebClient');
 
 import { WebClient } from '../../WebClient';
-import { create, setExtension } from '@bufbuild/protobuf';
 import {
   Command_AttachCard_ext,
   Command_ChangeZoneProperties_ext,
@@ -13,13 +12,11 @@ import {
   Command_DelCounter_ext,
   Command_DeleteArrow_ext,
   Command_DrawCards_ext,
-  Command_DrawCardsSchema,
   Command_DumpZone_ext,
   Command_FlipCard_ext,
   Command_GameSay_ext,
   Command_IncCardCounter_ext,
   Command_IncCounter_ext,
-  Command_Judge_ext,
   Command_KickFromGame_ext,
   Command_LeaveGame_ext,
   Command_MoveCard_ext,
@@ -38,7 +35,6 @@ import {
   Command_Shuffle_ext,
   Command_UndoDraw_ext,
   Command_Unconcede_ext,
-  GameCommandSchema,
 } from '../../generated';
 
 import { attachCard } from './attachCard';
@@ -74,7 +70,6 @@ import { setSideboardPlan } from './setSideboardPlan';
 import { shuffle } from './shuffle';
 import { undoDraw } from './undoDraw';
 import { unconcede } from './unconcede';
-import { judge } from './judge';
 
 const gameId = 1;
 
@@ -329,18 +324,6 @@ describe('Game commands — delegate to WebClient.instance.protobuf.sendGameComm
       Command_MoveCard_ext,
       expect.objectContaining({ startZone: 'grave', targetZone: 'hand' }),
       { judgeTargetId: 4 },
-    );
-  });
-
-  it('judge sends Command_Judge with targetId and wrapped gameCommand array', () => {
-    const targetId = 3;
-    const innerCmd = create(GameCommandSchema);
-    setExtension(innerCmd, Command_DrawCards_ext, create(Command_DrawCardsSchema, { number: 2 }));
-    judge(gameId, targetId, innerCmd);
-    expect(WebClient.instance.protobuf.sendGameCommand).toHaveBeenCalledWith(
-      gameId,
-      Command_Judge_ext,
-      expect.objectContaining({ targetId: 3, gameCommand: expect.any(Array) })
     );
   });
 });

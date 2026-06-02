@@ -439,23 +439,24 @@ export function useGameDialogs({
   const handleRequestPlayFromCardMenu = useCallback(
     (faceDown: boolean) => {
       const menu = cardMenu;
-      if (!menu || gameId == null || game?.localPlayerId == null) {
+      if (!menu || gameId == null || game == null) {
         return;
       }
-      const localPlayerId = game.localPlayerId;
+      // A judge playing a foreign card wraps as the owner and lands it on the
+      // owner's table; own cards send bare (judgeTarget → undefined). See useJudgeTarget.
       void playCardViaTableRow({
         webClient,
         gameId,
-        localPlayerId,
         sourcePlayerId: menu.sourcePlayerId,
         sourceZone: menu.sourceZone,
         card: menu.card,
         faceDown,
         isInverted: invertVerticalCoordinate,
-        tableZone: game.players[localPlayerId]?.zones[Enriched.ZoneName.TABLE],
+        tableZone: game.players[menu.sourcePlayerId]?.zones[Enriched.ZoneName.TABLE],
+        judgeTargetId: judgeTarget(menu.sourcePlayerId),
       });
     },
-    [cardMenu, game, gameId, invertVerticalCoordinate, webClient],
+    [cardMenu, game, gameId, invertVerticalCoordinate, judgeTarget, webClient],
   );
 
   const handleRequestMoveToLibraryAt = useCallback(() => {

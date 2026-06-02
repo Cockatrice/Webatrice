@@ -464,6 +464,7 @@ describe('useGameArrowInteractions', () => {
           targetZone: Enriched.ZoneName.STACK,
           cardsToMove: { card: [expect.objectContaining({ cardId: 7 })] },
         }),
+        undefined,
       );
     });
 
@@ -485,6 +486,7 @@ describe('useGameArrowInteractions', () => {
           targetZone: Enriched.ZoneName.TABLE,
           y: 1,
         }),
+        undefined,
       );
     });
 
@@ -506,6 +508,7 @@ describe('useGameArrowInteractions', () => {
           targetZone: Enriched.ZoneName.TABLE,
           y: 0,
         }),
+        undefined,
       );
     });
 
@@ -527,6 +530,7 @@ describe('useGameArrowInteractions', () => {
           targetZone: Enriched.ZoneName.TABLE,
           y: 2,
         }),
+        undefined,
       );
     });
 
@@ -548,6 +552,7 @@ describe('useGameArrowInteractions', () => {
           targetZone: Enriched.ZoneName.TABLE,
           y: 0,
         }),
+        undefined,
       );
     });
 
@@ -568,6 +573,7 @@ describe('useGameArrowInteractions', () => {
           targetZone: Enriched.ZoneName.TABLE,
           y: 0,
         }),
+        undefined,
       );
     });
 

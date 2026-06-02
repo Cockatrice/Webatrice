@@ -260,7 +260,6 @@ export function useGameArrowInteractions({
             const postPlayZone = await playCardViaTableRow({
               webClient,
               gameId,
-              localPlayerId: drag.sourcePlayerId,
               sourcePlayerId: drag.sourcePlayerId,
               sourceZone: Enriched.ZoneName.HAND,
               card: sourceCard,
@@ -404,7 +403,6 @@ export function useGameArrowInteractions({
             const postPlayZone = await playCardViaTableRow({
               webClient,
               gameId,
-              localPlayerId: src.sourcePlayerId,
               sourcePlayerId: src.sourcePlayerId,
               sourceZone: Enriched.ZoneName.HAND,
               card: sourceCard,
@@ -474,7 +472,6 @@ export function useGameArrowInteractions({
         void playCardViaTableRow({
           webClient,
           gameId,
-          localPlayerId,
           sourcePlayerId: localPlayerId,
           sourceZone: Enriched.ZoneName.HAND,
           card,

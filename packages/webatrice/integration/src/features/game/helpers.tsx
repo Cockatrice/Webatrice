@@ -43,6 +43,7 @@ export interface TableCardSeed {
   x: number;
   y: number;
   tapped?: boolean;
+  faceDown?: boolean;
 }
 
 export interface BuildGameStateOptions {
@@ -85,6 +86,7 @@ export function buildEventGameStateChanged(
                 x: c.x,
                 y: c.y,
                 tapped: c.tapped ?? false,
+                faceDown: c.faceDown ?? false,
               }),
             ),
           }),
