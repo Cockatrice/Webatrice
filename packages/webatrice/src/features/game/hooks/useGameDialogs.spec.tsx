@@ -23,12 +23,14 @@ interface SetupOpts {
   isSpectator?: boolean;
   canAct?: boolean;
   cardId?: number;
+  judge?: boolean;
 }
 
 function setup(opts: SetupOpts = {}) {
   const localPlayerId = opts.localPlayerId ?? 1;
   const isSpectator = opts.isSpectator ?? false;
   const canAct = opts.canAct ?? true;
+  const judge = opts.judge ?? false;
 
   const localPlayer = makePlayerEntry({
     properties: makePlayerProperties({ playerId: localPlayerId }),
@@ -48,11 +50,16 @@ function setup(opts: SetupOpts = {}) {
     },
   });
 
+  const opponent = makePlayerEntry({
+    properties: makePlayerProperties({ playerId: 2 }),
+    zones: { [Enriched.ZoneName.DECK]: makeZoneEntry({ name: Enriched.ZoneName.DECK, cardCount: 60 }) },
+  });
   const game = makeGameEntry({
     localPlayerId,
     started: true,
     spectator: isSpectator,
-    players: { [localPlayerId]: localPlayer },
+    judge,
+    players: judge ? { [localPlayerId]: localPlayer, 2: opponent } : { [localPlayerId]: localPlayer },
   });
   const gamesState: GamesState = {
     games: { 1: { ...game, info: { ...game.info, gameId: 1 } } },
@@ -67,7 +74,7 @@ function setup(opts: SetupOpts = {}) {
     canAct,
     canView: true,
     isLocalPlayer: true,
-    isJudge: false,
+    isJudge: judge,
     localPlayerId: 1,
   };
   const startPendingArrow = vi.fn();
@@ -175,6 +182,57 @@ describe('useGameDialogs', () => {
       undefined, // own card → no Command_Judge wrap
     );
     expect(result.current.prompt).toBeNull();
+  });
+
+  it('move-to-library-at on an OWN card targets self and sends bare', () => {
+    const { result, webClient } = setup();
+    const card = makeCard({ id: 9 });
+
+    act(() => {
+      result.current.handleCardContextMenu(1, Enriched.ZoneName.GRAVE, card, makeMouseEvent());
+    });
+    act(() => {
+      result.current.handleRequestMoveToLibraryAt();
+    });
+    act(() => {
+      result.current.prompt!.onSubmit('2');
+    });
+
+    expect(webClient.request.game.moveCard).toHaveBeenCalledWith(
+      1,
+      expect.objectContaining({
+        startPlayerId: 1,
+        targetPlayerId: 1,
+        targetZone: Enriched.ZoneName.DECK,
+        x: 1, // 1-indexed prompt → 0-indexed wire
+      }),
+      undefined, // own card → no Command_Judge wrap
+    );
+  });
+
+  it('move-to-library-at on an opponent card (judge) routes to the owner deck, wrapped', () => {
+    const { result, webClient } = setup({ judge: true });
+    const card = makeCard({ id: 10 });
+
+    act(() => {
+      result.current.handleCardContextMenu(2, Enriched.ZoneName.GRAVE, card, makeMouseEvent());
+    });
+    act(() => {
+      result.current.handleRequestMoveToLibraryAt();
+    });
+    act(() => {
+      result.current.prompt!.onSubmit('1');
+    });
+
+    expect(webClient.request.game.moveCard).toHaveBeenCalledWith(
+      1,
+      expect.objectContaining({
+        startPlayerId: 2,
+        targetPlayerId: 2, // owner tree, not the judge
+        targetZone: Enriched.ZoneName.DECK,
+      }),
+      2, // judge wrap target = owner
+    );
   });
 
   it('routes the concede flow through confirmConcede → webClient.game.concede', () => {

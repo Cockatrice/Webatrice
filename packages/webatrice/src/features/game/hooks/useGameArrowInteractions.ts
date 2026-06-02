@@ -2,7 +2,7 @@ import { RefObject, useCallback, useEffect, useMemo, useState } from 'react';
 
 import { useSettings } from '@app/hooks';
 import { useWebClient } from '@cockatrice/datatrice/react';
-import { CardAttribute, ServerInfo_Card } from '@cockatrice/sockatrice/generated';
+import { ServerInfo_Card } from '@cockatrice/sockatrice/generated';
 import { Enriched, GameEntry } from '@cockatrice/datatrice';
 import { ArrowColor, ColorRGBA, rgbaToCss } from '@app/types';
 import { makeCardKey, makePlayerKey, type CardRegistry } from '../utils/CardRegistry/CardRegistryContext';
@@ -266,6 +266,7 @@ export function useGameArrowInteractions({
               faceDown: false,
               isInverted: invertVerticalCoordinate,
               tableZone: game?.players[drag.sourcePlayerId]?.zones[Enriched.ZoneName.TABLE],
+              judgeTargetId: judgeTarget(drag.sourcePlayerId),
             });
             webClient.request.game.createArrow(gameId, {
               startPlayerId: drag.sourcePlayerId,
@@ -295,7 +296,7 @@ export function useGameArrowInteractions({
       window.removeEventListener('mousemove', handleMove);
       window.removeEventListener('mouseup', handleUp);
     };
-  }, [arrowDrag, gameId, webClient, game, invertVerticalCoordinate]);
+  }, [arrowDrag, gameId, webClient, game, invertVerticalCoordinate, judgeTarget]);
 
   const handleBoardMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     if (e.button !== 2) {
@@ -409,6 +410,7 @@ export function useGameArrowInteractions({
               faceDown: false,
               isInverted: invertVerticalCoordinate,
               tableZone: game?.players[src.sourcePlayerId]?.zones[Enriched.ZoneName.TABLE],
+              judgeTargetId: judgeTarget(src.sourcePlayerId),
             });
             webClient.request.game.createArrow(gameId, {
               startPlayerId: src.sourcePlayerId,
@@ -449,39 +451,38 @@ export function useGameArrowInteractions({
       }
       // Double-clicking a card that's part of a multi-selection bulk-taps the
       // TABLE subset (Cockatrice collective rule); the selection is preserved.
+      // A judge tapping foreign cards wraps each as its owner; own cards send bare.
       if (sourceZone === Enriched.ZoneName.TABLE && sourcePlayerId != null) {
         const bulk = bulkTargetsFor(selectedCards, makeCardKey(sourcePlayerId, sourceZone, card.id));
         if (bulk.length) {
-          dispatchBulkTap(webClient, gameId, bulk.filter((t) => t.zone === Enriched.ZoneName.TABLE));
+          dispatchBulkTap(webClient, gameId, bulk.filter((t) => t.zone === Enriched.ZoneName.TABLE), judgeTarget);
           return;
         }
       }
       collapseUnlessSelected(sourcePlayerId, sourceZone, card);
-      if (sourceZone === Enriched.ZoneName.TABLE) {
-        webClient.request.game.setCardAttr(gameId, {
-          zone: sourceZone,
-          cardId: card.id,
-          attribute: CardAttribute.AttrTapped,
-          attrValue: card.tapped ? '0' : '1',
-        });
+      if (sourceZone === Enriched.ZoneName.TABLE && sourcePlayerId != null) {
+        // Single-card tap routes through the same helper so the judge rule is
+        // applied identically to the bulk path. See useJudgeTarget.
+        dispatchBulkTap(webClient, gameId, [{ ownerPlayerId: sourcePlayerId, zone: sourceZone, card }], judgeTarget);
         return;
       }
-      if (sourceZone === Enriched.ZoneName.HAND && game?.localPlayerId != null) {
-        const localPlayerId = game.localPlayerId;
-        // Local target is never per-player mirrored; honor invertVerticalCoordinate for wire y.
+      if (sourceZone === Enriched.ZoneName.HAND && sourcePlayerId != null && game != null) {
+        // Play onto the card owner's table; a judge playing a foreign hand card
+        // wraps as the owner, own cards send bare. Mirrors the card-menu play.
         void playCardViaTableRow({
           webClient,
           gameId,
-          sourcePlayerId: localPlayerId,
+          sourcePlayerId,
           sourceZone: Enriched.ZoneName.HAND,
           card,
           faceDown: false,
           isInverted: invertVerticalCoordinate,
-          tableZone: game.players[localPlayerId]?.zones[Enriched.ZoneName.TABLE],
+          tableZone: game.players[sourcePlayerId]?.zones[Enriched.ZoneName.TABLE],
+          judgeTargetId: judgeTarget(sourcePlayerId),
         });
       }
     },
-    [gameId, game, invertVerticalCoordinate, pending, webClient, selectedCards, collapseUnlessSelected],
+    [gameId, game, invertVerticalCoordinate, pending, webClient, selectedCards, collapseUnlessSelected, judgeTarget],
   );
 
   // Returns true iff a pending arrow was resolved against this player. Callers

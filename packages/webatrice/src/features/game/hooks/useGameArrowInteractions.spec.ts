@@ -5,6 +5,7 @@ import { vi } from 'vitest';
 import { createCardRegistry } from '../utils/CardRegistry/CardRegistryContext';
 import { combineReducers } from '@reduxjs/toolkit';
 
+import { CardAttribute } from '@cockatrice/sockatrice/generated';
 import { games, type GamesState } from '@cockatrice/datatrice';
 import { makeCard, makeGameEntry, makePlayerEntry, makePlayerProperties, makeZoneEntry } from '@cockatrice/datatrice/testing';
 import { makeReduxWebClientHookWrapper } from '../../../__test-utils__/makeHookWrapper';
@@ -21,9 +22,17 @@ vi.mock('../../../hooks/useSettings');
 function setup({
   localPlayerId = 1,
   handCards = [],
-}: { localPlayerId?: number; handCards?: ReturnType<typeof makeCard>[] } = {}) {
+  judge = false,
+  extraPlayers = {},
+}: {
+  localPlayerId?: number;
+  handCards?: ReturnType<typeof makeCard>[];
+  judge?: boolean;
+  extraPlayers?: GamesState['games'][number]['players'];
+} = {}) {
   const game = makeGameEntry({
     localPlayerId,
+    judge,
     players: {
       [localPlayerId]: makePlayerEntry({
         properties: makePlayerProperties({ playerId: localPlayerId }),
@@ -33,6 +42,7 @@ function setup({
           table: makeZoneEntry({ name: Enriched.ZoneName.TABLE }),
         },
       }),
+      ...extraPlayers,
     },
   });
   const gamesState: GamesState = { games: { 1: { ...game, info: { ...game.info, gameId: 1 } } } };
@@ -609,5 +619,71 @@ describe('useGameArrowInteractions', () => {
     });
 
     expect(result.current.arrowSourceKey).not.toBeNull();
+  });
+
+  describe('judge override', () => {
+    type Cards = ReturnType<typeof makeCard>[];
+    function opponent(playerId: number, opts: { tableCards?: Cards; handCards?: Cards } = {}) {
+      return makePlayerEntry({
+        properties: makePlayerProperties({ playerId }),
+        zones: {
+          hand: makeZoneEntry({ name: Enriched.ZoneName.HAND, cards: opts.handCards ?? [] }),
+          deck: makeZoneEntry({ name: Enriched.ZoneName.DECK }),
+          table: makeZoneEntry({ name: Enriched.ZoneName.TABLE, cards: opts.tableCards ?? [] }),
+        },
+      });
+    }
+
+    it('double-click tap on an opponent TABLE card wraps as the owner (judge)', () => {
+      const card = makeCard({ id: 77, tapped: false });
+      const { result, webClient } = setup({ judge: true, extraPlayers: { 2: opponent(2, { tableCards: [card] }) } });
+
+      act(() => {
+        result.current.handleCardDoubleClick(2, Enriched.ZoneName.TABLE, card);
+      });
+
+      expect(webClient.request.game.setCardAttr).toHaveBeenCalledWith(
+        1,
+        expect.objectContaining({ cardId: 77, attribute: CardAttribute.AttrTapped, attrValue: '1' }),
+        2, // judge wrap target = owner
+      );
+    });
+
+    it('double-click tap on an OWN TABLE card sends bare (no judge wrap)', () => {
+      const card = makeCard({ id: 78, tapped: false });
+      const { result, webClient } = setup({ judge: true, extraPlayers: { 1: opponent(1, { tableCards: [card] }) } });
+
+      act(() => {
+        result.current.handleCardDoubleClick(1, Enriched.ZoneName.TABLE, card);
+      });
+
+      expect(webClient.request.game.setCardAttr).toHaveBeenCalledWith(
+        1,
+        expect.objectContaining({ cardId: 78, attribute: CardAttribute.AttrTapped, attrValue: '1' }),
+        undefined,
+      );
+    });
+
+    it('double-click play of an opponent HAND card lands on the owner table, wrapped (judge)', async () => {
+      vi.mocked(CardDTO.get).mockResolvedValue({ tablerow: { value: '1' } } as never);
+      const card = makeCard({ id: 88, name: 'Bear' });
+      const { result, webClient } = setup({ judge: true, extraPlayers: { 2: opponent(2, { handCards: [card] }) } });
+
+      act(() => {
+        result.current.handleCardDoubleClick(2, Enriched.ZoneName.HAND, card);
+      });
+
+      await waitFor(() => expect(webClient.request.game.moveCard).toHaveBeenCalled());
+      expect(webClient.request.game.moveCard).toHaveBeenCalledWith(
+        1,
+        expect.objectContaining({
+          startPlayerId: 2,
+          targetPlayerId: 2,
+          startZone: Enriched.ZoneName.HAND,
+          targetZone: Enriched.ZoneName.TABLE,
+        }),
+        2, // judge wrap target = owner
+      );
+    });
   });
 });

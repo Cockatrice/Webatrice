@@ -12,6 +12,7 @@ import type { SideboardPlanMove } from '../dialogs/SideboardDialog/SideboardDial
 import type { GameAccess } from './useGameAccess';
 import { playCardViaTableRow } from './playCard';
 import { useJudgeTarget } from './useJudgeTarget';
+import { moveTargetPlayerId } from '../utils/moveTarget';
 
 export interface AnchorPosition {
   top: number;
@@ -471,20 +472,22 @@ export function useGameDialogs({
       initialValue: '1',
       validate: (v) => (/^[1-9]\d*$/.test(v) ? null : 'Enter a positive integer'),
       onSubmit: (value) => {
+        // Non-table move routes to the card's owner tree; a judge moving a foreign
+        // card wraps as the owner, own cards send bare. See moveTargetPlayerId / useJudgeTarget.
         webClient.request.game.moveCard(gameId, {
           startPlayerId: menu.sourcePlayerId,
           startZone: menu.sourceZone,
           cardsToMove: { card: [{ cardId: menu.card.id }] },
-          targetPlayerId: game.localPlayerId,
+          targetPlayerId: moveTargetPlayerId(menu.sourcePlayerId, Enriched.ZoneName.DECK, game.localPlayerId),
           targetZone: Enriched.ZoneName.DECK,
           x: Math.max(0, Number(value) - 1),
           y: 0,
           isReversed: false,
-        });
+        }, judgeTarget(menu.sourcePlayerId));
         setPrompt(null);
       },
     });
-  }, [cardMenu, game, gameId, webClient]);
+  }, [cardMenu, game, gameId, judgeTarget, webClient]);
 
   const handleRequestDrawN = useCallback(() => {
     if (gameId == null) {
