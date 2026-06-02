@@ -27,7 +27,23 @@ describe('useGameAccess', () => {
   it('returns fully locked out when the game is missing', () => {
     const wrapper = makeWrapper({ games: {} });
     const { result } = renderHook(() => useGameAccess(1), { wrapper });
-    expect(result.current).toEqual({ canAct: false, canView: false, isLocalPlayer: false });
+    expect(result.current).toEqual({
+      canAct: false,
+      canView: false,
+      isLocalPlayer: false,
+      isJudge: false,
+      localPlayerId: undefined,
+    });
+  });
+
+  it('exposes the game-level judge flag and local player id (the single identity source)', () => {
+    const game = makeGameEntry({ localPlayerId: 5, spectator: false, judge: true });
+    const wrapper = makeWrapper({ games: { 1: game } });
+
+    const { result } = renderHook(() => useGameAccess(1, 9), { wrapper });
+
+    expect(result.current.isJudge).toBe(true);
+    expect(result.current.localPlayerId).toBe(5);
   });
 
   it('grants full action rights when no target is given and viewer is a local (non-spectator) player', () => {

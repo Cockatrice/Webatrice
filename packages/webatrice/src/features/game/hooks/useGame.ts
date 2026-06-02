@@ -11,6 +11,7 @@ import { useGameArrowInteractions, type GameArrowInteractions } from './useGameA
 import { useGameBoxSelection, type BoxSelectPreview } from './useGameBoxSelection';
 import { useGameDialogs, type GameDialogs } from './useGameDialogs';
 import { useGameDnd, type GameDnd } from './useGameDnd';
+import { useJudgeTarget } from './useJudgeTarget';
 import { useGameLifecycleNavigation } from './useGameLifecycleNavigation';
 import { useGameBoardLayout, type GameBoardLayout } from './useGameBoardLayout';
 import { useGameSelection, type GameSelection } from './useGameSelection';
@@ -66,6 +67,7 @@ export function useGame(): Game {
 
   const layout = useGameBoardLayout(game);
   const localAccess = useGameAccess(gameId, game?.localPlayerId);
+  const judgeTarget = useJudgeTarget(gameId);
 
   const arrows = useGameArrowInteractions({
     gameId,
@@ -94,6 +96,7 @@ export function useGame(): Game {
   });
   const dnd = useGameDnd({
     gameId,
+    judgeTarget,
     cancelPendingArrow: arrows.cancelPendingOnDragStart,
     collapseUnlessSelected: selection.collapseUnlessSelected,
   });

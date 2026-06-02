@@ -479,7 +479,7 @@ describe('Game container', () => {
         cardId: 7,
         attribute: CardAttribute.AttrPT,
         attrValue: '3/3',
-      });
+      }, undefined); // own card → no judge wrap
     });
   });
 

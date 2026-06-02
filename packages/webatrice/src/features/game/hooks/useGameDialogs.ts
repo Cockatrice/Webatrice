@@ -11,6 +11,7 @@ import { DEFAULT_DIE_COUNT, DEFAULT_DIE_SIDES } from '../dialogs/RollDieDialog/R
 import type { SideboardPlanMove } from '../dialogs/SideboardDialog/SideboardDialog';
 import type { GameAccess } from './useGameAccess';
 import { playCardViaTableRow } from './playCard';
+import { useJudgeTarget } from './useJudgeTarget';
 
 export interface AnchorPosition {
   top: number;
@@ -212,6 +213,7 @@ export function useGameDialogs({
 }: UseGameDialogsArgs): GameDialogs {
   const webClient = useWebClient();
   const dispatch = useAppDispatch();
+  const judgeTarget = useJudgeTarget(gameId);
   const { value: settings } = useSettings();
   const invertVerticalCoordinate = settings?.invertVerticalCoordinate ?? false;
 
@@ -358,11 +360,11 @@ export function useGameDialogs({
           cardId: menu.card.id,
           attribute: CardAttribute.AttrPT,
           attrValue: value,
-        });
+        }, judgeTarget(menu.sourcePlayerId));
         setPrompt(null);
       },
     });
-  }, [cardMenu, gameId, webClient]);
+  }, [cardMenu, judgeTarget, gameId, webClient]);
 
   const handleRequestSetAnnotation = useCallback(() => {
     const menu = cardMenu;
@@ -379,11 +381,11 @@ export function useGameDialogs({
           cardId: menu.card.id,
           attribute: CardAttribute.AttrAnnotation,
           attrValue: value,
-        });
+        }, judgeTarget(menu.sourcePlayerId));
         setPrompt(null);
       },
     });
-  }, [cardMenu, gameId, webClient]);
+  }, [cardMenu, judgeTarget, gameId, webClient]);
 
   const handleRequestSetCardCounter = useCallback((counterId: number) => {
     const menu = cardMenu;
@@ -403,11 +405,11 @@ export function useGameDialogs({
           cardId: menu.card.id,
           counterId,
           counterValue: Number(value),
-        });
+        }, judgeTarget(menu.sourcePlayerId));
         setPrompt(null);
       },
     });
-  }, [cardMenu, gameId, webClient]);
+  }, [cardMenu, judgeTarget, gameId, webClient]);
 
   const handleRequestDrawArrow = useCallback(() => {
     const menu = cardMenu;

@@ -6,6 +6,7 @@ interface CommandOptionsBase {
   onError?: (responseCode: number, raw: Response) => void;
   onResponseCode?: { [code: number]: (raw: Response) => void };
   onResponse?: (raw: Response) => void;
+  judgeTargetId?: number;
 }
 
 export interface CommandOptionsWithResponse<R> extends CommandOptionsBase {

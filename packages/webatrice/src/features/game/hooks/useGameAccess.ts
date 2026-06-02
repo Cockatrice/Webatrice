@@ -6,6 +6,10 @@ export interface GameAccess {
   canAct: boolean;
   canView: boolean;
   isLocalPlayer: boolean;
+  // Local user identity for this game — the single source for judge/seat checks
+  // (e.g. useJudgeTarget). Target-agnostic: same regardless of targetPlayerId.
+  isJudge: boolean;
+  localPlayerId: number | undefined;
 }
 
 /**
@@ -26,12 +30,14 @@ export function useGameAccess(gameId: number | undefined, targetPlayerId?: numbe
 
   return useMemo<GameAccess>(() => {
     if (!game) {
-      return { canAct: false, canView: false, isLocalPlayer: false };
+      return { canAct: false, canView: false, isLocalPlayer: false, isJudge: false, localPlayerId: undefined };
     }
     return {
       canAct: computeCanAct(game, targetPlayerId),
       canView: true,
       isLocalPlayer: targetPlayerId != null && targetPlayerId === game.localPlayerId,
+      isJudge: game.judge,
+      localPlayerId: game.localPlayerId,
     };
   }, [game, targetPlayerId]);
 }

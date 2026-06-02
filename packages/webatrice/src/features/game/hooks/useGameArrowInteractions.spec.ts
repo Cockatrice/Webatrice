@@ -407,6 +407,7 @@ describe('useGameArrowInteractions', () => {
           targetZone: Enriched.ZoneName.TABLE,
           targetCardId: 99,
         }),
+        undefined, // non-judge actor → no judge wrap
       );
       // Pending state cleared after dispatch so subsequent clicks don't
       // re-attach.

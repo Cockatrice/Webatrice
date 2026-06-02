@@ -67,6 +67,8 @@ function setup(opts: SetupOpts = {}) {
     canAct,
     canView: true,
     isLocalPlayer: true,
+    isJudge: false,
+    localPlayerId: 1,
   };
   const startPendingArrow = vi.fn();
   const startPendingAttach = vi.fn();
@@ -170,6 +172,7 @@ describe('useGameDialogs', () => {
         attribute: CardAttribute.AttrPT,
         attrValue: '3/3',
       }),
+      undefined, // own card → no Command_Judge wrap
     );
     expect(result.current.prompt).toBeNull();
   });

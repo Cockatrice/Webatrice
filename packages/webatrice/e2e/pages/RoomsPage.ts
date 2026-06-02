@@ -70,11 +70,23 @@ export class RoomsPage {
       .filter({ hasText: new RegExp(description, 'i') });
   }
 
-  async joinGame(description: string, options: { spectator?: boolean } = {}): Promise<void> {
+  async joinGame(
+    description: string,
+    options: { spectator?: boolean; judge?: boolean; judgeSpectator?: boolean } = {},
+  ): Promise<void> {
     const row = this.gameRow(description);
     await expect(row).toBeVisible({ timeout: 15_000 });
     await row.click();
-    const action = options.spectator ? /join as spectator/i : /^join$/i;
+    // The "Join as Judge*" controls render only for accounts with the IsJudge flag
+    // (GameSelectorToolbar). "Join as Judge" (exact) is a judge player; "Join as
+    // Judge Spectator" is an omniscient judge that doesn't take a seat.
+    const action = options.judgeSpectator
+      ? /join as judge spectator/i
+      : options.judge
+        ? /^join as judge$/i
+        : options.spectator
+          ? /join as spectator/i
+          : /^join$/i;
     const btn = this.page.getByRole('button', { name: action });
     await expect(btn).toBeEnabled({ timeout: 10_000 });
     await btn.click();

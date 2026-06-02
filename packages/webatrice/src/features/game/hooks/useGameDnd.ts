@@ -30,6 +30,10 @@ export interface GameDnd {
 
 export interface UseGameDndArgs {
   gameId: number | undefined;
+  // Resolves the Command_Judge target for a dragged card's owner (the owner when a
+  // judge drags a foreign card, else undefined → bare). Passed in to keep this hook
+  // store-decoupled. See useJudgeTarget.
+  judgeTarget: (ownerPlayerId: number) => number | undefined;
   cancelPendingArrow: () => void;
   collapseUnlessSelected: (
     ownerPlayerId: number | undefined,
@@ -204,6 +208,7 @@ function sendMoveCard(
   target: DragTarget,
   x: number,
   y: number,
+  judgeTargetId?: number,
 ): void {
   webClient.request.game.moveCard(gameId, {
     startPlayerId: source.sourcePlayerId,
@@ -214,10 +219,15 @@ function sendMoveCard(
     x,
     y,
     isReversed: false,
-  });
+  }, judgeTargetId);
 }
 
-export function useGameDnd({ gameId, cancelPendingArrow, collapseUnlessSelected }: UseGameDndArgs): GameDnd {
+export function useGameDnd({
+  gameId,
+  judgeTarget,
+  cancelPendingArrow,
+  collapseUnlessSelected,
+}: UseGameDndArgs): GameDnd {
   const webClient = useWebClient();
 
   // Cancel any pending arrow, then collapse the selection to the dragged card
@@ -239,9 +249,13 @@ export function useGameDnd({ gameId, cancelPendingArrow, collapseUnlessSelected 
         return;
       }
       const ctx = classifyDrop(event);
+      if (ctx.kind === 'noop') {
+        return;
+      }
+      const judgeTargetId = judgeTarget(ctx.source.sourcePlayerId);
       switch (ctx.kind) {
         case 'reorder':
-          sendMoveCard(webClient, gameId, ctx.source, ctx.target, ctx.targetIndex, 0);
+          sendMoveCard(webClient, gameId, ctx.source, ctx.target, ctx.targetIndex, 0, judgeTargetId);
           return;
         case 'table': {
           const gridX = resolveTableGridX(event, ctx.source, ctx.target, ctx.sameRow);
@@ -249,17 +263,15 @@ export function useGameDnd({ gameId, cancelPendingArrow, collapseUnlessSelected 
           if (gridX == null) {
             return;
           }
-          sendMoveCard(webClient, gameId, ctx.source, ctx.target, gridX, ctx.targetRow);
+          sendMoveCard(webClient, gameId, ctx.source, ctx.target, gridX, ctx.targetRow, judgeTargetId);
           return;
         }
         case 'cross-zone':
-          sendMoveCard(webClient, gameId, ctx.source, ctx.target, 0, 0);
-          return;
-        case 'noop':
+          sendMoveCard(webClient, gameId, ctx.source, ctx.target, 0, 0, judgeTargetId);
           return;
       }
     },
-    [gameId, webClient],
+    [gameId, webClient, judgeTarget],
   );
 
   return { handleDragStart, handleDragEnd, collisionDetection };

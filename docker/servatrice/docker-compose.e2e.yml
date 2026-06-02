@@ -29,9 +29,12 @@ services:
   servatrice-sql:
     <<: *servatrice-image
     entrypoint: ["/bin/sh", "-c"]
-    command: ["cp /usr/local/share/servatrice/servatrice.sql /init/servatrice.sql"]
+    # Schema first, then the judge seed as `zz-judge-seed.sql` so MySQL's
+    # /docker-entrypoint-initdb.d runs it last (alphabetical), after the tables exist.
+    command: ["cp /usr/local/share/servatrice/servatrice.sql /init/servatrice.sql && cp /seed/judge-seed.sql /init/zz-judge-seed.sql"]
     volumes:
       - servatrice_sql:/init
+      - ./judge-seed.sql:/seed/judge-seed.sql:ro
     restart: "no"
 
   mysql:

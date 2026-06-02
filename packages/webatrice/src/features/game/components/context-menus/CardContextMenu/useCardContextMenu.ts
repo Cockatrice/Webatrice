@@ -3,6 +3,7 @@ import { CardAttribute, ServerInfo_Card } from '@cockatrice/sockatrice/generated
 import { Enriched } from '@cockatrice/datatrice';
 import { dispatchBulkMove, dispatchBulkTap } from '../../../utils/bulkCardActions';
 import { moveTargetPlayerId } from '../../../utils/moveTarget';
+import { useJudgeTarget } from '../../../hooks/useJudgeTarget';
 import { bulkTargetsFor, type SelectedCard } from '../../../utils/selection';
 import { makeCardKey } from '../../../utils/CardRegistry/CardRegistryContext';
 interface MoveTarget {
@@ -24,7 +25,9 @@ export const CARD_MOVE_TARGETS: ReadonlyArray<MoveTarget> = [
 
 export interface CardContextMenu {
   ready: boolean;
-  isOwnedByLocal: boolean;
+  // Local user may act on this card — owns it, or is a judge (parity with
+  // Cockatrice's writeableCard = getLocalOrJudge()). Gates the writeable menu.
+  canActOnCard: boolean;
   canAttach: boolean;
   isAttached: boolean;
   canPlay: boolean;
@@ -86,6 +89,8 @@ export function useCardContextMenu({
   onRequestMoveToLibraryAt,
 }: UseCardContextMenuArgs): CardContextMenu {
   const webClient = useWebClient();
+  // Encapsulated judge rule: yields the owner to wrap as, or undefined for own/non-judge.
+  const judgeTarget = useJudgeTarget(gameId);
 
   const ready = card != null && ownerPlayerId != null && sourceZone != null && localPlayerId != null;
 
@@ -96,11 +101,18 @@ export function useCardContextMenu({
 
   // Card-menu affordance gates. See .github/instructions/webatrice-game.instructions.md#dialog-parity.
   const isOwnedByLocal = ready && ownerPlayerId === localPlayerId;
+  // A judge acting on a foreign card wraps every command in Command_Judge (target =
+  // owner) so the server runs it as the owner; undefined for own cards (sent bare).
+  const judgeTargetId = ready ? judgeTarget(ownerPlayerId!) : undefined;
+  // Writeable-card gate: own card, or a judge acting on a foreign card.
+  const canActOnCard = ready && (isOwnedByLocal || judgeTargetId !== undefined);
   const isAttached = ready && (card!.attachCardId ?? -1) >= 0;
   const canAttach = ready && sourceZone === Enriched.ZoneName.TABLE;
+  // Play stays own-card-only: the play path (playCard.ts) targets the local
+  // player and isn't judge-wrapped yet, so it's not safe on a foreign card.
   const canPlay = ready && isOwnedByLocal && sourceZone !== Enriched.ZoneName.TABLE;
   const canPeek =
-    ready && isOwnedByLocal && sourceZone === Enriched.ZoneName.TABLE && (card!.faceDown ?? false);
+    ready && canActOnCard && sourceZone === Enriched.ZoneName.TABLE && (card!.faceDown ?? false);
 
   const setAttr = (attribute: CardAttribute, value: string) => {
     if (!ready) {
@@ -111,7 +123,7 @@ export function useCardContextMenu({
       cardId: card!.id,
       attribute,
       attrValue: value,
-    });
+    }, judgeTargetId);
   };
 
   const handleFlip = () => {
@@ -123,7 +135,7 @@ export function useCardContextMenu({
       zone: sourceZone!,
       cardId: card!.id,
       faceDown: !card!.faceDown,
-    });
+    }, judgeTargetId);
     onClose();
   };
 
@@ -133,7 +145,7 @@ export function useCardContextMenu({
     }
     const tableTargets = bulkTargets.filter((t) => t.zone === Enriched.ZoneName.TABLE);
     if (tableTargets.length > 1) {
-      dispatchBulkTap(webClient, gameId, tableTargets);
+      dispatchBulkTap(webClient, gameId, tableTargets, judgeTarget);
     } else {
       setAttr(CardAttribute.AttrTapped, card!.tapped ? '0' : '1');
     }
@@ -175,7 +187,7 @@ export function useCardContextMenu({
       cardId: card!.id,
       counterId,
       counterDelta: delta,
-    });
+    }, judgeTargetId);
     onClose();
   };
 
@@ -199,7 +211,7 @@ export function useCardContextMenu({
       return;
     }
     // Unattach: omit target_* (server detects via proto2 presence).
-    webClient.request.game.attachCard(gameId, { startZone: sourceZone!, cardId: card!.id });
+    webClient.request.game.attachCard(gameId, { startZone: sourceZone!, cardId: card!.id }, judgeTargetId);
     onClose();
   };
 
@@ -215,7 +227,7 @@ export function useCardContextMenu({
         targetZone: target.zone,
         x: target.x,
         y: target.y,
-      });
+      }, judgeTarget);
     } else {
       webClient.request.game.moveCard(gameId, {
         startPlayerId: ownerPlayerId!,
@@ -226,7 +238,7 @@ export function useCardContextMenu({
         x: target.x,
         y: target.y,
         isReversed: false,
-      });
+      }, judgeTargetId);
     }
     onClose();
   };
@@ -262,13 +274,13 @@ export function useCardContextMenu({
       cardId: [card!.id],
       playerId: localPlayerId!,
       topCards: -1,
-    });
+    }, judgeTargetId);
     onClose();
   };
 
   return {
     ready,
-    isOwnedByLocal,
+    canActOnCard,
     canAttach,
     isAttached,
     canPlay,

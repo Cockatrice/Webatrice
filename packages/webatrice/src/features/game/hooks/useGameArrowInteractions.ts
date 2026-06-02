@@ -7,6 +7,7 @@ import { Enriched, GameEntry } from '@cockatrice/datatrice';
 import { ArrowColor, ColorRGBA, rgbaToCss } from '@app/types';
 import { makeCardKey, makePlayerKey, type CardRegistry } from '../utils/CardRegistry/CardRegistryContext';
 import { dispatchBulkTap } from '../utils/bulkCardActions';
+import { useJudgeTarget } from './useJudgeTarget';
 import { bulkTargetsFor, type SelectedCard } from '../utils/selection';
 
 import { playCardViaTableRow } from './playCard';
@@ -102,6 +103,7 @@ export function useGameArrowInteractions({
   collapseUnlessSelected,
 }: UseGameArrowInteractionsArgs): GameArrowInteractions {
   const webClient = useWebClient();
+  const judgeTarget = useJudgeTarget(gameId);
   const { value: settings } = useSettings();
   const invertVerticalCoordinate = settings?.invertVerticalCoordinate ?? false;
 
@@ -372,13 +374,14 @@ export function useGameArrowInteractions({
           setPending(null);
           return;
         }
+        // A judge attaching a foreign card wraps it as the source card's owner. See useJudgeTarget.
         webClient.request.game.attachCard(gameId, {
           startZone: src.sourceZone,
           cardId: src.sourceCardId,
           targetPlayerId: ownerPlayerId,
           targetZone: zone,
           targetCardId: card.id,
-        });
+        }, judgeTarget(src.sourcePlayerId));
         setPending(null);
         return;
       }
@@ -434,7 +437,7 @@ export function useGameArrowInteractions({
       });
       setPending(null);
     },
-    [gameId, game, invertVerticalCoordinate, pending, webClient, collapseUnlessSelected],
+    [gameId, game, invertVerticalCoordinate, pending, webClient, collapseUnlessSelected, judgeTarget],
   );
 
   const handleCardDoubleClick = useCallback(

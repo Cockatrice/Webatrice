@@ -47,7 +47,7 @@ function CardContextMenu(props: CardContextMenuProps) {
   const { isOpen, anchorPosition, card, onClose } = props;
   const {
     ready,
-    isOwnedByLocal,
+    canActOnCard,
     canAttach,
     isAttached,
     canPlay,
@@ -91,7 +91,7 @@ function CardContextMenu(props: CardContextMenuProps) {
           <Divider />
         </>
       )}
-      {isOwnedByLocal && (
+      {canActOnCard && (
         <>
           <MenuItem onClick={handleFlip}>Flip</MenuItem>
           <MenuItem onClick={handleTapToggle}>{card.tapped ? 'Untap' : 'Tap'}</MenuItem>
@@ -140,13 +140,13 @@ function CardContextMenu(props: CardContextMenuProps) {
         </>
       )}
       <MenuItem onClick={handleDrawArrow}>Draw arrow from here</MenuItem>
-      {isOwnedByLocal && canAttach && (
+      {canActOnCard && canAttach && (
         <MenuItem onClick={handleAttach}>Attach to card…</MenuItem>
       )}
-      {isOwnedByLocal && canAttach && isAttached && (
+      {canActOnCard && canAttach && isAttached && (
         <MenuItem onClick={handleUnattach}>Unattach</MenuItem>
       )}
-      {isOwnedByLocal && (
+      {canActOnCard && (
         <>
           <Divider />
           {moveTargets.map((t) => (

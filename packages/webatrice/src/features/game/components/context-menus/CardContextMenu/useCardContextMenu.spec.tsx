@@ -11,7 +11,10 @@ import {
   type UseCardContextMenuArgs,
 } from './useCardContextMenu';
 
-function setup(overrides: Partial<UseCardContextMenuArgs> = {}) {
+function setup(
+  overrides: Partial<UseCardContextMenuArgs> = {},
+  { judge = false }: { judge?: boolean } = {},
+) {
   const onClose = vi.fn();
   const onRequestSetPT = vi.fn();
   const onRequestSetAnnotation = vi.fn();
@@ -21,9 +24,12 @@ function setup(overrides: Partial<UseCardContextMenuArgs> = {}) {
   const onRequestPlay = vi.fn();
   const onRequestMoveToLibraryAt = vi.fn();
 
+  // useGameAccess reads the game for canAct + judge/local identity, so preload a
+  // real (local player 1) entry; `judge` flips the override per test.
+  const gamesState = { games: { 1: { judge, localPlayerId: 1 } } } as unknown as GamesState;
   const { Wrapper, webClient } = makeReduxWebClientHookWrapper({
     reducer: combineReducers({ games: games.gamesReducer }),
-    preloadedState: { games: { games: {} } as GamesState },
+    preloadedState: { games: gamesState },
   });
 
   const args: UseCardContextMenuArgs = {
@@ -56,11 +62,11 @@ function setup(overrides: Partial<UseCardContextMenuArgs> = {}) {
 }
 
 describe('useCardContextMenu', () => {
-  it('reports ready+ownership flags for a local TABLE card', () => {
+  it('reports ready + writeable flags for a local TABLE card', () => {
     const { result } = setup();
 
     expect(result.current.ready).toBe(true);
-    expect(result.current.isOwnedByLocal).toBe(true);
+    expect(result.current.canActOnCard).toBe(true);
     expect(result.current.canAttach).toBe(true);
     expect(result.current.isAttached).toBe(false);
     expect(result.current.canPlay).toBe(false);
@@ -96,6 +102,7 @@ describe('useCardContextMenu', () => {
         attribute: CardAttribute.AttrTapped,
         attrValue: '1',
       },
+      undefined, // own card → no judge wrap
     );
     expect(onClose).toHaveBeenCalledTimes(1);
   });
@@ -121,10 +128,12 @@ describe('useCardContextMenu', () => {
     expect(webClient.request.game.setCardAttr).toHaveBeenCalledWith(
       1,
       expect.objectContaining({ cardId: 9, attrValue: '1' }),
+      undefined,
     );
     expect(webClient.request.game.setCardAttr).toHaveBeenCalledWith(
       1,
       expect.objectContaining({ cardId: 10, attrValue: '1' }),
+      undefined,
     );
   });
 
@@ -148,6 +157,7 @@ describe('useCardContextMenu', () => {
     expect(webClient.request.game.setCardAttr).toHaveBeenCalledWith(
       1,
       expect.objectContaining({ cardId: 9 }),
+      undefined,
     );
   });
 
@@ -177,6 +187,30 @@ describe('useCardContextMenu', () => {
         x: -1,
         y: 0,
       }),
+      undefined, // non-judge actor → no judge wrap
+    );
+  });
+
+  it('handleMove keeps the local player as target for a TABLE move (control-change)', () => {
+    const { result, webClient } = setup({
+      card: makeCard({ id: 14 }),
+      ownerPlayerId: 2,
+      localPlayerId: 1,
+      sourceZone: Enriched.ZoneName.GRAVE,
+    });
+
+    act(() => {
+      result.current.handleMove(CARD_MOVE_TARGETS[1]); // Send to Battlefield
+    });
+
+    expect(webClient.request.game.moveCard).toHaveBeenCalledWith(
+      1,
+      expect.objectContaining({
+        startPlayerId: 2,
+        targetPlayerId: 1,
+        targetZone: Enriched.ZoneName.TABLE,
+      }),
+      undefined, // non-judge actor → no judge wrap
     );
   });
 
@@ -235,6 +269,64 @@ describe('useCardContextMenu', () => {
     expect(onRequestSetPT).toHaveBeenCalledTimes(1);
     expect(onRequestSetCounter).toHaveBeenCalledWith(3);
     expect(onRequestPlay).toHaveBeenCalledWith(false);
+  });
+
+  describe('judge override', () => {
+    it('canActOnCard opens for a judge on a foreign card', () => {
+      const { result } = setup({ ownerPlayerId: 2, localPlayerId: 1 }, { judge: true });
+      expect(result.current.canActOnCard).toBe(true);
+    });
+
+    it('canActOnCard is false for a non-judge on a foreign card', () => {
+      const { result } = setup({ ownerPlayerId: 2, localPlayerId: 1 });
+      expect(result.current.canActOnCard).toBe(false);
+    });
+
+    it('handleMove wraps a judge non-table move in Command_Judge (target=owner)', () => {
+      const { result, webClient } = setup(
+        { card: makeCard({ id: 40 }), ownerPlayerId: 2, localPlayerId: 1, sourceZone: Enriched.ZoneName.TABLE },
+        { judge: true },
+      );
+      act(() => {
+        result.current.handleMove(CARD_MOVE_TARGETS[2]); // Send to Graveyard
+      });
+      expect(webClient.request.game.moveCard).toHaveBeenCalledWith(
+        1,
+        expect.objectContaining({ startPlayerId: 2, targetPlayerId: 2, targetZone: Enriched.ZoneName.GRAVE }),
+        2, // judge wrap target = owner
+      );
+    });
+
+    it('handleTapToggle wraps a judge tap of a foreign card in Command_Judge', () => {
+      const { result, webClient } = setup(
+        { card: makeCard({ id: 41, tapped: false }), ownerPlayerId: 2, localPlayerId: 1 },
+        { judge: true },
+      );
+      act(() => {
+        result.current.handleTapToggle();
+      });
+      expect(webClient.request.game.setCardAttr).toHaveBeenCalledWith(
+        1,
+        expect.objectContaining({ cardId: 41, attribute: CardAttribute.AttrTapped, attrValue: '1' }),
+        2,
+      );
+    });
+
+    it('sends a judge action on their OWN card bare (no Command_Judge wrap)', () => {
+      const { result, webClient } = setup(
+        { card: makeCard({ id: 42 }), ownerPlayerId: 1, localPlayerId: 1, sourceZone: Enriched.ZoneName.TABLE },
+        { judge: true },
+      );
+      act(() => {
+        result.current.handleMove(CARD_MOVE_TARGETS[2]); // Send to Graveyard
+      });
+      // Own card → judgeTargetId is undefined (sent bare, not wrapped).
+      expect(webClient.request.game.moveCard).toHaveBeenCalledWith(
+        1,
+        expect.objectContaining({ startPlayerId: 1, targetPlayerId: 1, targetZone: Enriched.ZoneName.GRAVE }),
+        undefined,
+      );
+    });
   });
 
   it('all action handlers no-op when ready is false (no card)', () => {
