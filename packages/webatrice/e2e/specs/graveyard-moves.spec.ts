@@ -5,7 +5,7 @@ import { expect, test } from '@playwright/test';
 import { GamePage } from '../pages';
 import { registerAndJoinFirstRoom } from '../fixtures/flows';
 import { randomSuffix } from '../fixtures/users';
-import { dragTo } from '../fixtures/dnd';
+import { dragTo, movePopupTo } from '../fixtures/dnd';
 
 // Single-player flow exercising graveyard moves across both interaction surfaces
 // (board + popups) against real Servatrice. Seed three cards into the graveyard,
@@ -67,7 +67,12 @@ test('graveyard moves to battlefield, hand, and exile (board + popup)', async ({
     await expect(grave).toBeHidden();
 
     // 4. grave → exile (through popup): drop the battlefield card INTO the Exile popup.
+    //    The popup spawns at the top-left, over the battlefield card placed in
+    //    step 1 — move it clear so the card underneath is grabbable, then drop
+    //    the card onto the popup body. Collision detection is z-order aware, so
+    //    a release over the popup routes into exile, not the board behind it.
     const exile = await game.openZoneView('rfg', /exile/i);
+    await movePopupTo(page, exile, game.zoneViewHeader(exile), 360, 360);
     await dragTo(page, game.cardsOnBoard().first(), exile.locator('.zone-view-dialog__body'));
     await expect.poll(() => game.zoneStackCount('rfg')).toBe(2);
     await expect(game.cardsOnBoard()).toHaveCount(0);

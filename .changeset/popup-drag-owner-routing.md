@@ -18,3 +18,8 @@ still works.
 The open "View library" popup now stays in sync with the deck: when a card
 leaves it the snapshot is pruned and re-indexed, and dragging within the popup
 reorders the library — both mirroring Cockatrice's live `ZoneViewZone`.
+
+Drag collision detection now respects the popup's stacking: because a zone-view
+popup floats above the board, a card dropped onto it routes into the popup's zone
+(rather than the board droppable underneath), and a card dropped on visible board
+lands there even when a popup overlaps elsewhere on screen.

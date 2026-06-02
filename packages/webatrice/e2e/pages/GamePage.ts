@@ -159,6 +159,11 @@ export class GamePage {
     return dialog.locator('[data-testid^="zone-view-card-"]');
   }
 
+  // The draggable header of a zone-view popup (drag it to reposition the popup).
+  zoneViewHeader(dialog: Locator): Locator {
+    return dialog.locator('.zone-view-dialog__header');
+  }
+
   // Click the local zone stack to open its popup, then wait for the dialog.
   async openZoneView(zoneName: string, zoneLabel: RegExp): Promise<Locator> {
     await this.zoneStack(zoneName).click();

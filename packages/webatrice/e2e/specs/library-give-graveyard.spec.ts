@@ -5,7 +5,7 @@ import { expect, test } from '@playwright/test';
 import { GamePage } from '../pages';
 import { registerAndJoinFirstRoom } from '../fixtures/flows';
 import { randomSuffix } from '../fixtures/users';
-import { dragTo } from '../fixtures/dnd';
+import { dragTo, movePopupTo } from '../fixtures/dnd';
 
 // Two-context flow exercising the popup-drag + cross-player control path against
 // real Servatrice:
@@ -57,8 +57,24 @@ test('view library → drag to battlefield → give to opponent → opponent gra
     const before = await hostGame.zoneViewCards(library).count();
     expect(before).toBeGreaterThan(0);
 
-    // 2. Drag a library card onto the host's own battlefield.
-    await dragTo(hostPage, hostGame.zoneViewCards(library).first(), hostGame.battlefieldRow());
+    // 2. Drag a library card onto the host's own battlefield. A full deck dump
+    //    fills the 720px popup, which blankets the battlefield — so move the
+    //    popup to the top-left corner first, then release on the strip of the
+    //    battlefield row that the popup no longer covers (its center is still
+    //    occluded). Collision detection is z-order aware, so a release point
+    //    clear of the popup lets the board win.
+    await movePopupTo(hostPage, library, hostGame.zoneViewHeader(library), 40, 40);
+    const popupBox = await library.boundingBox();
+    const rowBox = await hostGame.battlefieldRow().boundingBox();
+    if (!popupBox || !rowBox) {
+      throw new Error('library popup or battlefield row has no bounding box.');
+    }
+    const popupRight = popupBox.x + popupBox.width;
+    const rowRight = rowBox.x + rowBox.width;
+    const dropPoint = { x: (popupRight + rowRight) / 2, y: rowBox.y + rowBox.height / 2 };
+    await dragTo(hostPage, hostGame.zoneViewCards(library).first(), hostGame.battlefieldRow(), {
+      to: dropPoint,
+    });
     await expect(hostGame.cardsOnBoard()).toHaveCount(1);
     // The library popup pruned the moved card (revealedCards sync).
     await expect(hostGame.zoneViewCards(library)).toHaveCount(before - 1);

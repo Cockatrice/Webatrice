@@ -128,7 +128,52 @@ function setupHook() {
     collapseUnlessSelected,
     handleDragStart: result.current.handleDragStart,
     handleDragEnd: result.current.handleDragEnd,
+    collisionDetection: result.current.collisionDetection,
   };
+}
+
+function clientRect(left: number, top: number, width: number, height: number) {
+  return { left, top, width, height, right: left + width, bottom: top + height } as any;
+}
+
+function makeContainer(id: string, node: HTMLElement, data: Record<string, unknown> = {}) {
+  return { id, node: { current: node }, data: { current: data } } as any;
+}
+
+// Build the args dnd-kit hands a CollisionDetection: a popup body droppable
+// (node inside a `.zone-view-dialog`) overlapping a larger board-row droppable
+// underneath it. The dragged card overlaps both; only `pointer` decides which
+// layer should own the drop.
+function buildCollisionArgs(pointer: { x: number; y: number }) {
+  document.body.innerHTML = '';
+  const dialog = document.createElement('div');
+  dialog.className = 'zone-view-dialog';
+  const popupBody = document.createElement('div');
+  dialog.appendChild(popupBody);
+  const boardRow = document.createElement('div');
+  document.body.append(dialog, boardRow);
+
+  const popupRect = clientRect(60, 60, 400, 300); // floating overlay
+  const boardRect = clientRect(0, 0, 800, 600); // board underneath, larger
+
+  const popup = makeContainer('zoneview-1-rfg', popupBody, { targetZone: Enriched.ZoneName.EXILE });
+  const board = makeContainer('battlefield-1-0', boardRow, {
+    targetPlayerId: 1,
+    targetZone: Enriched.ZoneName.TABLE,
+    row: 0,
+  });
+
+  const draggedRect = clientRect(pointer.x - 50, pointer.y - 70, 100, 140);
+  return {
+    active: { id: 99, rect: { current: { translated: draggedRect, initial: null } } },
+    collisionRect: draggedRect,
+    droppableRects: new Map<string, any>([
+      ['zoneview-1-rfg', popupRect],
+      ['battlefield-1-0', boardRect],
+    ]),
+    droppableContainers: [popup, board],
+    pointerCoordinates: pointer,
+  } as any;
 }
 
 function buildStartEvent(source: {
@@ -492,6 +537,25 @@ describe('useGameDnd', () => {
       );
 
       expect(webClient.request.game.moveCard).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('collisionDetection (popup z-order)', () => {
+    it('lets the popup win when the pointer is over it, even though a board droppable also intersects', () => {
+      const { collisionDetection } = setupHook();
+      const collisions = collisionDetection(buildCollisionArgs({ x: 200, y: 150 }));
+      // Pointer inside the popup overlay → only the popup's droppable is eligible,
+      // so the board row rendered underneath can't steal the drop.
+      expect(collisions.map((c) => c.id)).toEqual(['zoneview-1-rfg']);
+    });
+
+    it('excludes popup droppables when the pointer is outside every popup', () => {
+      const { collisionDetection } = setupHook();
+      const collisions = collisionDetection(buildCollisionArgs({ x: 600, y: 500 }));
+      // Pointer over visible board (clear of the popup) → board wins, popup excluded.
+      const ids = collisions.map((c) => c.id);
+      expect(ids).toContain('battlefield-1-0');
+      expect(ids).not.toContain('zoneview-1-rfg');
     });
   });
 
