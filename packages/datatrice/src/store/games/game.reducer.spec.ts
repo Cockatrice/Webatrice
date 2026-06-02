@@ -824,6 +824,84 @@ describe('2C: CARD_MOVED', () => {
     expect(movedCard.counterList[0].value).toBe(3);
   });
 
+  it('CARD_MOVED table → grave: battlefield-only state is cleared (Cockatrice resetState parity)', () => {
+    const cardCounter = create(ServerInfo_CardCounterSchema, { id: 1, value: 3 });
+    const card = makeCard({
+      id: 10,
+      tapped: true,
+      attacking: true,
+      doesntUntap: true,
+      pt: '5/5',
+      color: 'r',
+      annotation: 'note',
+      counterList: [cardCounter],
+    });
+    const state = makeState({
+      games: {
+        1: makeGameEntry({
+          players: {
+            1: makePlayerEntry({
+              zones: {
+                table: makeZoneEntry({ name: 'table', cards: [card], cardCount: 1 }),
+                grave: makeZoneEntry({ name: 'grave', cardCount: 0 }),
+              },
+            }),
+          },
+        }),
+      },
+    });
+
+    const result = dispatchCardMoved(state, Actions.cardMoved({
+      gameId: 1,
+      playerId: 1,
+      data: {
+        cardId: 10, cardName: '', startPlayerId: 1, startZone: 'table',
+        position: -1, targetPlayerId: 1, targetZone: 'grave',
+        x: 0, y: 0, newCardId: -1, faceDown: false, newCardProviderId: '',
+      },
+    }));
+
+    const movedCard = cardsIn(result, 1, 1, 'grave')[0];
+    expect(movedCard.tapped).toBe(false);
+    expect(movedCard.attacking).toBe(false);
+    expect(movedCard.doesntUntap).toBe(false);
+    expect(movedCard.pt).toBe('');
+    expect(movedCard.color).toBe('');
+    expect(movedCard.annotation).toBe('');
+    expect(movedCard.counterList).toEqual([]);
+  });
+
+  it('CARD_MOVED intra-table reorder preserves tapped (reset is gated on leaving the battlefield)', () => {
+    const card = makeCard({ id: 10, tapped: true, doesntUntap: true });
+    const state = makeState({
+      games: {
+        1: makeGameEntry({
+          players: {
+            1: makePlayerEntry({
+              zones: {
+                table: makeZoneEntry({ name: 'table', cards: [card], cardCount: 1 }),
+              },
+            }),
+          },
+        }),
+      },
+    });
+
+    const result = dispatchCardMoved(state, Actions.cardMoved({
+      gameId: 1,
+      playerId: 1,
+      data: {
+        cardId: 10, cardName: '', startPlayerId: 1, startZone: 'table',
+        position: -1, targetPlayerId: 1, targetZone: 'table',
+        x: 4, y: 0, newCardId: -1, faceDown: false, newCardProviderId: '',
+      },
+    }));
+
+    const movedCard = cardsIn(result, 1, 1, 'table')[0];
+    expect(movedCard.tapped).toBe(true);
+    expect(movedCard.doesntUntap).toBe(true);
+  });
+
   it('intra-zone TABLE move: card stays in the zone with updated x/y', () => {
     const card = makeCard({ id: 10, x: 0, y: 0, name: 'InPlace' });
     const state = makeState({

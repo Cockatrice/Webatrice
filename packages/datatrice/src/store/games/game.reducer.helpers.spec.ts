@@ -1,10 +1,11 @@
 ﻿import { create } from '@bufbuild/protobuf';
-import { ServerInfo_PlayerSchema } from '@cockatrice/sockatrice/generated';
+import { ServerInfo_CardCounterSchema, ServerInfo_PlayerSchema } from '@cockatrice/sockatrice/generated';
 import {
   formatLeaveMessage,
   MAX_GAME_MESSAGES,
   normalizePlayers,
   pushEventMessage,
+  resetCardState,
 } from './game.reducer.helpers';
 import { makeCard, makeGameEntry, makePlayerProperties } from '../../testing/fixtures/games';
 
@@ -118,5 +119,52 @@ describe('normalizePlayers', () => {
     const result = normalizePlayers([player]);
     expect(result[1].zones['table'].order).toEqual([10, 11]);
     expect(result[1].zones['table'].byId[10].name).toBe('Bolt');
+  });
+});
+
+describe('resetCardState', () => {
+  it('wipes every battlefield-only attribute (CardItem::resetState parity)', () => {
+    const card = makeCard({
+      id: 10,
+      tapped: true,
+      attacking: true,
+      doesntUntap: true,
+      pt: '5/5',
+      color: 'r',
+      annotation: 'note',
+      counterList: [create(ServerInfo_CardCounterSchema, { id: 1, value: 3 })],
+    });
+
+    const result = resetCardState(card);
+
+    expect(result.tapped).toBe(false);
+    expect(result.attacking).toBe(false);
+    expect(result.doesntUntap).toBe(false);
+    expect(result.pt).toBe('');
+    expect(result.color).toBe('');
+    expect(result.annotation).toBe('');
+    expect(result.counterList).toEqual([]);
+  });
+
+  it('preserves identity/location fields and returns a fresh object', () => {
+    const card = makeCard({
+      id: 10,
+      name: 'Grizzly Bears',
+      x: 3,
+      y: 2,
+      faceDown: true,
+      providerId: 'abc',
+      tapped: true,
+    });
+
+    const result = resetCardState(card);
+
+    expect(result).not.toBe(card);
+    expect(result.id).toBe(10);
+    expect(result.name).toBe('Grizzly Bears');
+    expect(result.x).toBe(3);
+    expect(result.y).toBe(2);
+    expect(result.faceDown).toBe(true);
+    expect(result.providerId).toBe('abc');
   });
 });

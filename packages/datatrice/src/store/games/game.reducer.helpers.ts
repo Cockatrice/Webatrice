@@ -106,3 +106,21 @@ export function buildEmptyCard(
     attachPlayerId: -1, attachZone: '', attachCardId: -1, providerId,
   });
 }
+
+// Port of desktop Cockatrice CardItem::resetState(): wipes battlefield-only transient
+// state when a card leaves the table. Event_MoveCard carries none of these fields and
+// Servatrice emits no per-attribute reset event, so the client applies it on
+// TABLE -> non-TABLE moves (see game.listeners.ts). Returns a fresh object (Immer does
+// not draft protobuf-es messages).
+export function resetCardState(card: ServerInfo_Card): ServerInfo_Card {
+  return {
+    ...card,
+    tapped: false,
+    attacking: false,
+    doesntUntap: false,
+    pt: '',
+    color: '',
+    annotation: '',
+    counterList: [],
+  };
+}

@@ -14,7 +14,7 @@ import {
 } from '@cockatrice/sockatrice/generated';
 import { GamesState } from './game.interfaces';
 import { Actions } from './game.actions';
-import { buildEmptyCard, formatLeaveMessage, normalizePlayers } from './game.reducer.helpers';
+import { buildEmptyCard, formatLeaveMessage, normalizePlayers, resetCardState } from './game.reducer.helpers';
 import {
   EVENT_PLAYER_ID_SYSTEM,
   diffPlayerProperties,
@@ -76,16 +76,20 @@ export function registerGameListeners(mw: ListenerMiddlewareInstance<unknown>): 
       const isLeavingBattlefield =
       startZone === Enriched.ZoneName.TABLE && effectiveTargetZone !== Enriched.ZoneName.TABLE;
 
-      const movedCard: ServerInfo_Card = removedCard
+      const baseCard: ServerInfo_Card = removedCard
         ? {
           ...removedCard,
           id: effectiveNewId,
           name: cardName || removedCard.name,
           x, y, faceDown,
           providerId: newCardProviderId || removedCard.providerId,
-          counterList: isLeavingBattlefield ? [] : [...removedCard.counterList],
+          counterList: [...removedCard.counterList],
         }
         : buildEmptyCard(effectiveNewId, cardName, x, y, faceDown, newCardProviderId ?? '');
+
+      // Leaving the battlefield wipes transient card state (tapped, counters, etc.) to
+      // mirror desktop Cockatrice's CardItem::resetState(); see resetCardState.
+      const movedCard = isLeavingBattlefield ? resetCardState(baseCard) : baseCard;
 
       // Capture before the move dispatch: if an open zone-view (deck) snapshot
       // holds this zone, the moved card must be pruned from it (see below).
