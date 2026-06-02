@@ -1,11 +1,21 @@
 .hand-zone {
-  height: 176px;
   display: flex;
   flex-direction: column;
+  min-height: 0;
   background: #0a4a1e;
   border-top: 2px solid #1a6a33;
   padding: 4px 0;
   box-sizing: border-box;
+}
+
+.game__board > .hand-zone {
+  flex: 0 0 auto;
+  height: clamp(120px, 15%, 192px);
+}
+
+.game__board-cell > .hand-zone {
+  flex: 0 0 25%;
+  min-height: 0;
 }
 
 .hand-zone__cards {
