@@ -9,7 +9,17 @@ export { setActivePhase } from './setActivePhase';
 export { reverseTurn } from './reverseTurn';
 export { moveCard } from './moveCard';
 export { sendGameCommands } from './sendGameCommands';
-export { bulkTap, bulkDoesntUntap, bulkFlip, bulkPeek, bulkMove } from './bulk';
+export {
+  bulkTap,
+  bulkDoesntUntap,
+  bulkFlip,
+  bulkPeek,
+  bulkMove,
+  bulkSetPT,
+  bulkSetAnnotation,
+  bulkIncCardCounter,
+  bulkSetCardCounter,
+} from './bulk';
 export { flipCard } from './flipCard';
 export { attachCard } from './attachCard';
 export { createToken } from './createToken';

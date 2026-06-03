@@ -105,7 +105,7 @@ describe('Game drag-drop (keyboard sensor)', () => {
     expect(grave.getAttribute('role')).toBe('button');
   });
 
-  it('routes a full drag cycle through handleDragEnd and dispatches moveCard', async () => {
+  it('routes a full drag cycle through handleDragEnd without leaking unrelated commands', async () => {
     // This test drives a complete keyboard drag: focus source → Space to
     // pick up → Tab cycles to a droppable → Space to drop. dnd-kit's own
     // keyboard coordinate-getter falls back to the focused droppable when

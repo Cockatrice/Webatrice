@@ -84,4 +84,56 @@ describe('bulk card commands', () => {
     expect(value.targetPlayerId).toBe(1);
     expect(value.cardsToMove?.card.map((c) => c.cardId)).toEqual([1, 2]);
   });
+
+  it('bulkSetPT sets the same P/T on every selected card', () => {
+    connectAndLogin();
+
+    GameCommands.bulkSetPT(gameId, [
+      { ownerPlayerId: 1, zone: 'table', card: card(1) },
+      { ownerPlayerId: 1, zone: 'table', card: card(2) },
+    ], '3/3');
+
+    const { value } = findLastGameCommand(Data.Command_SetCardAttr_ext);
+    expect(value.attribute).toBe(Data.CardAttribute.AttrPT);
+    expect(value.attrValue).toBe('3/3');
+    expect(captureLastOutbound().gameCommand).toHaveLength(2);
+  });
+
+  it('bulkSetAnnotation sets the same annotation on every selected card', () => {
+    connectAndLogin();
+
+    GameCommands.bulkSetAnnotation(gameId, [
+      { ownerPlayerId: 1, zone: 'table', card: card(1) },
+    ], 'note');
+
+    const { value } = findLastGameCommand(Data.Command_SetCardAttr_ext);
+    expect(value.attribute).toBe(Data.CardAttribute.AttrAnnotation);
+    expect(value.attrValue).toBe('note');
+  });
+
+  it('bulkIncCardCounter applies the same delta to every selected card', () => {
+    connectAndLogin();
+
+    GameCommands.bulkIncCardCounter(gameId, [
+      { ownerPlayerId: 1, zone: 'table', card: card(1) },
+      { ownerPlayerId: 1, zone: 'table', card: card(2) },
+    ], 5, 1);
+
+    const { value } = findLastGameCommand(Data.Command_IncCardCounter_ext);
+    expect(value.counterId).toBe(5);
+    expect(value.counterDelta).toBe(1);
+    expect(captureLastOutbound().gameCommand).toHaveLength(2);
+  });
+
+  it('bulkSetCardCounter sets the same value on every selected card', () => {
+    connectAndLogin();
+
+    GameCommands.bulkSetCardCounter(gameId, [
+      { ownerPlayerId: 1, zone: 'table', card: card(1) },
+    ], 5, 3);
+
+    const { value } = findLastGameCommand(Data.Command_SetCardCounter_ext);
+    expect(value.counterId).toBe(5);
+    expect(value.counterValue).toBe(3);
+  });
 });

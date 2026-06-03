@@ -1,4 +1,4 @@
-import { RefObject, useMemo, useRef, useState } from 'react';
+import { RefObject, useCallback, useMemo, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 
@@ -63,6 +63,13 @@ export function useGame(): Game {
     () => (game ? resolveSelectedCards(game, selection.selectedCardKeys) : []),
     [game, selection.selectedCardKeys],
   );
+  // Call-time getter for the live selection. Lets the dialog/dnd hooks read the
+  // current multi-selection without taking `selectedCards` as a dep (which would
+  // churn their memoized callbacks on every selection change). Mirrors the
+  // readGame/readLocalPlayer store-read pattern in useGameDialogs.
+  const selectedCardsRef = useRef(selectedCards);
+  selectedCardsRef.current = selectedCards;
+  const getSelectedCards = useCallback(() => selectedCardsRef.current, []);
 
   const layout = useGameBoardLayout(game);
   const localAccess = useGameAccess(gameId, game?.localPlayerId);
@@ -90,12 +97,14 @@ export function useGame(): Game {
     startPendingArrow: arrows.startPendingArrow,
     startPendingAttach: arrows.startPendingAttach,
     collapseUnlessSelected: selection.collapseUnlessSelected,
+    getSelectedCards,
   });
   const dnd = useGameDnd({
     gameId,
     judgeTarget,
     cancelPendingArrow: arrows.cancelPendingOnDragStart,
     collapseUnlessSelected: selection.collapseUnlessSelected,
+    getSelectedCards,
   });
 
   useGameShortcuts({ gameId, onRequestConcede: dialogs.openConcede });

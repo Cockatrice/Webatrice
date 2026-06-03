@@ -1,6 +1,5 @@
 import { ZoneName } from '@cockatrice/sockatrice';
 import { screen, fireEvent, waitFor } from '@testing-library/react';
-import { CardAttribute } from '@cockatrice/sockatrice/generated';
 import { createMockWebClient, makeStoreState, renderWithProviders, connectedState, makeUser } from '../../__test-utils__';
 import {
   makeCard,
@@ -451,7 +450,7 @@ describe('Game container', () => {
       expect(webClient.request.game.drawCards).toHaveBeenCalledWith(1, { number: 1 });
     });
 
-    it('opens a PromptDialog when "Set P/T…" is chosen and dispatches setCardAttr on submit', () => {
+    it('opens a PromptDialog when "Set P/T…" is chosen and dispatches bulkSetPT on submit', () => {
       const webClient = createMockWebClient();
       const card = makeCard({ id: 7, x: 0, y: 0, pt: '' });
       renderWithProviders(<Game />, {
@@ -472,12 +471,13 @@ describe('Game container', () => {
       fireEvent.change(input, { target: { value: '3/3' } });
       fireEvent.click(screen.getByRole('button', { name: /ok/i }));
 
-      expect(webClient.request.game.setCardAttr).toHaveBeenCalledWith(1, {
-        zone: ZoneName.TABLE,
-        cardId: 7,
-        attribute: CardAttribute.AttrPT,
-        attrValue: '3/3',
-      }, undefined); // own card → no judge wrap
+      // No multi-selection → the bulk dispatcher acts on just the menu card (n=1).
+      expect(webClient.request.game.bulkSetPT).toHaveBeenCalledWith(
+        1,
+        [expect.objectContaining({ ownerPlayerId: 1, zone: ZoneName.TABLE, card: expect.objectContaining({ id: 7 }) })],
+        '3/3',
+        expect.any(Function), // judge resolver forwarded; own card resolves bare
+      );
     });
   });
 

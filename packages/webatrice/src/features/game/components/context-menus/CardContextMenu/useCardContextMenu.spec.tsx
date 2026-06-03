@@ -66,7 +66,7 @@ function setup(
 // + judge resolver. The entry-building / collective rules / judge grouping are
 // covered by sockatrice's bulkCardActions.spec.
 type GameApi = ReturnType<typeof setup>['webClient']['request']['game'];
-type BulkFn = 'bulkTap' | 'bulkFlip' | 'bulkDoesntUntap' | 'bulkPeek' | 'bulkMove';
+type BulkFn = 'bulkTap' | 'bulkFlip' | 'bulkDoesntUntap' | 'bulkPeek' | 'bulkMove' | 'bulkIncCardCounter';
 
 function lastBulkCall(webClient: ReturnType<typeof setup>['webClient'], fn: BulkFn) {
   const calls = vi.mocked(webClient.request.game[fn] as GameApi[BulkFn]).mock.calls;
@@ -299,8 +299,44 @@ describe('useCardContextMenu', () => {
     expect(webClient.request.game.bulkTap).not.toHaveBeenCalled();
     expect(webClient.request.game.bulkFlip).not.toHaveBeenCalled();
     expect(webClient.request.game.bulkMove).not.toHaveBeenCalled();
-    expect(webClient.request.game.incCardCounter).not.toHaveBeenCalled();
+    expect(webClient.request.game.bulkIncCardCounter).not.toHaveBeenCalled();
     expect(webClient.request.game.attachCard).not.toHaveBeenCalled();
     expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('handleCardCounterDelta bulk-increments the menu card and closes', () => {
+    const { result, webClient, onClose } = setup({ card: makeCard({ id: 9 }) });
+
+    act(() => {
+      result.current.handleCardCounterDelta(5, 1);
+    });
+
+    const [gameId, targets, counterId, delta, judgeTarget] = lastBulkCall(webClient, 'bulkIncCardCounter');
+    expect(gameId).toBe(1);
+    expect(targetIds(targets as CardLocation[])).toEqual([9]);
+    expect(counterId).toBe(5);
+    expect(delta).toBe(1);
+    expect((judgeTarget as (o: number) => number | undefined)(1)).toBeUndefined(); // own card → bare
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('bulk-increments the whole selection when the menu card is part of a ≥2 selection', () => {
+    const menuCard = makeCard({ id: 9 });
+    const { result, webClient } = setup({
+      card: menuCard,
+      ownerPlayerId: 1,
+      sourceZone: ZoneName.TABLE,
+      selectedCards: [
+        { ownerPlayerId: 1, zone: ZoneName.TABLE, card: menuCard },
+        { ownerPlayerId: 1, zone: ZoneName.TABLE, card: makeCard({ id: 10 }) },
+      ],
+    });
+
+    act(() => {
+      result.current.handleCardCounterDelta(5, -1);
+    });
+
+    const [, targets] = lastBulkCall(webClient, 'bulkIncCardCounter');
+    expect(targetIds(targets as CardLocation[])).toEqual([9, 10]);
   });
 });

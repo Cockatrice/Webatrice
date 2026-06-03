@@ -49,7 +49,7 @@ function renderMenu(opts: {
 // Card actions invoke the sockatrice bulk command surface (request.game.bulk*);
 // here we assert the menu fired the right command for the right card. The
 // command-building itself is covered by sockatrice's bulkCardActions.spec.
-type BulkFn = 'bulkTap' | 'bulkFlip' | 'bulkDoesntUntap' | 'bulkPeek' | 'bulkMove';
+type BulkFn = 'bulkTap' | 'bulkFlip' | 'bulkDoesntUntap' | 'bulkPeek' | 'bulkMove' | 'bulkIncCardCounter';
 function lastBulk(webClient: ReturnType<typeof createMockWebClient>, fn: BulkFn) {
   const calls = vi.mocked(webClient.request.game[fn] as (...a: unknown[]) => void).mock.calls;
   expect(calls.length).toBeGreaterThan(0);
@@ -215,34 +215,31 @@ describe('CardContextMenu', () => {
     fireEvent.click(screen.getByText(label));
   }
 
-  it('adds an A-type counter via incCardCounter (+1 on id 0)', () => {
+  it('adds an A-type counter via bulkIncCardCounter (+1 on id 0)', () => {
     const webClient = createMockWebClient();
     renderMenu({ card: makeCard({ id: 9 }), webClient });
 
     openCounterSubmenu('A');
     fireEvent.click(screen.getByText('Add Counter'));
 
-    expect(webClient.request.game.incCardCounter).toHaveBeenCalledWith(1, {
-      zone: ZoneName.TABLE,
-      cardId: 9,
-      counterId: 0,
-      counterDelta: 1,
-    }, undefined);
+    const [gameId, targets, counterId, delta] = lastBulk(webClient, 'bulkIncCardCounter');
+    expect(gameId).toBe(1);
+    expect(targetIds(targets as CardLocation[])).toEqual([9]);
+    expect(counterId).toBe(0);
+    expect(delta).toBe(1);
   });
 
-  it('adds a B-type counter via incCardCounter (+1 on id 1)', () => {
+  it('adds a B-type counter via bulkIncCardCounter (+1 on id 1)', () => {
     const webClient = createMockWebClient();
     renderMenu({ card: makeCard({ id: 9 }), webClient });
 
     openCounterSubmenu('B');
     fireEvent.click(screen.getByText('Add Counter'));
 
-    expect(webClient.request.game.incCardCounter).toHaveBeenCalledWith(1, {
-      zone: ZoneName.TABLE,
-      cardId: 9,
-      counterId: 1,
-      counterDelta: 1,
-    }, undefined);
+    const [, targets, counterId, delta] = lastBulk(webClient, 'bulkIncCardCounter');
+    expect(targetIds(targets as CardLocation[])).toEqual([9]);
+    expect(counterId).toBe(1);
+    expect(delta).toBe(1);
   });
 
   it('disables Remove Counter when card has no counters of that type', () => {
@@ -253,7 +250,7 @@ describe('CardContextMenu', () => {
     expect(item).toHaveClass('Mui-disabled');
   });
 
-  it('removes a counter via incCardCounter (-1 on the matching id) when present', () => {
+  it('removes a counter via bulkIncCardCounter (-1 on the matching id) when present', () => {
     const webClient = createMockWebClient();
     const card = makeCard({
       id: 9,
@@ -266,12 +263,10 @@ describe('CardContextMenu', () => {
     openCounterSubmenu('A');
     fireEvent.click(screen.getByText('Remove Counter'));
 
-    expect(webClient.request.game.incCardCounter).toHaveBeenCalledWith(1, {
-      zone: ZoneName.TABLE,
-      cardId: 9,
-      counterId: 0,
-      counterDelta: -1,
-    }, undefined);
+    const [, targets, counterId, delta] = lastBulk(webClient, 'bulkIncCardCounter');
+    expect(targetIds(targets as CardLocation[])).toEqual([9]);
+    expect(counterId).toBe(0);
+    expect(delta).toBe(-1);
   });
 
   it('defers "Set Counter…" to the parent callback with the matching id', () => {

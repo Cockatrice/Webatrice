@@ -155,12 +155,9 @@ export function useCardContextMenu({
     if (!ready || gameId == null) {
       return;
     }
-    webClient.request.game.incCardCounter(gameId, {
-      zone: sourceZone!,
-      cardId: card!.id,
-      counterId,
-      counterDelta: delta,
-    }, judgeTargetId);
+    // Apply the delta across the selection (n=1 = just this card). Batched +
+    // judge-wrapped per owner by the bulk dispatcher. See bulkIncCardCounter.
+    webClient.request.game.bulkIncCardCounter(gameId, actionTargets, counterId, delta, judgeTarget);
     onClose();
   };
 

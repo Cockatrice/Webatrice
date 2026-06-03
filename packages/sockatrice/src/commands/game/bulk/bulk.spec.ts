@@ -4,9 +4,11 @@ import { WebClient } from '../../../WebClient';
 import {
   CardAttribute,
   Command_FlipCard_ext,
+  Command_IncCardCounter_ext,
   Command_MoveCard_ext,
   Command_RevealCards_ext,
   Command_SetCardAttr_ext,
+  Command_SetCardCounter_ext,
 } from '../../../generated';
 import type { GameCommandEntry } from '../../../services/ProtobufService';
 
@@ -15,6 +17,10 @@ import { bulkDoesntUntap } from './bulkDoesntUntap';
 import { bulkFlip } from './bulkFlip';
 import { bulkPeek } from './bulkPeek';
 import { bulkMove } from './bulkMove';
+import { bulkSetPT } from './bulkSetPT';
+import { bulkSetAnnotation } from './bulkSetAnnotation';
+import { bulkIncCardCounter } from './bulkIncCardCounter';
+import { bulkSetCardCounter } from './bulkSetCardCounter';
 import { moveTargetPlayerId } from './moveTargetPlayerId';
 import type { CardLocation } from './types';
 
@@ -182,6 +188,82 @@ describe('bulk actions — judge override', () => {
   });
 });
 
+describe('bulkSetPT', () => {
+  it('sets the same P/T on every target via SetCardAttr(AttrPT)', () => {
+    bulkSetPT(gameId, [
+      { ownerPlayerId: 0, zone: 'table', card: card(1, { pt: '1/1' }) },
+      { ownerPlayerId: 0, zone: 'table', card: card(2, { pt: '3/3' }) },
+    ], '3/3');
+    const entries = sentEntries();
+    expect(entries).toHaveLength(2);
+    expect(entries.every((e) => e.ext === Command_SetCardAttr_ext)).toBe(true);
+    expect(entries.every((e) => (e.value as { attribute: CardAttribute }).attribute === CardAttribute.AttrPT)).toBe(true);
+    expect(entries.map((e) => (e.value as { attrValue: string }).attrValue)).toEqual(['3/3', '3/3']);
+  });
+});
+
+describe('bulkSetAnnotation', () => {
+  it('sets the same annotation on every target via SetCardAttr(AttrAnnotation)', () => {
+    bulkSetAnnotation(gameId, [
+      { ownerPlayerId: 0, zone: 'table', card: card(1) },
+      { ownerPlayerId: 0, zone: 'table', card: card(2) },
+    ], 'note');
+    const entries = sentEntries();
+    expect(entries).toHaveLength(2);
+    expect(entries[0].value).toEqual(expect.objectContaining({
+      cardId: 1,
+      attribute: CardAttribute.AttrAnnotation,
+      attrValue: 'note',
+    }));
+  });
+});
+
+describe('bulkIncCardCounter', () => {
+  it('applies the same delta to every target via Command_IncCardCounter', () => {
+    bulkIncCardCounter(gameId, [
+      { ownerPlayerId: 0, zone: 'table', card: card(1) },
+      { ownerPlayerId: 0, zone: 'table', card: card(2) },
+    ], 5, 1);
+    const entries = sentEntries();
+    expect(entries).toHaveLength(2);
+    expect(entries.every((e) => e.ext === Command_IncCardCounter_ext)).toBe(true);
+    expect(entries[0].value).toEqual(expect.objectContaining({
+      zone: 'table',
+      cardId: 1,
+      counterId: 5,
+      counterDelta: 1,
+    }));
+  });
+
+  it('judge-wraps each foreign target with its owner', () => {
+    bulkIncCardCounter(gameId, [
+      { ownerPlayerId: 1, zone: 'table', card: card(1) },
+      { ownerPlayerId: 2, zone: 'table', card: card(2) },
+    ], 5, -1, (owner) => (owner === 1 ? undefined : owner));
+    const entries = sentEntries();
+    expect(entries[0].judgeTargetId).toBeUndefined();
+    expect(entries[1].judgeTargetId).toBe(2);
+  });
+});
+
+describe('bulkSetCardCounter', () => {
+  it('sets the same value on every target via Command_SetCardCounter', () => {
+    bulkSetCardCounter(gameId, [
+      { ownerPlayerId: 0, zone: 'table', card: card(1) },
+      { ownerPlayerId: 0, zone: 'table', card: card(2) },
+    ], 5, 3);
+    const entries = sentEntries();
+    expect(entries).toHaveLength(2);
+    expect(entries.every((e) => e.ext === Command_SetCardCounter_ext)).toBe(true);
+    expect(entries[0].value).toEqual(expect.objectContaining({
+      zone: 'table',
+      cardId: 1,
+      counterId: 5,
+      counterValue: 3,
+    }));
+  });
+});
+
 describe('empty selection', () => {
   it('every bulk command sends nothing for an empty selection', () => {
     bulkTap(gameId, []);
@@ -189,6 +271,10 @@ describe('empty selection', () => {
     bulkFlip(gameId, []);
     bulkPeek(gameId, [], 0);
     bulkMove(gameId, [], { targetPlayerId: 0, targetZone: 'grave', x: 0, y: 0 });
+    bulkSetPT(gameId, [], '3/3');
+    bulkSetAnnotation(gameId, [], 'note');
+    bulkIncCardCounter(gameId, [], 5, 1);
+    bulkSetCardCounter(gameId, [], 5, 3);
     expect(WebClient.instance.protobuf.sendGameCommands).not.toHaveBeenCalled();
   });
 });

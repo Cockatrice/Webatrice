@@ -10,7 +10,7 @@ import {
   makePlayerProperties,
   makeZoneEntry,
 } from '@cockatrice/datatrice/testing';
-import { CardAttribute } from '@cockatrice/sockatrice/generated';
+import type { CardLocation } from '@cockatrice/sockatrice';
 
 import { makeReduxWebClientHookWrapper } from '../../../__test-utils__/makeHookWrapper';
 
@@ -25,6 +25,7 @@ interface SetupOpts {
   canAct?: boolean;
   cardId?: number;
   judge?: boolean;
+  selectedCards?: readonly CardLocation[];
 }
 
 function setup(opts: SetupOpts = {}) {
@@ -90,6 +91,7 @@ function setup(opts: SetupOpts = {}) {
         startPendingArrow,
         startPendingAttach,
         collapseUnlessSelected: vi.fn(),
+        getSelectedCards: () => opts.selectedCards ?? [],
       }),
     { wrapper: Wrapper },
   );
@@ -152,7 +154,7 @@ describe('useGameDialogs', () => {
     expect(result.current.cardMenu).toBeNull();
   });
 
-  it('opens a set-PT prompt from the card menu and dispatches setCardAttr on submit', () => {
+  it('opens a set-PT prompt from the card menu and dispatches bulkSetPT on submit', () => {
     const { result, webClient } = setup();
     const card = makeCard({ id: 5, pt: '2/2' });
 
@@ -171,16 +173,38 @@ describe('useGameDialogs', () => {
       result.current.prompt!.onSubmit('3/3');
     });
 
-    expect(webClient.request.game.setCardAttr).toHaveBeenCalledWith(
+    // No multi-selection → the bulk dispatcher acts on just the menu card (n=1).
+    expect(webClient.request.game.bulkSetPT).toHaveBeenCalledWith(
       1,
-      expect.objectContaining({
-        cardId: 5,
-        attribute: CardAttribute.AttrPT,
-        attrValue: '3/3',
-      }),
-      undefined, // own card → no Command_Judge wrap
+      [expect.objectContaining({ ownerPlayerId: 1, zone: ZoneName.TABLE, card: expect.objectContaining({ id: 5 }) })],
+      '3/3',
+      expect.any(Function), // judge resolver forwarded; own card resolves bare
     );
     expect(result.current.prompt).toBeNull();
+  });
+
+  it('applies set-PT to the whole selection when the menu card is part of a ≥2 selection', () => {
+    const a = makeCard({ id: 5, pt: '2/2' });
+    const b = makeCard({ id: 6, pt: '1/1' });
+    const selectedCards: CardLocation[] = [
+      { ownerPlayerId: 1, zone: ZoneName.TABLE, card: a },
+      { ownerPlayerId: 1, zone: ZoneName.TABLE, card: b },
+    ];
+    const { result, webClient } = setup({ selectedCards });
+
+    act(() => {
+      result.current.handleCardContextMenu(1, ZoneName.TABLE, a, makeMouseEvent());
+    });
+    act(() => {
+      result.current.handleRequestSetPT();
+    });
+    act(() => {
+      result.current.prompt!.onSubmit('3/3');
+    });
+
+    const [, targets, value] = vi.mocked(webClient.request.game.bulkSetPT).mock.calls.at(-1)!;
+    expect(targets.map((t: CardLocation) => t.card.id)).toEqual([5, 6]);
+    expect(value).toBe('3/3');
   });
 
   it('move-to-library-at on an OWN card targets self and sends bare', () => {

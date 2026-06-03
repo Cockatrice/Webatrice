@@ -5,7 +5,7 @@ import { useStore } from 'react-redux';
 import { useSettings } from '@app/hooks';
 import { useAppDispatch, type RootState } from '@app/store';
 import { useWebClient } from '@cockatrice/datatrice/react';
-import { CardAttribute, ServerInfo_Card } from '@cockatrice/sockatrice/generated';
+import { ServerInfo_Card } from '@cockatrice/sockatrice/generated';
 import { games } from '@cockatrice/datatrice';
 import { CardDTO } from '../../../services/dexie/DexieDTOs/CardDTO';
 import { COUNTER_TYPE_LABELS } from '../components/ui/CardSlot/counterColors';
@@ -14,6 +14,7 @@ import type { SideboardPlanMove } from '../dialogs/SideboardDialog/SideboardDial
 import type { GameAccess } from './useGameAccess';
 import { playCardViaTableRow } from './playCard';
 import { useJudgeTarget } from './useJudgeTarget';
+import { effectiveTargets, type SelectedCard } from '../utils/selection';
 
 export interface AnchorPosition {
   top: number;
@@ -276,6 +277,11 @@ export interface UseGameDialogsArgs {
     zone: string | undefined,
     card: ServerInfo_Card,
   ) => void;
+  // Call-time getter for the live multi-selection. A bulk card action (set P/T,
+  // annotation, counter) applies to the whole selection when the menu's card is
+  // part of it, else just that card. Read at submit, not closed over, to keep the
+  // memoized action surface stable. See effectiveTargets / readGame precedent.
+  getSelectedCards: () => readonly SelectedCard[];
 }
 
 export function useGameDialogs({
@@ -285,6 +291,7 @@ export function useGameDialogs({
   startPendingArrow,
   startPendingAttach,
   collapseUnlessSelected,
+  getSelectedCards,
 }: UseGameDialogsArgs): GameDialogs {
   const webClient = useWebClient();
   const dispatch = useAppDispatch();
@@ -439,6 +446,20 @@ export function useGameDialogs({
     [gameId, isSpectator, localAccess.canAct, closeAllContextMenus],
   );
 
+  // The cards a card-menu bulk action targets: the whole selection when the
+  // menu's card is part of a ≥2 selection, else just that card (n=1 = today's
+  // single-card behavior). Read at call time so these handlers don't dep on the
+  // churning selection. See effectiveTargets.
+  const menuTargets = useCallback(
+    (menu: CardMenuState): readonly SelectedCard[] =>
+      effectiveTargets(getSelectedCards(), {
+        ownerPlayerId: menu.sourcePlayerId,
+        zone: menu.sourceZone,
+        card: menu.card,
+      }),
+    [getSelectedCards],
+  );
+
   const handleRequestSetPT = useCallback(() => {
     const menu = cardMenu;
     if (!menu || gameId == null) {
@@ -449,16 +470,11 @@ export function useGameDialogs({
       label: 'P/T (e.g. 3/3)',
       initialValue: menu.card.pt ?? '',
       onSubmit: (value) => {
-        webClient.request.game.setCardAttr(gameId, {
-          zone: menu.sourceZone,
-          cardId: menu.card.id,
-          attribute: CardAttribute.AttrPT,
-          attrValue: value,
-        }, judgeTarget(menu.sourcePlayerId));
+        webClient.request.game.bulkSetPT(gameId, menuTargets(menu), value, judgeTarget);
         setPrompt(null);
       },
     });
-  }, [cardMenu, judgeTarget, gameId, webClient]);
+  }, [cardMenu, judgeTarget, gameId, webClient, menuTargets]);
 
   const handleRequestSetAnnotation = useCallback(() => {
     const menu = cardMenu;
@@ -470,16 +486,11 @@ export function useGameDialogs({
       label: 'Annotation',
       initialValue: menu.card.annotation ?? '',
       onSubmit: (value) => {
-        webClient.request.game.setCardAttr(gameId, {
-          zone: menu.sourceZone,
-          cardId: menu.card.id,
-          attribute: CardAttribute.AttrAnnotation,
-          attrValue: value,
-        }, judgeTarget(menu.sourcePlayerId));
+        webClient.request.game.bulkSetAnnotation(gameId, menuTargets(menu), value, judgeTarget);
         setPrompt(null);
       },
     });
-  }, [cardMenu, judgeTarget, gameId, webClient]);
+  }, [cardMenu, judgeTarget, gameId, webClient, menuTargets]);
 
   const handleRequestSetCardCounter = useCallback((counterId: number) => {
     const menu = cardMenu;
@@ -494,16 +505,11 @@ export function useGameDialogs({
       initialValue: String(existing?.value ?? 0),
       validate: (v) => (/^-?\d+$/.test(v) ? null : 'Enter an integer'),
       onSubmit: (value) => {
-        webClient.request.game.setCardCounter(gameId, {
-          zone: menu.sourceZone,
-          cardId: menu.card.id,
-          counterId,
-          counterValue: Number(value),
-        }, judgeTarget(menu.sourcePlayerId));
+        webClient.request.game.bulkSetCardCounter(gameId, menuTargets(menu), counterId, Number(value), judgeTarget);
         setPrompt(null);
       },
     });
-  }, [cardMenu, judgeTarget, gameId, webClient]);
+  }, [cardMenu, judgeTarget, gameId, webClient, menuTargets]);
 
   const handleRequestDrawArrow = useCallback(() => {
     const menu = cardMenu;
