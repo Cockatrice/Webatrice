@@ -4,11 +4,9 @@ import { games } from '@cockatrice/datatrice';
 import { useAppSelector } from '@app/store';
 import { cx } from '@app/utils';
 
-import './PlayerList.css';
+import { useGameId } from '../../ui/GameIdContext';
 
-export interface PlayerListProps {
-  gameId: number | undefined;
-}
+import './PlayerList.css';
 
 // See .github/instructions/webatrice-game.instructions.md#servatrice-game-event-quirks.
 function pingCssColor(pingSeconds: number | undefined): string {
@@ -21,7 +19,8 @@ function pingCssColor(pingSeconds: number | undefined): string {
   return `hsl(${hue}, 100%, 50%)`;
 }
 
-function PlayerList({ gameId }: PlayerListProps) {
+function PlayerList() {
+  const gameId = useGameId();
   const players = useAppSelector((state) =>
     gameId != null ? games.Selectors.getPlayers(state, gameId) : undefined,
   );

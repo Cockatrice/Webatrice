@@ -38,7 +38,6 @@ describe('ZoneViewDialog', () => {
     renderWithProviders(
       <ZoneViewDialog
         isOpen={false}
-        gameId={1}
         playerId={1}
         zoneName={Enriched.ZoneName.GRAVE}
         handleClose={() => {}}
@@ -57,7 +56,6 @@ describe('ZoneViewDialog', () => {
     renderWithProviders(
       <ZoneViewDialog
         isOpen
-        gameId={1}
         playerId={1}
         zoneName={Enriched.ZoneName.GRAVE}
         handleClose={() => {}}
@@ -79,7 +77,6 @@ describe('ZoneViewDialog', () => {
     renderWithProviders(
       <ZoneViewDialog
         isOpen
-        gameId={1}
         playerId={1}
         zoneName={Enriched.ZoneName.GRAVE}
         handleClose={() => {}}
@@ -100,7 +97,6 @@ describe('ZoneViewDialog', () => {
     renderWithProviders(
       <ZoneViewDialog
         isOpen
-        gameId={1}
         playerId={1}
         zoneName={Enriched.ZoneName.EXILE}
         handleClose={() => {}}
@@ -115,7 +111,6 @@ describe('ZoneViewDialog', () => {
     renderWithProviders(
       <ZoneViewDialog
         isOpen
-        gameId={1}
         playerId={1}
         zoneName={Enriched.ZoneName.DECK}
         handleClose={() => {}}
@@ -137,7 +132,6 @@ describe('ZoneViewDialog', () => {
     renderWithProviders(
       <ZoneViewDialog
         isOpen
-        gameId={1}
         playerId={1}
         zoneName={Enriched.ZoneName.EXILE}
         handleClose={() => {}}
@@ -160,7 +154,6 @@ describe('ZoneViewDialog', () => {
     renderWithProviders(
       <ZoneViewDialog
         isOpen
-        gameId={1}
         playerId={1}
         zoneName={Enriched.ZoneName.GRAVE}
         handleClose={handleClose}
@@ -177,7 +170,6 @@ describe('ZoneViewDialog', () => {
     renderWithProviders(
       <ZoneViewDialog
         isOpen
-        gameId={1}
         playerId={1}
         zoneName={Enriched.ZoneName.GRAVE}
         handleClose={() => {}}
@@ -198,7 +190,7 @@ describe('ZoneViewDialog', () => {
       makeCard({ id: 1, name: 'Island' }),
     ];
     renderWithProviders(
-      <ZoneViewDialog isOpen gameId={1} playerId={1} zoneName={Enriched.ZoneName.DECK} handleClose={() => {}} />,
+      <ZoneViewDialog isOpen playerId={1} zoneName={Enriched.ZoneName.DECK} handleClose={() => {}} />,
       { preloadedState: state },
     );
 
@@ -209,7 +201,7 @@ describe('ZoneViewDialog', () => {
   it('shows a "Shuffle on close" checkbox (default checked) for the library and passes the flag on close', () => {
     const handleClose = vi.fn();
     renderWithProviders(
-      <ZoneViewDialog isOpen gameId={1} playerId={1} zoneName={Enriched.ZoneName.DECK} handleClose={handleClose} />,
+      <ZoneViewDialog isOpen playerId={1} zoneName={Enriched.ZoneName.DECK} handleClose={handleClose} />,
       { preloadedState: stateWith({ name: Enriched.ZoneName.DECK, cardCount: 0 }) },
     );
 
@@ -222,7 +214,7 @@ describe('ZoneViewDialog', () => {
   it('passes shuffleOnClose=false when the library checkbox is unchecked', () => {
     const handleClose = vi.fn();
     renderWithProviders(
-      <ZoneViewDialog isOpen gameId={1} playerId={1} zoneName={Enriched.ZoneName.DECK} handleClose={handleClose} />,
+      <ZoneViewDialog isOpen playerId={1} zoneName={Enriched.ZoneName.DECK} handleClose={handleClose} />,
       { preloadedState: stateWith({ name: Enriched.ZoneName.DECK, cardCount: 0 }) },
     );
 
@@ -233,7 +225,7 @@ describe('ZoneViewDialog', () => {
 
   it('does not show the shuffle-on-close checkbox for non-deck zones', () => {
     renderWithProviders(
-      <ZoneViewDialog isOpen gameId={1} playerId={1} zoneName={Enriched.ZoneName.GRAVE} handleClose={() => {}} />,
+      <ZoneViewDialog isOpen playerId={1} zoneName={Enriched.ZoneName.GRAVE} handleClose={() => {}} />,
       { preloadedState: stateWith({ name: Enriched.ZoneName.GRAVE, cardCount: 0 }) },
     );
 

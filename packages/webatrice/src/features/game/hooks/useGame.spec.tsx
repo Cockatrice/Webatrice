@@ -121,17 +121,8 @@ describe('useGame', () => {
     expect(result.current.sensors).toBeDefined();
   });
 
-  it('exposes deckSelectOpen=true before game start when local is not ready', () => {
-    const { result } = setup({ started: false, readyStart: false });
-
-    expect(result.current.deckSelectOpen).toBe(true);
-  });
-
-  it('hides the deck-select once the local player marks ready', () => {
-    const { result } = setup({ started: false, readyStart: true });
-
-    expect(result.current.deckSelectOpen).toBe(false);
-  });
+  // The deck-select open predicate moved into useDeckSelectDialog (so the dialog
+  // self-gates); its open/closed cases are covered in useDeckSelectDialog.spec.
 
   // Hand visibility (bar vs inline, omniscient reveal) is owned by the board
   // view-model and covered in useGameBoardLayout.spec.ts.

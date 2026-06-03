@@ -38,12 +38,14 @@ function stateWithGame(overrides: Partial<Parameters<typeof makeGameEntry>[0]> =
   });
 }
 
+// Self-sources gameInfoOpen + closeGameInfo from GameDialogsContext and the
+// gameId from GameIdContext (default 1 in the harness).
 describe('GameInfoDialog', () => {
   it('renders game id, started flag, elapsed, and host name', () => {
-    renderWithProviders(
-      <GameInfoDialog isOpen gameId={1} onClose={() => {}} />,
-      { preloadedState: stateWithGame() },
-    );
+    renderWithProviders(<GameInfoDialog />, {
+      preloadedState: stateWithGame(),
+      gameDialogs: { gameInfoOpen: true },
+    });
 
     expect(screen.getByText(/game id/i)).toBeInTheDocument();
     expect(screen.getByText(/elapsed/i)).toBeInTheDocument();
@@ -53,10 +55,10 @@ describe('GameInfoDialog', () => {
   });
 
   it('tags the local player with "you" and the host with "host"', () => {
-    renderWithProviders(
-      <GameInfoDialog isOpen gameId={1} onClose={() => {}} />,
-      { preloadedState: stateWithGame() },
-    );
+    renderWithProviders(<GameInfoDialog />, {
+      preloadedState: stateWithGame(),
+      gameDialogs: { gameInfoOpen: true },
+    });
 
     // Scope to the player-list row, not the Host <dd>.
     const aliceNameSpans = screen
@@ -67,24 +69,25 @@ describe('GameInfoDialog', () => {
     expect(aliceRow.textContent).toMatch(/you/);
   });
 
-  it('calls onClose when the close button is clicked', () => {
-    const onClose = vi.fn();
-    renderWithProviders(
-      <GameInfoDialog isOpen gameId={1} onClose={onClose} />,
-      { preloadedState: stateWithGame() },
-    );
+  it('calls closeGameInfo when the close button is clicked', () => {
+    const closeGameInfo = vi.fn();
+    renderWithProviders(<GameInfoDialog />, {
+      preloadedState: stateWithGame(),
+      gameDialogs: { gameInfoOpen: true, closeGameInfo },
+    });
 
     // Two buttons match /close/i: the header IconButton (aria-label) and the
     // text "Close" button in the dialog footer. Use the footer one explicitly.
     fireEvent.click(screen.getByRole('button', { name: 'Close' }));
-    expect(onClose).toHaveBeenCalled();
+    expect(closeGameInfo).toHaveBeenCalled();
   });
 
   it('returns null when the game is missing', () => {
-    const { container } = renderWithProviders(
-      <GameInfoDialog isOpen gameId={999} onClose={() => {}} />,
-      { preloadedState: stateWithGame() },
-    );
+    const { container } = renderWithProviders(<GameInfoDialog />, {
+      preloadedState: stateWithGame(),
+      gameId: 999,
+      gameDialogs: { gameInfoOpen: true },
+    });
     expect(container.querySelector('.GameInfoDialog')).toBeNull();
   });
 });

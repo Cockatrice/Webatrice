@@ -52,9 +52,6 @@ export interface BattlefieldStackColumnProps {
   attachmentsByParent: ReadonlyMap<number, games.AttachedChild[]>;
   draggable: boolean;
   ownerPlayerId: number;
-  arrowSourceKey: string | null;
-  arrowTargetKey: string | null;
-  selectedCardKeys: ReadonlySet<string>;
 }
 
 function BattlefieldStackColumn({
@@ -62,9 +59,6 @@ function BattlefieldStackColumn({
   attachmentsByParent,
   draggable,
   ownerPlayerId,
-  arrowSourceKey,
-  arrowTargetKey,
-  selectedCardKeys,
 }: BattlefieldStackColumnProps) {
   const { widthPx, heightPx } = computeStackFootprint(cards, attachmentsByParent);
   const slotHeightPct = roundPercent((CARD_HEIGHT_PX * 100) / heightPx);
@@ -99,9 +93,6 @@ function BattlefieldStackColumn({
               attachments={attachmentsByParent.get(card.id) ?? EMPTY_ATTACHMENTS}
               draggable={draggable}
               ownerPlayerId={ownerPlayerId}
-              arrowSourceKey={arrowSourceKey}
-              arrowTargetKey={arrowTargetKey}
-              selectedCardKeys={selectedCardKeys}
             />
           </div>
         );

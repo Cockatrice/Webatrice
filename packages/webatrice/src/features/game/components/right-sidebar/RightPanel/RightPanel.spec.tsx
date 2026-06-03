@@ -13,19 +13,9 @@ function stateWithGame() {
   return makeStoreState({ games: { games: { 1: makeGameEntry() } } });
 }
 
-const NOOP = () => {};
-const DEFAULT_RP_PROPS = {
-  gameId: 1,
-  hoveredCard: null,
-  onRequestRollDie: NOOP,
-  onRequestConcede: NOOP,
-  onRequestUnconcede: NOOP,
-  onRequestGameInfo: NOOP,
-};
-
 describe('RightPanel', () => {
   it('renders CardPreview, PlayerList, GameLog, and TurnControls', () => {
-    renderWithProviders(<RightPanel {...DEFAULT_RP_PROPS} />, {
+    renderWithProviders(<RightPanel />, {
       preloadedState: stateWithGame(),
     });
 
@@ -35,22 +25,22 @@ describe('RightPanel', () => {
     expect(screen.getByTestId('turn-controls')).toBeInTheDocument();
   });
 
-  it('forwards the hovered card into the preview', () => {
+  it('shows the hovered card in the preview (from CardPreviewContext)', () => {
     const card = makeCard({ name: 'Lightning Bolt' });
-    renderWithProviders(
-      <RightPanel {...DEFAULT_RP_PROPS} hoveredCard={card} />,
-      { preloadedState: stateWithGame() },
-    );
+    renderWithProviders(<RightPanel />, {
+      preloadedState: stateWithGame(),
+      previewCard: card,
+    });
 
     const small = document.querySelector('.card-preview__image--small') as HTMLImageElement;
     expect(small.src).toContain('Lightning%20Bolt');
   });
 
-  it('forwards Roll Die clicks through to the parent callback', () => {
+  it('surfaces TurnControls wired to the Roll Die dialog action', () => {
     const onRequestRollDie = vi.fn();
     renderWithProviders(
-      <RightPanel {...DEFAULT_RP_PROPS} onRequestRollDie={onRequestRollDie} />,
-      { preloadedState: stateWithGame() },
+      <RightPanel />,
+      { preloadedState: stateWithGame(), gameDialogActions: { onRequestRollDie } },
     );
 
     fireEvent.click(screen.getByRole('button', { name: /roll die/i }));
@@ -59,7 +49,7 @@ describe('RightPanel', () => {
   });
 
   it('shows the Spectating tag when the local user is a spectator', () => {
-    renderWithProviders(<RightPanel {...DEFAULT_RP_PROPS} />, {
+    renderWithProviders(<RightPanel />, {
       preloadedState: makeStoreState({
         games: { games: { 1: makeGameEntry({ spectator: true }) } },
       }),
@@ -69,7 +59,7 @@ describe('RightPanel', () => {
   });
 
   it('hides the Spectating tag when the local user is a participant', () => {
-    renderWithProviders(<RightPanel {...DEFAULT_RP_PROPS} />, {
+    renderWithProviders(<RightPanel />, {
       preloadedState: stateWithGame(),
     });
 

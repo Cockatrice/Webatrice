@@ -14,7 +14,10 @@ import { useDeckSelectDialog } from './useDeckSelectDialog';
 const VALID_COD_XML =
   '<?xml version="1.0"?><cockatrice_deck version="1"><zone name="main"><card number="4" name="Island"/></zone></cockatrice_deck>';
 
-function setup(playerProps: Parameters<typeof makePlayerProperties>[0] = {}) {
+function setup(
+  playerProps: Parameters<typeof makePlayerProperties>[0] = {},
+  gameOverrides: Parameters<typeof makeGameEntry>[0] = {},
+) {
   const game = makeGameEntry({
     localPlayerId: 1,
     players: {
@@ -22,6 +25,7 @@ function setup(playerProps: Parameters<typeof makePlayerProperties>[0] = {}) {
         properties: makePlayerProperties({ playerId: 1, ...playerProps }),
       }),
     },
+    ...gameOverrides,
   });
   const gamesState: GamesState = { games: { 1: { ...game, info: { ...game.info, gameId: 1 } } } };
 
@@ -32,6 +36,43 @@ function setup(playerProps: Parameters<typeof makePlayerProperties>[0] = {}) {
 }
 
 describe('useDeckSelectDialog', () => {
+  it('is open for a not-started game with an active local player who has not readied', () => {
+    const { Wrapper } = setup();
+    const { result } = renderHook(() => useDeckSelectDialog(1), { wrapper: Wrapper });
+
+    expect(result.current.isOpen).toBe(true);
+  });
+
+  it('is closed once the local player has readied up', () => {
+    const { Wrapper } = setup({ readyStart: true });
+    const { result } = renderHook(() => useDeckSelectDialog(1), { wrapper: Wrapper });
+
+    expect(result.current.isOpen).toBe(false);
+  });
+
+  it('is closed once the game has started', () => {
+    const { Wrapper } = setup({}, { started: true });
+    const { result } = renderHook(() => useDeckSelectDialog(1), { wrapper: Wrapper });
+
+    expect(result.current.isOpen).toBe(false);
+  });
+
+  it('is closed when gameId is undefined (never opens against the fallback game)', () => {
+    const { Wrapper } = setup();
+    const { result } = renderHook(() => useDeckSelectDialog(undefined), { wrapper: Wrapper });
+
+    expect(result.current.isOpen).toBe(false);
+  });
+
+  it('toggles readyStart to false when the player is already ready (Unready)', () => {
+    const { Wrapper, webClient } = setup({ deckHash: 'abc123', readyStart: true });
+    const { result } = renderHook(() => useDeckSelectDialog(1), { wrapper: Wrapper });
+
+    act(() => result.current.handleToggleReady());
+
+    expect(webClient.request.game.readyStart).toHaveBeenCalledWith(1, { ready: false });
+  });
+
   it('reports canSubmit=false until non-whitespace deck text is entered', () => {
     const { Wrapper } = setup();
     const { result } = renderHook(() => useDeckSelectDialog(1), { wrapper: Wrapper });

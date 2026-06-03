@@ -15,7 +15,7 @@ export interface ZoneContextMenu {
 }
 
 export interface UseZoneContextMenuArgs {
-  gameId: number;
+  gameId: number | undefined;
   playerId: number | null;
   zoneName: string | null;
   onClose: () => void;
@@ -30,12 +30,12 @@ export function useZoneContextMenu({
   const webClient = useWebClient();
 
   const zone = useAppSelector((state) =>
-    playerId != null && zoneName != null
+    gameId != null && playerId != null && zoneName != null
       ? games.Selectors.getZone(state, gameId, playerId, zoneName)
       : undefined,
   );
 
-  const ready = playerId != null && zoneName != null;
+  const ready = gameId != null && playerId != null && zoneName != null;
   const alwaysReveal = zone?.alwaysRevealTopCard ?? false;
   const alwaysLook = zone?.alwaysLookAtTopCard ?? false;
 
@@ -46,14 +46,23 @@ export function useZoneContextMenu({
   };
 
   const handleDrawOne = () => {
+    if (gameId == null) {
+      return;
+    }
     webClient.request.game.drawCards(gameId, { number: 1 });
   };
 
   const handleShuffle = () => {
+    if (gameId == null) {
+      return;
+    }
     webClient.request.game.shuffle(gameId, { zoneName: Enriched.ZoneName.DECK, start: 0, end: -1 });
   };
 
   const handleRevealTop = () => {
+    if (gameId == null) {
+      return;
+    }
     webClient.request.game.revealCards(gameId, {
       zoneName: Enriched.ZoneName.DECK,
       playerId: -1,
@@ -62,6 +71,9 @@ export function useZoneContextMenu({
   };
 
   const handleToggleAlwaysReveal = () => {
+    if (gameId == null) {
+      return;
+    }
     webClient.request.game.changeZoneProperties(gameId, {
       zoneName: Enriched.ZoneName.DECK,
       alwaysRevealTopCard: !alwaysReveal,
@@ -69,6 +81,9 @@ export function useZoneContextMenu({
   };
 
   const handleToggleAlwaysLook = () => {
+    if (gameId == null) {
+      return;
+    }
     webClient.request.game.changeZoneProperties(gameId, {
       zoneName: Enriched.ZoneName.DECK,
       alwaysLookAtTopCard: !alwaysLook,

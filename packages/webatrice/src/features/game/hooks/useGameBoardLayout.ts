@@ -3,11 +3,7 @@ import { useMemo, useRef } from 'react';
 import { GameEntry } from '@cockatrice/datatrice';
 
 import { computeCanAct } from './useGameAccess';
-
-export interface BoardPlayer {
-  playerId: number;
-  name: string;
-}
+import { activePlayersOf } from '../utils/activePlayers';
 
 export interface BoardCell {
   playerId: number;
@@ -23,8 +19,7 @@ export interface BoardCell {
 }
 
 export interface GameBoardLayout {
-  players: BoardPlayer[]; // seated players in join order (used by the reveal dialog)
-  cells: BoardCell[]; // placed players; length === players.length
+  cells: BoardCell[]; // placed active players in join order
   columns: number;
   rows: number;
   // 'bar' renders a single bottom hand for the local player; 'inline' renders a
@@ -39,7 +34,6 @@ export interface GameBoardLayout {
 const MIN_PLAYERS_FOR_TWO_COLUMNS = 4;
 
 const EMPTY_LAYOUT: GameBoardLayout = {
-  players: [],
   cells: [],
   columns: 1,
   rows: 1,
@@ -67,11 +61,9 @@ export function useGameBoardLayout(game: GameEntry | undefined): GameBoardLayout
       return EMPTY_LAYOUT;
     }
 
-    // Active players only: drop spectators and conceded seats (Cockatrice's
-    // collectActivePlayers keeps !getConceded()), so a conceded board collapses out.
-    const seated = Object.values(game.players).filter(
-      (p) => !p.properties.spectator && !p.properties.conceded,
-    );
+    // Active players only: drop spectators and conceded seats so a conceded
+    // board collapses out (see activePlayersOf / Cockatrice collectActivePlayers).
+    const seated = activePlayersOf(game);
     const seatedIds = new Set(seated.map((p) => p.properties.playerId));
     joinOrderRef.current = joinOrderRef.current.filter((id) => seatedIds.has(id));
     for (const p of seated) {
@@ -80,11 +72,9 @@ export function useGameBoardLayout(game: GameEntry | undefined): GameBoardLayout
         joinOrderRef.current.push(id);
       }
     }
-    const byId = new Map(seated.map((p) => [p.properties.playerId, p]));
-    const players: BoardPlayer[] = joinOrderRef.current.map((id) => {
-      const p = byId.get(id)!;
-      return { playerId: id, name: p.properties.userInfo?.name ?? `p${id}` };
-    });
+    // Active player ids in join order; only the id is needed to seat cells (names
+    // are a presentation concern owned by the consumers that show them).
+    const players = joinOrderRef.current;
 
     const n = players.length;
     if (n === 0) {
@@ -99,9 +89,9 @@ export function useGameBoardLayout(game: GameEntry | undefined): GameBoardLayout
     // visible hand renders inline per board, otherwise a single bottom bar.
     const omniscient = game.info?.spectatorsOmniscient === true;
     const visibleHand = new Set<number>();
-    for (const p of players) {
-      if ((!isSpectator && p.playerId === localPlayerId) || omniscient) {
-        visibleHand.add(p.playerId);
+    for (const playerId of players) {
+      if ((!isSpectator && playerId === localPlayerId) || omniscient) {
+        visibleHand.add(playerId);
       }
     }
     const handMode: 'bar' | 'inline' = visibleHand.size > 1 ? 'inline' : 'bar';
@@ -117,7 +107,7 @@ export function useGameBoardLayout(game: GameEntry | undefined): GameBoardLayout
     // anchor, so the seats fill in plain join order.
     const localIndex = isSpectator
       ? -1
-      : players.findIndex((p) => p.playerId === localPlayerId);
+      : players.findIndex((p) => p === localPlayerId);
     const ring =
       localIndex >= 0
         ? [...players.slice(localIndex), ...players.slice(0, localIndex)]
@@ -135,21 +125,21 @@ export function useGameBoardLayout(game: GameEntry | undefined): GameBoardLayout
       }
     }
 
-    const cells: BoardCell[] = ring.map((entry, k) => {
+    const cells: BoardCell[] = ring.map((playerId, k) => {
       const index = path[k];
       const row = Math.floor(index / columns);
       const col = index % columns;
       return {
-        playerId: entry.playerId,
-        isLocal: !isSpectator && entry.playerId === localPlayerId,
+        playerId,
+        isLocal: !isSpectator && playerId === localPlayerId,
         mirrored: row < rows - 1,
-        canAct: computeCanAct(game, entry.playerId),
-        showHand: handMode === 'inline' && visibleHand.has(entry.playerId),
+        canAct: computeCanAct(game, playerId),
+        showHand: handMode === 'inline' && visibleHand.has(playerId),
         row,
         col,
       };
     });
 
-    return { players, cells, columns, rows, handMode, bottomHand };
+    return { cells, columns, rows, handMode, bottomHand };
   }, [game]);
 }

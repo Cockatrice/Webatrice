@@ -31,7 +31,7 @@ function stateWithZone(zoneName: Enriched.ZoneNameValue, overrides: Parameters<t
 describe('ZoneStack', () => {
   it('renders the label', () => {
     renderWithProviders(
-      <ZoneStack gameId={1} playerId={1} zoneName={Enriched.ZoneName.GRAVE} label="Graveyard" />,
+      <ZoneStack zoneName={Enriched.ZoneName.GRAVE} label="Graveyard" />,
       { preloadedState: stateWithZone(Enriched.ZoneName.GRAVE, { cardCount: 0 }) },
     );
 
@@ -40,7 +40,7 @@ describe('ZoneStack', () => {
 
   it('shows the authoritative cardCount, even when order is empty (hidden zone)', () => {
     renderWithProviders(
-      <ZoneStack gameId={1} playerId={1} zoneName={Enriched.ZoneName.DECK} label="Deck" />,
+      <ZoneStack zoneName={Enriched.ZoneName.DECK} label="Deck" />,
       {
         preloadedState: stateWithZone(Enriched.ZoneName.DECK, {
           cardCount: 40,
@@ -56,7 +56,7 @@ describe('ZoneStack', () => {
     const a = makeCard({ id: 1, name: 'Bottom Card' });
     const b = makeCard({ id: 2, name: 'Top Card' });
     renderWithProviders(
-      <ZoneStack gameId={1} playerId={1} zoneName={Enriched.ZoneName.GRAVE} label="Graveyard" />,
+      <ZoneStack zoneName={Enriched.ZoneName.GRAVE} label="Graveyard" />,
       {
         preloadedState: stateWithZone(Enriched.ZoneName.GRAVE, {
           cardCount: 2,
@@ -71,7 +71,7 @@ describe('ZoneStack', () => {
 
   it('renders a placeholder when the zone has no visible cards', () => {
     const { container } = renderWithProviders(
-      <ZoneStack gameId={1} playerId={1} zoneName={Enriched.ZoneName.EXILE} label="Exile" />,
+      <ZoneStack zoneName={Enriched.ZoneName.EXILE} label="Exile" />,
       { preloadedState: stateWithZone(Enriched.ZoneName.EXILE, { cardCount: 0 }) },
     );
 
@@ -82,7 +82,7 @@ describe('ZoneStack', () => {
   it('hides the image when the top card is face-down', () => {
     const hidden = makeCard({ id: 1, name: 'Secret', faceDown: true });
     const { container } = renderWithProviders(
-      <ZoneStack gameId={1} playerId={1} zoneName={Enriched.ZoneName.EXILE} label="Exile" />,
+      <ZoneStack zoneName={Enriched.ZoneName.EXILE} label="Exile" />,
       {
         preloadedState: stateWithZone(Enriched.ZoneName.EXILE, {
           cardCount: 1,
@@ -97,7 +97,7 @@ describe('ZoneStack', () => {
 
   it('renders count 0 when the zone entry is missing entirely', () => {
     renderWithProviders(
-      <ZoneStack gameId={1} playerId={1} zoneName="nonexistent" label="Missing" />,
+      <ZoneStack zoneName="nonexistent" label="Missing" />,
       {
         preloadedState: makeStoreState({
           games: {
@@ -118,8 +118,6 @@ describe('ZoneStack', () => {
     const onClick = vi.fn();
     renderWithProviders(
       <ZoneStack
-        gameId={1}
-        playerId={1}
         zoneName={Enriched.ZoneName.GRAVE}
         label="Graveyard"
         onClick={onClick}
@@ -134,7 +132,7 @@ describe('ZoneStack', () => {
 
   it('does not gain button semantics when onClick is omitted', () => {
     renderWithProviders(
-      <ZoneStack gameId={1} playerId={1} zoneName={Enriched.ZoneName.GRAVE} label="Graveyard" />,
+      <ZoneStack zoneName={Enriched.ZoneName.GRAVE} label="Graveyard" />,
       { preloadedState: stateWithZone(Enriched.ZoneName.GRAVE, { cardCount: 0 }) },
     );
 
@@ -146,8 +144,6 @@ describe('ZoneStack', () => {
   it('applies the rotated modifier class when rotated is true', () => {
     renderWithProviders(
       <ZoneStack
-        gameId={1}
-        playerId={1}
         zoneName={Enriched.ZoneName.GRAVE}
         label="Graveyard"
         rotated
@@ -162,7 +158,7 @@ describe('ZoneStack', () => {
 
   it('omits the rotated modifier by default', () => {
     renderWithProviders(
-      <ZoneStack gameId={1} playerId={1} zoneName={Enriched.ZoneName.DECK} label="Deck" />,
+      <ZoneStack zoneName={Enriched.ZoneName.DECK} label="Deck" />,
       { preloadedState: stateWithZone(Enriched.ZoneName.DECK, { cardCount: 0 }) },
     );
 
@@ -175,8 +171,6 @@ describe('ZoneStack', () => {
     const onClick = vi.fn();
     renderWithProviders(
       <ZoneStack
-        gameId={1}
-        playerId={1}
         zoneName={Enriched.ZoneName.GRAVE}
         label="Graveyard"
         onClick={onClick}

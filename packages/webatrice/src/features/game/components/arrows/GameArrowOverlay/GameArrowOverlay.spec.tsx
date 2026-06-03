@@ -16,11 +16,11 @@ import {
   makeCardKey,
 } from '../../../utils/CardRegistry/CardRegistryContext';
 
-function Harness({ gameId }: { gameId: number }) {
+function Harness() {
   const ref = useRef<HTMLDivElement>(null);
   return (
     <div ref={ref} data-testid="arrow-harness-root" style={{ position: 'relative', width: 600, height: 400 }}>
-      <GameArrowOverlay gameId={gameId} containerRef={ref} />
+      <GameArrowOverlay containerRef={ref} />
     </div>
   );
 }
@@ -81,7 +81,7 @@ function wrapWithRegistry(children: React.ReactNode, registry: ReturnType<typeof
 describe('GameArrowOverlay', () => {
   it('renders an SVG root when mounted', () => {
     const { registry } = setupRegistryWithTwoCards();
-    renderWithProviders(wrapWithRegistry(<Harness gameId={1} />, registry), {
+    renderWithProviders(wrapWithRegistry(<Harness />, registry), {
       preloadedState: stateWithOneArrow(),
     });
 
@@ -93,7 +93,7 @@ describe('GameArrowOverlay', () => {
     // Pretend the board rect starts at 0,0 for simplicity; card A center is
     // (125, 125) and card B center is (325, 325) in viewport coords — same in
     // board-relative coords since the harness root is at 0,0.
-    renderWithProviders(wrapWithRegistry(<Harness gameId={1} />, registry), {
+    renderWithProviders(wrapWithRegistry(<Harness />, registry), {
       preloadedState: stateWithOneArrow(),
     });
 
@@ -106,7 +106,7 @@ describe('GameArrowOverlay', () => {
 
   it('skips arrows whose endpoints are not registered yet', () => {
     const registry = createCardRegistry();
-    renderWithProviders(wrapWithRegistry(<Harness gameId={1} />, registry), {
+    renderWithProviders(wrapWithRegistry(<Harness />, registry), {
       preloadedState: stateWithOneArrow(),
     });
 
@@ -116,7 +116,7 @@ describe('GameArrowOverlay', () => {
   it('dispatches deleteArrow when an arrow line is clicked', () => {
     const webClient = createMockWebClient();
     const { registry } = setupRegistryWithTwoCards();
-    renderWithProviders(wrapWithRegistry(<Harness gameId={1} />, registry), {
+    renderWithProviders(wrapWithRegistry(<Harness />, registry), {
       preloadedState: stateWithOneArrow(),
       webClient,
     });

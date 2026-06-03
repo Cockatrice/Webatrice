@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import Divider from '@mui/material/Divider';
@@ -5,60 +6,41 @@ import Check from '@mui/icons-material/Check';
 
 import { Enriched } from '@cockatrice/datatrice';
 import NestedMenuItem from '../CardContextMenu/NestedMenuItem';
+import { useGameDialogsContext } from '../../ui/GameDialogsContext';
+import { useGameId } from '../../ui/GameIdContext';
 
 import { useZoneContextMenu } from './useZoneContextMenu';
 
 import './ZoneContextMenu.css';
 
-export interface ZoneContextMenuProps {
-  isOpen: boolean;
-  anchorPosition: { top: number; left: number } | null;
-  gameId: number;
-  playerId: number | null;
-  zoneName: string | null;
-  onClose: () => void;
-  onRequestDrawN: () => void;
-  onRequestDumpN: () => void;
-  onRequestRevealTopN: () => void;
-  onRequestRevealZone: () => void;
-  // Library extended actions
-  onRequestUndoDraw: () => void;
-  onRequestDrawBottom: () => void;
-  onRequestMoveTopCardToZone: (zone: string, options?: { x?: number }) => void;
-  onRequestPlayTop: (faceDown: boolean) => void;
-  onRequestMoveTopNToZone: (zone: string) => void;
-  onRequestShuffleTopN: () => void;
-  onRequestShuffleBottomN: () => void;
-  // View zone (reuses zone-view dialog)
-  onRequestViewZone: () => void;
-  // Graveyard / Exile actions
-  onRequestMoveAllFromZoneToDeck: (top: boolean) => void;
-  onRequestMoveAllFromZoneTo: (targetZone: string) => void;
-  onRequestRevealRandomFromZone: () => void;
-}
-
-function ZoneContextMenu(props: ZoneContextMenuProps) {
+function ZoneContextMenu() {
+  const dialogs = useGameDialogsContext();
+  const gameId = useGameId();
+  const zoneMenu = dialogs.zoneMenu;
+  const isOpen = zoneMenu != null;
+  const anchorPosition = zoneMenu?.anchorPosition ?? null;
+  const playerId = zoneMenu?.playerId ?? null;
+  const zoneName = zoneMenu?.zoneName ?? null;
+  const onClose = dialogs.closeZoneMenu;
+  // Parent-owned (prompt/dialog-opening) actions, sourced from the dialogs slice
+  // under the names the menu items already use.
   const {
-    isOpen,
-    anchorPosition,
-    zoneName,
-    onClose,
-    onRequestDrawN,
-    onRequestDumpN,
-    onRequestRevealTopN,
-    onRequestRevealZone,
-    onRequestUndoDraw,
-    onRequestDrawBottom,
-    onRequestMoveTopCardToZone,
-    onRequestPlayTop,
-    onRequestMoveTopNToZone,
-    onRequestShuffleTopN,
-    onRequestShuffleBottomN,
-    onRequestViewZone,
-    onRequestMoveAllFromZoneToDeck,
-    onRequestMoveAllFromZoneTo,
-    onRequestRevealRandomFromZone,
-  } = props;
+    handleRequestDrawN: onRequestDrawN,
+    handleRequestDumpN: onRequestDumpN,
+    handleRequestRevealTopN: onRequestRevealTopN,
+    handleRequestRevealZone: onRequestRevealZone,
+    handleRequestUndoDraw: onRequestUndoDraw,
+    handleRequestDrawBottom: onRequestDrawBottom,
+    handleRequestMoveTopCardToZone: onRequestMoveTopCardToZone,
+    handleRequestPlayTop: onRequestPlayTop,
+    handleRequestMoveTopNToZone: onRequestMoveTopNToZone,
+    handleRequestShuffleTopN: onRequestShuffleTopN,
+    handleRequestShuffleBottomN: onRequestShuffleBottomN,
+    handleRequestViewZone: onRequestViewZone,
+    handleRequestMoveAllFromZoneToDeck: onRequestMoveAllFromZoneToDeck,
+    handleRequestMoveAllFromZoneTo: onRequestMoveAllFromZoneTo,
+    handleRequestRevealRandomFromZone: onRequestRevealRandomFromZone,
+  } = dialogs;
   const {
     ready,
     alwaysReveal,
@@ -69,7 +51,7 @@ function ZoneContextMenu(props: ZoneContextMenuProps) {
     handleToggleAlwaysReveal,
     handleToggleAlwaysLook,
     runAndClose,
-  } = useZoneContextMenu(props);
+  } = useZoneContextMenu({ gameId, playerId, zoneName, onClose });
 
   if (!ready) {
     return null;
@@ -192,4 +174,4 @@ function ZoneContextMenu(props: ZoneContextMenuProps) {
   return null;
 }
 
-export default ZoneContextMenu;
+export default memo(ZoneContextMenu);

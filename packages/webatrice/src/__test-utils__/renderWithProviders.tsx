@@ -33,6 +33,14 @@ const testTheme = createTheme({
 import { rootReducerMap, type RootState } from '../store';
 import { ToastProvider } from '../components/Toast/ToastContext';
 import { GameInteractionProvider, type GameInteractionHandlers } from '../features/game/components/ui/GameInteractionContext';
+import { CardVisualStateProvider, type CanActFor } from '../features/game/components/ui/CardVisualStateContext';
+import { GameDialogActionsProvider, type GameDialogActions } from '../features/game/components/ui/GameDialogActionsContext';
+import { GameIdProvider } from '../features/game/components/ui/GameIdContext';
+import { CardPreviewProvider } from '../features/game/components/ui/CardPreviewContext';
+import { GameDialogsProvider } from '../features/game/components/ui/GameDialogsContext';
+import { BoardCellProvider, type BoardCellInfo } from '../features/game/components/ui/BoardCellContext';
+import type { GameDialogs } from '../features/game/hooks/useGameDialogs';
+import type { ServerInfo_Card } from '@cockatrice/sockatrice/generated';
 import { createMockWebClient } from './mockWebClient';
 
 const NOOP_GAME_INTERACTION: GameInteractionHandlers = {
@@ -45,6 +53,105 @@ const NOOP_GAME_INTERACTION: GameInteractionHandlers = {
   onZoneClick: () => undefined,
   onZoneContextMenu: () => undefined,
 };
+
+const NOOP_DIALOG_ACTIONS: GameDialogActions = {
+  onRequestRollDie: () => undefined,
+  onRequestConcede: () => undefined,
+  onRequestUnconcede: () => undefined,
+  onRequestGameInfo: () => undefined,
+};
+
+// Closed/no-op default for the whole dialogs slice. Typed as GameDialogs so the
+// compiler flags any field a spec forgets — specs override only what they assert.
+const noop = () => undefined;
+const NOOP_GAME_DIALOGS: GameDialogs = {
+  cardMenu: null,
+  zoneMenu: null,
+  playerMenu: null,
+  handMenu: null,
+  closeCardMenu: noop,
+  closeZoneMenu: noop,
+  closePlayerMenu: noop,
+  closeHandMenu: noop,
+  handleCardContextMenu: noop,
+  handleZoneContextMenu: noop,
+  handlePlayerContextMenu: noop,
+  handleHandContextMenu: noop,
+  zoneViews: [],
+  handleZoneClick: noop,
+  handleCloseZoneView: noop,
+  prompt: null,
+  closePrompt: noop,
+  rollDieOpen: false,
+  lastDieSides: 0,
+  lastDieCount: 0,
+  openRollDie: noop,
+  closeRollDie: noop,
+  handleRollDieSubmit: noop,
+  createTokenOpen: false,
+  openCreateToken: noop,
+  closeCreateToken: noop,
+  handleCreateTokenSubmit: noop,
+  sideboardOpen: false,
+  openSideboard: noop,
+  closeSideboard: noop,
+  handleSideboardSubmit: noop,
+  handleToggleSideboardLock: noop,
+  gameInfoOpen: false,
+  openGameInfo: noop,
+  closeGameInfo: noop,
+  concedeConfirm: null,
+  openConcede: noop,
+  openUnconcede: noop,
+  closeConcedeConfirm: noop,
+  confirmConcede: noop,
+  confirmUnconcede: noop,
+  revealState: null,
+  closeReveal: noop,
+  handleRequestSetPT: noop,
+  handleRequestSetAnnotation: noop,
+  handleRequestSetCardCounter: noop,
+  handleRequestDrawArrow: noop,
+  handleRequestAttach: noop,
+  handleRequestPlayFromCardMenu: noop,
+  handleRequestMoveToLibraryAt: noop,
+  handleRequestDrawN: noop,
+  handleRequestDumpN: noop,
+  handleRequestRevealTopN: noop,
+  handleRequestRevealZone: noop,
+  handleRequestUndoDraw: noop,
+  handleRequestDrawBottom: noop,
+  handleRequestMoveTopCardToZone: noop,
+  handleRequestPlayTop: noop,
+  handleRequestMoveTopNToZone: noop,
+  handleRequestShuffleTopN: noop,
+  handleRequestShuffleBottomN: noop,
+  handleRequestViewZone: noop,
+  handleRequestMoveAllFromZoneToDeck: noop,
+  handleRequestMoveAllFromZoneTo: noop,
+  handleRequestRevealRandomFromZone: noop,
+  handleRequestChooseMulligan: noop,
+  handleRequestRevealHand: noop,
+  handleRequestRevealRandom: noop,
+  handleRequestViewHand: noop,
+  handleRequestSortHandBy: noop,
+  handleRequestMoveHandToDeck: noop,
+  handleRequestMoveHandToZone: noop,
+};
+
+interface CardVisualStateOverride {
+  arrowSourceKey?: string | null;
+  arrowTargetKey?: string | null;
+  selectedCardKeys?: ReadonlySet<string>;
+  canActFor?: CanActFor;
+}
+
+const EMPTY_SELECTION: ReadonlySet<string> = new Set();
+const DENY_ALL: CanActFor = () => false;
+
+// Board components (PlayerBoard, StackColumn, Battlefield, PlayerInfoPanel,
+// ZoneStack) read their seat from BoardCellContext; default to the local seat 1.
+const DEFAULT_BOARD_CELL: BoardCellInfo = { playerId: 1, mirrored: false, isLocal: false };
 
 let defaultWebClient: WebClient | undefined;
 function getDefaultWebClient(): WebClient {
@@ -84,22 +191,63 @@ interface ExtendedRenderOptions extends Omit<RenderOptions, 'wrapper'> {
   store?: EnhancedStore<RootState>;
   // Partial overrides for the game-interaction context (defaults to no-ops).
   gameInteraction?: Partial<GameInteractionHandlers>;
+  // Partial overrides for the card-visual-state context (arrow/selection/canAct).
+  // Defaults: no arrows, empty selection, canAct denied for every seat.
+  cardVisualState?: CardVisualStateOverride;
+  // Partial overrides for the game-dialog-actions context (defaults to no-ops).
+  gameDialogActions?: Partial<GameDialogActions>;
+  // The active game's id provided via GameIdContext. Omit for the default (1,
+  // matching the dominant store fixture); pass explicitly — including
+  // `undefined` — to override (e.g. the no-active-game case).
+  gameId?: number;
+  // The card shown in the preview pane, provided via CardPreviewContext.
+  previewCard?: ServerInfo_Card | null;
+  // Partial overrides for the dialogs slice (defaults to a closed/no-op slice).
+  // Set the relevant menu state + handlers a dialog spec asserts against.
+  gameDialogs?: Partial<GameDialogs>;
+  // The seat a board component renders, provided via BoardCellContext. Defaults
+  // to the local seat (playerId 1); pass to render an opponent/mirrored cell.
+  boardCell?: Partial<BoardCellInfo>;
 }
 
 export function renderWithProviders(
   ui: ReactElement,
-  {
+  options: ExtendedRenderOptions = {},
+) {
+  const {
     preloadedState,
     route = '/',
     webClient = getDefaultWebClient(),
     store: externalStore,
     gameInteraction,
+    cardVisualState,
+    gameDialogActions,
+    gameDialogs,
+    boardCell,
+    previewCard = null,
     ...renderOptions
-  }: ExtendedRenderOptions = {},
-) {
+  } = options;
+  const boardCellInfo: BoardCellInfo = boardCell
+    ? { ...DEFAULT_BOARD_CELL, ...boardCell }
+    : DEFAULT_BOARD_CELL;
+  // Distinguish "omitted" (default game 1) from an explicit `gameId: undefined`
+  // (no-active-game tests) — a destructure default can't tell them apart.
+  const gameId = 'gameId' in options ? options.gameId : 1;
   const interactionHandlers: GameInteractionHandlers = gameInteraction
     ? { ...NOOP_GAME_INTERACTION, ...gameInteraction }
     : NOOP_GAME_INTERACTION;
+  const dialogActions: GameDialogActions = gameDialogActions
+    ? { ...NOOP_DIALOG_ACTIONS, ...gameDialogActions }
+    : NOOP_DIALOG_ACTIONS;
+  const dialogs: GameDialogs = gameDialogs
+    ? { ...NOOP_GAME_DIALOGS, ...gameDialogs }
+    : NOOP_GAME_DIALOGS;
+  const visualState = {
+    arrowSourceKey: cardVisualState?.arrowSourceKey ?? null,
+    arrowTargetKey: cardVisualState?.arrowTargetKey ?? null,
+    selectedCardKeys: cardVisualState?.selectedCardKeys ?? EMPTY_SELECTION,
+    canActFor: cardVisualState?.canActFor ?? DENY_ALL,
+  };
   const store = externalStore ?? createStore<RootState>({
     reducer: combineReducers(rootReducerMap),
     preloadedState,
@@ -118,9 +266,26 @@ export function renderWithProviders(
                       screenReaderInstructions: { draggable: '' },
                     }}
                   >
-                    <GameInteractionProvider value={interactionHandlers}>
-                      {children}
-                    </GameInteractionProvider>
+                    <GameIdProvider value={gameId}>
+                      <GameInteractionProvider value={interactionHandlers}>
+                        <CardVisualStateProvider
+                          arrowSourceKey={visualState.arrowSourceKey}
+                          arrowTargetKey={visualState.arrowTargetKey}
+                          selectedCardKeys={visualState.selectedCardKeys}
+                          canActFor={visualState.canActFor}
+                        >
+                          <GameDialogActionsProvider value={dialogActions}>
+                            <CardPreviewProvider value={previewCard}>
+                              <GameDialogsProvider value={dialogs}>
+                                <BoardCellProvider value={boardCellInfo}>
+                                  {children}
+                                </BoardCellProvider>
+                              </GameDialogsProvider>
+                            </CardPreviewProvider>
+                          </GameDialogActionsProvider>
+                        </CardVisualStateProvider>
+                      </GameInteractionProvider>
+                    </GameIdProvider>
                   </DndContext>
                 </MemoryRouter>
               </ToastProvider>

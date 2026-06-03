@@ -11,6 +11,14 @@ import MenuItem from '@mui/material/MenuItem';
 import InputLabel from '@mui/material/InputLabel';
 import FormControl from '@mui/material/FormControl';
 
+import { memo, useMemo } from 'react';
+
+import { games } from '@cockatrice/datatrice';
+import { useAppSelector } from '@app/store';
+
+import { useGameId } from '../../components/ui/GameIdContext';
+import { useGameDialogsContext } from '../../components/ui/GameDialogsContext';
+import { activePlayersOf } from '../../utils/activePlayers';
 import { useRevealCardsDialog } from './useRevealCardsDialog';
 
 import './RevealCardsDialog.css';
@@ -34,29 +42,28 @@ export interface RevealCardsSubmit {
   topCards: number;
 }
 
-export interface RevealCardsDialogProps {
-  isOpen: boolean;
-  title: string;
-  zoneLabel: string;
-  showCountInput?: boolean;
-  defaultCount?: number;
-  players: ReadonlyArray<{ playerId: number; name: string }>;
-  onSubmit: (args: RevealCardsSubmit) => void;
-  onCancel: () => void;
-}
-
 const ALL_PLAYERS = -1;
 
-function RevealCardsDialog({
-  isOpen,
-  title,
-  zoneLabel,
-  showCountInput = false,
-  defaultCount = 1,
-  players,
-  onSubmit,
-  onCancel,
-}: RevealCardsDialogProps) {
+// Self-sources its reveal request (title/zone/count/onSubmit) from the
+// GameDialogsContext.revealState slice, closes via closeReveal, and folds the
+// reveal-target list (active, non-spectator, non-conceded seats — matching the
+// board layout) from the store. Renders propless and self-gates.
+function RevealCardsDialog() {
+  const { revealState, closeReveal } = useGameDialogsContext();
+  const gameId = useGameId();
+  const game = useAppSelector((state) =>
+    gameId != null ? games.Selectors.getGame(state, gameId) : undefined,
+  );
+  const players = useMemo(
+    () =>
+      (game ? activePlayersOf(game) : []).map((p) => ({
+        playerId: p.properties.playerId,
+        name: p.properties.userInfo?.name ?? `p${p.properties.playerId}`,
+      })),
+    [game],
+  );
+
+  const isOpen = revealState != null;
   const {
     targetPlayerId,
     countDraft,
@@ -64,13 +71,25 @@ function RevealCardsDialog({
     setTargetPlayerId,
     handleCountChange,
     handleSubmit,
-  } = useRevealCardsDialog({ isOpen, showCountInput, defaultCount, onSubmit });
+  } = useRevealCardsDialog({
+    isOpen,
+    showCountInput: revealState?.showCountInput ?? false,
+    defaultCount: revealState?.defaultCount ?? 1,
+    onSubmit: revealState?.onSubmit,
+  });
+
+  if (!revealState) {
+    return null;
+  }
+
+  const { title, zoneLabel } = revealState;
+  const showCountInput = revealState.showCountInput;
 
   return (
     <StyledDialog
       className={'RevealCardsDialog ' + classes.root}
-      open={isOpen}
-      onClose={onCancel}
+      open
+      onClose={closeReveal}
       maxWidth={false}
     >
       <DialogTitle className="dialog-title">
@@ -118,7 +137,7 @@ function RevealCardsDialog({
           )}
         </DialogContent>
         <DialogActions>
-          <Button type="button" onClick={onCancel}>Cancel</Button>
+          <Button type="button" onClick={closeReveal}>Cancel</Button>
           <Button type="submit" variant="contained" color="primary">Reveal</Button>
         </DialogActions>
       </form>
@@ -126,4 +145,4 @@ function RevealCardsDialog({
   );
 }
 
-export default RevealCardsDialog;
+export default memo(RevealCardsDialog);

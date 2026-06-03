@@ -1,25 +1,16 @@
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 
+import { useGameDialogActions } from '../../ui/GameDialogActionsContext';
+import { useGameId } from '../../ui/GameIdContext';
 import { useTurnControls } from './useTurnControls';
 
 import './TurnControls.css';
 
-export interface TurnControlsProps {
-  gameId: number | undefined;
-  onRequestRollDie: () => void;
-  onRequestConcede: () => void;
-  onRequestUnconcede: () => void;
-  onRequestGameInfo: () => void;
-}
-
-function TurnControls({
-  gameId,
-  onRequestRollDie,
-  onRequestConcede,
-  onRequestUnconcede,
-  onRequestGameInfo,
-}: TurnControlsProps) {
+function TurnControls() {
+  const gameId = useGameId();
+  const { onRequestRollDie, onRequestConcede, onRequestUnconcede, onRequestGameInfo } =
+    useGameDialogActions();
   const {
     isHost,
     isConceded,

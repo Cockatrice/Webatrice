@@ -33,7 +33,6 @@ export interface Game extends CurrentGame {
   handleGameMouseDown: (e: React.MouseEvent<HTMLDivElement>) => void;
   boxSelectPreview: BoxSelectPreview | null;
   localAccess: GameAccess;
-  deckSelectOpen: boolean;
   layout: GameBoardLayout;
   arrows: GameArrowInteractions;
   dialogs: GameDialogs;
@@ -103,15 +102,6 @@ export function useGame(): Game {
 
   useGameShortcuts({ gameId, onRequestConcede: dialogs.openConcede });
 
-  // localPlayer null-check guards the reconnect window before Event_GameStateChanged repopulates players.
-  const deckSelectOpen =
-    game != null &&
-    localPlayer != null &&
-    !game.started &&
-    !current.isSpectator &&
-    !current.isJudge &&
-    !localPlayer.properties.readyStart;
-
   return {
     ...current,
     boardRef,
@@ -129,7 +119,6 @@ export function useGame(): Game {
     handleGameMouseDown: box.handleGameMouseDown,
     boxSelectPreview: box.previewRect,
     localAccess,
-    deckSelectOpen,
     layout,
     arrows,
     dialogs,

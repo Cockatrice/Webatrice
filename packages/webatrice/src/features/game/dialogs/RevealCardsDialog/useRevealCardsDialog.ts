@@ -15,7 +15,9 @@ export interface UseRevealCardsDialogArgs {
   isOpen: boolean;
   showCountInput: boolean;
   defaultCount: number;
-  onSubmit: (args: RevealCardsSubmit) => void;
+  // Optional: the dialog self-gates (renders null) when there's no active reveal
+  // request, so a submit can't fire without a real handler.
+  onSubmit?: (args: RevealCardsSubmit) => void;
 }
 
 const ALL_PLAYERS = -1;
@@ -56,7 +58,7 @@ export function useRevealCardsDialog({
       }
       topCards = n;
     }
-    onSubmit({ targetPlayerId, topCards });
+    onSubmit?.({ targetPlayerId, topCards });
   };
 
   return {

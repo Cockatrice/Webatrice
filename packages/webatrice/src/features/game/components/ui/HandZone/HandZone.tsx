@@ -5,32 +5,26 @@ import { cx } from '@app/utils';
 
 import CardSlot from '../CardSlot/CardSlot';
 import { makeCardKey } from '../../../utils/CardRegistry/CardRegistryContext';
-import { EMPTY_SELECTION } from '../../../utils/selection';
 import { useGameInteraction } from '../GameInteractionContext';
+import { useCanActFor, useCardVisualState } from '../CardVisualStateContext';
+import { useGameIdRequired } from '../GameIdContext';
 import { useHandZone } from './useHandZone';
 
 import './HandZone.css';
 
 export interface HandZoneProps {
-  gameId: number;
   playerId: number;
-  canAct?: boolean;
-  arrowSourceKey?: string | null;
-  arrowTargetKey?: string | null;
-  selectedCardKeys?: ReadonlySet<string>;
   onHandContextMenu?: (event: React.MouseEvent) => void;
 }
 
 function HandZone({
-  gameId,
   playerId,
-  canAct = false,
-  arrowSourceKey = null,
-  arrowTargetKey = null,
-  selectedCardKeys = EMPTY_SELECTION,
   onHandContextMenu,
 }: HandZoneProps) {
+  const gameId = useGameIdRequired();
   const { onCardHover, onCardClick, onCardContextMenu, onCardDoubleClick, onCardFocus, onCardBlur } = useGameInteraction();
+  const { arrowSourceKey, arrowTargetKey, selectedCardKeys } = useCardVisualState();
+  const canAct = useCanActFor()(playerId);
   const { cards, setNodeRef, isOver, handleZoneContextMenu } = useHandZone({
     gameId,
     playerId,

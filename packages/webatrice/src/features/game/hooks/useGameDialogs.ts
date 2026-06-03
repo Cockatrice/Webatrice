@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 
 import { useSettings } from '@app/hooks';
 import { useAppDispatch } from '@app/store';
@@ -1122,15 +1122,37 @@ export function useGameDialogs({
     setConcedeConfirm(null);
   }, [gameId, webClient]);
 
-  return {
+  // Simple open/close setters, hoisted out of the return literal so the whole
+  // object can be memoized (a fresh return object each render would churn
+  // GameDialogsContext's value and force every dialog/menu consumer to re-render
+  // on every Game render — e.g. each arrow-drag tick).
+  const closeCardMenu = useCallback(() => setCardMenu(null), []);
+  const closeZoneMenu = useCallback(() => setZoneMenu(null), []);
+  const closePlayerMenu = useCallback(() => setPlayerMenu(null), []);
+  const closeHandMenu = useCallback(() => setHandMenu(null), []);
+  const closePrompt = useCallback(() => setPrompt(null), []);
+  const openRollDie = useCallback(() => setRollDieOpen(true), []);
+  const closeRollDie = useCallback(() => setRollDieOpen(false), []);
+  const openCreateToken = useCallback(() => setCreateTokenOpen(true), []);
+  const closeCreateToken = useCallback(() => setCreateTokenOpen(false), []);
+  const openSideboard = useCallback(() => setSideboardOpen(true), []);
+  const closeSideboard = useCallback(() => setSideboardOpen(false), []);
+  const openGameInfo = useCallback(() => setGameInfoOpen(true), []);
+  const closeGameInfo = useCallback(() => setGameInfoOpen(false), []);
+  const openConcede = useCallback(() => setConcedeConfirm('concede'), []);
+  const openUnconcede = useCallback(() => setConcedeConfirm('unconcede'), []);
+  const closeConcedeConfirm = useCallback(() => setConcedeConfirm(null), []);
+  const closeReveal = useCallback(() => setRevealState(null), []);
+
+  return useMemo<GameDialogs>(() => ({
     cardMenu,
     zoneMenu,
     playerMenu,
     handMenu,
-    closeCardMenu: useCallback(() => setCardMenu(null), []),
-    closeZoneMenu: useCallback(() => setZoneMenu(null), []),
-    closePlayerMenu: useCallback(() => setPlayerMenu(null), []),
-    closeHandMenu: useCallback(() => setHandMenu(null), []),
+    closeCardMenu,
+    closeZoneMenu,
+    closePlayerMenu,
+    closeHandMenu,
     handleCardContextMenu,
     handleZoneContextMenu,
     handlePlayerContextMenu,
@@ -1141,39 +1163,39 @@ export function useGameDialogs({
     handleCloseZoneView,
 
     prompt,
-    closePrompt: useCallback(() => setPrompt(null), []),
+    closePrompt,
 
     rollDieOpen,
     lastDieSides,
     lastDieCount,
-    openRollDie: useCallback(() => setRollDieOpen(true), []),
-    closeRollDie: useCallback(() => setRollDieOpen(false), []),
+    openRollDie,
+    closeRollDie,
     handleRollDieSubmit,
 
     createTokenOpen,
-    openCreateToken: useCallback(() => setCreateTokenOpen(true), []),
-    closeCreateToken: useCallback(() => setCreateTokenOpen(false), []),
+    openCreateToken,
+    closeCreateToken,
     handleCreateTokenSubmit,
 
     sideboardOpen,
-    openSideboard: useCallback(() => setSideboardOpen(true), []),
-    closeSideboard: useCallback(() => setSideboardOpen(false), []),
+    openSideboard,
+    closeSideboard,
     handleSideboardSubmit,
     handleToggleSideboardLock,
 
     gameInfoOpen,
-    openGameInfo: useCallback(() => setGameInfoOpen(true), []),
-    closeGameInfo: useCallback(() => setGameInfoOpen(false), []),
+    openGameInfo,
+    closeGameInfo,
 
     concedeConfirm,
-    openConcede: useCallback(() => setConcedeConfirm('concede'), []),
-    openUnconcede: useCallback(() => setConcedeConfirm('unconcede'), []),
-    closeConcedeConfirm: useCallback(() => setConcedeConfirm(null), []),
+    openConcede,
+    openUnconcede,
+    closeConcedeConfirm,
     confirmConcede,
     confirmUnconcede,
 
     revealState,
-    closeReveal: useCallback(() => setRevealState(null), []),
+    closeReveal,
 
     handleRequestSetPT,
     handleRequestSetAnnotation,
@@ -1206,5 +1228,78 @@ export function useGameDialogs({
     handleRequestMoveAllFromZoneToDeck,
     handleRequestMoveAllFromZoneTo,
     handleRequestRevealRandomFromZone,
-  };
+  }), [
+    cardMenu,
+    zoneMenu,
+    playerMenu,
+    handMenu,
+    zoneViews,
+    prompt,
+    rollDieOpen,
+    lastDieSides,
+    lastDieCount,
+    createTokenOpen,
+    sideboardOpen,
+    gameInfoOpen,
+    concedeConfirm,
+    revealState,
+    closeCardMenu,
+    closeZoneMenu,
+    closePlayerMenu,
+    closeHandMenu,
+    closePrompt,
+    openRollDie,
+    closeRollDie,
+    openCreateToken,
+    closeCreateToken,
+    openSideboard,
+    closeSideboard,
+    openGameInfo,
+    closeGameInfo,
+    openConcede,
+    openUnconcede,
+    closeConcedeConfirm,
+    closeReveal,
+    handleCardContextMenu,
+    handleZoneContextMenu,
+    handlePlayerContextMenu,
+    handleHandContextMenu,
+    handleZoneClick,
+    handleCloseZoneView,
+    handleRollDieSubmit,
+    handleCreateTokenSubmit,
+    handleSideboardSubmit,
+    handleToggleSideboardLock,
+    confirmConcede,
+    confirmUnconcede,
+    handleRequestSetPT,
+    handleRequestSetAnnotation,
+    handleRequestSetCardCounter,
+    handleRequestDrawArrow,
+    handleRequestAttach,
+    handleRequestPlayFromCardMenu,
+    handleRequestMoveToLibraryAt,
+    handleRequestDrawN,
+    handleRequestDumpN,
+    handleRequestRevealTopN,
+    handleRequestRevealZone,
+    handleRequestChooseMulligan,
+    handleRequestRevealHand,
+    handleRequestRevealRandom,
+    handleRequestViewHand,
+    handleRequestSortHandBy,
+    handleRequestMoveHandToDeck,
+    handleRequestMoveHandToZone,
+    handleRequestUndoDraw,
+    handleRequestDrawBottom,
+    handleRequestMoveTopCardToZone,
+    handleRequestPlayTop,
+    handleRequestMoveTopNToZone,
+    handleRequestShuffleTopN,
+    handleRequestShuffleBottomN,
+    handleRequestViewZone,
+    handleRequestMoveAllFromZoneToDeck,
+    handleRequestMoveAllFromZoneTo,
+    handleRequestRevealRandomFromZone,
+  ]);
 }

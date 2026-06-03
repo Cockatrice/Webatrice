@@ -3,29 +3,16 @@ import { memo } from 'react';
 import BattlefieldRow from './BattlefieldRow';
 import BattlefieldStackColumn from './BattlefieldStackColumn';
 import { useBattlefield } from './useBattlefield';
-import { EMPTY_SELECTION } from '../../../utils/selection';
+import { useCanActFor } from '../../ui/CardVisualStateContext';
+import { useGameIdRequired } from '../../ui/GameIdContext';
+import { useBoardCell } from '../../ui/BoardCellContext';
 
 import './Battlefield.css';
 
-export interface BattlefieldProps {
-  gameId: number;
-  playerId: number;
-  mirrored?: boolean;
-  canAct?: boolean;
-  arrowSourceKey?: string | null;
-  arrowTargetKey?: string | null;
-  selectedCardKeys?: ReadonlySet<string>;
-}
-
-function Battlefield({
-  gameId,
-  playerId,
-  mirrored = false,
-  canAct = false,
-  arrowSourceKey = null,
-  arrowTargetKey = null,
-  selectedCardKeys = EMPTY_SELECTION,
-}: BattlefieldProps) {
+function Battlefield() {
+  const { playerId, mirrored } = useBoardCell();
+  const gameId = useGameIdRequired();
+  const draggable = useCanActFor()(playerId);
   const { rows, stackColumnsByRow, rowOrder, attachmentsByParent } = useBattlefield({
     gameId,
     playerId,
@@ -60,11 +47,8 @@ function Battlefield({
                 key={stackCards[0].id}
                 cards={stackCards}
                 attachmentsByParent={attachmentsByParent}
-                draggable={canAct}
+                draggable={draggable}
                 ownerPlayerId={playerId}
-                arrowSourceKey={arrowSourceKey}
-                arrowTargetKey={arrowTargetKey}
-                selectedCardKeys={selectedCardKeys}
               />
             );
           })}
@@ -74,7 +58,4 @@ function Battlefield({
   );
 }
 
-// Memoized so a card change on ONE player's board doesn't re-render the other players'
-// boards (their props are unchanged). A board re-renders only when its own subscribed
-// state changes; see useBattlefield for per-column reference stabilization within a board.
 export default memo(Battlefield);

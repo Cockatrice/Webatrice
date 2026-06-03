@@ -69,7 +69,7 @@ describe('Battlefield', () => {
   });
 
   it('renders three rows regardless of card count', () => {
-    renderWithProviders(<Battlefield gameId={1} playerId={1} />, {
+    renderWithProviders(<Battlefield />, {
       preloadedState: stateWithBattlefield([]),
     });
 
@@ -84,7 +84,7 @@ describe('Battlefield', () => {
       makeCard({ id: 2, name: 'Mid', x: 0, y: 1 }),
       makeCard({ id: 3, name: 'Bot', x: 0, y: 2 }),
     ];
-    renderWithProviders(<Battlefield gameId={1} playerId={1} />, {
+    renderWithProviders(<Battlefield />, {
       preloadedState: stateWithBattlefield(cards),
     });
 
@@ -98,7 +98,7 @@ describe('Battlefield', () => {
       makeCard({ id: 1, name: 'TooHigh', x: 0, y: -5 }),
       makeCard({ id: 2, name: 'TooLow', x: 0, y: 99 }),
     ];
-    renderWithProviders(<Battlefield gameId={1} playerId={1} />, {
+    renderWithProviders(<Battlefield />, {
       preloadedState: stateWithBattlefield(cards),
     });
 
@@ -111,7 +111,7 @@ describe('Battlefield', () => {
       makeCard({ id: 1, name: 'Right', x: 10, y: 0 }),
       makeCard({ id: 2, name: 'Left', x: 0, y: 0 }),
     ];
-    renderWithProviders(<Battlefield gameId={1} playerId={1} />, {
+    renderWithProviders(<Battlefield />, {
       preloadedState: stateWithBattlefield(cards),
     });
 
@@ -126,7 +126,7 @@ describe('Battlefield', () => {
       makeCard({ id: 2, name: 'B', x: 0, y: 1 }),
       makeCard({ id: 3, name: 'C', x: 0, y: 2 }),
     ];
-    renderWithProviders(<Battlefield gameId={1} playerId={1} />, {
+    renderWithProviders(<Battlefield />, {
       preloadedState: stateWithBattlefield(cards),
     });
 
@@ -142,8 +142,9 @@ describe('Battlefield', () => {
       makeCard({ id: 2, name: 'B', x: 0, y: 1 }),
       makeCard({ id: 3, name: 'C', x: 0, y: 2 }),
     ];
-    renderWithProviders(<Battlefield gameId={1} playerId={1} mirrored />, {
+    renderWithProviders(<Battlefield />, {
       preloadedState: stateWithBattlefield(cards),
+      boardCell: { mirrored: true },
     });
 
     const rowsInOrder = Array.from(
@@ -160,7 +161,7 @@ describe('Battlefield', () => {
         makeCard({ id: 2, name: 'B', x: 0, y: 1 }),
         makeCard({ id: 3, name: 'C', x: 0, y: 2 }),
       ];
-      renderWithProviders(<Battlefield gameId={1} playerId={1} />, {
+      renderWithProviders(<Battlefield />, {
         preloadedState: stateWithBattlefield(cards),
       });
 
@@ -176,8 +177,9 @@ describe('Battlefield', () => {
         makeCard({ id: 1, name: 'A', x: 0, y: 0 }),
         makeCard({ id: 2, name: 'B', x: 0, y: 1 }),
       ];
-      renderWithProviders(<Battlefield gameId={1} playerId={1} mirrored />, {
+      renderWithProviders(<Battlefield />, {
         preloadedState: stateWithBattlefield(cards),
+        boardCell: { mirrored: true },
       });
 
       const rowsInOrder = Array.from(
@@ -202,7 +204,7 @@ describe('Battlefield', () => {
         makeCard({ id: 10, name: 'Creature', x: 0, y: 0 }),
         attachedChild({ id: 11, name: 'Aura', x: 5, y: 2, attachCardId: 10 }),
       ];
-      renderWithProviders(<Battlefield gameId={1} playerId={1} />, {
+      renderWithProviders(<Battlefield />, {
         preloadedState: stateWithBattlefield(cards),
       });
 
@@ -228,7 +230,7 @@ describe('Battlefield', () => {
         attachedChild({ id: 3, name: 'AuraB', attachCardId: 1 }),
       ];
       const { container } = renderWithProviders(
-        <Battlefield gameId={1} playerId={1} />,
+        <Battlefield />,
         { preloadedState: stateWithBattlefield(cards) },
       );
 
@@ -262,8 +264,8 @@ describe('Battlefield', () => {
         attachedChild({ id: 2, name: 'Aura', attachCardId: 1 }),
       ];
       const { container } = renderWithProviders(
-        <Battlefield gameId={1} playerId={1} mirrored />,
-        { preloadedState: stateWithBattlefield(cards) },
+        <Battlefield />,
+        { preloadedState: stateWithBattlefield(cards), boardCell: { mirrored: true } },
       );
 
       // One attachment → stackFactor = 4/3. Reversed fan keeps the child at
@@ -283,7 +285,7 @@ describe('Battlefield', () => {
       // desktop's `if (numberAttachedCards) actualY += 15` guard.
       const cards = [makeCard({ id: 1, name: 'Solo', x: 0, y: 0 })];
       const { container } = renderWithProviders(
-        <Battlefield gameId={1} playerId={1} />,
+        <Battlefield />,
         { preloadedState: stateWithBattlefield(cards) },
       );
 
@@ -305,7 +307,7 @@ describe('Battlefield', () => {
         attachedChild({ id: 3, name: 'AuraB', attachCardId: 1 }),
       ];
       const { container } = renderWithProviders(
-        <Battlefield gameId={1} playerId={1} />,
+        <Battlefield />,
         { preloadedState: stateWithBattlefield(cards) },
       );
 
@@ -320,7 +322,7 @@ describe('Battlefield', () => {
         makeCard({ id: 1, name: 'Creature', x: 0, y: 0 }),
         attachedChild({ id: 2, name: 'Aura', attachCardId: 1 }),
       ];
-      renderWithProviders(<Battlefield gameId={1} playerId={1} />, {
+      renderWithProviders(<Battlefield />, {
         preloadedState: stateWithBattlefield(cards),
       });
 
@@ -343,8 +345,11 @@ describe('Battlefield', () => {
       const enemyCreature = makeCard({ id: 21, name: 'Enemy creature', x: 0, y: 0 });
 
       const { container } = renderWithProviders(
-        <Battlefield gameId={1} playerId={2} mirrored />,
-        { preloadedState: stateWithTwoBattlefields([ownersAura], [enemyCreature]) },
+        <Battlefield />,
+        {
+          preloadedState: stateWithTwoBattlefields([ownersAura], [enemyCreature]),
+          boardCell: { playerId: 2, mirrored: true },
+        },
       );
 
       // The aura must render as a child inside player 2's AttachmentStack…
@@ -380,8 +385,11 @@ describe('Battlefield', () => {
         attachPlayerId: 1, attachZone: Enriched.ZoneName.TABLE, attachCardId: 10,
       });
       const { store, container } = renderWithProviders(
-        <Battlefield gameId={1} playerId={2} mirrored />,
-        { preloadedState: stateWithTwoBattlefields([parent, auraA, auraB], []) },
+        <Battlefield />,
+        {
+          preloadedState: stateWithTwoBattlefields([parent, auraA, auraB], []),
+          boardCell: { playerId: 2, mirrored: true },
+        },
       );
 
       // Before the move, player 2's battlefield is empty.
@@ -422,7 +430,7 @@ describe('Battlefield', () => {
       const parent = makeCard({ id: 10, name: 'Creature', x: 0, y: 0 });
       const source = makeCard({ id: 11, name: 'Aura', x: 3, y: 0 });
       const { store, container } = renderWithProviders(
-        <Battlefield gameId={1} playerId={1} />,
+        <Battlefield />,
         { preloadedState: stateWithBattlefield([parent, source]) },
       );
 
@@ -466,7 +474,7 @@ describe('Battlefield', () => {
         makeCard({ id: 3, name: 'C', x: 2, y: 0 }),
       ];
       const { container } = renderWithProviders(
-        <Battlefield gameId={1} playerId={1} />,
+        <Battlefield />,
         { preloadedState: stateWithBattlefield(cards) },
       );
 
@@ -501,7 +509,7 @@ describe('Battlefield', () => {
         makeCard({ id: 3, name: 'C', x: 2, y: 0 }),
         makeCard({ id: 4, name: 'D', x: 3, y: 0 }), // starts a new stack (col 1)
       ];
-      renderWithProviders(<Battlefield gameId={1} playerId={1} />, {
+      renderWithProviders(<Battlefield />, {
         preloadedState: stateWithBattlefield(cards),
       });
 
@@ -515,7 +523,7 @@ describe('Battlefield', () => {
     it('sizes a single-card stack with aspect-ratio 146/204 so it scales with lane height', () => {
       const cards = [makeCard({ id: 1, name: 'Alone', x: 0, y: 0 })];
       const { container } = renderWithProviders(
-        <Battlefield gameId={1} playerId={1} />,
+        <Battlefield />,
         { preloadedState: stateWithBattlefield(cards) },
       );
       const stack = container.querySelector('.battlefield-stack-column') as HTMLElement;
@@ -531,7 +539,7 @@ describe('Battlefield', () => {
         makeCard({ id: 3, name: 'C', x: 2, y: 0 }),
       ];
       const { container } = renderWithProviders(
-        <Battlefield gameId={1} playerId={1} />,
+        <Battlefield />,
         { preloadedState: stateWithBattlefield(cards) },
       );
       const stack = container.querySelector('.battlefield-stack-column') as HTMLElement;
@@ -547,7 +555,7 @@ describe('Battlefield', () => {
         makeCard({ id: 1, name: 'Far-left', x: 0, y: 0 }),
         makeCard({ id: 2, name: 'Far-right', x: 7, y: 0 }),
       ];
-      renderWithProviders(<Battlefield gameId={1} playerId={1} />, {
+      renderWithProviders(<Battlefield />, {
         preloadedState: stateWithBattlefield(cards),
       });
 
@@ -575,7 +583,7 @@ describe('Battlefield', () => {
         makeCard({ id: 1, name: 'A', x: 0, y: 0 }),
         makeCard({ id: 2, name: 'B', x: 3, y: 0 }),
       ];
-      renderWithProviders(<Battlefield gameId={1} playerId={1} />, {
+      renderWithProviders(<Battlefield />, {
         preloadedState: stateWithBattlefield(cards),
       });
 
@@ -590,7 +598,7 @@ describe('Battlefield', () => {
       const mover = makeCard({ id: 50, name: 'Mover', x: 0, y: 0 });
       const stationary = makeCard({ id: 51, name: 'Still', x: 6, y: 0 });
       const { store } = renderWithProviders(
-        <Battlefield gameId={1} playerId={1} />,
+        <Battlefield />,
         { preloadedState: stateWithBattlefield([mover, stationary]) },
       );
 
@@ -631,7 +639,7 @@ describe('Battlefield', () => {
     it('re-renders when a card is moved intra-battlefield (Event_MoveCard arrives)', () => {
       const card = makeCard({ id: 42, name: 'Mover', x: 0, y: 0 });
       const { store } = renderWithProviders(
-        <Battlefield gameId={1} playerId={1} />,
+        <Battlefield />,
         { preloadedState: stateWithBattlefield([card]) },
       );
 

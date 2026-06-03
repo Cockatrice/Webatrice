@@ -7,12 +7,12 @@ import { cx } from '@app/utils';
 
 import { useGameAccess } from '../../../hooks/useGameAccess';
 import { useScryfallCard } from '../../../hooks/useScryfallCard';
+import { useGameIdRequired } from '../GameIdContext';
+import { useBoardCell } from '../BoardCellContext';
 
 import './ZoneStack.css';
 
 export interface ZoneStackProps {
-  gameId: number;
-  playerId: number;
   zoneName: string;
   label: string;
   rotated?: boolean;
@@ -21,14 +21,14 @@ export interface ZoneStackProps {
 }
 
 function ZoneStack({
-  gameId,
-  playerId,
   zoneName,
   label,
   rotated = false,
   onClick,
   onContextMenu,
 }: ZoneStackProps) {
+  const { playerId } = useBoardCell();
+  const gameId = useGameIdRequired();
   const zone = useAppSelector((state) =>
     games.Selectors.getZone(state, gameId, playerId, zoneName),
   );

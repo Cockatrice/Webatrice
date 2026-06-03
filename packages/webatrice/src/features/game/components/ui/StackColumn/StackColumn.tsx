@@ -7,31 +7,19 @@ import { cx } from '@app/utils';
 
 import CardSlot from '../CardSlot/CardSlot';
 import { makeCardKey } from '../../../utils/CardRegistry/CardRegistryContext';
-import { EMPTY_SELECTION } from '../../../utils/selection';
 import { useGameInteraction } from '../GameInteractionContext';
+import { useCanActFor, useCardVisualState } from '../CardVisualStateContext';
+import { useGameIdRequired } from '../GameIdContext';
+import { useBoardCell } from '../BoardCellContext';
 
 import './StackColumn.css';
 
-export interface StackColumnProps {
-  gameId: number;
-  playerId: number;
-  mirrored?: boolean;
-  canAct?: boolean;
-  arrowSourceKey?: string | null;
-  arrowTargetKey?: string | null;
-  selectedCardKeys?: ReadonlySet<string>;
-}
-
-function StackColumn({
-  gameId,
-  playerId,
-  mirrored = false,
-  canAct = false,
-  arrowSourceKey = null,
-  arrowTargetKey = null,
-  selectedCardKeys = EMPTY_SELECTION,
-}: StackColumnProps) {
+function StackColumn() {
+  const { playerId, mirrored } = useBoardCell();
+  const gameId = useGameIdRequired();
   const { onCardHover, onCardClick, onCardContextMenu, onCardDoubleClick, onCardFocus, onCardBlur } = useGameInteraction();
+  const { arrowSourceKey, arrowTargetKey, selectedCardKeys } = useCardVisualState();
+  const canAct = useCanActFor()(playerId);
   const zone = useAppSelector((state) =>
     games.Selectors.getZone(state, gameId, playerId, Enriched.ZoneName.STACK),
   );

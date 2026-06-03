@@ -1,9 +1,12 @@
+import { memo, useMemo } from 'react';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import Divider from '@mui/material/Divider';
 
 import { ServerInfo_Card } from '@cockatrice/sockatrice/generated';
-import type { SelectedCard } from '../../../utils/selection';
+import { games } from '@cockatrice/datatrice';
+import { useAppSelector } from '@app/store';
+import { resolveSelectedCards } from '../../../utils/selection';
 import {
   COUNTER_TYPE_COUNT,
   COUNTER_TYPE_LABELS,
@@ -11,28 +14,13 @@ import {
 } from '../../ui/CardSlot/counterColors';
 
 import NestedMenuItem from './NestedMenuItem';
+import { useGameDialogsContext } from '../../ui/GameDialogsContext';
+import { useGameId } from '../../ui/GameIdContext';
+import { useCardVisualState } from '../../ui/CardVisualStateContext';
+import { useLocalIdentity } from '../../../hooks/useLocalIdentity';
 import { useCardContextMenu } from './useCardContextMenu';
 
 import './CardContextMenu.css';
-
-export interface CardContextMenuProps {
-  isOpen: boolean;
-  anchorPosition: { top: number; left: number } | null;
-  gameId: number;
-  localPlayerId: number | null;
-  card: ServerInfo_Card | null;
-  ownerPlayerId: number | null;
-  sourceZone: string | null;
-  selectedCards?: readonly SelectedCard[];
-  onClose: () => void;
-  onRequestSetPT: () => void;
-  onRequestSetAnnotation: () => void;
-  onRequestSetCounter: (counterId: number) => void;
-  onRequestDrawArrow: () => void;
-  onRequestAttach: () => void;
-  onRequestPlay: (faceDown: boolean) => void;
-  onRequestMoveToLibraryAt: () => void;
-}
 
 const COUNTER_TYPE_IDS: ReadonlyArray<number> = Array.from(
   { length: COUNTER_TYPE_COUNT },
@@ -43,8 +31,26 @@ function hasCounter(card: ServerInfo_Card, counterId: number): boolean {
   return card.counterList.some((c) => c.id === counterId && c.value > 0);
 }
 
-function CardContextMenu(props: CardContextMenuProps) {
-  const { isOpen, anchorPosition, card, onClose } = props;
+function CardContextMenu() {
+  const dialogs = useGameDialogsContext();
+  const gameId = useGameId();
+  const { localPlayerId } = useLocalIdentity();
+  const { selectedCardKeys } = useCardVisualState();
+  const cardMenu = dialogs.cardMenu;
+  const isOpen = cardMenu != null;
+  const anchorPosition = cardMenu?.anchorPosition ?? null;
+  const card = cardMenu?.card ?? null;
+
+  // Resolve the multi-selection to live cards for bulk actions (was computed in
+  // Game via the same helper and passed as a prop).
+  const game = useAppSelector((state) =>
+    gameId != null ? games.Selectors.getGame(state, gameId) : undefined,
+  );
+  const selectedCards = useMemo(
+    () => (game ? resolveSelectedCards(game, selectedCardKeys) : []),
+    [game, selectedCardKeys],
+  );
+
   const {
     ready,
     canActOnCard,
@@ -69,7 +75,22 @@ function CardContextMenu(props: CardContextMenuProps) {
     handlePeek,
     handleMove,
     handleMoveToLibraryAt,
-  } = useCardContextMenu(props);
+  } = useCardContextMenu({
+    gameId,
+    localPlayerId: localPlayerId ?? null,
+    card,
+    ownerPlayerId: cardMenu?.sourcePlayerId ?? null,
+    sourceZone: cardMenu?.sourceZone ?? null,
+    selectedCards,
+    onClose: dialogs.closeCardMenu,
+    onRequestSetPT: dialogs.handleRequestSetPT,
+    onRequestSetAnnotation: dialogs.handleRequestSetAnnotation,
+    onRequestSetCounter: dialogs.handleRequestSetCardCounter,
+    onRequestDrawArrow: dialogs.handleRequestDrawArrow,
+    onRequestAttach: dialogs.handleRequestAttach,
+    onRequestPlay: dialogs.handleRequestPlayFromCardMenu,
+    onRequestMoveToLibraryAt: dialogs.handleRequestMoveToLibraryAt,
+  });
 
   if (!ready || !card) {
     return null;
@@ -78,7 +99,7 @@ function CardContextMenu(props: CardContextMenuProps) {
   return (
     <Menu
       open={isOpen}
-      onClose={onClose}
+      onClose={dialogs.closeCardMenu}
       anchorReference="anchorPosition"
       anchorPosition={anchorPosition ?? undefined}
       data-testid="card-context-menu"
@@ -163,4 +184,4 @@ function CardContextMenu(props: CardContextMenuProps) {
   );
 }
 
-export default CardContextMenu;
+export default memo(CardContextMenu);

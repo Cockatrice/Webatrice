@@ -52,7 +52,7 @@ export interface CardContextMenu {
 }
 
 export interface UseCardContextMenuArgs {
-  gameId: number;
+  gameId: number | undefined;
   localPlayerId: number | null;
   card: ServerInfo_Card | null;
   ownerPlayerId: number | null;
@@ -115,7 +115,7 @@ export function useCardContextMenu({
     ready && canActOnCard && sourceZone === Enriched.ZoneName.TABLE && (card!.faceDown ?? false);
 
   const setAttr = (attribute: CardAttribute, value: string) => {
-    if (!ready) {
+    if (!ready || gameId == null) {
       return;
     }
     webClient.request.game.setCardAttr(gameId, {
@@ -127,7 +127,7 @@ export function useCardContextMenu({
   };
 
   const handleFlip = () => {
-    if (!ready) {
+    if (!ready || gameId == null) {
       return;
     }
     // TODO(card-db): forward stored P/T once a name-keyed card DB is wired in (server re-derives for known names).
@@ -140,7 +140,7 @@ export function useCardContextMenu({
   };
 
   const handleTapToggle = () => {
-    if (!ready) {
+    if (!ready || gameId == null) {
       return;
     }
     const tableTargets = bulkTargets.filter((t) => t.zone === Enriched.ZoneName.TABLE);
@@ -153,7 +153,7 @@ export function useCardContextMenu({
   };
 
   const handleFaceDownToggle = () => {
-    if (!ready) {
+    if (!ready || gameId == null) {
       return;
     }
     setAttr(CardAttribute.AttrFaceDown, card!.faceDown ? '0' : '1');
@@ -161,7 +161,7 @@ export function useCardContextMenu({
   };
 
   const handleDoesntUntapToggle = () => {
-    if (!ready) {
+    if (!ready || gameId == null) {
       return;
     }
     setAttr(CardAttribute.AttrDoesntUntap, card!.doesntUntap ? '0' : '1');
@@ -179,7 +179,7 @@ export function useCardContextMenu({
   };
 
   const handleCardCounterDelta = (counterId: number, delta: number) => {
-    if (!ready) {
+    if (!ready || gameId == null) {
       return;
     }
     webClient.request.game.incCardCounter(gameId, {
@@ -207,7 +207,7 @@ export function useCardContextMenu({
   };
 
   const handleUnattach = () => {
-    if (!ready) {
+    if (!ready || gameId == null) {
       return;
     }
     // Unattach: omit target_* (server detects via proto2 presence).
@@ -216,7 +216,7 @@ export function useCardContextMenu({
   };
 
   const handleMove = (target: MoveTarget) => {
-    if (!ready) {
+    if (!ready || gameId == null) {
       return;
     }
     // Non-table moves route to the card's owner tree; TABLE keeps the local
@@ -265,7 +265,7 @@ export function useCardContextMenu({
   };
 
   const handlePeek = () => {
-    if (!ready) {
+    if (!ready || gameId == null) {
       return;
     }
     // actPeek reveals to local player only; scope via playerId.

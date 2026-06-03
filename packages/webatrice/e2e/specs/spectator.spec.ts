@@ -10,7 +10,7 @@ import { randomSuffix } from '../fixtures/users';
 // third context. Assertions:
 //   - spectator sees the `spectating-tag` chip in the right panel.
 //   - spectator does NOT see the deck-select dialog (it's gated on
-//     `!isSpectator` in `useGame.ts`'s `deckSelectOpen` predicate).
+//     `!isSpectator` in `useDeckSelectDialog`'s open predicate).
 //   - spectator can leave; the host/joiner game stays alive.
 
 const DECK_PATH = resolve(__dirname, '..', 'fixtures', 'decks', 'forest-60.cod');

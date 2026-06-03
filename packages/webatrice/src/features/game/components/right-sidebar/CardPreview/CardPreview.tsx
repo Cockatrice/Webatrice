@@ -1,19 +1,16 @@
 import { useEffect, useState } from 'react';
-import { ServerInfo_Card } from '@cockatrice/sockatrice/generated';
 import IconButton from '@mui/material/IconButton';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 
 import { CardDTO } from '@app/services';
 
 import { useScryfallCard } from '../../../hooks/useScryfallCard';
+import { useCardPreview } from '../../ui/CardPreviewContext';
 
 import './CardPreview.css';
 
-export interface CardPreviewProps {
-  card: ServerInfo_Card | null | undefined;
-}
-
-function CardPreview({ card }: CardPreviewProps) {
+function CardPreview() {
+  const card = useCardPreview();
   const { smallUrl, normalUrl, ready } = useScryfallCard(card ?? null);
   const [normalLoaded, setNormalLoaded] = useState(false);
   const [flipped, setFlipped] = useState(false);

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { memo, useEffect, useMemo, useState } from 'react';
 import { styled } from '@mui/material/styles';
 import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
@@ -9,7 +9,11 @@ import FormControlLabel from '@mui/material/FormControlLabel';
 import Checkbox from '@mui/material/Checkbox';
 import Tooltip from '@mui/material/Tooltip';
 
-import { Enriched, ZoneEntry } from '@cockatrice/datatrice';
+import { Enriched, ZoneEntry, games } from '@cockatrice/datatrice';
+import { useAppSelector } from '@app/store';
+
+import { useGameId } from '../../components/ui/GameIdContext';
+import { useGameDialogsContext } from '../../components/ui/GameDialogsContext';
 import './SideboardDialog.css';
 
 const PREFIX = 'SideboardDialog';
@@ -30,17 +34,6 @@ export interface SideboardPlanMove {
   cardName: string;
   startZone: string;
   targetZone: string;
-}
-
-export interface SideboardDialogProps {
-  isOpen: boolean;
-  playerName: string;
-  deckCards: ReadonlyArray<{ id: number; name: string }>;
-  sideboardCards: ReadonlyArray<{ id: number; name: string }>;
-  isLocked: boolean;
-  onSubmit: (moveList: SideboardPlanMove[]) => void;
-  onCancel: () => void;
-  onToggleLock: (next: boolean) => void;
 }
 
 type Card = { id: number; name: string };
@@ -65,16 +58,29 @@ function applyMoves(
   return { deck, sideboard };
 }
 
-function SideboardDialog({
-  isOpen,
-  playerName,
-  deckCards,
-  sideboardCards,
-  isLocked,
-  onSubmit,
-  onCancel,
-  onToggleLock,
-}: SideboardDialogProps) {
+// Self-sources its open state + submit/cancel/lock handlers from
+// GameDialogsContext, and folds the local player's name, deck/sideboard cards,
+// and lock flag from the store, so Game renders it propless.
+function SideboardDialog() {
+  const {
+    sideboardOpen: isOpen,
+    handleSideboardSubmit: onSubmit,
+    closeSideboard: onCancel,
+    handleToggleSideboardLock: onToggleLock,
+  } = useGameDialogsContext();
+  const gameId = useGameId();
+  const localPlayer = useAppSelector((state) =>
+    gameId != null ? games.Selectors.getLocalPlayer(state, gameId) : undefined,
+  );
+  const playerName = localPlayer?.properties.userInfo?.name ?? '';
+  // Keyed on the zone refs (stable unless the zone changes) so applyMoves below
+  // doesn't recompute on every unrelated render.
+  const deckZone = localPlayer?.zones[Enriched.ZoneName.DECK];
+  const sideboardZone = localPlayer?.zones[Enriched.ZoneName.SIDEBOARD];
+  const deckCards = useMemo(() => cardsFromZone(deckZone), [deckZone]);
+  const sideboardCards = useMemo(() => cardsFromZone(sideboardZone), [sideboardZone]);
+  const isLocked = localPlayer?.properties.sideboardLocked ?? false;
+
   const [moves, setMoves] = useState<SideboardPlanMove[]>([]);
 
   // Reset draft on open or server-side lock (resetSideboardPlan parity).
@@ -221,7 +227,7 @@ function SideboardDialog({
   );
 }
 
-export default SideboardDialog;
+export default memo(SideboardDialog);
 
 // Exported for tests and the Game.tsx wiring layer.
 export { applyMoves };

@@ -1,6 +1,9 @@
+import { memo, useMemo } from 'react';
+
 import { cx } from '@app/utils';
 
 import { BoardCell } from '../../../hooks/useGameBoardLayout';
+import { BoardCellProvider } from '../BoardCellContext';
 import HandZone from '../HandZone/HandZone';
 import PlayerBoard from '../PlayerBoard/PlayerBoard';
 
@@ -8,10 +11,6 @@ import './GameBoardCell.css';
 
 export interface GameBoardCellProps {
   cell: BoardCell;
-  gameId: number;
-  arrowSourceKey?: string | null;
-  arrowTargetKey?: string | null;
-  selectedCardKeys?: ReadonlySet<string>;
   onPlayerContextMenu?: (event: React.MouseEvent) => void;
   onPlayerClick?: (playerId: number) => boolean;
   onHandContextMenu?: (event: React.MouseEvent) => void;
@@ -25,40 +24,34 @@ export interface GameBoardCellProps {
  */
 function GameBoardCell({
   cell,
-  gameId,
-  arrowSourceKey = null,
-  arrowTargetKey = null,
-  selectedCardKeys,
   onPlayerContextMenu,
   onPlayerClick,
   onHandContextMenu,
 }: GameBoardCellProps) {
+  // The seat identity PlayerBoard's subtree reads from BoardCellContext.
+  // Memoized on the primitives so the value is stable across re-renders that
+  // don't change this seat.
+  const cellInfo = useMemo(
+    () => ({ playerId: cell.playerId, mirrored: cell.mirrored, isLocal: cell.isLocal }),
+    [cell.playerId, cell.mirrored, cell.isLocal],
+  );
+
   return (
     <div
       className={cx('game__board-cell', { 'game__board-cell--mirrored': cell.mirrored })}
       style={{ gridColumn: cell.col + 1, gridRow: cell.row + 1 }}
     >
-      <PlayerBoard
-        gameId={gameId}
-        playerId={cell.playerId}
-        mirrored={cell.mirrored}
-        isLocal={cell.isLocal}
-        canAct={cell.canAct}
-        canEditCounters={cell.canAct}
-        arrowSourceKey={arrowSourceKey}
-        arrowTargetKey={arrowTargetKey}
-        selectedCardKeys={selectedCardKeys}
-        onPlayerContextMenu={cell.canAct ? onPlayerContextMenu : undefined}
-        onPlayerClick={onPlayerClick}
-      />
+      <BoardCellProvider value={cellInfo}>
+        <PlayerBoard
+          onPlayerContextMenu={cell.canAct ? onPlayerContextMenu : undefined}
+          onPlayerClick={onPlayerClick}
+        />
+      </BoardCellProvider>
+      {/* HandZone sits outside the cell provider: the bottom-bar hand (rendered
+          by Game) has no cell, so HandZone reads its seat from a prop either way. */}
       {cell.showHand && (
         <HandZone
-          gameId={gameId}
           playerId={cell.playerId}
-          canAct={cell.canAct}
-          arrowSourceKey={arrowSourceKey}
-          arrowTargetKey={arrowTargetKey}
-          selectedCardKeys={selectedCardKeys}
           onHandContextMenu={cell.isLocal ? onHandContextMenu : undefined}
         />
       )}
@@ -66,4 +59,4 @@ function GameBoardCell({
   );
 }
 
-export default GameBoardCell;
+export default memo(GameBoardCell);

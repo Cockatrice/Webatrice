@@ -1,11 +1,17 @@
 import { useState } from 'react';
 
 import { useWebClient } from '@cockatrice/datatrice/react';
-import { games } from '@cockatrice/datatrice';
-import { useAppSelector } from '@app/store';
 import { useLeaveGame } from '@app/hooks';
 
+import { useCurrentGame } from '../../hooks/useCurrentGame';
+
 export interface DeckSelectDialog {
+  // Whether the deck-select modal should be shown: a not-yet-started game where
+  // the local player is an active (non-spectator, non-judge) participant who
+  // hasn't readied up. Folded in here (was derived in Game/useGame) so the
+  // dialog self-gates. localPlayer null-check guards the reconnect window before
+  // Event_GameStateChanged repopulates players.
+  isOpen: boolean;
   deckText: string;
   setDeckText: (v: string) => void;
   fileName: string | null;
@@ -36,9 +42,18 @@ function validateCodXml(xml: string): boolean {
 export function useDeckSelectDialog(gameId: number | undefined): DeckSelectDialog {
   const webClient = useWebClient();
   const leaveGame = useLeaveGame();
-  const localPlayer = useAppSelector((state) =>
-    gameId != null ? games.Selectors.getLocalPlayer(state, gameId) : undefined,
-  );
+  // useCurrentGame falls back to the first active game when gameId is undefined;
+  // guard on gameId so the dialog never opens against that fallback (the action
+  // handlers below already no-op on a null id).
+  const { game, localPlayer, isSpectator, isJudge } = useCurrentGame(gameId);
+  const isOpen =
+    gameId != null &&
+    game != null &&
+    localPlayer != null &&
+    !game.started &&
+    !isSpectator &&
+    !isJudge &&
+    !localPlayer.properties.readyStart;
   const [deckText, setDeckTextState] = useState('');
   const [fileXml, setFileXml] = useState<string | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
@@ -47,9 +62,9 @@ export function useDeckSelectDialog(gameId: number | undefined): DeckSelectDialo
   const deckHash = localPlayer?.properties.deckHash ?? '';
   const isReady = localPlayer?.properties.readyStart ?? false;
   const hasLocalPlayer = localPlayer != null;
-  // Guard Submit/Ready on having a local player — today the deckSelectOpen
-  // predicate in Game.tsx implies one, but the dialog mounts before the
-  // Event_GameJoined echo populates players during reconnect.
+  // Guard Submit/Ready on having a local player — the isOpen predicate above
+  // implies one, but the dialog can mount before the Event_GameJoined echo
+  // populates players during reconnect.
   const canSubmit =
     hasLocalPlayer && (fileXml != null || deckText.trim().length > 0);
   const canToggleReady = hasLocalPlayer && deckHash.length > 0;
@@ -118,6 +133,7 @@ export function useDeckSelectDialog(gameId: number | undefined): DeckSelectDialo
   };
 
   return {
+    isOpen,
     deckText,
     setDeckText,
     fileName,

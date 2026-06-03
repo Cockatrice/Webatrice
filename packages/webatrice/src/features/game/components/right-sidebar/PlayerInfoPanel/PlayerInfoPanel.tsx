@@ -5,6 +5,9 @@ import { ServerInfo_Counter } from '@cockatrice/sockatrice/generated';
 import { Enriched } from '@cockatrice/datatrice';
 import ZoneStack from '../../ui/ZoneStack/ZoneStack';
 import { useGameInteraction } from '../../ui/GameInteractionContext';
+import { useCanActFor, useCardVisualState } from '../../ui/CardVisualStateContext';
+import { useGameIdRequired } from '../../ui/GameIdContext';
+import { useBoardCell } from '../../ui/BoardCellContext';
 import { makePlayerKey, useRegisterCardRef } from '../../../utils/CardRegistry/CardRegistryContext';
 
 import { counterCssColor, usePlayerInfoPanel } from './usePlayerInfoPanel';
@@ -21,23 +24,19 @@ const ZONE_ROWS: Array<{ name: string; label: string; rotated?: boolean }> = [
 ];
 
 export interface PlayerInfoPanelProps {
-  gameId: number;
-  playerId: number;
-  canEdit?: boolean;
-  arrowTargetKey?: string | null;
   onContextMenu?: (event: React.MouseEvent) => void;
   onPlayerClick?: (playerId: number) => boolean;
 }
 
 function PlayerInfoPanel({
-  gameId,
-  playerId,
-  canEdit = false,
-  arrowTargetKey,
   onContextMenu,
   onPlayerClick,
 }: PlayerInfoPanelProps) {
+  const { playerId } = useBoardCell();
+  const gameId = useGameIdRequired();
   const { onZoneClick, onZoneContextMenu } = useGameInteraction();
+  const { arrowTargetKey } = useCardVisualState();
+  const canEdit = useCanActFor()(playerId);
   const { properties, isHost, lifeCounter, otherCounters, handleIncrement } = usePlayerInfoPanel({
     gameId,
     playerId,
@@ -140,8 +139,6 @@ function PlayerInfoPanel({
             return (
               <ZoneStack
                 key={z.name}
-                gameId={gameId}
-                playerId={playerId}
                 zoneName={z.name}
                 label={z.label}
                 rotated={z.rotated}

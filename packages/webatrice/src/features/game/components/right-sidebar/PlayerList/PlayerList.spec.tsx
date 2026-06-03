@@ -47,7 +47,7 @@ describe('PlayerList', () => {
       }),
     });
 
-    renderWithProviders(<PlayerList gameId={1} />, {
+    renderWithProviders(<PlayerList />, {
       preloadedState: buildState([p1, p2], 1),
     });
 
@@ -69,7 +69,7 @@ describe('PlayerList', () => {
           pingSeconds: 0,
         }),
       });
-      renderWithProviders(<PlayerList gameId={1} />, {
+      renderWithProviders(<PlayerList />, {
         preloadedState: buildState([p], 1),
       });
 
@@ -86,7 +86,7 @@ describe('PlayerList', () => {
           pingSeconds: 15,
         }),
       });
-      renderWithProviders(<PlayerList gameId={1} />, {
+      renderWithProviders(<PlayerList />, {
         preloadedState: buildState([p], 1),
       });
 
@@ -103,7 +103,7 @@ describe('PlayerList', () => {
           pingSeconds: -1,
         }),
       });
-      renderWithProviders(<PlayerList gameId={1} />, {
+      renderWithProviders(<PlayerList />, {
         preloadedState: buildState([p], 1),
       });
 
@@ -122,7 +122,7 @@ describe('PlayerList', () => {
           sideboardLocked: true,
         }),
       });
-      renderWithProviders(<PlayerList gameId={1} />, {
+      renderWithProviders(<PlayerList />, {
         preloadedState: buildState([p], 1),
       });
 
@@ -137,7 +137,7 @@ describe('PlayerList', () => {
           sideboardLocked: false,
         }),
       });
-      renderWithProviders(<PlayerList gameId={1} />, {
+      renderWithProviders(<PlayerList />, {
         preloadedState: buildState([p], 1),
       });
 
@@ -159,7 +159,7 @@ describe('PlayerList', () => {
       }),
     });
 
-    renderWithProviders(<PlayerList gameId={1} />, {
+    renderWithProviders(<PlayerList />, {
       preloadedState: buildState([p1, p2], 2),
     });
 
@@ -180,7 +180,7 @@ describe('PlayerList', () => {
       }),
     });
 
-    renderWithProviders(<PlayerList gameId={1} />, {
+    renderWithProviders(<PlayerList />, {
       preloadedState: buildState([p1], 0),
     });
 
@@ -190,7 +190,7 @@ describe('PlayerList', () => {
   });
 
   it('shows empty state when there are no players', () => {
-    renderWithProviders(<PlayerList gameId={1} />, {
+    renderWithProviders(<PlayerList />, {
       preloadedState: buildState([], 0),
     });
 
@@ -198,8 +198,9 @@ describe('PlayerList', () => {
   });
 
   it('handles missing gameId without throwing', () => {
-    renderWithProviders(<PlayerList gameId={undefined} />, {
+    renderWithProviders(<PlayerList />, {
       preloadedState: makeStoreState({}),
+      gameId: undefined,
     });
 
     expect(screen.getByText(/no players/i)).toBeInTheDocument();
@@ -219,7 +220,7 @@ describe('PlayerList', () => {
       }),
     });
 
-    renderWithProviders(<PlayerList gameId={1} />, {
+    renderWithProviders(<PlayerList />, {
       preloadedState: buildState([p1, p2], 1, 2),
     });
 

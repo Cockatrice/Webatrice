@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { styled } from '@mui/material/styles';
 import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
@@ -10,6 +11,9 @@ import CloseIcon from '@mui/icons-material/Close';
 
 import { games } from '@cockatrice/datatrice';
 import { useAppSelector } from '@app/store';
+
+import { useGameId } from '../../components/ui/GameIdContext';
+import { useGameDialogsContext } from '../../components/ui/GameDialogsContext';
 
 import './GameInfoDialog.css';
 
@@ -27,12 +31,6 @@ const StyledDialog = styled(Dialog)(({ theme }) => ({
   },
 }));
 
-export interface GameInfoDialogProps {
-  isOpen: boolean;
-  gameId: number | undefined;
-  onClose: () => void;
-}
-
 function formatElapsed(totalSeconds: number): string {
   const s = Math.max(0, Math.floor(totalSeconds));
   const hh = String(Math.floor(s / 3600)).padStart(2, '0');
@@ -41,7 +39,11 @@ function formatElapsed(totalSeconds: number): string {
   return `${hh}:${mm}:${ss}`;
 }
 
-function GameInfoDialog({ isOpen, gameId, onClose }: GameInfoDialogProps) {
+// Self-sources its open state + close handler from GameDialogsContext and the
+// active gameId from GameIdContext, so Game renders it propless.
+function GameInfoDialog() {
+  const { gameInfoOpen: isOpen, closeGameInfo: onClose } = useGameDialogsContext();
+  const gameId = useGameId();
   const game = useAppSelector((state) =>
     gameId != null ? games.Selectors.getGame(state, gameId) : undefined,
   );
@@ -128,4 +130,4 @@ function GameInfoDialog({ isOpen, gameId, onClose }: GameInfoDialogProps) {
   );
 }
 
-export default GameInfoDialog;
+export default memo(GameInfoDialog);

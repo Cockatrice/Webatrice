@@ -59,14 +59,9 @@ function stateWith(opts: {
   });
 }
 
-const NOOP = () => {};
-const DEFAULT_TURN_PROPS = {
-  gameId: 1,
-  onRequestRollDie: NOOP,
-  onRequestConcede: NOOP,
-  onRequestUnconcede: NOOP,
-  onRequestGameInfo: NOOP,
-};
+// TurnControls takes no props now (gameId via GameIdContext, dialog actions via
+// GameDialogActionsContext); renderWithProviders supplies gameId=1 by default.
+const DEFAULT_TURN_PROPS = {};
 
 describe('TurnControls', () => {
   beforeEach(() => {
@@ -173,8 +168,8 @@ describe('TurnControls', () => {
     const webClient = createMockWebClient();
     const onRequestConcede = vi.fn();
     renderWithProviders(
-      <TurnControls {...DEFAULT_TURN_PROPS} onRequestConcede={onRequestConcede} />,
-      { preloadedState: stateWith(), webClient },
+      <TurnControls {...DEFAULT_TURN_PROPS} />,
+      { preloadedState: stateWith(), webClient, gameDialogActions: { onRequestConcede } },
     );
 
     fireEvent.click(screen.getByRole('button', { name: /^concede$/i }));
@@ -187,8 +182,8 @@ describe('TurnControls', () => {
   it('routes Unconcede through the parent confirm handler when already conceded', () => {
     const onRequestUnconcede = vi.fn();
     renderWithProviders(
-      <TurnControls {...DEFAULT_TURN_PROPS} onRequestUnconcede={onRequestUnconcede} />,
-      { preloadedState: stateWith({ conceded: true }) },
+      <TurnControls {...DEFAULT_TURN_PROPS} />,
+      { preloadedState: stateWith({ conceded: true }), gameDialogActions: { onRequestUnconcede } },
     );
 
     fireEvent.click(screen.getByRole('button', { name: /unconcede/i }));
@@ -211,8 +206,8 @@ describe('TurnControls', () => {
   it('fires onRequestRollDie when Roll Die is clicked', () => {
     const onRequestRollDie = vi.fn();
     renderWithProviders(
-      <TurnControls {...DEFAULT_TURN_PROPS} onRequestRollDie={onRequestRollDie} />,
-      { preloadedState: stateWith() },
+      <TurnControls {...DEFAULT_TURN_PROPS} />,
+      { preloadedState: stateWith(), gameDialogActions: { onRequestRollDie } },
     );
 
     fireEvent.click(screen.getByRole('button', { name: /roll die/i }));
@@ -223,8 +218,8 @@ describe('TurnControls', () => {
   it('fires onRequestGameInfo when Game Info is clicked', () => {
     const onRequestGameInfo = vi.fn();
     renderWithProviders(
-      <TurnControls {...DEFAULT_TURN_PROPS} onRequestGameInfo={onRequestGameInfo} />,
-      { preloadedState: stateWith() },
+      <TurnControls {...DEFAULT_TURN_PROPS} />,
+      { preloadedState: stateWith(), gameDialogActions: { onRequestGameInfo } },
     );
 
     fireEvent.click(screen.getByRole('button', { name: /game info/i }));
