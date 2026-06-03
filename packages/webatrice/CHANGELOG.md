@@ -1,5 +1,32 @@
 # @cockatrice/webatrice
 
+## 4.1.7
+
+### Patch Changes
+
+- 698d8c4: Animate battlefield cards with the Card Preview's 3D flip when they are turned face-up/face-down.
+
+  The `rotateY` flip (with its mid-flip scale dip) previously lived only in the right-sidebar Card
+  Preview. It is now extracted into a shared `src/styles/card-flip.css` (neutral `cardflip` classes:
+  resting `--front`/`--back` plus one-shot `--animate-to-front`/`--animate-to-back` keyframes), imported
+  once via `index.css`. Both `CardPreview` and `CardSlot` consume it.
+
+  `CardSlot` now renders both faces (image front + face-down back) inside a `perspective` frame so the
+  flip reveals the other side. A small guard in `useCardSlot` adds the animate class only after
+  `card.faceDown` actually changes, so the keyframe plays on real flips (both directions) without every
+  slot spinning on initial board render. Honors `prefers-reduced-motion`.
+
+- b2a9b58: Reveal face-down cards through the flip command so they render after resuming a game.
+
+  The card context menu's "Face Up/Face Down" toggle sent setCardAttr(AttrFaceDown), whose
+  Event_SetCardAttr carries no card identity. After resuming an in-progress game the client has no
+  local identity for a face-down card (the server sends face-down cards with an empty name, and the
+  provider id is usually empty), so turning it face up that way left it with nothing to render and
+  the image was blank. The toggle now uses Command_FlipCard, whose event reveals the card's
+  name/providerId when it turns face up. The redundant separate "Flip" menu item (which already used
+  the flip command) is removed, leaving the clearer "Face Up/Face Down" label as the single
+  face-down toggle.
+
 ## 4.1.6
 
 ### Patch Changes
