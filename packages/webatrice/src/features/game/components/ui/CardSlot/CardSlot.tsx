@@ -30,6 +30,7 @@ interface CardSlotContentProps {
   card: ServerInfo_Card;
   smallUrl: string | null | undefined;
   zone: string | undefined;
+  flipClass: string;
 }
 
 // Memoized inner so the ~60 CardSlots whose visual state is unchanged on drag
@@ -39,16 +40,26 @@ const CardSlotContent = memo(function CardSlotContent({
   card,
   smallUrl,
   zone,
+  flipClass,
 }: CardSlotContentProps) {
+  // Both faces always render so the shared 3D flip (src/styles/card-flip.css) can
+  // reveal the other side. restClass holds the correct static side; flipClass adds
+  // the keyframe spin only when faceDown changes (see useCardSlot).
+  const restClass = card.faceDown ? 'cardflip--back' : 'cardflip--front';
   return (
     <>
-      {card.faceDown ? (
-        <div className="card-slot__back" aria-label="face-down card" />
-      ) : (
-        smallUrl && (
-          <img className="card-slot__image" src={smallUrl} alt={card.name} draggable={false} />
-        )
-      )}
+      <div className="card-slot__flip-frame">
+        <div className={`cardflip ${restClass} ${flipClass}`}>
+          <div className="cardflip__face cardflip__face--front card-slot__face-front">
+            {smallUrl ? (
+              <img className="card-slot__image" src={smallUrl} alt={card.name} draggable={false} />
+            ) : (
+              <div className="card-slot__image card-slot__image--loading" />
+            )}
+          </div>
+          <div className="cardflip__face cardflip__face--back card-slot__back" aria-label="face-down card" />
+        </div>
+      </div>
 
       {!card.faceDown && (card.name || (zone === Enriched.ZoneName.TABLE && card.annotation)) && (
         <div className="card-slot__top">
@@ -98,7 +109,7 @@ function CardSlot({
   onFocus,
   onBlur,
 }: CardSlotProps) {
-  const { smallUrl, attributes, listeners, isDragging, dropSide, rootRef } = useCardSlot({
+  const { smallUrl, attributes, listeners, isDragging, dropSide, rootRef, flipClass } = useCardSlot({
     card,
     draggable,
     ownerPlayerId,
@@ -146,7 +157,7 @@ function CardSlot({
       {...(draggable ? attributes : {})}
       {...(draggable ? listeners : {})}
     >
-      <CardSlotContent card={card} smallUrl={smallUrl} zone={zone} />
+      <CardSlotContent card={card} smallUrl={smallUrl} zone={zone} flipClass={flipClass} />
     </div>
   );
 }

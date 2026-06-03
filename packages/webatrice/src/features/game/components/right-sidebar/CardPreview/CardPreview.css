@@ -25,51 +25,19 @@
   perspective: 1200px;
 }
 
-.card-preview__flipper {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  transform-style: preserve-3d;
-  transform: rotateY(0deg) scale(1);
-  animation: card-preview-flip-to-front 450ms ease both;
-}
-
-.card-preview__flipper--flipped {
-  animation: card-preview-flip-to-back 450ms ease both;
-}
-
-@keyframes card-preview-flip-to-back {
-  0%   { transform: rotateY(0deg)   scale(1); }
-  50%  { transform: rotateY(90deg)  scale(0.92); }
-  100% { transform: rotateY(180deg) scale(1); }
-}
-
-@keyframes card-preview-flip-to-front {
-  0%   { transform: rotateY(180deg) scale(1); }
-  50%  { transform: rotateY(90deg)  scale(0.92); }
-  100% { transform: rotateY(0deg)   scale(1); }
-}
+/* 3D flip mechanics (.cardflip*) live in src/styles/card-flip.css. */
 
 .card-preview__face {
-  backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
   border-radius: 10px;
 }
 
 .card-preview__face--front {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
   aspect-ratio: 488 / 680;
   overflow: hidden;
   background: #0d1930;
 }
 
 .card-preview__face--back {
-  position: absolute;
-  inset: 0;
-  transform: rotateY(180deg);
   background: #0d1930;
   color: #d6def0;
   padding: 10px;
