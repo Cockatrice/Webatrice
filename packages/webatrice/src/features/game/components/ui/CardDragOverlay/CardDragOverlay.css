@@ -1,24 +1,14 @@
-.card-drag-overlay {
+/* The overlay hosts a real .card-slot (see CardDragOverlay.tsx) so it mirrors the
+   resting card. Give it a definite size — .card-slot is otherwise sized by its
+   flow parent via height:100% + aspect-ratio — and the floating-preview feel.
+   No overflow:hidden: a tapped card rotates 90deg about center and its rotated
+   bounds must stay visible (face rounding is handled by .card-slot__face-front). */
+.card-drag-overlay.card-slot {
   width: 146px;
   height: 204px;
-  border-radius: 6px;
-  overflow: hidden;
+  max-height: none;
   opacity: 0.85;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.55);
   pointer-events: none;
-}
-
-.card-drag-overlay__image {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
-.card-drag-overlay__back {
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(135deg, #2a1f3d 0%, #1a1028 60%, #0d0617 100%);
-  border: 1px solid #3a2d50;
-  box-sizing: border-box;
+  cursor: default;
 }
