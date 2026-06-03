@@ -14,6 +14,7 @@ import {
 } from '@cockatrice/sockatrice/generated';
 import { GamesState } from './game.interfaces';
 import { Actions } from './game.actions';
+import { cloneWith } from '../../common';
 import { buildEmptyCard, formatLeaveMessage, normalizePlayers, resetCardState } from './game.reducer.helpers';
 import {
   EVENT_PLAYER_ID_SYSTEM,
@@ -77,14 +78,13 @@ export function registerGameListeners(mw: ListenerMiddlewareInstance<unknown>): 
       startZone === Enriched.ZoneName.TABLE && effectiveTargetZone !== Enriched.ZoneName.TABLE;
 
       const baseCard: ServerInfo_Card = removedCard
-        ? {
-          ...removedCard,
+        ? cloneWith(ServerInfo_CardSchema, removedCard, {
           id: effectiveNewId,
           name: cardName || removedCard.name,
           x, y, faceDown,
           providerId: newCardProviderId || removedCard.providerId,
           counterList: [...removedCard.counterList],
-        }
+        })
         : buildEmptyCard(effectiveNewId, cardName, x, y, faceDown, newCardProviderId ?? '');
 
       // Leaving the battlefield wipes transient card state (tapped, counters, etc.) to

@@ -1,3 +1,5 @@
+import { memo } from 'react';
+
 import BattlefieldRow from './BattlefieldRow';
 import BattlefieldStackColumn from './BattlefieldStackColumn';
 import { useBattlefield } from './useBattlefield';
@@ -72,4 +74,7 @@ function Battlefield({
   );
 }
 
-export default Battlefield;
+// Memoized so a card change on ONE player's board doesn't re-render the other players'
+// boards (their props are unchanged). A board re-renders only when its own subscribed
+// state changes; see useBattlefield for per-column reference stabilization within a board.
+export default memo(Battlefield);

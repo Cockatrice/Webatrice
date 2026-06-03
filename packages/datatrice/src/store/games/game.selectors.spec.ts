@@ -1,6 +1,8 @@
 ﻿import { Enriched } from '../../types';
 
 import { Selectors } from './game.selectors';
+import { gamesReducer } from './game.reducer';
+import { Actions } from './game.actions';
 import { makeGameEntry, makePlayerEntry, makeState,
   makeZoneEntry, makeCard, makeCounter, makeArrow,
 } from '../../testing/fixtures/games';
@@ -431,6 +433,82 @@ describe('Selectors', () => {
       const a = Selectors.getAttachmentsByParent(rootState(state), 1, 1);
       const b = Selectors.getAttachmentsByParent(rootState(state), 1, 1);
       expect(a).toBe(b);
+    });
+
+    describe('reference stability (render-perf guard)', () => {
+      function stateWithTableAndHand(
+        tableCards: ReturnType<typeof makeCard>[],
+        handCards: ReturnType<typeof makeCard>[],
+      ): GamesState {
+        return makeState({
+          games: {
+            1: makeGameEntry({
+              players: {
+                1: makePlayerEntry({
+                  zones: {
+                    [Enriched.ZoneName.TABLE]: makeZoneEntry({
+                      name: Enriched.ZoneName.TABLE, withCoords: true,
+                      cardCount: tableCards.length, cards: tableCards,
+                    }),
+                    [Enriched.ZoneName.HAND]: makeZoneEntry({
+                      name: Enriched.ZoneName.HAND,
+                      cardCount: handCards.length, cards: handCards,
+                    }),
+                  },
+                }),
+              },
+            }),
+          },
+        });
+      }
+
+      it('returns the SAME sub-map after an unrelated HAND mutation (TABLE zones untouched)', () => {
+        const state = stateWithTableAndHand(
+          [
+            makeCard({ id: 1, name: 'Creature' }),
+            makeCard({ id: 2, name: 'Aura', attachPlayerId: 1, attachZone: Enriched.ZoneName.TABLE, attachCardId: 1 }),
+          ],
+          [makeCard({ id: 99, name: 'In hand' })],
+        );
+        const before = Selectors.getAttachmentsByParent(rootState(state), 1, 1);
+        const next = gamesReducer(state, Actions.cardFieldsUpdated({
+          gameId: 1, playerId: 1, zoneName: Enriched.ZoneName.HAND, cardId: 99, fields: { tapped: true },
+        }));
+        const after = Selectors.getAttachmentsByParent(rootState(next), 1, 1);
+        expect(after).toBe(before);
+      });
+
+      it('returns the SAME sub-map after a TABLE mutation that does not change attachments', () => {
+        const state = stateWithTable([
+          makeCard({ id: 1, name: 'Creature' }),
+          makeCard({ id: 2, name: 'Aura', attachPlayerId: 1, attachZone: Enriched.ZoneName.TABLE, attachCardId: 1 }),
+          makeCard({ id: 3, name: 'Other creature' }),
+        ]);
+        const before = Selectors.getAttachmentsByParent(rootState(state), 1, 1);
+        // Tap an unrelated creature — its card object is cloned (TABLE zone ref changes) but
+        // the attachment graph is identical, so the reconciled result is reference-stable.
+        const next = gamesReducer(state, Actions.cardFieldsUpdated({
+          gameId: 1, playerId: 1, zoneName: Enriched.ZoneName.TABLE, cardId: 3, fields: { tapped: true },
+        }));
+        const after = Selectors.getAttachmentsByParent(rootState(next), 1, 1);
+        expect(after).toBe(before);
+      });
+
+      it('returns a new result when an attachment is actually added', () => {
+        const state = stateWithTable([
+          makeCard({ id: 11, name: 'Creature' }),
+          makeCard({ id: 12, name: 'Aura', attachPlayerId: 1, attachZone: Enriched.ZoneName.TABLE, attachCardId: 11 }),
+        ]);
+        const before = Selectors.getAttachmentsByParent(rootState(state), 1, 1);
+        const next = gamesReducer(state, Actions.cardInsertedIntoZone({
+          gameId: 1, playerId: 1, zoneName: Enriched.ZoneName.TABLE,
+          card: makeCard({ id: 13, name: 'Aura 2', attachPlayerId: 1, attachZone: Enriched.ZoneName.TABLE, attachCardId: 11 }),
+        }));
+        const after = Selectors.getAttachmentsByParent(rootState(next), 1, 1);
+        // attachment graph changed → fresh reference
+        expect(after).not.toBe(before);
+        expect(after.get(11)?.map((e) => e.card.name)).toEqual(['Aura', 'Aura 2']);
+      });
     });
 
     describe('cross-player attach', () => {

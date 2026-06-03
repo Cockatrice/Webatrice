@@ -1,3 +1,5 @@
+import { memo } from 'react';
+
 import { games } from '@cockatrice/datatrice';
 import { useAppSelector } from '@app/store';
 import { cx } from '@app/utils';
@@ -95,4 +97,6 @@ function PlayerList({ gameId }: PlayerListProps) {
   );
 }
 
-export default PlayerList;
+// Memoized so it skips re-render when unrelated game state changes (e.g. card hover/preview);
+// it still updates when the players map changes (joins/leaves, ping, ready, conceded).
+export default memo(PlayerList);

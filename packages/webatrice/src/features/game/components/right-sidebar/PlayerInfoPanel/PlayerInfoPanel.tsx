@@ -1,3 +1,5 @@
+import { memo } from 'react';
+
 import { cx } from '@app/utils';
 import { ServerInfo_Counter } from '@cockatrice/sockatrice/generated';
 import { Enriched } from '@cockatrice/datatrice';
@@ -36,7 +38,7 @@ function PlayerInfoPanel({
   onPlayerClick,
 }: PlayerInfoPanelProps) {
   const { onZoneClick, onZoneContextMenu } = useGameInteraction();
-  const { player, isHost, lifeCounter, otherCounters, handleIncrement } = usePlayerInfoPanel({
+  const { properties, isHost, lifeCounter, otherCounters, handleIncrement } = usePlayerInfoPanel({
     gameId,
     playerId,
   });
@@ -49,13 +51,13 @@ function PlayerInfoPanel({
     }
   };
 
-  if (!player) {
+  if (!properties) {
     return <div className="player-info-panel player-info-panel--empty" />;
   }
 
-  const name = player.properties.userInfo?.name ?? '(unknown)';
-  const conceded = player.properties.conceded;
-  const ready = player.properties.readyStart;
+  const name = properties.userInfo?.name ?? '(unknown)';
+  const conceded = properties.conceded;
+  const ready = properties.readyStart;
 
   const counterHandlers = (c: ServerInfo_Counter) =>
     canEdit
@@ -154,4 +156,6 @@ function PlayerInfoPanel({
   );
 }
 
-export default PlayerInfoPanel;
+// Memoized + subscribes only to `properties`/`counters` (stable across this player's card
+// mutations), so tapping a creature no longer re-renders the player rail or its ZoneStacks.
+export default memo(PlayerInfoPanel);

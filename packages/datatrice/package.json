@@ -54,6 +54,9 @@
     "golden:coverage": "npm run lint && npm run test:coverage && npm run test:integration:coverage",
     "pack": "npm pack"
   },
+  "dependencies": {
+    "dequal": "^2.0.3"
+  },
   "peerDependencies": {
     "@bufbuild/protobuf": "^2.11.0",
     "@reduxjs/toolkit": "^2.11.2",
