@@ -1,5 +1,6 @@
 import { CaseReducer, PayloadAction } from '@reduxjs/toolkit';
-import { ServerInfo_ReplayMatch } from '@cockatrice/sockatrice/generated';
+import { ServerInfo_ReplayMatch, ServerInfo_ReplayMatchSchema } from '@cockatrice/sockatrice/generated';
+import { cloneWith } from '../../common';
 import { ServerState } from './server.interfaces';
 
 export const replayReducers = {
@@ -22,7 +23,9 @@ export const replayReducers = {
     if (!existing) {
       return;
     }
-    existing.doNotHide = doNotHide;
+    // Reassign a fresh clone; Immer can't draft protobuf-es, so `existing.doNotHide = …` in
+    // place would go untracked.
+    state.replays[gameId] = cloneWith(ServerInfo_ReplayMatchSchema, existing, { doNotHide });
   }) as CaseReducer<ServerState, PayloadAction<{ gameId: number; doNotHide: boolean }>>,
 
   replayDeleteMatch: ((state, action) => {

@@ -1,4 +1,5 @@
-import { createSelector } from '@reduxjs/toolkit';
+import { createSelector, lruMemoize } from '@reduxjs/toolkit';
+import { dequal } from 'dequal';
 import { Enriched } from '../../types';
 import { ServerInfo_Card } from '@cockatrice/sockatrice/generated';
 import { GamesState } from './game.interfaces';
@@ -26,18 +27,22 @@ function materializeZoneCards(zone: Enriched.ZoneEntry): ServerInfo_Card[] {
   return arr;
 }
 
-const attachmentsByParentCache = new WeakMap<
-  { [playerId: number]: Enriched.PlayerEntry },
-  ReadonlyMap<number, ReadonlyMap<number, AttachedChild[]>>
->();
+// Attachment index, stabilized for render performance.
+//
+// `getAttachmentsByParent` feeds React.memo'd battlefield columns. Because reducers
+// clone-and-reassign, Immer hands us a new `game.players` reference on EVERY card mutation,
+// so a naive selector would rebuild and return a new Map on every tap, defeating the memo.
+// We wrap the build in reselect's `lruMemoize` with a `resultEqualityCheck`: the scan reruns
+// when `players` changes (it's cheap), but when the attachment graph is unchanged the PREVIOUS
+// Map is returned by reference, so memoized columns skip. Map identity survives taps / P/T /
+// counter changes (the hot path); a real attach/unattach allocates a fresh Map (rare). maxSize
+// defaults to 1, which fits the single on-screen game — and the per-player calls within one
+// render share the same `players` ref, hitting the input cache.
+type AttachmentsResult = ReadonlyMap<number, ReadonlyMap<number, AttachedChild[]>>;
 
-function materializeAllAttachments(
+function buildAttachments(
   players: { [playerId: number]: Enriched.PlayerEntry },
-): ReadonlyMap<number, ReadonlyMap<number, AttachedChild[]>> {
-  const cached = attachmentsByParentCache.get(players);
-  if (cached) {
-    return cached;
-  }
+): AttachmentsResult {
   const result = new Map<number, Map<number, AttachedChild[]>>();
   const playerIds = Object.keys(players).map(Number).sort((a, b) => a - b);
   for (const ownerPlayerId of playerIds) {
@@ -66,9 +71,14 @@ function materializeAllAttachments(
       bucket.push({ card, ownerPlayerId });
     }
   }
-  attachmentsByParentCache.set(players, result);
   return result;
 }
+
+// `dequal` deep-compares the rebuilt attachment graph (it handles Maps). When the graph is
+// unchanged, reselect's resultEqualityCheck returns the PRIOR Map, giving memoized battlefield
+// columns a stable reference to skip on. The scan reruns on every mutation (cheap); only the
+// output reference is what we're stabilizing here.
+const selectAllAttachments = lruMemoize(buildAttachments, { resultEqualityCheck: dequal });
 
 export const Selectors = {
   getGames: ({ games }: State): { [gameId: number]: Enriched.GameEntry } => games.games,
@@ -128,7 +138,7 @@ export const Selectors = {
     if (!game) {
       return EMPTY_ATTACHMENTS;
     }
-    const all = materializeAllAttachments(game.players);
+    const all = selectAllAttachments(game.players);
     return all.get(parentPlayerId) ?? EMPTY_ATTACHMENTS;
   },
 

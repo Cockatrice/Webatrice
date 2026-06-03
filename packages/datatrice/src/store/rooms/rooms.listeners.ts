@@ -1,8 +1,9 @@
 import type { ListenerMiddlewareInstance } from '@reduxjs/toolkit';
+import { clone } from '@bufbuild/protobuf';
 
 import { Enriched } from '../../types';
-import { ServerInfo_Game, ServerInfo_Room, ServerInfo_RoomSchema } from '@cockatrice/sockatrice/generated';
-import { mergeSetFields, normalizeGameObject, normalizeGametypeMap } from '../../common';
+import { ServerInfo_GameSchema, ServerInfo_RoomSchema } from '@cockatrice/sockatrice/generated';
+import { cloneWith, mergeSetFields, normalizeGameObject, normalizeGametypeMap } from '../../common';
 
 import { Actions } from './rooms.actions';
 import { RoomsState } from './rooms.interfaces';
@@ -20,9 +21,9 @@ export function registerRoomsListeners(mw: ListenerMiddlewareInstance<unknown>):
         const rawGametypeList = rawRoom.gametypeList ?? [];
 
         if (existing) {
-          // Sparse mergeSetFields outside the reducer (Immer doesn't draft protobuf-es).
-          // See .github/instructions/datatrice-store.instructions.md#reducer-author-hazards.
-          const nextInfo = { ...existing.info } as ServerInfo_Room;
+          // Sparse merge onto a fresh clone (clone preserves unset proto2 fields a spread
+          // would drop). See .github/instructions/datatrice-store.instructions.md#reducer-author-hazards.
+          const nextInfo = clone(ServerInfo_RoomSchema, existing.info);
           mergeSetFields(ServerInfo_RoomSchema, nextInfo, rawRoom);
           const nextGametypeMap = rawGametypeList.length > 0
             ? normalizeGametypeMap(rawGametypeList)
@@ -71,7 +72,8 @@ export function registerRoomsListeners(mw: ListenerMiddlewareInstance<unknown>):
 
         const existing = room.games[rawGame.gameId];
         if (existing) {
-          const merged: ServerInfo_Game = { ...existing.info, ...rawGame };
+          // clone base preserves existing's unset proto2 fields; rawGame's set fields win.
+          const merged = cloneWith(ServerInfo_GameSchema, existing.info, rawGame);
           const game: Enriched.Game = {
             info: merged,
             gameType: merged.gameTypes?.length

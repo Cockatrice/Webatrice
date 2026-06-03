@@ -1,8 +1,8 @@
+import { useMemo } from 'react';
 import { useWebClient } from '@cockatrice/datatrice/react';
 import { games } from '@cockatrice/datatrice';
 import { useAppSelector } from '@app/store';
-import { ServerInfo_Counter } from '@cockatrice/sockatrice/generated';
-import { PlayerEntry } from '@cockatrice/datatrice';
+import { ServerInfo_Counter, ServerInfo_PlayerProperties } from '@cockatrice/sockatrice/generated';
 type ServerColor = { r: number; g: number; b: number; a: number } | undefined;
 
 // Canonical MTG mana colors, mirroring the dead-code table in desktop's
@@ -62,7 +62,9 @@ function isLifeCounter(c: { name: string }): boolean {
 }
 
 export interface PlayerInfoPanel {
-  player: PlayerEntry | undefined;
+  // Subscribes to `properties` (not the whole PlayerEntry) so the panel doesn't re-render on
+  // this player's card/battlefield mutations — properties only re-clone on playerPropertiesUpdated.
+  properties: ServerInfo_PlayerProperties | undefined;
   isHost: boolean;
   // Life renders in the header alongside the name; all other counters render
   // as circles centered in the rail body.
@@ -81,21 +83,25 @@ export function usePlayerInfoPanel({
   playerId,
 }: UsePlayerInfoPanelArgs): PlayerInfoPanel {
   const webClient = useWebClient();
-  const player = useAppSelector((state) => games.Selectors.getPlayer(state, gameId, playerId));
+  const properties = useAppSelector((state) => games.Selectors.getPlayer(state, gameId, playerId)?.properties);
   const countersMap = useAppSelector((state) => games.Selectors.getCounters(state, gameId, playerId));
   const hostId = useAppSelector((state) => games.Selectors.getHostId(state, gameId));
 
   const isHost = hostId != null && hostId === playerId;
-  const allCounters = Object.values(countersMap);
-  const lifeCounter = allCounters.find(isLifeCounter);
-  const otherCounters = allCounters.filter((c) => !isLifeCounter(c));
+  const { lifeCounter, otherCounters } = useMemo(() => {
+    const all = Object.values(countersMap);
+    return {
+      lifeCounter: all.find(isLifeCounter),
+      otherCounters: all.filter((c) => !isLifeCounter(c)),
+    };
+  }, [countersMap]);
 
   const handleIncrement = (counterId: number, delta: number) => {
     webClient.request.game.incCounter(gameId, { counterId, delta });
   };
 
   return {
-    player,
+    properties,
     isHost,
     lifeCounter,
     otherCounters,

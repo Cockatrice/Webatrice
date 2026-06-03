@@ -15,6 +15,7 @@ import {
   ServerInfo_Card,
   ServerInfo_CardSchema,
 } from '@cockatrice/sockatrice/generated';
+import { cloneWith } from '../../common';
 import { GamesState } from './game.interfaces';
 import { pushEventMessage } from './game.reducer.helpers';
 import { formatZonePropertiesChanged } from './messageLog';
@@ -49,12 +50,11 @@ export const cardReducers = {
     if (!game || !zone || !card) {
       return;
     }
-    zone.byId[cardId] = {
-      ...card,
+    zone.byId[cardId] = cloneWith(ServerInfo_CardSchema, card, {
       faceDown,
       name: cardName || card.name,
       providerId: cardProviderId || card.providerId,
-    };
+    });
   }) as CaseReducer<GamesState, PayloadAction<{ gameId: number; playerId: number; data: Event_FlipCard }>>,
 
   cardDestroyed: (() => {}) as CaseReducer<
@@ -96,7 +96,7 @@ export const cardReducers = {
       if (!zone.byId[revealedCard.id]) {
         zone.order.push(revealedCard.id);
       }
-      zone.byId[revealedCard.id] = { ...revealedCard, counterList: [...revealedCard.counterList] };
+      zone.byId[revealedCard.id] = clone(ServerInfo_CardSchema, revealedCard);
     }
   }) as CaseReducer<GamesState, PayloadAction<{ gameId: number; playerId: number; data: Event_RevealCards }>>,
 

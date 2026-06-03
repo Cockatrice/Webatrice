@@ -1,7 +1,13 @@
 import { CaseReducer, PayloadAction } from '@reduxjs/toolkit';
+import { clone } from '@bufbuild/protobuf';
 import { Enriched } from '../../types';
-import { ServerInfo_Card, ServerInfo_PlayerProperties, ServerInfo_PlayerPropertiesSchema } from '@cockatrice/sockatrice/generated';
-import { mergeSetFields } from '../../common';
+import {
+  ServerInfo_Card,
+  ServerInfo_CardSchema,
+  ServerInfo_PlayerProperties,
+  ServerInfo_PlayerPropertiesSchema,
+} from '@cockatrice/sockatrice/generated';
+import { cloneWith, mergeSetFields } from '../../common';
 import { GamesState } from './game.interfaces';
 import { pushEventMessage } from './game.reducer.helpers';
 
@@ -125,11 +131,10 @@ export const primitiveReducers = {
           child.attachZone === Enriched.ZoneName.TABLE &&
           child.attachCardId === fromCardId
         ) {
-          otherTable.byId[childId] = {
-            ...child,
+          otherTable.byId[childId] = cloneWith(ServerInfo_CardSchema, child, {
             attachPlayerId: toPlayerId,
             attachCardId: toCardId,
-          };
+          });
         }
       }
     }
@@ -141,8 +146,8 @@ export const primitiveReducers = {
     toCardId: number;
   }>>,
 
-  // Reassign byId[cardId] to a fresh object; Immer doesn't draft protobuf-es.
-  // See .github/instructions/datatrice-store.instructions.md#reducer-author-hazards.
+  // Reassign byId[cardId] to a fresh clone; Immer can't draft protobuf-es messages, so an
+  // in-place mutation would go untracked. See .github/instructions/datatrice-store.instructions.md#reducer-author-hazards.
   cardFieldsUpdated: ((state, action) => {
     const { gameId, playerId, zoneName, cardId, fields } = action.payload;
     const zone = state.games[gameId]?.players[playerId]?.zones[zoneName];
@@ -150,7 +155,7 @@ export const primitiveReducers = {
     if (!zone || !card) {
       return;
     }
-    zone.byId[cardId] = { ...card, ...fields };
+    zone.byId[cardId] = cloneWith(ServerInfo_CardSchema, card, fields);
   }) as CaseReducer<GamesState, PayloadAction<{
     gameId: number;
     playerId: number;
@@ -170,7 +175,7 @@ export const primitiveReducers = {
     for (const id of zone.order) {
       const card = zone.byId[id];
       if (card) {
-        zone.byId[id] = { ...card, ...fields };
+        zone.byId[id] = cloneWith(ServerInfo_CardSchema, card, fields);
       }
     }
   }) as CaseReducer<GamesState, PayloadAction<{
@@ -235,7 +240,11 @@ export const primitiveReducers = {
     if (!player) {
       return;
     }
-    mergeSetFields(ServerInfo_PlayerPropertiesSchema, player.properties, properties);
+    // Clone-and-reassign: mergeSetFields mutates its target, which Immer can't track on a
+    // stored protobuf-es message. Merge into a fresh clone, then reassign.
+    const next = clone(ServerInfo_PlayerPropertiesSchema, player.properties);
+    mergeSetFields(ServerInfo_PlayerPropertiesSchema, next, properties);
+    player.properties = next;
   }) as CaseReducer<GamesState, PayloadAction<{
     gameId: number;
     playerId: number;

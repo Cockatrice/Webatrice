@@ -1,3 +1,5 @@
+import { memo } from 'react';
+
 import { Enriched } from '@cockatrice/datatrice';
 import { cx } from '@app/utils';
 
@@ -71,4 +73,6 @@ function HandZone({
   );
 }
 
-export default HandZone;
+// Memoized so board mutations don't re-render the hand; it re-renders only when its own
+// hand-zone selection changes (getCards(HAND) ref is stable except on hand mutations).
+export default memo(HandZone);

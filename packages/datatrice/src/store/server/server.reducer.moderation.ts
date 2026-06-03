@@ -3,10 +3,11 @@ import {
   Response_WarnList,
   ServerInfo_Ban,
   ServerInfo_ChatMessage,
+  ServerInfo_UserSchema,
   ServerInfo_User_UserLevelFlag,
   ServerInfo_Warning,
 } from '@cockatrice/sockatrice/generated';
-import { normalizeLogs } from '../../common';
+import { cloneWith, normalizeLogs } from '../../common';
 import { ServerState } from './server.interfaces';
 
 export const moderationReducers = {
@@ -51,7 +52,9 @@ export const moderationReducers = {
     newLevel = shouldBeJudge
       ? (newLevel | ServerInfo_User_UserLevelFlag.IsJudge)
       : (newLevel & ~ServerInfo_User_UserLevelFlag.IsJudge);
-    user.userLevel = newLevel;
+    // Reassign a fresh clone; Immer can't draft protobuf-es, so `user.userLevel = …` in
+    // place would go untracked and the moderator badge wouldn't re-render.
+    state.users[userName] = cloneWith(ServerInfo_UserSchema, user, { userLevel: newLevel });
   }) as CaseReducer<ServerState, PayloadAction<{ userName: string; shouldBeMod: boolean; shouldBeJudge: boolean }>>,
 
   viewLogs: ((state, action) => {
