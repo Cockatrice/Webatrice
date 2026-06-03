@@ -1,5 +1,59 @@
 # @cockatrice/webatrice
 
+## 4.1.6
+
+### Patch Changes
+
+- e0a1d55: Refactor the game feature out of deep prop-drilling and into hook/context layers (no behavior change).
+
+  `Game` previously threaded `gameId`, the hovered-card preview, local identity, and the entire
+  dialog/menu state slice (~80 props across ~10 dialogs/menus) down through the tree. These are now
+  sourced from focused contexts and hooks:
+
+  - `GameIdContext` (`useGameId` / `useGameIdRequired`) provides the active game id once; ~18
+    board/sidebar components and the dialogs read it from context instead of a prop.
+  - `useLocalIdentity` consolidates `localPlayerId`/`isHost`/`isJudge`/`isSpectator`.
+  - `CardPreviewContext` lifts the hovered-card preview so `RightPanel` no longer forwards it.
+  - `GameDialogsContext` carries the dialog/menu state machine; the context menus and dialogs
+    (roll-die, create-token, sideboard, reveal, game-info, deck-select, player menu) self-source and
+    self-gate, rendering propless. Each dialog folds its own derived data (e.g. the sideboard's
+    deck/sideboard cards, the reveal target list) in its own hook/selector.
+  - `BoardCellContext` provides per-seat `{ playerId, mirrored, isLocal }` so `PlayerBoard`,
+    `Battlefield`, `StackColumn`, `PlayerInfoPanel`, and `ZoneStack` stop forwarding seat identity.
+
+  Re-render hygiene: the `useGameDialogs` return is memoized and the propless dialog/menu consumers
+  are wrapped in `React.memo`, so they no longer re-render on every `Game` render (e.g. arrow-drag
+  ticks). Shared helpers were extracted to remove duplication (`activePlayersOf`), and the
+  context-menu hooks now treat an absent `gameId` as `undefined` rather than a `0` sentinel.
+
+  Positional props (`playerId`, `zoneName`, a menu's target card/anchor, a popup's initial position)
+  and the generic `@app/dialogs` (`PromptDialog`, concede `ConfirmDialog`s) are intentionally left as
+  props.
+
+- e0a1d55: Make the game dialog/menu memoization pay off during play, restore reveal seat order, and clean up
+  context boilerplate (no behavior change).
+
+  - Reveal-target dropdown and board layout now seat from datatrice's `seatedPlayersOf` /
+    `getSeatedPlayers`, restoring server seat/join order (it had regressed to numeric-key order).
+    `utils/activePlayers.ts` is removed in favor of the shared datatrice helper.
+  - `useGameDialogs` action handlers no longer close over the whole `game`/`localPlayer`; they read
+    the latest values from the store at call time. The hook now returns a stable `actions` object
+    merged with the dialog state, so the propless `React.memo`'d dialogs and context menus stop
+    re-rendering on every `Game` render (e.g. card moves, arrow-drag ticks) and only update when
+    dialog state changes. The `GameDialogs` type is split into `GameDialogsState` &
+    `GameDialogsActions` so the shape, the hook return, and the test no-op default stop being
+    hand-synced.
+  - A `createRequiredContext` factory replaces the duplicated throw-if-absent boilerplate in
+    `BoardCellContext`, `GameDialogsContext`, `GameDialogActionsContext`, and `GameInteractionContext`.
+    A shared `playerName(player)` helper unifies the `userInfo?.name ?? \`p${id}\``fallback used by
+the reveal list, turn controls, and the game-info dialog.`GameInfoDialog`and`CardContextMenu`reuse`useCurrentGame`, and the dead `DeckSelectDialog` close prop is removed.
+
+- 7e02622: Harden the game store against the Immer / protobuf-es hazard and optimize game-board rendering.
+
+  - **Store (datatrice):** reducers across the games/rooms/server slices now clone-and-reassign protobuf-es messages instead of mutating them in place. Immer can't draft proto2 messages, so in-place writes (`counterSet`, `adjustMod`, `replayModifyMatch`, `playerPropertiesUpdated`, and the room/game list merges) went untracked, and several spreads dropped unset proto2 fields. Adds a `cloneWith` helper and a `dequal` dependency.
+  - **Attachment selector:** `getAttachmentsByParent` returns a stable reference when the attachment graph is unchanged (reselect `lruMemoize` + `dequal`), so a single card mutation no longer rebuilds-and-re-renders the whole battlefield.
+  - **Render (webatrice):** battlefield row/column card arrays are reference-stabilized, and `Battlefield`/`HandZone`/`PlayerList`/`PlayerInfoPanel` are memoized, so tapping one creature re-renders only that card's subtree instead of the entire board and sidebar.
+
 ## 4.1.5
 
 ### Patch Changes
