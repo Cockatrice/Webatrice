@@ -36,7 +36,7 @@ function statefulPlayer(
 
 describe('PlayerInfoPanel', () => {
   it('renders the player name', () => {
-    renderWithProviders(<PlayerInfoPanel gameId={1} playerId={1} />, {
+    renderWithProviders(<PlayerInfoPanel />, {
       preloadedState: statefulPlayer(),
     });
 
@@ -44,7 +44,7 @@ describe('PlayerInfoPanel', () => {
   });
 
   it('does not render ping (ping lives in the right-side PlayerList)', () => {
-    renderWithProviders(<PlayerInfoPanel gameId={1} playerId={1} />, {
+    renderWithProviders(<PlayerInfoPanel />, {
       preloadedState: statefulPlayer(),
     });
 
@@ -55,7 +55,7 @@ describe('PlayerInfoPanel', () => {
     const player = makePlayerEntry({
       properties: makePlayerProperties({ playerId: 1 }),
     });
-    renderWithProviders(<PlayerInfoPanel gameId={1} playerId={1} />, {
+    renderWithProviders(<PlayerInfoPanel />, {
       preloadedState: makeStoreState({
         games: { games: { 1: makeGameEntry({ players: { 1: player } }) } },
       }),
@@ -79,7 +79,7 @@ describe('PlayerInfoPanel', () => {
     });
 
     const { container } = renderWithProviders(
-      <PlayerInfoPanel gameId={1} playerId={1} />,
+      <PlayerInfoPanel />,
       {
         preloadedState: statefulPlayer({ counters: { 2: white, 1: life } }),
       },
@@ -100,7 +100,7 @@ describe('PlayerInfoPanel', () => {
   });
 
   it('renders no counter elements when the player has no counters', () => {
-    renderWithProviders(<PlayerInfoPanel gameId={1} playerId={1} />, {
+    renderWithProviders(<PlayerInfoPanel />, {
       preloadedState: statefulPlayer({ counters: {} }),
     });
 
@@ -108,7 +108,7 @@ describe('PlayerInfoPanel', () => {
   });
 
   it('renders the Deck, Hand, Graveyard, and Exile zones inside the body', () => {
-    renderWithProviders(<PlayerInfoPanel gameId={1} playerId={1} />, {
+    renderWithProviders(<PlayerInfoPanel />, {
       preloadedState: statefulPlayer(),
     });
 
@@ -121,7 +121,7 @@ describe('PlayerInfoPanel', () => {
   it('does not wire left-click onZoneClick for the Hand row', () => {
     const onZoneClick = vi.fn();
     renderWithProviders(
-      <PlayerInfoPanel gameId={1} playerId={1} />,
+      <PlayerInfoPanel />,
       { preloadedState: statefulPlayer(), gameInteraction: { onZoneClick } },
     );
 
@@ -133,7 +133,7 @@ describe('PlayerInfoPanel', () => {
   it('forwards zone clicks with (playerId, zoneName)', () => {
     const onZoneClick = vi.fn();
     renderWithProviders(
-      <PlayerInfoPanel gameId={1} playerId={1} />,
+      <PlayerInfoPanel />,
       { preloadedState: statefulPlayer(), gameInteraction: { onZoneClick } },
     );
 
@@ -150,7 +150,7 @@ describe('PlayerInfoPanel', () => {
         conceded: true,
       }),
     });
-    renderWithProviders(<PlayerInfoPanel gameId={1} playerId={1} />, {
+    renderWithProviders(<PlayerInfoPanel />, {
       preloadedState: makeStoreState({
         games: { games: { 1: makeGameEntry({ players: { 1: player } }) } },
       }),
@@ -167,7 +167,7 @@ describe('PlayerInfoPanel', () => {
         readyStart: true,
       }),
     });
-    renderWithProviders(<PlayerInfoPanel gameId={1} playerId={1} />, {
+    renderWithProviders(<PlayerInfoPanel />, {
       preloadedState: makeStoreState({
         games: { games: { 1: makeGameEntry({ players: { 1: player } }) } },
       }),
@@ -178,8 +178,8 @@ describe('PlayerInfoPanel', () => {
 
   it('renders an empty panel when the player is missing', () => {
     const { container } = renderWithProviders(
-      <PlayerInfoPanel gameId={1} playerId={999} />,
-      { preloadedState: statefulPlayer() },
+      <PlayerInfoPanel />,
+      { preloadedState: statefulPlayer(), boardCell: { playerId: 999 } },
     );
 
     expect(container.querySelector('.player-info-panel--empty')).not.toBeNull();
@@ -194,7 +194,7 @@ describe('PlayerInfoPanel', () => {
       }),
     });
     const { container } = renderWithProviders(
-      <PlayerInfoPanel gameId={1} playerId={1} />,
+      <PlayerInfoPanel />,
       {
         preloadedState: makeStoreState({
           games: {
@@ -217,8 +217,9 @@ describe('PlayerInfoPanel', () => {
       }),
     });
     const { container } = renderWithProviders(
-      <PlayerInfoPanel gameId={1} playerId={2} />,
+      <PlayerInfoPanel />,
       {
+        boardCell: { playerId: 2 },
         preloadedState: makeStoreState({
           games: {
             games: {
@@ -242,7 +243,7 @@ describe('PlayerInfoPanel', () => {
         sideboardLocked: true,
       }),
     });
-    renderWithProviders(<PlayerInfoPanel gameId={1} playerId={1} />, {
+    renderWithProviders(<PlayerInfoPanel />, {
       preloadedState: makeStoreState({
         games: { games: { 1: makeGameEntry({ players: { 1: player } }) } },
       }),
@@ -259,7 +260,7 @@ describe('PlayerInfoPanel', () => {
         count: 1,
         counterColor: create(colorSchema, { r: 0, g: 0, b: 0, a: 0 }),
       });
-      renderWithProviders(<PlayerInfoPanel gameId={1} playerId={1} />, {
+      renderWithProviders(<PlayerInfoPanel />, {
         preloadedState: statefulPlayer({ counters: { 1: white } }),
       });
 
@@ -275,7 +276,7 @@ describe('PlayerInfoPanel', () => {
         count: 1,
         counterColor: create(colorSchema, { r: 10, g: 20, b: 30, a: 255 }),
       });
-      renderWithProviders(<PlayerInfoPanel gameId={1} playerId={1} />, {
+      renderWithProviders(<PlayerInfoPanel />, {
         preloadedState: statefulPlayer({ counters: { 2: custom } }),
       });
 
@@ -292,13 +293,13 @@ describe('PlayerInfoPanel', () => {
         counterColor: create(colorSchema, { r: 0, g: 0, b: 0, a: 0 }),
       });
       const { unmount } = renderWithProviders(
-        <PlayerInfoPanel gameId={1} playerId={1} />,
+        <PlayerInfoPanel />,
         { preloadedState: statefulPlayer({ counters: { 3: poison1 } }) },
       );
       const first = screen.getByTestId('counter-3').getAttribute('style') ?? '';
       unmount();
 
-      renderWithProviders(<PlayerInfoPanel gameId={1} playerId={1} />, {
+      renderWithProviders(<PlayerInfoPanel />, {
         preloadedState: statefulPlayer({ counters: { 3: poison1 } }),
       });
       const second = screen.getByTestId('counter-3').getAttribute('style') ?? '';
@@ -320,7 +321,7 @@ describe('PlayerInfoPanel', () => {
 
     it('does not attach click handlers when canEdit is false (default)', () => {
       const webClient = createMockWebClient();
-      renderWithProviders(<PlayerInfoPanel gameId={1} playerId={1} />, {
+      renderWithProviders(<PlayerInfoPanel />, {
         preloadedState: statefulPlayer({ counters: { 1: life } }),
         webClient,
       });
@@ -335,9 +336,10 @@ describe('PlayerInfoPanel', () => {
 
     it('dispatches incCounter(+1) on left-click when canEdit is true', () => {
       const webClient = createMockWebClient();
-      renderWithProviders(<PlayerInfoPanel gameId={1} playerId={1} canEdit />, {
+      renderWithProviders(<PlayerInfoPanel />, {
         preloadedState: statefulPlayer({ counters: { 1: life } }),
         webClient,
+        cardVisualState: { canActFor: () => true },
       });
 
       fireEvent.click(screen.getByTestId('counter-1'));
@@ -349,10 +351,11 @@ describe('PlayerInfoPanel', () => {
       const webClient = createMockWebClient();
       const onContextMenu = vi.fn();
       renderWithProviders(
-        <PlayerInfoPanel gameId={1} playerId={1} canEdit onContextMenu={onContextMenu} />,
+        <PlayerInfoPanel onContextMenu={onContextMenu} />,
         {
           preloadedState: statefulPlayer({ counters: { 1: life } }),
           webClient,
+          cardVisualState: { canActFor: () => true },
         },
       );
 
@@ -366,8 +369,11 @@ describe('PlayerInfoPanel', () => {
     it('still fires the panel-level onContextMenu when right-clicking outside a counter', () => {
       const onContextMenu = vi.fn();
       const { container } = renderWithProviders(
-        <PlayerInfoPanel gameId={1} playerId={1} canEdit onContextMenu={onContextMenu} />,
-        { preloadedState: statefulPlayer({ counters: { 1: life } }) },
+        <PlayerInfoPanel onContextMenu={onContextMenu} />,
+        {
+          preloadedState: statefulPlayer({ counters: { 1: life } }),
+          cardVisualState: { canActFor: () => true },
+        },
       );
 
       fireEvent.contextMenu(container.querySelector('.player-info-panel__name')!);
@@ -380,14 +386,12 @@ describe('PlayerInfoPanel', () => {
       const onZoneContextMenu = vi.fn();
       renderWithProviders(
         <PlayerInfoPanel
-          gameId={1}
-          playerId={1}
-          canEdit
           onContextMenu={onContextMenu}
         />,
         {
           preloadedState: statefulPlayer({ counters: { 1: life } }),
           gameInteraction: { onZoneContextMenu },
+          cardVisualState: { canActFor: () => true },
         },
       );
 

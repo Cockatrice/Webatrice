@@ -1,9 +1,9 @@
 ﻿import { Enriched } from '../../types';
 
-import { Selectors } from './game.selectors';
+import { Selectors, seatedPlayersOf } from './game.selectors';
 import { gamesReducer } from './game.reducer';
 import { Actions } from './game.actions';
-import { makeGameEntry, makePlayerEntry, makeState,
+import { makeGameEntry, makePlayerEntry, makePlayerProperties, makeState,
   makeZoneEntry, makeCard, makeCounter, makeArrow,
 } from '../../testing/fixtures/games';
 import { GamesState } from './game.interfaces';
@@ -36,6 +36,47 @@ describe('Selectors', () => {
   it('getPlayers → returns undefined for unknown gameId', () => {
     const state = makeState();
     expect(Selectors.getPlayers(rootState(state), 999)).toBeUndefined();
+  });
+
+  describe('seated players (seatOrder)', () => {
+    function gameWith(specs: Array<{ id: number; spectator?: boolean; conceded?: boolean }>, seatOrder?: number[]) {
+      const players: Record<number, ReturnType<typeof makePlayerEntry>> = {};
+      for (const s of specs) {
+        players[s.id] = makePlayerEntry({
+          properties: makePlayerProperties({
+            playerId: s.id,
+            spectator: s.spectator ?? false,
+            conceded: s.conceded ?? false,
+          }),
+        });
+      }
+      return makeGameEntry({ players, ...(seatOrder ? { seatOrder } : {}) });
+    }
+
+    it('seatedPlayersOf → returns active players in seatOrder, not numeric-key order', () => {
+      const game = gameWith([{ id: 2 }, { id: 5 }], [5, 2]);
+      expect(seatedPlayersOf(game).map((p) => p.properties.playerId)).toEqual([5, 2]);
+    });
+
+    it('seatedPlayersOf → excludes spectators and conceded players', () => {
+      const game = gameWith([{ id: 1 }, { id: 2, spectator: true }, { id: 3, conceded: true }], [1, 2, 3]);
+      expect(seatedPlayersOf(game).map((p) => p.properties.playerId)).toEqual([1]);
+    });
+
+    it('seatedPlayersOf → skips ids in seatOrder with no matching player', () => {
+      const game = gameWith([{ id: 1 }], [1, 99]);
+      expect(seatedPlayersOf(game).map((p) => p.properties.playerId)).toEqual([1]);
+    });
+
+    it('getSeatedPlayers → returns active players in seat order for a game', () => {
+      const state = makeState({ games: { 1: gameWith([{ id: 2 }, { id: 5 }], [5, 2]) } });
+      expect(Selectors.getSeatedPlayers(rootState(state), 1).map((p) => p.properties.playerId)).toEqual([5, 2]);
+    });
+
+    it('getSeatedPlayers → returns [] for unknown gameId', () => {
+      const state = makeState();
+      expect(Selectors.getSeatedPlayers(rootState(state), 999)).toEqual([]);
+    });
   });
 
   it('getPlayer → returns a specific player', () => {

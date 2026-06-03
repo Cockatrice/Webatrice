@@ -29,6 +29,21 @@ describe('useCreateTokenDialog', () => {
     expect(result.current.scope).toBe('all');
   });
 
+  it('resets the form fields when the dialog is reopened', () => {
+    const { result, rerender } = renderHook(
+      ({ isOpen }) => useCreateTokenDialog({ isOpen, onSubmit: vi.fn() }),
+      { initialProps: { isOpen: true } },
+    );
+
+    act(() => result.current.handleNameChange('temp'));
+    expect(result.current.name).toBe('temp');
+
+    rerender({ isOpen: false });
+    rerender({ isOpen: true });
+
+    expect(result.current.name).toBe('');
+  });
+
   it('starts the chooser in deck scope when predefinedTokenNames are supplied', () => {
     const { result } = renderHook(() =>
       useCreateTokenDialog({

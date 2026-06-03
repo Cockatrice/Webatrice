@@ -1,10 +1,11 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
+import { useStore } from 'react-redux';
 
 import { useSettings } from '@app/hooks';
-import { useAppDispatch } from '@app/store';
+import { useAppDispatch, type RootState } from '@app/store';
 import { useWebClient } from '@cockatrice/datatrice/react';
 import { CardAttribute, ServerInfo_Card } from '@cockatrice/sockatrice/generated';
-import { Enriched, GameEntry, PlayerEntry, games } from '@cockatrice/datatrice';
+import { Enriched, games } from '@cockatrice/datatrice';
 import { CardDTO } from '../../../services/dexie/DexieDTOs/CardDTO';
 import { COUNTER_TYPE_LABELS } from '../components/ui/CardSlot/counterColors';
 import { DEFAULT_DIE_COUNT, DEFAULT_DIE_SIDES } from '../dialogs/RollDieDialog/RollDieDialog';
@@ -63,12 +64,31 @@ export interface StartPendingSource {
   sourceCardId: number;
 }
 
-export interface GameDialogs {
-  // Card/zone/player/hand menus
+// The dialogs slice splits into STATE (the open/closed flags + payloads that
+// change as the user opens/closes dialogs) and ACTIONS (the stable open/close/
+// request callbacks). Keeping them as separate types lets the hook return, the
+// `GameDialogs` contract, and the test harness's no-op default all derive from
+// one source instead of hand-syncing ~70 fields in three places. `GameDialogs`
+// (their intersection) stays the single type every consumer reads.
+export interface GameDialogsState {
   cardMenu: CardMenuState | null;
   zoneMenu: ZoneMenuState | null;
   playerMenu: AnchorPosition | null;
   handMenu: AnchorPosition | null;
+  zoneViews: ZoneViewTarget[];
+  prompt: PromptState | null;
+  rollDieOpen: boolean;
+  lastDieSides: number;
+  lastDieCount: number;
+  createTokenOpen: boolean;
+  sideboardOpen: boolean;
+  gameInfoOpen: boolean;
+  concedeConfirm: ConcedeConfirm;
+  revealState: RevealState | null;
+}
+
+export interface GameDialogsActions {
+  // Card/zone/player/hand menus
   closeCardMenu: () => void;
   closeZoneMenu: () => void;
   closePlayerMenu: () => void;
@@ -88,24 +108,18 @@ export interface GameDialogs {
   handleHandContextMenu: (event: React.MouseEvent) => void;
 
   // Zone-view dialog stack
-  zoneViews: ZoneViewTarget[];
   handleZoneClick: (playerId: number, zoneName: string) => void;
   handleCloseZoneView: (playerId: number, zoneName: string, shuffleOnClose?: boolean) => void;
 
   // Prompt dialog
-  prompt: PromptState | null;
   closePrompt: () => void;
 
   // Roll die dialog
-  rollDieOpen: boolean;
-  lastDieSides: number;
-  lastDieCount: number;
   openRollDie: () => void;
   closeRollDie: () => void;
   handleRollDieSubmit: (args: { sides: number; count: number }) => void;
 
   // Token / sideboard / game info / concede
-  createTokenOpen: boolean;
   openCreateToken: () => void;
   closeCreateToken: () => void;
   handleCreateTokenSubmit: (args: {
@@ -118,17 +132,14 @@ export interface GameDialogs {
     providerId?: string;
   }) => void;
 
-  sideboardOpen: boolean;
   openSideboard: () => void;
   closeSideboard: () => void;
   handleSideboardSubmit: (moveList: SideboardPlanMove[]) => void;
   handleToggleSideboardLock: (locked: boolean) => void;
 
-  gameInfoOpen: boolean;
   openGameInfo: () => void;
   closeGameInfo: () => void;
 
-  concedeConfirm: ConcedeConfirm;
   openConcede: () => void;
   openUnconcede: () => void;
   closeConcedeConfirm: () => void;
@@ -136,7 +147,6 @@ export interface GameDialogs {
   confirmUnconcede: () => void;
 
   // Reveal-cards dialog
-  revealState: RevealState | null;
   closeReveal: () => void;
 
   // Card context menu action handlers
@@ -182,12 +192,78 @@ export interface GameDialogs {
   handleRequestMoveHandToZone: (zone: string) => void;
 }
 
+export type GameDialogs = GameDialogsState & GameDialogsActions;
+
 export type HandSortKey = 'name' | 'maintype' | 'manacost';
+
+// No-op implementation of the whole action surface, co-located with the type so
+// the compiler flags any handler that drifts. Test harnesses compose this with a
+// closed-state object to build a complete `GameDialogs` without re-enumerating
+// the ~55 callbacks. Tree-shaken out of production bundles.
+const noopDialogAction = (): void => undefined;
+export const NOOP_GAME_DIALOGS_ACTIONS: GameDialogsActions = {
+  closeCardMenu: noopDialogAction,
+  closeZoneMenu: noopDialogAction,
+  closePlayerMenu: noopDialogAction,
+  closeHandMenu: noopDialogAction,
+  handleCardContextMenu: noopDialogAction,
+  handleZoneContextMenu: noopDialogAction,
+  handlePlayerContextMenu: noopDialogAction,
+  handleHandContextMenu: noopDialogAction,
+  handleZoneClick: noopDialogAction,
+  handleCloseZoneView: noopDialogAction,
+  closePrompt: noopDialogAction,
+  openRollDie: noopDialogAction,
+  closeRollDie: noopDialogAction,
+  handleRollDieSubmit: noopDialogAction,
+  openCreateToken: noopDialogAction,
+  closeCreateToken: noopDialogAction,
+  handleCreateTokenSubmit: noopDialogAction,
+  openSideboard: noopDialogAction,
+  closeSideboard: noopDialogAction,
+  handleSideboardSubmit: noopDialogAction,
+  handleToggleSideboardLock: noopDialogAction,
+  openGameInfo: noopDialogAction,
+  closeGameInfo: noopDialogAction,
+  openConcede: noopDialogAction,
+  openUnconcede: noopDialogAction,
+  closeConcedeConfirm: noopDialogAction,
+  confirmConcede: noopDialogAction,
+  confirmUnconcede: noopDialogAction,
+  closeReveal: noopDialogAction,
+  handleRequestSetPT: noopDialogAction,
+  handleRequestSetAnnotation: noopDialogAction,
+  handleRequestSetCardCounter: noopDialogAction,
+  handleRequestDrawArrow: noopDialogAction,
+  handleRequestAttach: noopDialogAction,
+  handleRequestPlayFromCardMenu: noopDialogAction,
+  handleRequestMoveToLibraryAt: noopDialogAction,
+  handleRequestDrawN: noopDialogAction,
+  handleRequestDumpN: noopDialogAction,
+  handleRequestRevealTopN: noopDialogAction,
+  handleRequestRevealZone: noopDialogAction,
+  handleRequestUndoDraw: noopDialogAction,
+  handleRequestDrawBottom: noopDialogAction,
+  handleRequestMoveTopCardToZone: noopDialogAction,
+  handleRequestPlayTop: noopDialogAction,
+  handleRequestMoveTopNToZone: noopDialogAction,
+  handleRequestShuffleTopN: noopDialogAction,
+  handleRequestShuffleBottomN: noopDialogAction,
+  handleRequestViewZone: noopDialogAction,
+  handleRequestMoveAllFromZoneToDeck: noopDialogAction,
+  handleRequestMoveAllFromZoneTo: noopDialogAction,
+  handleRequestRevealRandomFromZone: noopDialogAction,
+  handleRequestChooseMulligan: noopDialogAction,
+  handleRequestRevealHand: noopDialogAction,
+  handleRequestRevealRandom: noopDialogAction,
+  handleRequestViewHand: noopDialogAction,
+  handleRequestSortHandBy: noopDialogAction,
+  handleRequestMoveHandToDeck: noopDialogAction,
+  handleRequestMoveHandToZone: noopDialogAction,
+};
 
 export interface UseGameDialogsArgs {
   gameId: number | undefined;
-  game: GameEntry | undefined;
-  localPlayer: PlayerEntry | undefined;
   localAccess: GameAccess;
   isSpectator: boolean;
   startPendingArrow: (source: StartPendingSource) => void;
@@ -204,8 +280,6 @@ export interface UseGameDialogsArgs {
 
 export function useGameDialogs({
   gameId,
-  game,
-  localPlayer,
   localAccess,
   isSpectator,
   startPendingArrow,
@@ -214,9 +288,26 @@ export function useGameDialogs({
 }: UseGameDialogsArgs): GameDialogs {
   const webClient = useWebClient();
   const dispatch = useAppDispatch();
+  const store = useStore<RootState>();
   const judgeTarget = useJudgeTarget(gameId);
   const { value: settings } = useSettings();
   const invertVerticalCoordinate = settings?.invertVerticalCoordinate ?? false;
+
+  // Read the latest game / local player from the store at CALL time, never at
+  // render time. The action handlers used to close over the `game`/`localPlayer`
+  // props, which made every handler — and therefore the memoized return — churn
+  // on every game-state update, defeating the dialog/menu `memo()` wrappers during
+  // play. These getters depend only on the (stable) store and gameId, so the
+  // handlers can drop `game`/`localPlayer` from their dep arrays. Store-read
+  // precedent: useReduxEffect.
+  const readGame = useCallback(
+    () => (gameId != null ? games.Selectors.getGame(store.getState(), gameId) : undefined),
+    [store, gameId],
+  );
+  const readLocalPlayer = useCallback(
+    () => (gameId != null ? games.Selectors.getLocalPlayer(store.getState(), gameId) : undefined),
+    [store, gameId],
+  );
 
   const [zoneViews, setZoneViews] = useState<ZoneViewTarget[]>([]);
   const [cardMenu, setCardMenu] = useState<CardMenuState | null>(null);
@@ -234,6 +325,7 @@ export function useGameDialogs({
   const [gameInfoOpen, setGameInfoOpen] = useState(false);
 
   const handleZoneClick = useCallback((playerId: number, zoneName: string) => {
+    const game = readGame();
     const alreadyOpen = zoneViews.some((v) => v.playerId === playerId && v.zoneName === zoneName);
     setZoneViews((prev) =>
       alreadyOpen ? prev : [...prev, { playerId, zoneName }],
@@ -249,9 +341,10 @@ export function useGameDialogs({
     ) {
       webClient.request.game.dumpZone(gameId, { playerId, zoneName, numberCards: -1, isReversed: false });
     }
-  }, [zoneViews, gameId, game, webClient]);
+  }, [zoneViews, gameId, readGame, webClient]);
 
   const handleCloseZoneView = useCallback((playerId: number, zoneName: string, shuffleOnClose?: boolean) => {
+    const game = readGame();
     setZoneViews((prev) =>
       prev.filter((v) => !(v.playerId === playerId && v.zoneName === zoneName)),
     );
@@ -263,7 +356,7 @@ export function useGameDialogs({
       }
       dispatch(games.Actions.zoneViewCleared({ gameId, playerId, zoneName }));
     }
-  }, [gameId, game, webClient, dispatch]);
+  }, [gameId, readGame, webClient, dispatch]);
 
   // Mutual exclusion: only one in-game context menu is open at a time.
   // Each `handle*ContextMenu` calls this before opening its own menu so the
@@ -301,7 +394,7 @@ export function useGameDialogs({
 
   const handleZoneContextMenu = useCallback(
     (playerId: number, zoneName: string, event: React.MouseEvent) => {
-      if (playerId !== game?.localPlayerId) {
+      if (playerId !== readGame()?.localPlayerId) {
         return;
       }
       const supported =
@@ -319,7 +412,7 @@ export function useGameDialogs({
         anchorPosition: { top: event.clientY, left: event.clientX },
       });
     },
-    [game?.localPlayerId, closeAllContextMenus],
+    [readGame, closeAllContextMenus],
   );
 
   const handlePlayerContextMenu = useCallback(
@@ -440,6 +533,7 @@ export function useGameDialogs({
   const handleRequestPlayFromCardMenu = useCallback(
     (faceDown: boolean) => {
       const menu = cardMenu;
+      const game = readGame();
       if (!menu || gameId == null || game == null) {
         return;
       }
@@ -457,11 +551,12 @@ export function useGameDialogs({
         judgeTargetId: judgeTarget(menu.sourcePlayerId),
       });
     },
-    [cardMenu, game, gameId, invertVerticalCoordinate, judgeTarget, webClient],
+    [cardMenu, readGame, gameId, invertVerticalCoordinate, judgeTarget, webClient],
   );
 
   const handleRequestMoveToLibraryAt = useCallback(() => {
     const menu = cardMenu;
+    const game = readGame();
     if (!menu || gameId == null || game == null) {
       return;
     }
@@ -487,7 +582,7 @@ export function useGameDialogs({
         setPrompt(null);
       },
     });
-  }, [cardMenu, game, gameId, judgeTarget, webClient]);
+  }, [cardMenu, readGame, gameId, judgeTarget, webClient]);
 
   const handleRequestDrawN = useCallback(() => {
     if (gameId == null) {
@@ -506,7 +601,8 @@ export function useGameDialogs({
   }, [gameId, webClient]);
 
   const handleRequestDumpN = useCallback(() => {
-    if (gameId == null) {
+    const game = readGame();
+    if (gameId == null || game == null) {
       return;
     }
     setPrompt({
@@ -516,7 +612,7 @@ export function useGameDialogs({
       validate: (v) => (/^[1-9]\d*$/.test(v) ? null : 'Enter a positive integer'),
       onSubmit: (value) => {
         webClient.request.game.dumpZone(gameId, {
-          playerId: game!.localPlayerId,
+          playerId: game.localPlayerId,
           zoneName: Enriched.ZoneName.DECK,
           numberCards: Number(value),
           isReversed: false,
@@ -524,7 +620,7 @@ export function useGameDialogs({
         setPrompt(null);
       },
     });
-  }, [game, gameId, webClient]);
+  }, [readGame, gameId, webClient]);
 
   const handleRollDieSubmit = useCallback(
     ({ sides, count }: { sides: number; count: number }) => {
@@ -596,6 +692,7 @@ export function useGameDialogs({
       return;
     }
     // Mulligan accepts [-handSize, handSize + deckSize]; ≤0 is relative-to-hand-size (desktop parity).
+    const localPlayer = readLocalPlayer();
     const handSize = localPlayer?.zones[Enriched.ZoneName.HAND]?.cardCount ?? 0;
     const deckSize = localPlayer?.zones[Enriched.ZoneName.DECK]?.cardCount ?? 0;
     const min = -handSize;
@@ -622,7 +719,7 @@ export function useGameDialogs({
         setPrompt(null);
       },
     });
-  }, [gameId, localPlayer, webClient]);
+  }, [gameId, readLocalPlayer, webClient]);
 
   const handleRequestRevealHand = useCallback(() => {
     if (gameId == null) {
@@ -647,15 +744,18 @@ export function useGameDialogs({
 
   // Reuse zone-view dialog for aViewHand parity.
   const handleRequestViewHand = useCallback(() => {
+    const game = readGame();
     if (game?.localPlayerId == null) {
       return;
     }
     handleZoneClick(game.localPlayerId, Enriched.ZoneName.HAND);
-  }, [game?.localPlayerId, handleZoneClick]);
+  }, [readGame, handleZoneClick]);
 
   // Sort-hand: per-card moveCard dispatches (desktop hand_menu.cpp parity); async for Dexie metadata lookups.
   const handleRequestSortHandBy = useCallback(
     (key: HandSortKey) => {
+      const game = readGame();
+      const localPlayer = readLocalPlayer();
       if (gameId == null || game == null || localPlayer == null) {
         return;
       }
@@ -716,12 +816,14 @@ export function useGameDialogs({
         }
       })();
     },
-    [game, gameId, localPlayer, webClient],
+    [readGame, gameId, readLocalPlayer, webClient],
   );
 
   // Move hand → deck: per-card moveCard, x=0 (top) or x=-1 (bottom).
   const handleRequestMoveHandToDeck = useCallback(
     (top: boolean) => {
+      const game = readGame();
+      const localPlayer = readLocalPlayer();
       if (gameId == null || localPlayer == null || game?.localPlayerId == null) {
         return;
       }
@@ -743,11 +845,13 @@ export function useGameDialogs({
         });
       }
     },
-    [game?.localPlayerId, gameId, localPlayer, webClient],
+    [readGame, gameId, readLocalPlayer, webClient],
   );
 
   const handleRequestMoveHandToZone = useCallback(
     (targetZone: string) => {
+      const game = readGame();
+      const localPlayer = readLocalPlayer();
       if (gameId == null || localPlayer == null || game?.localPlayerId == null) {
         return;
       }
@@ -769,7 +873,7 @@ export function useGameDialogs({
         });
       }
     },
-    [game?.localPlayerId, gameId, localPlayer, webClient],
+    [readGame, gameId, readLocalPlayer, webClient],
   );
 
   const handleRequestRevealRandom = useCallback(() => {
@@ -855,6 +959,7 @@ export function useGameDialogs({
   // Hidden-zone command addressing is positional. See .github/instructions/webatrice-game.instructions.md#servatrice-game-event-quirks.
 
   const handleRequestDrawBottom = useCallback(() => {
+    const game = readGame();
     if (gameId == null || game?.localPlayerId == null) {
       return;
     }
@@ -875,10 +980,11 @@ export function useGameDialogs({
       y: 0,
       isReversed: false,
     });
-  }, [game, gameId, webClient]);
+  }, [readGame, gameId, webClient]);
 
   const handleRequestMoveTopCardToZone = useCallback(
     (targetZone: string, options?: { x?: number }) => {
+      const game = readGame();
       if (gameId == null || game?.localPlayerId == null) {
         return;
       }
@@ -899,11 +1005,12 @@ export function useGameDialogs({
         isReversed: false,
       });
     },
-    [game, gameId, webClient],
+    [readGame, gameId, webClient],
   );
 
   const handleRequestPlayTop = useCallback(
     (faceDown: boolean) => {
+      const game = readGame();
       if (gameId == null || game?.localPlayerId == null) {
         return;
       }
@@ -924,11 +1031,12 @@ export function useGameDialogs({
         isReversed: false,
       });
     },
-    [game, gameId, webClient],
+    [readGame, gameId, webClient],
   );
 
   const handleRequestMoveTopNToZone = useCallback(
     (targetZone: string) => {
+      const game = readGame();
       if (gameId == null || game?.localPlayerId == null) {
         return;
       }
@@ -969,7 +1077,7 @@ export function useGameDialogs({
         },
       });
     },
-    [game, gameId, webClient],
+    [readGame, gameId, webClient],
   );
 
   const handleRequestShuffleTopN = useCallback(() => {
@@ -1019,6 +1127,7 @@ export function useGameDialogs({
   // Move every card in source zone → target via one moveCard each.
   const handleRequestMoveAllFromZoneToDeck = useCallback(
     (top: boolean) => {
+      const game = readGame();
       if (gameId == null || zoneMenu == null || game == null) {
         return;
       }
@@ -1041,11 +1150,12 @@ export function useGameDialogs({
         });
       }
     },
-    [game, gameId, webClient, zoneMenu],
+    [readGame, gameId, webClient, zoneMenu],
   );
 
   const handleRequestMoveAllFromZoneTo = useCallback(
     (targetZone: string) => {
+      const game = readGame();
       if (gameId == null || zoneMenu == null || game == null) {
         return;
       }
@@ -1068,7 +1178,7 @@ export function useGameDialogs({
         });
       }
     },
-    [game, gameId, webClient, zoneMenu],
+    [readGame, gameId, webClient, zoneMenu],
   );
 
   // Client-only zone-view (no server roundtrip).
@@ -1122,89 +1232,190 @@ export function useGameDialogs({
     setConcedeConfirm(null);
   }, [gameId, webClient]);
 
-  return {
-    cardMenu,
-    zoneMenu,
-    playerMenu,
-    handMenu,
-    closeCardMenu: useCallback(() => setCardMenu(null), []),
-    closeZoneMenu: useCallback(() => setZoneMenu(null), []),
-    closePlayerMenu: useCallback(() => setPlayerMenu(null), []),
-    closeHandMenu: useCallback(() => setHandMenu(null), []),
-    handleCardContextMenu,
-    handleZoneContextMenu,
-    handlePlayerContextMenu,
-    handleHandContextMenu,
+  // Simple open/close setters, hoisted out of the return literal so the whole
+  // object can be memoized (a fresh return object each render would churn
+  // GameDialogsContext's value and force every dialog/menu consumer to re-render
+  // on every Game render — e.g. each arrow-drag tick).
+  const closeCardMenu = useCallback(() => setCardMenu(null), []);
+  const closeZoneMenu = useCallback(() => setZoneMenu(null), []);
+  const closePlayerMenu = useCallback(() => setPlayerMenu(null), []);
+  const closeHandMenu = useCallback(() => setHandMenu(null), []);
+  const closePrompt = useCallback(() => setPrompt(null), []);
+  const openRollDie = useCallback(() => setRollDieOpen(true), []);
+  const closeRollDie = useCallback(() => setRollDieOpen(false), []);
+  const openCreateToken = useCallback(() => setCreateTokenOpen(true), []);
+  const closeCreateToken = useCallback(() => setCreateTokenOpen(false), []);
+  const openSideboard = useCallback(() => setSideboardOpen(true), []);
+  const closeSideboard = useCallback(() => setSideboardOpen(false), []);
+  const openGameInfo = useCallback(() => setGameInfoOpen(true), []);
+  const closeGameInfo = useCallback(() => setGameInfoOpen(false), []);
+  const openConcede = useCallback(() => setConcedeConfirm('concede'), []);
+  const openUnconcede = useCallback(() => setConcedeConfirm('unconcede'), []);
+  const closeConcedeConfirm = useCallback(() => setConcedeConfirm(null), []);
+  const closeReveal = useCallback(() => setRevealState(null), []);
 
-    zoneViews,
-    handleZoneClick,
-    handleCloseZoneView,
+  // The action surface is decoupled from game state (handlers read the latest
+  // game/local-player from the store at call time), so this object is stable for
+  // the whole game once gameId/webClient/judgeTarget settle — the merged value
+  // below then only changes when dialog STATE changes, letting the propless,
+  // memo()'d dialogs/menus skip the per-frame Game re-renders during play.
+  const actions = useMemo<GameDialogsActions>(
+    () => ({
+      closeCardMenu,
+      closeZoneMenu,
+      closePlayerMenu,
+      closeHandMenu,
+      handleCardContextMenu,
+      handleZoneContextMenu,
+      handlePlayerContextMenu,
+      handleHandContextMenu,
+      handleZoneClick,
+      handleCloseZoneView,
+      closePrompt,
+      openRollDie,
+      closeRollDie,
+      handleRollDieSubmit,
+      openCreateToken,
+      closeCreateToken,
+      handleCreateTokenSubmit,
+      openSideboard,
+      closeSideboard,
+      handleSideboardSubmit,
+      handleToggleSideboardLock,
+      openGameInfo,
+      closeGameInfo,
+      openConcede,
+      openUnconcede,
+      closeConcedeConfirm,
+      confirmConcede,
+      confirmUnconcede,
+      closeReveal,
+      handleRequestSetPT,
+      handleRequestSetAnnotation,
+      handleRequestSetCardCounter,
+      handleRequestDrawArrow,
+      handleRequestAttach,
+      handleRequestPlayFromCardMenu,
+      handleRequestMoveToLibraryAt,
+      handleRequestDrawN,
+      handleRequestDumpN,
+      handleRequestRevealTopN,
+      handleRequestRevealZone,
+      handleRequestUndoDraw,
+      handleRequestDrawBottom,
+      handleRequestMoveTopCardToZone,
+      handleRequestPlayTop,
+      handleRequestMoveTopNToZone,
+      handleRequestShuffleTopN,
+      handleRequestShuffleBottomN,
+      handleRequestViewZone,
+      handleRequestMoveAllFromZoneToDeck,
+      handleRequestMoveAllFromZoneTo,
+      handleRequestRevealRandomFromZone,
+      handleRequestChooseMulligan,
+      handleRequestRevealHand,
+      handleRequestRevealRandom,
+      handleRequestViewHand,
+      handleRequestSortHandBy,
+      handleRequestMoveHandToDeck,
+      handleRequestMoveHandToZone,
+    }),
+    [
+      closeCardMenu,
+      closeZoneMenu,
+      closePlayerMenu,
+      closeHandMenu,
+      handleCardContextMenu,
+      handleZoneContextMenu,
+      handlePlayerContextMenu,
+      handleHandContextMenu,
+      handleZoneClick,
+      handleCloseZoneView,
+      closePrompt,
+      openRollDie,
+      closeRollDie,
+      handleRollDieSubmit,
+      openCreateToken,
+      closeCreateToken,
+      handleCreateTokenSubmit,
+      openSideboard,
+      closeSideboard,
+      handleSideboardSubmit,
+      handleToggleSideboardLock,
+      openGameInfo,
+      closeGameInfo,
+      openConcede,
+      openUnconcede,
+      closeConcedeConfirm,
+      confirmConcede,
+      confirmUnconcede,
+      closeReveal,
+      handleRequestSetPT,
+      handleRequestSetAnnotation,
+      handleRequestSetCardCounter,
+      handleRequestDrawArrow,
+      handleRequestAttach,
+      handleRequestPlayFromCardMenu,
+      handleRequestMoveToLibraryAt,
+      handleRequestDrawN,
+      handleRequestDumpN,
+      handleRequestRevealTopN,
+      handleRequestRevealZone,
+      handleRequestUndoDraw,
+      handleRequestDrawBottom,
+      handleRequestMoveTopCardToZone,
+      handleRequestPlayTop,
+      handleRequestMoveTopNToZone,
+      handleRequestShuffleTopN,
+      handleRequestShuffleBottomN,
+      handleRequestViewZone,
+      handleRequestMoveAllFromZoneToDeck,
+      handleRequestMoveAllFromZoneTo,
+      handleRequestRevealRandomFromZone,
+      handleRequestChooseMulligan,
+      handleRequestRevealHand,
+      handleRequestRevealRandom,
+      handleRequestViewHand,
+      handleRequestSortHandBy,
+      handleRequestMoveHandToDeck,
+      handleRequestMoveHandToZone,
+    ],
+  );
 
-    prompt,
-    closePrompt: useCallback(() => setPrompt(null), []),
-
-    rollDieOpen,
-    lastDieSides,
-    lastDieCount,
-    openRollDie: useCallback(() => setRollDieOpen(true), []),
-    closeRollDie: useCallback(() => setRollDieOpen(false), []),
-    handleRollDieSubmit,
-
-    createTokenOpen,
-    openCreateToken: useCallback(() => setCreateTokenOpen(true), []),
-    closeCreateToken: useCallback(() => setCreateTokenOpen(false), []),
-    handleCreateTokenSubmit,
-
-    sideboardOpen,
-    openSideboard: useCallback(() => setSideboardOpen(true), []),
-    closeSideboard: useCallback(() => setSideboardOpen(false), []),
-    handleSideboardSubmit,
-    handleToggleSideboardLock,
-
-    gameInfoOpen,
-    openGameInfo: useCallback(() => setGameInfoOpen(true), []),
-    closeGameInfo: useCallback(() => setGameInfoOpen(false), []),
-
-    concedeConfirm,
-    openConcede: useCallback(() => setConcedeConfirm('concede'), []),
-    openUnconcede: useCallback(() => setConcedeConfirm('unconcede'), []),
-    closeConcedeConfirm: useCallback(() => setConcedeConfirm(null), []),
-    confirmConcede,
-    confirmUnconcede,
-
-    revealState,
-    closeReveal: useCallback(() => setRevealState(null), []),
-
-    handleRequestSetPT,
-    handleRequestSetAnnotation,
-    handleRequestSetCardCounter,
-    handleRequestDrawArrow,
-    handleRequestAttach,
-    handleRequestPlayFromCardMenu,
-    handleRequestMoveToLibraryAt,
-    handleRequestDrawN,
-    handleRequestDumpN,
-    handleRequestRevealTopN,
-    handleRequestRevealZone,
-    handleRequestChooseMulligan,
-    handleRequestRevealHand,
-    handleRequestRevealRandom,
-    handleRequestViewHand,
-    handleRequestSortHandBy,
-    handleRequestMoveHandToDeck,
-    handleRequestMoveHandToZone,
-
-    handleRequestUndoDraw,
-    handleRequestDrawBottom,
-    handleRequestMoveTopCardToZone,
-    handleRequestPlayTop,
-    handleRequestMoveTopNToZone,
-    handleRequestShuffleTopN,
-    handleRequestShuffleBottomN,
-
-    handleRequestViewZone,
-    handleRequestMoveAllFromZoneToDeck,
-    handleRequestMoveAllFromZoneTo,
-    handleRequestRevealRandomFromZone,
-  };
+  return useMemo<GameDialogs>(
+    () => ({
+      cardMenu,
+      zoneMenu,
+      playerMenu,
+      handMenu,
+      zoneViews,
+      prompt,
+      rollDieOpen,
+      lastDieSides,
+      lastDieCount,
+      createTokenOpen,
+      sideboardOpen,
+      gameInfoOpen,
+      concedeConfirm,
+      revealState,
+      ...actions,
+    }),
+    [
+      cardMenu,
+      zoneMenu,
+      playerMenu,
+      handMenu,
+      zoneViews,
+      prompt,
+      rollDieOpen,
+      lastDieSides,
+      lastDieCount,
+      createTokenOpen,
+      sideboardOpen,
+      gameInfoOpen,
+      concedeConfirm,
+      revealState,
+      actions,
+    ],
+  );
 }

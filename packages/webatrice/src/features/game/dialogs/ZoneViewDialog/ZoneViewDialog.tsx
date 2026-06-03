@@ -10,8 +10,9 @@ import { cx } from '@app/utils';
 
 import CardSlot from '../../components/ui/CardSlot/CardSlot';
 import { makeCardKey } from '../../utils/CardRegistry/CardRegistryContext';
-import { EMPTY_SELECTION } from '../../utils/selection';
 import { useGameInteraction } from '../../components/ui/GameInteractionContext';
+import { useCardVisualState } from '../../components/ui/CardVisualStateContext';
+import { useGameId } from '../../components/ui/GameIdContext';
 import { useGameAccess } from '../../hooks/useGameAccess';
 import { useZoneViewDialog } from './useZoneViewDialog';
 
@@ -19,25 +20,26 @@ import './ZoneViewDialog.css';
 
 export interface ZoneViewDialogProps {
   isOpen: boolean;
-  gameId: number | undefined;
   playerId: number | undefined;
   zoneName: string | undefined;
   handleClose: (shuffleOnClose?: boolean) => void;
   initialPosition?: { x: number; y: number };
-  selectedCardKeys?: ReadonlySet<string>;
 }
 
 const DEFAULT_POSITION = { x: 80, y: 80 };
 
+// Keeps its positional props (which seat/zone, where it opens, how it closes —
+// all from the zoneViews stack entry) but self-sources the feature-global gameId
+// and the shared selection set from context.
 function ZoneViewDialog({
   isOpen,
-  gameId,
   playerId,
   zoneName,
   handleClose,
   initialPosition = DEFAULT_POSITION,
-  selectedCardKeys = EMPTY_SELECTION,
 }: ZoneViewDialogProps) {
+  const gameId = useGameId();
+  const { selectedCardKeys } = useCardVisualState();
   const { onCardHover, onCardFocus, onCardBlur, onCardClick, onCardContextMenu, onCardDoubleClick } =
     useGameInteraction();
   const { cards, count, title, position, handlePointerDown, handlePointerMove, handlePointerUp } =

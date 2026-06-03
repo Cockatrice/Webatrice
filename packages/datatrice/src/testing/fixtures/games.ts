@@ -153,6 +153,10 @@ export function makeGameEntry(overrides: Partial<Enriched.GameEntry> = {}): Enri
     },
     messages: [],
     ...overrides,
+    // Default seatOrder to the players' key order unless explicitly overridden,
+    // so fixtures get a sensible order without each test specifying it.
+    seatOrder:
+      overrides.seatOrder ?? Object.keys(overrides.players ?? { 1: null }).map(Number),
   };
 }
 

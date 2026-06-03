@@ -218,13 +218,34 @@ describe('2B: Game state & player management', () => {
     expect(newPlayer.arrows).toEqual({});
   });
 
-  it('PLAYER_LEFT → removes player from game.players', () => {
+  it('PLAYER_JOINED → appends the new id to seatOrder (join order)', () => {
+    // makeState seats player 1 in game 1.
+    const state = makeState();
+    const result = dispatchThroughStore(
+      state,
+      Actions.playerJoined({ gameId: 1, playerProperties: makePlayerProperties({ playerId: 5 }) }),
+    );
+    expect(result.games[1].seatOrder).toEqual([1, 5]);
+  });
+
+  it('PLAYER_JOINED → a re-join moves the id to the end of seatOrder (no duplicate)', () => {
+    const state = makeState();
+    state.games[1].seatOrder = [1, 5];
+    const result = dispatchThroughStore(
+      state,
+      Actions.playerJoined({ gameId: 1, playerProperties: makePlayerProperties({ playerId: 1 }) }),
+    );
+    expect(result.games[1].seatOrder).toEqual([5, 1]);
+  });
+
+  it('PLAYER_LEFT → removes player from game.players and seatOrder', () => {
     const state = makeState();
     const result = dispatchThroughStore(
       state,
       Actions.playerLeft({ gameId: 1, playerId: 1, reason: 3, timeReceived: 1000 }),
     );
     expect(result.games[1].players[1]).toBeUndefined();
+    expect(result.games[1].seatOrder).toEqual([]);
   });
 
   it('PLAYER_LEFT → emits a GameMessage with the formatted reason string', () => {

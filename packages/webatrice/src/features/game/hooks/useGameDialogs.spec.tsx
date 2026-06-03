@@ -84,8 +84,6 @@ function setup(opts: SetupOpts = {}) {
     () =>
       useGameDialogs({
         gameId: 1,
-        game: { ...game, info: { ...game.info, gameId: 1 } },
-        localPlayer,
         localAccess,
         isSpectator,
         startPendingArrow,

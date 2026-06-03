@@ -229,7 +229,8 @@ export function registerGameListeners(mw: ListenerMiddlewareInstance<unknown>): 
             next[id].properties.userInfo = prevUserInfo;
           }
         }
-        api.dispatch(Actions.gamePlayersReplaced({ gameId, players: next }));
+        const order = data.playerList.map((p) => p.properties.playerId);
+        api.dispatch(Actions.gamePlayersReplaced({ gameId, players: next, order }));
       }
 
       // isFieldSet distinguishes "set" from "default"; see .github/instructions/datatrice-store.instructions.md#reducer-author-hazards.

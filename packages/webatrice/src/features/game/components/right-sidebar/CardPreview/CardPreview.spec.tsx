@@ -1,7 +1,9 @@
 import { render, screen, fireEvent, act } from '@testing-library/react';
 
+import { ServerInfo_Card } from '@cockatrice/sockatrice/generated';
 import { makeCard } from '@cockatrice/datatrice/testing';
 import CardPreview from './CardPreview';
+import { CardPreviewProvider } from '../../ui/CardPreviewContext';
 
 // CardPreview triggers an async CardDTO.get(name) inside a useEffect. The
 // setupTests Dexie mock resolves immediately, but the resulting setState
@@ -9,15 +11,22 @@ import CardPreview from './CardPreview';
 // doesn't warn.
 const flushDtoLookup = () => act(async () => {});
 
+// CardPreview reads the hovered card from CardPreviewContext (Game provides it).
+const previewTree = (card: ServerInfo_Card | null) => (
+  <CardPreviewProvider value={card}>
+    <CardPreview />
+  </CardPreviewProvider>
+);
+
 describe('CardPreview', () => {
   it('shows an empty hint when no card is hovered', () => {
-    render(<CardPreview card={null} />);
+    render(previewTree(null));
     expect(screen.getByText(/hover a card/i)).toBeInTheDocument();
   });
 
   it('renders the small image immediately on hover', () => {
     const card = makeCard({ name: 'Lightning Bolt' });
-    render(<CardPreview card={card} />);
+    render(previewTree(card));
 
     const small = document.querySelector('.card-preview__image--small') as HTMLImageElement;
     expect(small).not.toBeNull();
@@ -27,7 +36,7 @@ describe('CardPreview', () => {
 
   it('renders a normal image that stays transparent until it loads', () => {
     const card = makeCard({ name: 'Lightning Bolt' });
-    render(<CardPreview card={card} />);
+    render(previewTree(card));
 
     const normal = screen.getByTestId('card-preview-normal') as HTMLImageElement;
     expect(normal.src).toContain('version=normal');
@@ -36,7 +45,7 @@ describe('CardPreview', () => {
 
   it('reveals the normal image once onLoad fires', async () => {
     const card = makeCard({ name: 'Lightning Bolt' });
-    render(<CardPreview card={card} />);
+    render(previewTree(card));
 
     const normal = screen.getByTestId('card-preview-normal');
     fireEvent.load(normal);
@@ -47,14 +56,14 @@ describe('CardPreview', () => {
   it('resets the loaded flag when the card changes', async () => {
     const a = makeCard({ id: 1, name: 'A' });
     const b = makeCard({ id: 2, name: 'B' });
-    const { rerender } = render(<CardPreview card={a} />);
+    const { rerender } = render(previewTree(a));
 
     fireEvent.load(screen.getByTestId('card-preview-normal'));
     expect(screen.getByTestId('card-preview-normal')).toHaveClass(
       'card-preview__image--loaded',
     );
 
-    rerender(<CardPreview card={b} />);
+    rerender(previewTree(b));
     expect(screen.getByTestId('card-preview-normal')).not.toHaveClass(
       'card-preview__image--loaded',
     );

@@ -1,14 +1,13 @@
 import { useRef } from 'react';
 
+import { useGameId } from '../../ui/GameIdContext';
+
 import { formatElapsed, useGameLog } from './useGameLog';
 
 import './GameLog.css';
 
-export interface GameLogProps {
-  gameId: number | undefined;
-}
-
-function GameLog({ gameId }: GameLogProps) {
+function GameLog() {
+  const gameId = useGameId();
   const listRef = useRef<HTMLDivElement>(null);
   const {
     messages,

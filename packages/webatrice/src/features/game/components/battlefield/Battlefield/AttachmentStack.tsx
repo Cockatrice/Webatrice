@@ -7,6 +7,7 @@ import { games } from '@cockatrice/datatrice';
 import CardSlot from '../../ui/CardSlot/CardSlot';
 import { makeCardKey } from '../../../utils/CardRegistry/CardRegistryContext';
 import { useGameInteraction } from '../../ui/GameInteractionContext';
+import { useCardVisualState } from '../../ui/CardVisualStateContext';
 import { attachmentSlotLayout } from './gridMath';
 
 import './AttachmentStack.css';
@@ -16,9 +17,6 @@ export interface AttachmentStackProps {
   ownerPlayerId: number;
   attachments: games.AttachedChild[];
   draggable: boolean;
-  arrowSourceKey: string | null;
-  arrowTargetKey: string | null;
-  selectedCardKeys: ReadonlySet<string>;
 }
 
 function AttachmentStack({
@@ -26,11 +24,9 @@ function AttachmentStack({
   attachments,
   draggable,
   ownerPlayerId,
-  arrowSourceKey,
-  arrowTargetKey,
-  selectedCardKeys,
 }: AttachmentStackProps) {
   const { onCardHover, onCardClick, onCardContextMenu, onCardDoubleClick, onCardFocus, onCardBlur } = useGameInteraction();
+  const { arrowSourceKey, arrowTargetKey, selectedCardKeys } = useCardVisualState();
   const parentKey = makeCardKey(ownerPlayerId, Enriched.ZoneName.TABLE, parent.id);
 
   const N = attachments.length;

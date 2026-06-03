@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { styled } from '@mui/material/styles';
 import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
@@ -11,12 +12,11 @@ import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
 import InputLabel from '@mui/material/InputLabel';
 import FormControl from '@mui/material/FormControl';
-import Radio from '@mui/material/Radio';
-import RadioGroup from '@mui/material/RadioGroup';
 import List from '@mui/material/List';
 import ListItemButton from '@mui/material/ListItemButton';
 import ListItemText from '@mui/material/ListItemText';
 
+import { useGameDialogsContext } from '../../components/ui/GameDialogsContext';
 import {
   MAX_ANNOTATION_LEN,
   MAX_NAME_LEN,
@@ -50,13 +50,6 @@ export interface CreateTokenSubmit {
   providerId?: string;
 }
 
-export interface CreateTokenDialogProps {
-  isOpen: boolean;
-  onSubmit: (args: CreateTokenSubmit) => void;
-  onCancel: () => void;
-  predefinedTokenNames?: string[];
-}
-
 const COLOR_OPTIONS: ReadonlyArray<{ value: string; label: string }> = [
   { value: 'w', label: 'White' },
   { value: 'u', label: 'Blue' },
@@ -67,7 +60,14 @@ const COLOR_OPTIONS: ReadonlyArray<{ value: string; label: string }> = [
   { value: '', label: 'Colorless' },
 ];
 
-function CreateTokenDialog({ isOpen, onSubmit, onCancel, predefinedTokenNames }: CreateTokenDialogProps) {
+// Self-sources its open state and the submit / cancel handlers from
+// GameDialogsContext, so Game renders it propless.
+function CreateTokenDialog() {
+  const {
+    createTokenOpen: isOpen,
+    handleCreateTokenSubmit: onSubmit,
+    closeCreateToken: onCancel,
+  } = useGameDialogsContext();
   const {
     name,
     color,
@@ -76,11 +76,9 @@ function CreateTokenDialog({ isOpen, onSubmit, onCancel, predefinedTokenNames }:
     destroyOnZoneChange,
     faceDown,
     error,
-    scope,
     search,
     filteredTokens,
     selectedTokenName,
-    setScope,
     setSearch,
     selectPredefinedToken,
     handleNameChange,
@@ -90,9 +88,7 @@ function CreateTokenDialog({ isOpen, onSubmit, onCancel, predefinedTokenNames }:
     setDestroyOnZoneChange,
     setFaceDown,
     handleSubmit,
-  } = useCreateTokenDialog({ isOpen, onSubmit, predefinedTokenNames });
-
-  const hasDeckScope = Boolean(predefinedTokenNames?.length);
+  } = useCreateTokenDialog({ isOpen, onSubmit });
 
   return (
     <StyledDialog
@@ -109,20 +105,6 @@ function CreateTokenDialog({ isOpen, onSubmit, onCancel, predefinedTokenNames }:
       <form onSubmit={handleSubmit}>
         <DialogContent className="dialog-content create-token-dialog__body">
           <div className="create-token-dialog__chooser">
-            <RadioGroup
-              row
-              value={scope}
-              onChange={(e) => setScope(e.target.value as 'all' | 'deck')}
-              aria-label="Token source"
-            >
-              <FormControlLabel value="all" control={<Radio size="small" />} label="All Tokens" />
-              <FormControlLabel
-                value="deck"
-                control={<Radio size="small" />}
-                label="Deck Tokens"
-                disabled={!hasDeckScope}
-              />
-            </RadioGroup>
             <TextField
               fullWidth
               variant="outlined"
@@ -246,4 +228,4 @@ function CreateTokenDialog({ isOpen, onSubmit, onCancel, predefinedTokenNames }:
   );
 }
 
-export default CreateTokenDialog;
+export default memo(CreateTokenDialog);

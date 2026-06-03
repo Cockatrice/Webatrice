@@ -1,47 +1,60 @@
 import { screen, fireEvent } from '@testing-library/react';
 import { create } from '@bufbuild/protobuf';
-import { CardAttribute, ServerInfo_CardCounterSchema } from '@cockatrice/sockatrice/generated';
+import {
+  CardAttribute,
+  ServerInfo_Card,
+  ServerInfo_CardCounterSchema,
+} from '@cockatrice/sockatrice/generated';
 import { Enriched } from '@cockatrice/datatrice';
-import { createMockWebClient, renderWithProviders } from '../../../../../__test-utils__';
-import { makeCard } from '@cockatrice/datatrice/testing';
+import { createMockWebClient, makeStoreState, renderWithProviders } from '../../../../../__test-utils__';
+import {
+  makeCard,
+  makeGameEntry,
+  makePlayerEntry,
+  makePlayerProperties,
+} from '@cockatrice/datatrice/testing';
+import type { GameDialogs } from '../../../hooks/useGameDialogs';
 import CardContextMenu from './CardContextMenu';
 
-const defaultProps = {
-  isOpen: true,
-  anchorPosition: { top: 100, left: 100 },
-  gameId: 1,
-  localPlayerId: 1,
-  ownerPlayerId: 1,
-  sourceZone: Enriched.ZoneName.TABLE,
-  onClose: () => {},
-  onRequestSetPT: () => {},
-  onRequestSetAnnotation: () => {},
-  onRequestSetCounter: () => {},
-  onRequestDrawArrow: () => {},
-  onRequestAttach: () => {},
-  onRequestPlay: () => {},
-  onRequestMoveToLibraryAt: () => {},
-};
+// CardContextMenu now self-sources: the right-clicked card / owner / zone come
+// from dialogs.cardMenu (GameDialogsContext), localPlayerId from the store via
+// useLocalIdentity, and the parent action handlers from the dialogs slice.
+function renderMenu(opts: {
+  card?: ServerInfo_Card | null;
+  localPlayerId?: number;
+  ownerPlayerId?: number;
+  sourceZone?: string;
+  dialogs?: Partial<GameDialogs>;
+  webClient?: ReturnType<typeof createMockWebClient>;
+} = {}) {
+  const card = opts.card === undefined ? makeCard() : opts.card;
+  const localPlayerId = opts.localPlayerId ?? 1;
+  const ownerPlayerId = opts.ownerPlayerId ?? 1;
+  const sourceZone = opts.sourceZone ?? Enriched.ZoneName.TABLE;
+  const player = makePlayerEntry({
+    properties: makePlayerProperties({ playerId: localPlayerId }),
+  });
+  const preloadedState = makeStoreState({
+    games: { games: { 1: makeGameEntry({ localPlayerId, players: { [localPlayerId]: player } }) } },
+  });
+  const cardMenu = card
+    ? { card, sourcePlayerId: ownerPlayerId, sourceZone, anchorPosition: { top: 100, left: 100 } }
+    : null;
+  return renderWithProviders(<CardContextMenu />, {
+    preloadedState,
+    webClient: opts.webClient,
+    gameDialogs: { cardMenu, ...opts.dialogs },
+  });
+}
 
 describe('CardContextMenu', () => {
-  it('does not render when card is null', () => {
-    const { container } = renderWithProviders(
-      <CardContextMenu {...defaultProps} card={null} />,
-    );
+  it('does not render when there is no open card menu', () => {
+    const { container } = renderMenu({ card: null });
     expect(container.querySelector('[data-testid="card-context-menu"]')).toBeNull();
   });
 
-  it('does not render when closed', () => {
-    renderWithProviders(
-      <CardContextMenu {...defaultProps} isOpen={false} card={makeCard()} />,
-    );
-    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
-  });
-
   it('renders all expected menu items', () => {
-    renderWithProviders(
-      <CardContextMenu {...defaultProps} card={makeCard({ tapped: false, faceDown: false })} />,
-    );
+    renderMenu({ card: makeCard({ tapped: false, faceDown: false }) });
 
     expect(screen.getByText('Flip')).toBeInTheDocument();
     expect(screen.getByText('Tap')).toBeInTheDocument();
@@ -49,9 +62,6 @@ describe('CardContextMenu', () => {
     expect(screen.getByText('Doesn\'t Untap')).toBeInTheDocument();
     expect(screen.getByText('Set P/T…')).toBeInTheDocument();
     expect(screen.getByText('Set Annotation…')).toBeInTheDocument();
-    // Counter actions live behind a "Counters > Counter {label}" submenu
-    // chain (see desktop card_menu.cpp: aAddCounter[i]/aRemoveCounter[i]/
-    // aSetCounter[i] grouped per type). Surfaced lazily.
     expect(screen.getByText('Counters')).toBeInTheDocument();
     expect(screen.getByText('Send to Hand')).toBeInTheDocument();
     expect(screen.getByText('Send to Graveyard')).toBeInTheDocument();
@@ -62,13 +72,8 @@ describe('CardContextMenu', () => {
 
   it('flips the card via flipCard and closes the menu', () => {
     const webClient = createMockWebClient();
-    const onClose = vi.fn();
-    const card = makeCard({ id: 10, faceDown: false });
-
-    renderWithProviders(
-      <CardContextMenu {...defaultProps} card={card} onClose={onClose} />,
-      { webClient },
-    );
+    const closeCardMenu = vi.fn();
+    renderMenu({ card: makeCard({ id: 10, faceDown: false }), webClient, dialogs: { closeCardMenu } });
 
     fireEvent.click(screen.getByText('Flip'));
 
@@ -77,15 +82,12 @@ describe('CardContextMenu', () => {
       cardId: 10,
       faceDown: true,
     }, undefined);
-    expect(onClose).toHaveBeenCalled();
+    expect(closeCardMenu).toHaveBeenCalled();
   });
 
   it('toggles tap via setCardAttr (untapped → tapped)', () => {
     const webClient = createMockWebClient();
-    renderWithProviders(
-      <CardContextMenu {...defaultProps} card={makeCard({ id: 5, tapped: false })} />,
-      { webClient },
-    );
+    renderMenu({ card: makeCard({ id: 5, tapped: false }), webClient });
 
     fireEvent.click(screen.getByText('Tap'));
 
@@ -99,10 +101,7 @@ describe('CardContextMenu', () => {
 
   it('shows Untap label and sends "0" when the card is already tapped', () => {
     const webClient = createMockWebClient();
-    renderWithProviders(
-      <CardContextMenu {...defaultProps} card={makeCard({ id: 5, tapped: true })} />,
-      { webClient },
-    );
+    renderMenu({ card: makeCard({ id: 5, tapped: true }), webClient });
 
     expect(screen.getByText('Untap')).toBeInTheDocument();
     fireEvent.click(screen.getByText('Untap'));
@@ -117,10 +116,7 @@ describe('CardContextMenu', () => {
 
   it('toggles Face Down and shows Face Up when already face-down', () => {
     const webClient = createMockWebClient();
-    renderWithProviders(
-      <CardContextMenu {...defaultProps} card={makeCard({ id: 5, faceDown: true })} />,
-      { webClient },
-    );
+    renderMenu({ card: makeCard({ id: 5, faceDown: true }), webClient });
 
     expect(screen.getByText('Face Up')).toBeInTheDocument();
     fireEvent.click(screen.getByText('Face Up'));
@@ -135,10 +131,7 @@ describe('CardContextMenu', () => {
 
   it('toggles Doesn\'t Untap and shows Allow Untap when already set', () => {
     const webClient = createMockWebClient();
-    renderWithProviders(
-      <CardContextMenu {...defaultProps} card={makeCard({ id: 5, doesntUntap: true })} />,
-      { webClient },
-    );
+    renderMenu({ card: makeCard({ id: 5, doesntUntap: true }), webClient });
 
     expect(screen.getByText('Allow Untap')).toBeInTheDocument();
     fireEvent.click(screen.getByText('Allow Untap'));
@@ -152,44 +145,28 @@ describe('CardContextMenu', () => {
   });
 
   it('requests the PT prompt via parent callback', () => {
-    const onRequestSetPT = vi.fn();
-    const onClose = vi.fn();
-    renderWithProviders(
-      <CardContextMenu
-        {...defaultProps}
-        card={makeCard()}
-        onRequestSetPT={onRequestSetPT}
-        onClose={onClose}
-      />,
-    );
+    const handleRequestSetPT = vi.fn();
+    const closeCardMenu = vi.fn();
+    renderMenu({ card: makeCard(), dialogs: { handleRequestSetPT, closeCardMenu } });
 
     fireEvent.click(screen.getByText('Set P/T…'));
 
-    expect(onRequestSetPT).toHaveBeenCalled();
-    expect(onClose).toHaveBeenCalled();
+    expect(handleRequestSetPT).toHaveBeenCalled();
+    expect(closeCardMenu).toHaveBeenCalled();
   });
 
   it('requests the Annotation prompt via parent callback', () => {
-    const onRequestSetAnnotation = vi.fn();
-    renderWithProviders(
-      <CardContextMenu
-        {...defaultProps}
-        card={makeCard()}
-        onRequestSetAnnotation={onRequestSetAnnotation}
-      />,
-    );
+    const handleRequestSetAnnotation = vi.fn();
+    renderMenu({ card: makeCard(), dialogs: { handleRequestSetAnnotation } });
 
     fireEvent.click(screen.getByText('Set Annotation…'));
 
-    expect(onRequestSetAnnotation).toHaveBeenCalled();
+    expect(handleRequestSetAnnotation).toHaveBeenCalled();
   });
 
   it('moves to hand via moveCard with x=-1 (append)', () => {
     const webClient = createMockWebClient();
-    renderWithProviders(
-      <CardContextMenu {...defaultProps} card={makeCard({ id: 7 })} />,
-      { webClient },
-    );
+    renderMenu({ card: makeCard({ id: 7 }), webClient });
 
     fireEvent.click(screen.getByText('Send to Hand'));
 
@@ -206,16 +183,8 @@ describe('CardContextMenu', () => {
   });
 
   it('hides mutator items (tap, flip, move, counters, P/T) for opponent-owned cards (desktop parity)', () => {
-    renderWithProviders(
-      <CardContextMenu
-        {...defaultProps}
-        localPlayerId={1}
-        ownerPlayerId={2}
-        card={makeCard({ id: 7 })}
-      />,
-    );
+    renderMenu({ localPlayerId: 1, ownerPlayerId: 2, card: makeCard({ id: 7 }) });
 
-    // Mutators gone:
     expect(screen.queryByText('Flip')).not.toBeInTheDocument();
     expect(screen.queryByText('Tap')).not.toBeInTheDocument();
     expect(screen.queryByText('Set P/T…')).not.toBeInTheDocument();
@@ -223,21 +192,12 @@ describe('CardContextMenu', () => {
     expect(screen.queryByText('Send to Hand')).not.toBeInTheDocument();
     expect(screen.queryByText('Attach to card…')).not.toBeInTheDocument();
 
-    // Read-only stays:
     expect(screen.getByText('Draw arrow from here')).toBeInTheDocument();
   });
 
   it('routes moves through the acting (local) player when invoked on an owned card', () => {
     const webClient = createMockWebClient();
-    renderWithProviders(
-      <CardContextMenu
-        {...defaultProps}
-        localPlayerId={1}
-        ownerPlayerId={1}
-        card={makeCard({ id: 7 })}
-      />,
-      { webClient },
-    );
+    renderMenu({ localPlayerId: 1, ownerPlayerId: 1, card: makeCard({ id: 7 }), webClient });
 
     fireEvent.click(screen.getByText('Send to Hand'));
 
@@ -249,10 +209,7 @@ describe('CardContextMenu', () => {
 
   it('moves to library top vs bottom with distinct x values', () => {
     const webClient = createMockWebClient();
-    renderWithProviders(
-      <CardContextMenu {...defaultProps} card={makeCard({ id: 7 })} />,
-      { webClient },
-    );
+    renderMenu({ card: makeCard({ id: 7 }), webClient });
 
     fireEvent.click(screen.getByText('Send to Library (top)'));
     expect(webClient.request.game.moveCard).toHaveBeenLastCalledWith(1, expect.objectContaining({
@@ -268,8 +225,7 @@ describe('CardContextMenu', () => {
   });
 
   // Per-counter actions live three levels deep: Counters ▸ {label} ▸
-  // {Add|Remove|Set Counter}. Tests navigate the chain via clicks on the
-  // intermediate triggers, which mirrors the user's path through the menu.
+  // {Add|Remove|Set Counter}. Navigate the chain via clicks.
   function openCounterSubmenu(label: string) {
     fireEvent.click(screen.getByText('Counters'));
     fireEvent.click(screen.getByText(label));
@@ -277,10 +233,7 @@ describe('CardContextMenu', () => {
 
   it('adds an A-type counter via incCardCounter (+1 on id 0)', () => {
     const webClient = createMockWebClient();
-    renderWithProviders(
-      <CardContextMenu {...defaultProps} card={makeCard({ id: 9 })} />,
-      { webClient },
-    );
+    renderMenu({ card: makeCard({ id: 9 }), webClient });
 
     openCounterSubmenu('A');
     fireEvent.click(screen.getByText('Add Counter'));
@@ -295,10 +248,7 @@ describe('CardContextMenu', () => {
 
   it('adds a B-type counter via incCardCounter (+1 on id 1)', () => {
     const webClient = createMockWebClient();
-    renderWithProviders(
-      <CardContextMenu {...defaultProps} card={makeCard({ id: 9 })} />,
-      { webClient },
-    );
+    renderMenu({ card: makeCard({ id: 9 }), webClient });
 
     openCounterSubmenu('B');
     fireEvent.click(screen.getByText('Add Counter'));
@@ -312,9 +262,7 @@ describe('CardContextMenu', () => {
   });
 
   it('disables Remove Counter when card has no counters of that type', () => {
-    renderWithProviders(
-      <CardContextMenu {...defaultProps} card={makeCard({ id: 9 })} />,
-    );
+    renderMenu({ card: makeCard({ id: 9 }) });
 
     openCounterSubmenu('A');
     const item = screen.getByText('Remove Counter').closest('li');
@@ -329,10 +277,7 @@ describe('CardContextMenu', () => {
         create(ServerInfo_CardCounterSchema, { id: 0, value: 2 }),
       ],
     });
-    renderWithProviders(
-      <CardContextMenu {...defaultProps} card={card} />,
-      { webClient },
-    );
+    renderMenu({ card, webClient });
 
     openCounterSubmenu('A');
     fireEvent.click(screen.getByText('Remove Counter'));
@@ -346,99 +291,58 @@ describe('CardContextMenu', () => {
   });
 
   it('defers "Set Counter…" to the parent callback with the matching id', () => {
-    const onRequestSetCounter = vi.fn();
-    renderWithProviders(
-      <CardContextMenu
-        {...defaultProps}
-        card={makeCard()}
-        onRequestSetCounter={onRequestSetCounter}
-      />,
-    );
+    const handleRequestSetCardCounter = vi.fn();
+    renderMenu({ card: makeCard(), dialogs: { handleRequestSetCardCounter } });
 
     openCounterSubmenu('A');
     fireEvent.click(screen.getByText('Set Counter…'));
 
-    expect(onRequestSetCounter).toHaveBeenCalledWith(0);
+    expect(handleRequestSetCardCounter).toHaveBeenCalledWith(0);
   });
 
   it('defers "Draw arrow from here" to the parent callback', () => {
-    const onRequestDrawArrow = vi.fn();
-    renderWithProviders(
-      <CardContextMenu
-        {...defaultProps}
-        card={makeCard()}
-        onRequestDrawArrow={onRequestDrawArrow}
-      />,
-    );
+    const handleRequestDrawArrow = vi.fn();
+    renderMenu({ card: makeCard(), dialogs: { handleRequestDrawArrow } });
 
     fireEvent.click(screen.getByText('Draw arrow from here'));
 
-    expect(onRequestDrawArrow).toHaveBeenCalled();
+    expect(handleRequestDrawArrow).toHaveBeenCalled();
   });
 
   describe('Attach / Unattach', () => {
     it('defers "Attach to card…" to the parent callback', () => {
-      const onRequestAttach = vi.fn();
-      const onClose = vi.fn();
-      renderWithProviders(
-        <CardContextMenu
-          {...defaultProps}
-          card={makeCard()}
-          onRequestAttach={onRequestAttach}
-          onClose={onClose}
-        />,
-      );
+      const handleRequestAttach = vi.fn();
+      const closeCardMenu = vi.fn();
+      renderMenu({ card: makeCard(), dialogs: { handleRequestAttach, closeCardMenu } });
 
       fireEvent.click(screen.getByText('Attach to card…'));
 
-      expect(onRequestAttach).toHaveBeenCalled();
-      expect(onClose).toHaveBeenCalled();
+      expect(handleRequestAttach).toHaveBeenCalled();
+      expect(closeCardMenu).toHaveBeenCalled();
     });
 
     it('does not show "Unattach" when the card is not attached (attachCardId = -1)', () => {
-      renderWithProviders(
-        <CardContextMenu
-          {...defaultProps}
-          card={makeCard({ attachCardId: -1 })}
-        />,
-      );
+      renderMenu({ card: makeCard({ attachCardId: -1 }) });
 
       expect(screen.queryByText('Unattach')).not.toBeInTheDocument();
     });
 
     it('shows "Unattach" and dispatches attachCard with only startZone+cardId (desktop parity)', () => {
       const webClient = createMockWebClient();
-      const onClose = vi.fn();
-      renderWithProviders(
-        <CardContextMenu
-          {...defaultProps}
-          card={makeCard({ id: 11, attachCardId: 99 })}
-          onClose={onClose}
-        />,
-        { webClient },
-      );
+      const closeCardMenu = vi.fn();
+      renderMenu({ card: makeCard({ id: 11, attachCardId: 99 }), webClient, dialogs: { closeCardMenu } });
 
       fireEvent.click(screen.getByText('Unattach'));
 
-      // Target fields are intentionally absent. The server uses proto2
-      // presence (`has_target_player_id()`) to detect "detach"; passing
-      // targetPlayerId: -1 would leave presence set and the server would
-      // treat the message as an attach with a missing player.
       expect(webClient.request.game.attachCard).toHaveBeenCalledWith(1, {
         startZone: Enriched.ZoneName.TABLE,
         cardId: 11,
       }, undefined);
-      expect(onClose).toHaveBeenCalled();
+      expect(closeCardMenu).toHaveBeenCalled();
     });
 
     it('hides Attach / Unattach when the source card is not on the table', () => {
-      renderWithProviders(
-        <CardContextMenu
-          {...defaultProps}
-          sourceZone={Enriched.ZoneName.HAND}
-          card={makeCard({ attachCardId: 99 })}
-        />,
-      );
+      renderMenu({ sourceZone: Enriched.ZoneName.HAND, card: makeCard({ attachCardId: 99 }) });
 
       expect(screen.queryByText('Attach to card…')).not.toBeInTheDocument();
       expect(screen.queryByText('Unattach')).not.toBeInTheDocument();

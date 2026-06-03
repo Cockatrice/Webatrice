@@ -51,8 +51,8 @@ export class GamePage {
     await expect(this.page.locator('.game__board-grid')).toBeVisible({ timeout: 30_000 });
     // DeckSelectDialog (a MUI modal) aria-hides its siblings while open, so
     // locators inside turn-controls match nothing until it is dismissed. Gate
-    // on dismissal (= game.started && local readyStart, per useGame.ts
-    // deckSelectOpen) before callers drive endTurn/leaveGame.
+    // on dismissal (= game.started && local readyStart, per
+    // useDeckSelectDialog's open predicate) before callers drive endTurn/leaveGame.
     await expect(this.deckSelect.dialog).toBeHidden({ timeout: 30_000 });
   }
 

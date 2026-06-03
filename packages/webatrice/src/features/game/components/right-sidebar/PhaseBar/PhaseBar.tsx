@@ -3,13 +3,11 @@ import Tooltip from '@mui/material/Tooltip';
 import { Phase } from '@cockatrice/datatrice';
 import { cx } from '@app/utils';
 
+import { useGameId } from '../../ui/GameIdContext';
+
 import { usePhaseBar } from './usePhaseBar';
 
 import './PhaseBar.css';
-
-export interface PhaseBarProps {
-  gameId: number | undefined;
-}
 
 const PHASE_LABELS: ReadonlyArray<{
   phase: Phase;
@@ -30,7 +28,8 @@ const PHASE_LABELS: ReadonlyArray<{
   { phase: Phase.EndCleanup, label: 'END', title: 'End step / cleanup' },
 ];
 
-function PhaseBar({ gameId }: PhaseBarProps) {
+function PhaseBar() {
+  const gameId = useGameId();
   const {
     activePhase,
     canPassTurn,

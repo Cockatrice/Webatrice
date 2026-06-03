@@ -36,7 +36,7 @@ describe('HandZone', () => {
       makeCard({ id: 1, name: 'Forest' }),
       makeCard({ id: 2, name: 'Mountain' }),
     ];
-    renderWithProviders(<HandZone gameId={1} playerId={1} />, {
+    renderWithProviders(<HandZone playerId={1} />, {
       preloadedState: stateWithHand(cards),
     });
 
@@ -46,7 +46,7 @@ describe('HandZone', () => {
   });
 
   it('renders an empty row when hand is empty', () => {
-    renderWithProviders(<HandZone gameId={1} playerId={1} />, {
+    renderWithProviders(<HandZone playerId={1} />, {
       preloadedState: stateWithHand([]),
     });
 
@@ -58,7 +58,7 @@ describe('HandZone', () => {
     it('fires onZoneContextMenu when right-clicking the empty hand area', () => {
       const onZoneContextMenu = vi.fn();
       renderWithProviders(
-        <HandZone gameId={1} playerId={1} onHandContextMenu={onZoneContextMenu} />,
+        <HandZone playerId={1} onHandContextMenu={onZoneContextMenu} />,
         { preloadedState: stateWithHand([]) },
       );
 
@@ -71,7 +71,7 @@ describe('HandZone', () => {
       const onZoneContextMenu = vi.fn();
       const cards = [makeCard({ id: 1, name: 'Island' })];
       renderWithProviders(
-        <HandZone gameId={1} playerId={1} onHandContextMenu={onZoneContextMenu} />,
+        <HandZone playerId={1} onHandContextMenu={onZoneContextMenu} />,
         { preloadedState: stateWithHand(cards) },
       );
 

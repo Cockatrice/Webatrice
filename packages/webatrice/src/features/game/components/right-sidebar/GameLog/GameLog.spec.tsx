@@ -31,7 +31,7 @@ function stateWithMessages(
 
 describe('GameLog', () => {
   it('shows an empty hint when no messages are present', () => {
-    renderWithProviders(<GameLog gameId={1} />, {
+    renderWithProviders(<GameLog />, {
       preloadedState: stateWithMessages([], []),
     });
 
@@ -45,7 +45,7 @@ describe('GameLog', () => {
         userInfo: makeUser({ name: 'Alice' }),
       }),
     });
-    renderWithProviders(<GameLog gameId={1} />, {
+    renderWithProviders(<GameLog />, {
       preloadedState: stateWithMessages(
         [alice],
         [
@@ -71,7 +71,7 @@ describe('GameLog', () => {
         userInfo: makeUser({ name: 'Host' }),
       }),
     });
-    renderWithProviders(<GameLog gameId={1} />, {
+    renderWithProviders(<GameLog />, {
       preloadedState: stateWithMessages(
         [host],
         [{ playerId: 0, message: 'gl', timeReceived: 0, kind: 'chat' }],
@@ -83,7 +83,7 @@ describe('GameLog', () => {
   });
 
   it('renders a fallback author label when the speaker is not in the player list', () => {
-    renderWithProviders(<GameLog gameId={1} />, {
+    renderWithProviders(<GameLog />, {
       preloadedState: stateWithMessages(
         [],
         [{ playerId: 99, message: 'hello', timeReceived: 0 }],
@@ -94,15 +94,16 @@ describe('GameLog', () => {
   });
 
   it('disables the chat input when gameId is undefined', () => {
-    renderWithProviders(<GameLog gameId={undefined} />, {
+    renderWithProviders(<GameLog />, {
       preloadedState: makeStoreState({ games: { games: {} } }),
+      gameId: undefined,
     });
 
     expect(screen.getByLabelText('game chat input')).toBeDisabled();
   });
 
   it('enables the chat input when gameId is provided', () => {
-    renderWithProviders(<GameLog gameId={1} />, {
+    renderWithProviders(<GameLog />, {
       preloadedState: stateWithMessages([], []),
     });
 
@@ -111,7 +112,7 @@ describe('GameLog', () => {
 
   it('submits the chat draft and clears the input', () => {
     const webClient = createMockWebClient();
-    renderWithProviders(<GameLog gameId={1} />, {
+    renderWithProviders(<GameLog />, {
       preloadedState: stateWithMessages([], []),
       webClient,
     });
@@ -126,7 +127,7 @@ describe('GameLog', () => {
 
   it('does not dispatch for a whitespace-only message', () => {
     const webClient = createMockWebClient();
-    renderWithProviders(<GameLog gameId={1} />, {
+    renderWithProviders(<GameLog />, {
       preloadedState: stateWithMessages([], []),
       webClient,
     });
@@ -144,7 +145,7 @@ describe('GameLog', () => {
     // distinct italic style. Regression guard — GameLog was chat-only before
     // this milestone.
     it('renders event messages without a leading author label', () => {
-      renderWithProviders(<GameLog gameId={1} />, {
+      renderWithProviders(<GameLog />, {
         preloadedState: stateWithMessages(
           [],
           [
@@ -159,7 +160,7 @@ describe('GameLog', () => {
     });
 
     it('tags event lines with the event modifier class', () => {
-      renderWithProviders(<GameLog gameId={1} />, {
+      renderWithProviders(<GameLog />, {
         preloadedState: stateWithMessages(
           [],
           [
@@ -179,7 +180,7 @@ describe('GameLog', () => {
           userInfo: makeUser({ name: 'Alice' }),
         }),
       });
-      renderWithProviders(<GameLog gameId={1} />, {
+      renderWithProviders(<GameLog />, {
         preloadedState: stateWithMessages(
           [alice],
           [
@@ -210,7 +211,7 @@ describe('GameLog', () => {
     });
 
     it('renders the initial secondsElapsed snapshot in HH:MM:SS form', () => {
-      renderWithProviders(<GameLog gameId={1} />, {
+      renderWithProviders(<GameLog />, {
         preloadedState: stateWithMessages([], [], 3723),
       });
 
@@ -218,7 +219,7 @@ describe('GameLog', () => {
     });
 
     it('advances locally once per second between server events', () => {
-      renderWithProviders(<GameLog gameId={1} />, {
+      renderWithProviders(<GameLog />, {
         preloadedState: stateWithMessages([], [], 0),
       });
 
@@ -232,8 +233,9 @@ describe('GameLog', () => {
     });
 
     it('does not render the timer when there is no active game', () => {
-      renderWithProviders(<GameLog gameId={undefined} />, {
+      renderWithProviders(<GameLog />, {
         preloadedState: makeStoreState({ games: { games: {} } }),
+        gameId: undefined,
       });
 
       expect(screen.queryByTestId('game-log-timer')).not.toBeInTheDocument();
@@ -243,7 +245,7 @@ describe('GameLog', () => {
     // the server pushes a fresh `secondsElapsed`, at which point the display
     // snaps to the server value. Regression guard for that snap behavior.
     it('resyncs displayed time when Redux pushes a new secondsElapsed', () => {
-      const { store } = renderWithProviders(<GameLog gameId={1} />, {
+      const { store } = renderWithProviders(<GameLog />, {
         preloadedState: stateWithMessages([], [], 10),
       });
 

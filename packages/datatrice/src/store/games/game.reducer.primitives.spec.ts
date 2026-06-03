@@ -382,6 +382,35 @@ describe('gamePlayersReplaced', () => {
     expect(result.games[1].players[2]).toBeUndefined();
   });
 
+  it('sets seatOrder from the provided order (server seat order)', () => {
+    const state = makeState();
+    const replacement = {
+      2: makePlayerEntry({ properties: makePlayerProperties({ playerId: 2 }) }),
+      5: makePlayerEntry({ properties: makePlayerProperties({ playerId: 5 }) }),
+    };
+    const result = gamesReducer(state, Actions.gamePlayersReplaced({
+      gameId: 1, players: replacement, order: [5, 2],
+    }));
+    expect(result.games[1].seatOrder).toEqual([5, 2]);
+  });
+
+  it('falls back to key order and drops order ids with no matching player', () => {
+    const state = makeState();
+    const replacement = {
+      2: makePlayerEntry({ properties: makePlayerProperties({ playerId: 2 }) }),
+      5: makePlayerEntry({ properties: makePlayerProperties({ playerId: 5 }) }),
+    };
+    // No order → key order; an order id 99 with no player is dropped.
+    expect(
+      gamesReducer(state, Actions.gamePlayersReplaced({ gameId: 1, players: replacement }))
+        .games[1].seatOrder,
+    ).toEqual([2, 5]);
+    expect(
+      gamesReducer(state, Actions.gamePlayersReplaced({ gameId: 1, players: replacement, order: [5, 99, 2] }))
+        .games[1].seatOrder,
+    ).toEqual([5, 2]);
+  });
+
   it('no-ops when game is missing', () => {
     const state = makeState();
     const result = gamesReducer(state, Actions.gamePlayersReplaced({

@@ -1,6 +1,6 @@
-import { createContext, useContext } from 'react';
-
 import { ServerInfo_Card } from '@cockatrice/sockatrice/generated';
+
+import { createRequiredContext } from './createRequiredContext';
 
 export interface GameInteractionHandlers {
   onCardHover: (card: ServerInfo_Card) => void;
@@ -13,14 +13,5 @@ export interface GameInteractionHandlers {
   onZoneContextMenu: (playerId: number, zoneName: string, event: React.MouseEvent) => void;
 }
 
-const GameInteractionContext = createContext<GameInteractionHandlers | null>(null);
-
-export const GameInteractionProvider = GameInteractionContext.Provider;
-
-export function useGameInteraction(): GameInteractionHandlers {
-  const ctx = useContext(GameInteractionContext);
-  if (!ctx) {
-    throw new Error('useGameInteraction must be used inside <GameInteractionProvider>');
-  }
-  return ctx;
-}
+export const [GameInteractionProvider, useGameInteraction] =
+  createRequiredContext<GameInteractionHandlers>('GameInteractionContext');

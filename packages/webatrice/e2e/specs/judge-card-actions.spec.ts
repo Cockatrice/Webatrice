@@ -8,7 +8,7 @@ import { randomSuffix } from '../fixtures/users';
 
 // End-to-end judge override against real Servatrice: a judge acting on another
 // player's card. The judge joins as a JUDGE SPECTATOR — webatrice gives judges no
-// deck-select (useGame `deckSelectOpen` excludes judges) and only spectators may
+// deck-select (useDeckSelectDialog's open predicate excludes judges) and only spectators may
 // join a running game, while the card context menu is gated on `canActOnCard`
 // (true for judges) rather than ownership. The judge sends the host's battlefield
 // card to the graveyard; the server must accept the wrapped Command_Judge and

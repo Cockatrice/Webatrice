@@ -1,40 +1,34 @@
+import { memo } from 'react';
 import Divider from '@mui/material/Divider';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 
+import { useGameDialogsContext } from '../../ui/GameDialogsContext';
+
 import './PlayerContextMenu.css';
 
-export interface PlayerContextMenuProps {
-  isOpen: boolean;
-  anchorPosition: { top: number; left: number } | null;
-  onClose: () => void;
-  onRequestCreateToken: () => void;
-  onRequestViewSideboard: () => void;
-}
+// Self-sources its open state (playerMenu) and the create-token / view-sideboard
+// openers from GameDialogsContext, so Game renders it propless.
+function PlayerContextMenu() {
+  const { playerMenu, closePlayerMenu, openCreateToken, openSideboard } = useGameDialogsContext();
+  const isOpen = playerMenu != null;
 
-function PlayerContextMenu({
-  isOpen,
-  anchorPosition,
-  onClose,
-  onRequestCreateToken,
-  onRequestViewSideboard,
-}: PlayerContextMenuProps) {
   const handleCreateToken = () => {
-    onRequestCreateToken();
-    onClose();
+    openCreateToken();
+    closePlayerMenu();
   };
 
   const handleViewSideboard = () => {
-    onRequestViewSideboard();
-    onClose();
+    openSideboard();
+    closePlayerMenu();
   };
 
   return (
     <Menu
       open={isOpen}
-      onClose={onClose}
+      onClose={closePlayerMenu}
       anchorReference="anchorPosition"
-      anchorPosition={anchorPosition ?? undefined}
+      anchorPosition={playerMenu ?? undefined}
       data-testid="player-context-menu"
       className="player-context-menu"
     >
@@ -45,4 +39,4 @@ function PlayerContextMenu({
   );
 }
 
-export default PlayerContextMenu;
+export default memo(PlayerContextMenu);

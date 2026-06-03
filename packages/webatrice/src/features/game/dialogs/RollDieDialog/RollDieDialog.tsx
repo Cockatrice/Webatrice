@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { styled } from '@mui/material/styles';
 import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
@@ -6,6 +7,7 @@ import DialogTitle from '@mui/material/DialogTitle';
 import Button from '@mui/material/Button';
 import TextField from '@mui/material/TextField';
 
+import { useGameDialogsContext } from '../../components/ui/GameDialogsContext';
 import { useRollDieDialog } from './useRollDieDialog';
 
 import './RollDieDialog.css';
@@ -27,29 +29,24 @@ const StyledDialog = styled(Dialog)(({ theme }) => ({
 export const DEFAULT_DIE_SIDES = 6;
 export const DEFAULT_DIE_COUNT = 1;
 
-export interface RollDieDialogProps {
-  isOpen: boolean;
-  lastSides?: number;
-  lastCount?: number;
-  onSubmit: (args: { sides: number; count: number }) => void;
-  onCancel: () => void;
-}
-
-function RollDieDialog({
-  isOpen,
-  lastSides = DEFAULT_DIE_SIDES,
-  lastCount = DEFAULT_DIE_COUNT,
-  onSubmit,
-  onCancel,
-}: RollDieDialogProps) {
+// Self-sources its open state, the seeded last-roll values, and the submit /
+// cancel handlers from GameDialogsContext, so Game renders it propless.
+function RollDieDialog() {
+  const { rollDieOpen, lastDieSides, lastDieCount, handleRollDieSubmit, closeRollDie } =
+    useGameDialogsContext();
   const { sides, count, error, handleSidesChange, handleCountChange, handleSubmit } =
-    useRollDieDialog({ isOpen, lastSides, lastCount, onSubmit });
+    useRollDieDialog({
+      isOpen: rollDieOpen,
+      lastSides: lastDieSides,
+      lastCount: lastDieCount,
+      onSubmit: handleRollDieSubmit,
+    });
 
   return (
     <StyledDialog
       className={'RollDieDialog ' + classes.root}
-      open={isOpen}
-      onClose={onCancel}
+      open={rollDieOpen}
+      onClose={closeRollDie}
       maxWidth={false}
     >
       <DialogTitle className="dialog-title">
@@ -85,7 +82,7 @@ function RollDieDialog({
           />
         </DialogContent>
         <DialogActions>
-          <Button type="button" onClick={onCancel}>Cancel</Button>
+          <Button type="button" onClick={closeRollDie}>Cancel</Button>
           <Button type="submit" variant="contained" color="primary">Roll</Button>
         </DialogActions>
       </form>
@@ -93,4 +90,4 @@ function RollDieDialog({
   );
 }
 
-export default RollDieDialog;
+export default memo(RollDieDialog);

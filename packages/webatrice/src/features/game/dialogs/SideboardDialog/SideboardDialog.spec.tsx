@@ -1,27 +1,65 @@
-import { screen, fireEvent, within } from '@testing-library/react';
-import { Enriched } from '@cockatrice/datatrice';
+import { act, screen, fireEvent, within } from '@testing-library/react';
+import { Enriched, games } from '@cockatrice/datatrice';
+import {
+  makeCard,
+  makeGameEntry,
+  makePlayerEntry,
+  makePlayerProperties,
+  makeZoneEntry,
+} from '@cockatrice/datatrice/testing';
 import { renderWithProviders } from '../../../../__test-utils__';
+import type { GameDialogs } from '../../hooks/useGameDialogs';
 import SideboardDialog, { applyMoves } from './SideboardDialog';
 
-const DEFAULT_PROPS = {
-  isOpen: true,
-  playerName: 'P1',
-  deckCards: [
-    { id: 1, name: 'Island' },
-    { id: 2, name: 'Mountain' },
-  ],
-  sideboardCards: [
-    { id: 10, name: 'Counterspell' },
-  ],
-  isLocked: false,
-  onSubmit: () => {},
-  onCancel: () => {},
-  onToggleLock: () => {},
-};
+const DECK_CARDS = [
+  makeCard({ id: 1, name: 'Island' }),
+  makeCard({ id: 2, name: 'Mountain' }),
+];
+const SIDEBOARD_CARDS = [makeCard({ id: 10, name: 'Counterspell' })];
+
+function makeLocalPlayer(opts: { sideboardLocked?: boolean; sideboard?: ReturnType<typeof makeCard>[] } = {}) {
+  return makePlayerEntry({
+    properties: makePlayerProperties({
+      playerId: 1,
+      sideboardLocked: opts.sideboardLocked ?? false,
+      userInfo: { name: 'P1' },
+    }),
+    zones: {
+      deck: makeZoneEntry({ name: Enriched.ZoneName.DECK, cards: DECK_CARDS }),
+      sb: makeZoneEntry({ name: Enriched.ZoneName.SIDEBOARD, cards: opts.sideboard ?? SIDEBOARD_CARDS }),
+    },
+  });
+}
+
+// SideboardDialog self-sources: open state + submit/cancel/lock handlers from
+// GameDialogsContext; player name, deck/sideboard cards, and lock flag from the
+// local player in the store. sideboardOpen=true = open.
+function render(
+  opts: {
+    dialogs?: Partial<GameDialogs>;
+    sideboardLocked?: boolean;
+    sideboard?: ReturnType<typeof makeCard>[];
+  } = {},
+) {
+  const preloadedState = {
+    games: {
+      games: {
+        1: makeGameEntry({
+          localPlayerId: 1,
+          players: { 1: makeLocalPlayer(opts) },
+        }),
+      },
+    },
+  };
+  return renderWithProviders(<SideboardDialog />, {
+    preloadedState,
+    gameDialogs: { sideboardOpen: true, ...opts.dialogs },
+  });
+}
 
 describe('SideboardDialog', () => {
   it('renders deck and sideboard columns with counts', () => {
-    renderWithProviders(<SideboardDialog {...DEFAULT_PROPS} />);
+    render();
 
     expect(screen.getByText(/main deck \(2\)/i)).toBeInTheDocument();
     expect(screen.getByText(/^sideboard \(1\)/i)).toBeInTheDocument();
@@ -30,10 +68,8 @@ describe('SideboardDialog', () => {
   });
 
   it('moves a card from deck to sideboard when → is clicked (local draft only)', () => {
-    const onSubmit = vi.fn();
-    renderWithProviders(
-      <SideboardDialog {...DEFAULT_PROPS} onSubmit={onSubmit} />,
-    );
+    const handleSideboardSubmit = vi.fn();
+    render({ dialogs: { handleSideboardSubmit } });
 
     fireEvent.click(screen.getByRole('button', { name: /move Island to sideboard/i }));
 
@@ -41,27 +77,25 @@ describe('SideboardDialog', () => {
     expect(screen.getByText(/main deck \(1\)/i)).toBeInTheDocument();
     expect(screen.getByText(/^sideboard \(2\)/i)).toBeInTheDocument();
     // No dispatch yet — Apply hasn't been clicked.
-    expect(onSubmit).not.toHaveBeenCalled();
+    expect(handleSideboardSubmit).not.toHaveBeenCalled();
   });
 
   it('submits the accumulated draft as a moveList when Apply is clicked', () => {
-    const onSubmit = vi.fn();
-    renderWithProviders(
-      <SideboardDialog {...DEFAULT_PROPS} onSubmit={onSubmit} />,
-    );
+    const handleSideboardSubmit = vi.fn();
+    render({ dialogs: { handleSideboardSubmit } });
 
     fireEvent.click(screen.getByRole('button', { name: /move Island to sideboard/i }));
     fireEvent.click(screen.getByRole('button', { name: /move Counterspell to main deck/i }));
     fireEvent.click(screen.getByRole('button', { name: /apply plan/i }));
 
-    expect(onSubmit).toHaveBeenCalledWith([
+    expect(handleSideboardSubmit).toHaveBeenCalledWith([
       { cardName: 'Island', startZone: Enriched.ZoneName.DECK, targetZone: Enriched.ZoneName.SIDEBOARD },
       { cardName: 'Counterspell', startZone: Enriched.ZoneName.SIDEBOARD, targetZone: Enriched.ZoneName.DECK },
     ]);
   });
 
-  it('disables move buttons and Apply when isLocked is true', () => {
-    renderWithProviders(<SideboardDialog {...DEFAULT_PROPS} isLocked />);
+  it('disables move buttons and Apply when the sideboard is locked', () => {
+    render({ sideboardLocked: true });
 
     expect(screen.getByRole('button', { name: /move Island to sideboard/i })).toBeDisabled();
     expect(screen.getByRole('button', { name: /move Counterspell to main deck/i })).toBeDisabled();
@@ -69,26 +103,29 @@ describe('SideboardDialog', () => {
     expect(screen.getByRole('note')).toHaveTextContent(/sideboard is locked/i);
   });
 
-  it('dispatches onToggleLock when the Lock checkbox changes', () => {
-    const onToggleLock = vi.fn();
-    renderWithProviders(
-      <SideboardDialog {...DEFAULT_PROPS} onToggleLock={onToggleLock} />,
-    );
+  it('dispatches the lock handler when the Lock checkbox changes', () => {
+    const handleToggleSideboardLock = vi.fn();
+    render({ dialogs: { handleToggleSideboardLock } });
 
     fireEvent.click(screen.getByLabelText('Lock sideboard'));
-    expect(onToggleLock).toHaveBeenCalledWith(true);
+    expect(handleToggleSideboardLock).toHaveBeenCalledWith(true);
   });
 
   it('resets the draft when the sideboard is locked mid-edit (desktop resetSideboardPlan parity)', () => {
-    const onSubmit = vi.fn();
-    const { rerender } = renderWithProviders(
-      <SideboardDialog {...DEFAULT_PROPS} onSubmit={onSubmit} />,
-    );
+    const { store } = render();
 
     fireEvent.click(screen.getByRole('button', { name: /move Island to sideboard/i }));
     expect(screen.getByRole('button', { name: /apply plan \(1\)/i })).toBeInTheDocument();
 
-    rerender(<SideboardDialog {...DEFAULT_PROPS} isLocked onSubmit={onSubmit} />);
+    // Server locks the sideboard mid-edit; the lock flag flows through the store.
+    act(() => {
+      store.dispatch(
+        games.Actions.gamePlayersReplaced({
+          gameId: 1,
+          players: { 1: makeLocalPlayer({ sideboardLocked: true }) },
+        }),
+      );
+    });
 
     // Draft cleared — Apply label no longer carries a count and the lists
     // reflect the original wire snapshot.
@@ -97,22 +134,18 @@ describe('SideboardDialog', () => {
   });
 
   it('renders (empty) when a column has no cards', () => {
-    renderWithProviders(
-      <SideboardDialog {...DEFAULT_PROPS} sideboardCards={[]} />,
-    );
+    render({ sideboard: [] });
 
     const sbList = screen.getByTestId('sideboard-dialog-sb');
     expect(within(sbList).getByText(/\(empty\)/)).toBeInTheDocument();
   });
 
-  it('fires onCancel when the Cancel button is clicked', () => {
-    const onCancel = vi.fn();
-    renderWithProviders(
-      <SideboardDialog {...DEFAULT_PROPS} onCancel={onCancel} />,
-    );
+  it('fires the close handler when the Cancel button is clicked', () => {
+    const closeSideboard = vi.fn();
+    render({ dialogs: { closeSideboard } });
 
     fireEvent.click(screen.getByRole('button', { name: /cancel/i }));
-    expect(onCancel).toHaveBeenCalled();
+    expect(closeSideboard).toHaveBeenCalled();
   });
 });
 

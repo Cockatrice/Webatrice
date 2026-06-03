@@ -15,7 +15,7 @@ export interface HandContextMenu {
 }
 
 export interface UseHandContextMenuArgs {
-  gameId: number;
+  gameId: number | undefined;
   handSize: number;
   onClose: () => void;
   onRequestChooseMulligan: () => void;
@@ -42,7 +42,7 @@ export function useHandContextMenu({
   const webClient = useWebClient();
 
   const handleChoose = () => {
-    if (gameId <= 0) {
+    if (gameId == null) {
       return;
     }
     onRequestChooseMulligan();
@@ -50,7 +50,7 @@ export function useHandContextMenu({
   };
 
   const handleSameSize = () => {
-    if (gameId <= 0) {
+    if (gameId == null) {
       return;
     }
     webClient.request.game.mulligan(gameId, { number: handSize });
@@ -58,7 +58,7 @@ export function useHandContextMenu({
   };
 
   const handleMinusOne = () => {
-    if (gameId <= 0) {
+    if (gameId == null) {
       return;
     }
     // Desktop's actMulliganMinusOne floors at 1 (see
@@ -70,7 +70,7 @@ export function useHandContextMenu({
   };
 
   const handleRevealHand = () => {
-    if (gameId <= 0) {
+    if (gameId == null) {
       return;
     }
     onRequestRevealHand();
@@ -78,7 +78,7 @@ export function useHandContextMenu({
   };
 
   const handleRevealRandom = () => {
-    if (gameId <= 0) {
+    if (gameId == null) {
       return;
     }
     onRequestRevealRandom();
@@ -86,7 +86,7 @@ export function useHandContextMenu({
   };
 
   const handleViewHand = () => {
-    if (gameId <= 0) {
+    if (gameId == null) {
       return;
     }
     onRequestViewHand();
@@ -94,7 +94,7 @@ export function useHandContextMenu({
   };
 
   const handleSortBy = (key: HandSortKey) => {
-    if (gameId <= 0) {
+    if (gameId == null) {
       return;
     }
     onRequestSortHandBy(key);
@@ -102,7 +102,7 @@ export function useHandContextMenu({
   };
 
   const handleMoveToDeck = (top: boolean) => {
-    if (gameId <= 0) {
+    if (gameId == null) {
       return;
     }
     onRequestMoveHandToDeck(top);
@@ -110,7 +110,7 @@ export function useHandContextMenu({
   };
 
   const handleMoveToZone = (zone: string) => {
-    if (gameId <= 0) {
+    if (gameId == null) {
       return;
     }
     onRequestMoveHandToZone(zone);

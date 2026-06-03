@@ -35,7 +35,7 @@ function stateWithStack(cards: ReturnType<typeof makeCard>[] = []) {
 
 describe('StackColumn', () => {
   it('renders an empty cards container when the stack is empty', () => {
-    renderWithProviders(<StackColumn gameId={1} playerId={1} />, {
+    renderWithProviders(<StackColumn />, {
       preloadedState: stateWithStack([]),
     });
 
@@ -44,7 +44,7 @@ describe('StackColumn', () => {
   });
 
   it('renders a CardSlot per card on the stack', () => {
-    renderWithProviders(<StackColumn gameId={1} playerId={1} />, {
+    renderWithProviders(<StackColumn />, {
       preloadedState: stateWithStack([
         makeCard({ id: 1, name: 'Lightning Bolt' }),
         makeCard({ id: 2, name: 'Counterspell' }),
@@ -56,7 +56,7 @@ describe('StackColumn', () => {
 
   it('fires onCardContextMenu when right-clicking a stack card', () => {
     const onCardContextMenu = vi.fn();
-    renderWithProviders(<StackColumn gameId={1} playerId={1} />, {
+    renderWithProviders(<StackColumn />, {
       preloadedState: stateWithStack([makeCard({ id: 7, name: 'Lightning Bolt' })]),
       gameInteraction: { onCardContextMenu },
     });

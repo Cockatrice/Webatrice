@@ -15,12 +15,15 @@ function buildGame({
   judge = false,
   omniscient = false,
   playerSpec,
+  seatOrder,
 }: {
   localPlayerId: number;
   spectator?: boolean;
   judge?: boolean;
   omniscient?: boolean;
   playerSpec: Array<{ id: number; name?: string; spectator?: boolean; conceded?: boolean }>;
+  // Explicit seat order; defaults (via makeGameEntry) to the players' key order.
+  seatOrder?: number[];
 }) {
   const players: Record<number, ReturnType<typeof makePlayerEntry>> = {};
   for (const p of playerSpec) {
@@ -38,6 +41,7 @@ function buildGame({
     spectator,
     judge,
     players,
+    ...(seatOrder ? { seatOrder } : {}),
     info: makeGameInfo({ spectatorsOmniscient: omniscient }),
   });
 }
@@ -53,7 +57,6 @@ function cellById(cells: BoardCell[]): Map<number, BoardCell> {
 describe('useGameBoardLayout', () => {
   it('returns empty defaults when no game is provided', () => {
     const { result } = renderHook(() => useGameBoardLayout(undefined));
-    expect(result.current.players).toEqual([]);
     expect(result.current.cells).toEqual([]);
     expect(result.current.columns).toBe(1);
     expect(result.current.rows).toBe(1);
@@ -131,6 +134,14 @@ describe('useGameBoardLayout', () => {
     }
   });
 
+  it('seats in store seatOrder, not numeric-key order', () => {
+    // seatOrder puts 3 before 2; with the local player 1 anchored, the ring
+    // follows seatOrder ([1,3,2]) — numeric order would give [1,2,3].
+    const game = buildGame({ localPlayerId: 1, playerSpec: seats([1, 2, 3]), seatOrder: [1, 3, 2] });
+    const { result } = renderHook(() => useGameBoardLayout(game));
+    expect(result.current.cells.map((c) => c.playerId)).toEqual([1, 3, 2]);
+  });
+
   it('rotates the ring so anchoring keeps seating order relative to the local player', () => {
     // Join order 1,2,3,4; local player 2 -> ring [2,3,4,1]. P1 wraps past P4
     // (it comes after P4, not before P3), proving rotation rather than reshuffle.
@@ -151,8 +162,8 @@ describe('useGameBoardLayout', () => {
       ],
     });
     const { result } = renderHook(() => useGameBoardLayout(game));
-    // The local spectator is excluded from the seated-player list.
-    expect(result.current.players.map((p) => p.playerId)).toEqual([0, 1]);
+    // The local spectator is excluded from the seated cells.
+    expect(result.current.cells.map((c) => c.playerId).sort((a, b) => a - b)).toEqual([0, 1]);
     expect(result.current.cells.every((c) => !c.isLocal)).toBe(true);
   });
 
@@ -165,16 +176,8 @@ describe('useGameBoardLayout', () => {
       ],
     });
     const { result } = renderHook(() => useGameBoardLayout(game));
-    expect(result.current.players.map((p) => p.playerId)).toEqual([1]);
     expect(result.current.cells).toHaveLength(1);
     expect(result.current.cells[0]).toMatchObject({ playerId: 1, isLocal: true });
-  });
-
-  it('falls back to a playerId-based name when userInfo is missing', () => {
-    const game = buildGame({ localPlayerId: 0, playerSpec: [{ id: 0 }, { id: 1 }] });
-    const { result } = renderHook(() => useGameBoardLayout(game));
-    expect(result.current.players[0].name).toBe('p0');
-    expect(result.current.players[1].name).toBe('p1');
   });
 
   describe('hand mode', () => {

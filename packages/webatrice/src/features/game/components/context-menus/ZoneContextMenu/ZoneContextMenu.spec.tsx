@@ -6,31 +6,8 @@ import {
   makePlayerEntry,
   makeZoneEntry,
 } from '@cockatrice/datatrice/testing';
+import type { GameDialogs } from '../../../hooks/useGameDialogs';
 import ZoneContextMenu from './ZoneContextMenu';
-
-const defaultProps = {
-  isOpen: true,
-  anchorPosition: { top: 100, left: 100 },
-  gameId: 1,
-  playerId: 1,
-  zoneName: Enriched.ZoneName.DECK,
-  onClose: () => {},
-  onRequestDrawN: () => {},
-  onRequestDumpN: () => {},
-  onRequestRevealTopN: () => {},
-  onRequestRevealZone: () => {},
-  onRequestUndoDraw: () => {},
-  onRequestDrawBottom: () => {},
-  onRequestMoveTopCardToZone: () => {},
-  onRequestPlayTop: () => {},
-  onRequestMoveTopNToZone: () => {},
-  onRequestShuffleTopN: () => {},
-  onRequestShuffleBottomN: () => {},
-  onRequestViewZone: () => {},
-  onRequestMoveAllFromZoneToDeck: () => {},
-  onRequestMoveAllFromZoneTo: () => {},
-  onRequestRevealRandomFromZone: () => {},
-};
 
 function stateWithDeckZone(overrides: Partial<ReturnType<typeof makeZoneEntry>> = {}) {
   const player = makePlayerEntry({
@@ -49,27 +26,40 @@ function stateWithDeckZone(overrides: Partial<ReturnType<typeof makeZoneEntry>> 
   });
 }
 
+// ZoneContextMenu self-sources: zoneMenu state (which seat/zone, open) + the
+// parent-owned action handlers come from GameDialogsContext.
+function renderMenu(opts: {
+  playerId?: number | null;
+  zoneName?: string;
+  zoneOverrides?: Partial<ReturnType<typeof makeZoneEntry>>;
+  dialogs?: Partial<GameDialogs>;
+  webClient?: ReturnType<typeof createMockWebClient>;
+} = {}) {
+  const playerId = opts.playerId === undefined ? 1 : opts.playerId;
+  const zoneName = opts.zoneName ?? Enriched.ZoneName.DECK;
+  const zoneMenu =
+    playerId != null ? { playerId, zoneName, anchorPosition: { top: 100, left: 100 } } : null;
+  return renderWithProviders(<ZoneContextMenu />, {
+    preloadedState: stateWithDeckZone(opts.zoneOverrides),
+    webClient: opts.webClient,
+    gameDialogs: { zoneMenu, ...opts.dialogs },
+  });
+}
+
 describe('ZoneContextMenu', () => {
-  it('does not render when playerId is null', () => {
-    renderWithProviders(
-      <ZoneContextMenu {...defaultProps} playerId={null} />,
-    );
+  it('does not render when there is no open zone menu', () => {
+    renderMenu({ playerId: null });
     expect(screen.queryByRole('menu')).not.toBeInTheDocument();
   });
 
   it('does not render for unsupported zones (e.g. hand, stack)', () => {
-    renderWithProviders(
-      <ZoneContextMenu {...defaultProps} zoneName={Enriched.ZoneName.HAND} />,
-      { preloadedState: stateWithDeckZone() },
-    );
+    renderMenu({ zoneName: Enriched.ZoneName.HAND });
     expect(screen.queryByRole('menu')).not.toBeInTheDocument();
   });
 
   describe('Deck zone', () => {
     it('renders every deck action when open', () => {
-      renderWithProviders(<ZoneContextMenu {...defaultProps} />, {
-        preloadedState: stateWithDeckZone(),
-      });
+      renderMenu();
 
       expect(screen.getByText('Draw a card')).toBeInTheDocument();
       expect(screen.getByText('Draw N cards…')).toBeInTheDocument();
@@ -83,24 +73,18 @@ describe('ZoneContextMenu', () => {
 
     it('dispatches drawCards(1) on "Draw a card"', () => {
       const webClient = createMockWebClient();
-      const onClose = vi.fn();
-      renderWithProviders(
-        <ZoneContextMenu {...defaultProps} onClose={onClose} />,
-        { webClient, preloadedState: stateWithDeckZone() },
-      );
+      const closeZoneMenu = vi.fn();
+      renderMenu({ webClient, dialogs: { closeZoneMenu } });
 
       fireEvent.click(screen.getByText('Draw a card'));
 
       expect(webClient.request.game.drawCards).toHaveBeenCalledWith(1, { number: 1 });
-      expect(onClose).toHaveBeenCalled();
+      expect(closeZoneMenu).toHaveBeenCalled();
     });
 
     it('dispatches shuffle on the deck zone', () => {
       const webClient = createMockWebClient();
-      renderWithProviders(<ZoneContextMenu {...defaultProps} />, {
-        webClient,
-        preloadedState: stateWithDeckZone(),
-      });
+      renderMenu({ webClient });
 
       fireEvent.click(screen.getByText('Shuffle'));
 
@@ -113,10 +97,7 @@ describe('ZoneContextMenu', () => {
 
     it('dispatches revealCards(topCards=1, playerId=-1) on "Reveal top card to all"', () => {
       const webClient = createMockWebClient();
-      renderWithProviders(<ZoneContextMenu {...defaultProps} />, {
-        webClient,
-        preloadedState: stateWithDeckZone(),
-      });
+      renderMenu({ webClient });
 
       fireEvent.click(screen.getByText('Reveal top card to all'));
 
@@ -128,35 +109,24 @@ describe('ZoneContextMenu', () => {
     });
 
     it('defers prompt-backed items to parent callbacks', () => {
-      const onRequestDrawN = vi.fn();
-      const onRequestDumpN = vi.fn();
-      const onRequestRevealTopN = vi.fn();
-      renderWithProviders(
-        <ZoneContextMenu
-          {...defaultProps}
-          onRequestDrawN={onRequestDrawN}
-          onRequestDumpN={onRequestDumpN}
-          onRequestRevealTopN={onRequestRevealTopN}
-        />,
-        { preloadedState: stateWithDeckZone() },
-      );
+      const handleRequestDrawN = vi.fn();
+      const handleRequestDumpN = vi.fn();
+      const handleRequestRevealTopN = vi.fn();
+      renderMenu({ dialogs: { handleRequestDrawN, handleRequestDumpN, handleRequestRevealTopN } });
 
       fireEvent.click(screen.getByText('Draw N cards…'));
-      expect(onRequestDrawN).toHaveBeenCalled();
+      expect(handleRequestDrawN).toHaveBeenCalled();
 
       fireEvent.click(screen.getByText('Dump top N…'));
-      expect(onRequestDumpN).toHaveBeenCalled();
+      expect(handleRequestDumpN).toHaveBeenCalled();
 
       fireEvent.click(screen.getByText('Reveal top N to…'));
-      expect(onRequestRevealTopN).toHaveBeenCalled();
+      expect(handleRequestRevealTopN).toHaveBeenCalled();
     });
 
     it('dispatches changeZoneProperties with the flipped alwaysRevealTopCard', () => {
       const webClient = createMockWebClient();
-      renderWithProviders(<ZoneContextMenu {...defaultProps} />, {
-        webClient,
-        preloadedState: stateWithDeckZone({ alwaysRevealTopCard: false }),
-      });
+      renderMenu({ webClient, zoneOverrides: { alwaysRevealTopCard: false } });
 
       fireEvent.click(screen.getByText('Always reveal top card'));
 
@@ -168,10 +138,7 @@ describe('ZoneContextMenu', () => {
 
     it('dispatches changeZoneProperties with the flipped alwaysLookAtTopCard', () => {
       const webClient = createMockWebClient();
-      renderWithProviders(<ZoneContextMenu {...defaultProps} />, {
-        webClient,
-        preloadedState: stateWithDeckZone({ alwaysLookAtTopCard: true }),
-      });
+      renderMenu({ webClient, zoneOverrides: { alwaysLookAtTopCard: true } });
 
       fireEvent.click(screen.getByText('Always look at top card'));
 
@@ -184,35 +151,21 @@ describe('ZoneContextMenu', () => {
 
   describe('Graveyard / Exile zones', () => {
     it('offers "Reveal graveyard to…" on the grave zone', () => {
-      const onRequestRevealZone = vi.fn();
-      renderWithProviders(
-        <ZoneContextMenu
-          {...defaultProps}
-          zoneName={Enriched.ZoneName.GRAVE}
-          onRequestRevealZone={onRequestRevealZone}
-        />,
-        { preloadedState: stateWithDeckZone() },
-      );
+      const handleRequestRevealZone = vi.fn();
+      renderMenu({ zoneName: Enriched.ZoneName.GRAVE, dialogs: { handleRequestRevealZone } });
 
       fireEvent.click(screen.getByText('Reveal graveyard to…'));
 
-      expect(onRequestRevealZone).toHaveBeenCalled();
+      expect(handleRequestRevealZone).toHaveBeenCalled();
     });
 
     it('offers "Reveal exile to…" on the exile zone', () => {
-      const onRequestRevealZone = vi.fn();
-      renderWithProviders(
-        <ZoneContextMenu
-          {...defaultProps}
-          zoneName={Enriched.ZoneName.EXILE}
-          onRequestRevealZone={onRequestRevealZone}
-        />,
-        { preloadedState: stateWithDeckZone() },
-      );
+      const handleRequestRevealZone = vi.fn();
+      renderMenu({ zoneName: Enriched.ZoneName.EXILE, dialogs: { handleRequestRevealZone } });
 
       fireEvent.click(screen.getByText('Reveal exile to…'));
 
-      expect(onRequestRevealZone).toHaveBeenCalled();
+      expect(handleRequestRevealZone).toHaveBeenCalled();
     });
   });
 });

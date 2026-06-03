@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { styled } from '@mui/material/styles';
 import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
@@ -8,8 +9,10 @@ import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
 import CloseIcon from '@mui/icons-material/Close';
 
-import { games } from '@cockatrice/datatrice';
-import { useAppSelector } from '@app/store';
+import { useGameId } from '../../components/ui/GameIdContext';
+import { useGameDialogsContext } from '../../components/ui/GameDialogsContext';
+import { useCurrentGame } from '../../hooks/useCurrentGame';
+import { playerName } from '../../utils/playerName';
 
 import './GameInfoDialog.css';
 
@@ -27,12 +30,6 @@ const StyledDialog = styled(Dialog)(({ theme }) => ({
   },
 }));
 
-export interface GameInfoDialogProps {
-  isOpen: boolean;
-  gameId: number | undefined;
-  onClose: () => void;
-}
-
 function formatElapsed(totalSeconds: number): string {
   const s = Math.max(0, Math.floor(totalSeconds));
   const hh = String(Math.floor(s / 3600)).padStart(2, '0');
@@ -41,10 +38,12 @@ function formatElapsed(totalSeconds: number): string {
   return `${hh}:${mm}:${ss}`;
 }
 
-function GameInfoDialog({ isOpen, gameId, onClose }: GameInfoDialogProps) {
-  const game = useAppSelector((state) =>
-    gameId != null ? games.Selectors.getGame(state, gameId) : undefined,
-  );
+// Self-sources its open state + close handler from GameDialogsContext and the
+// active gameId from GameIdContext, so Game renders it propless.
+function GameInfoDialog() {
+  const { gameInfoOpen: isOpen, closeGameInfo: onClose } = useGameDialogsContext();
+  const gameId = useGameId();
+  const { game } = useCurrentGame(gameId);
 
   if (!game) {
     return null;
@@ -82,17 +81,17 @@ function GameInfoDialog({ isOpen, gameId, onClose }: GameInfoDialogProps) {
           <dt>Elapsed</dt>
           <dd>{formatElapsed(game.secondsElapsed)}</dd>
           <dt>Host</dt>
-          <dd>{
-            players.find((p) => p.properties.playerId === game.hostId)
-              ?.properties.userInfo?.name ?? `p${game.hostId}`
-          }</dd>
+          <dd>{(() => {
+            const host = players.find((p) => p.properties.playerId === game.hostId);
+            return host ? playerName(host) : `p${game.hostId}`;
+          })()}</dd>
         </dl>
         <hr />
         <Typography variant="h3" className="game-info-dialog__section">Players</Typography>
         <ul className="game-info-dialog__players">
           {players.map((p) => {
             const pid = p.properties.playerId;
-            const pname = p.properties.userInfo?.name ?? `p${pid}`;
+            const pname = playerName(p);
             const tags: string[] = [];
             if (pid === game.hostId) {
               tags.push('host');
@@ -128,4 +127,4 @@ function GameInfoDialog({ isOpen, gameId, onClose }: GameInfoDialogProps) {
   );
 }
 
-export default GameInfoDialog;
+export default memo(GameInfoDialog);

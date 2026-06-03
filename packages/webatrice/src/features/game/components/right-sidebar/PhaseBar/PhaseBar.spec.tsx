@@ -41,7 +41,7 @@ function stateWith(opts: {
 
 describe('PhaseBar', () => {
   it('renders 11 phase buttons plus PASS', () => {
-    renderWithProviders(<PhaseBar gameId={1} />, {
+    renderWithProviders(<PhaseBar />, {
       preloadedState: stateWith(),
     });
 
@@ -51,7 +51,7 @@ describe('PhaseBar', () => {
   });
 
   it('renders phases in desktop-Cockatrice order', () => {
-    renderWithProviders(<PhaseBar gameId={1} />, {
+    renderWithProviders(<PhaseBar />, {
       preloadedState: stateWith(),
     });
 
@@ -65,7 +65,7 @@ describe('PhaseBar', () => {
   });
 
   it('applies the active modifier only to the button matching activePhase', () => {
-    renderWithProviders(<PhaseBar gameId={1} />, {
+    renderWithProviders(<PhaseBar />, {
       preloadedState: stateWith({ phase: Phase.DeclareAttackers }),
     });
 
@@ -75,14 +75,15 @@ describe('PhaseBar', () => {
   });
 
   it('renders no active button when gameId is undefined', () => {
-    renderWithProviders(<PhaseBar gameId={undefined} />, {
+    renderWithProviders(<PhaseBar />, {
       preloadedState: makeStoreState({}),
+      gameId: undefined,
     });
     expect(document.querySelectorAll('.phase-bar__btn--active')).toHaveLength(0);
   });
 
   it('enables buttons when the local player is the active player and the game has started', () => {
-    renderWithProviders(<PhaseBar gameId={1} />, {
+    renderWithProviders(<PhaseBar />, {
       preloadedState: stateWith({ started: true }),
     });
 
@@ -91,7 +92,7 @@ describe('PhaseBar', () => {
   });
 
   it('disables every button when the game has not started', () => {
-    renderWithProviders(<PhaseBar gameId={1} />, {
+    renderWithProviders(<PhaseBar />, {
       preloadedState: stateWith({ started: false }),
     });
 
@@ -102,7 +103,7 @@ describe('PhaseBar', () => {
   it('disables phase buttons but keeps PASS TURN enabled for a non-active participant (matches Cockatrice server)', () => {
     // server_player.cpp::cmdNextTurn has no active-player check, so any
     // non-conceded participant may pass the turn from the PhaseBar.
-    renderWithProviders(<PhaseBar gameId={1} />, {
+    renderWithProviders(<PhaseBar />, {
       preloadedState: stateWith({
         localPlayerId: 1,
         activePlayerId: 2,
@@ -121,7 +122,7 @@ describe('PhaseBar', () => {
 
   it('dispatches nextTurn when PASS is clicked by a non-active participant', () => {
     const webClient = createMockWebClient();
-    renderWithProviders(<PhaseBar gameId={1} />, {
+    renderWithProviders(<PhaseBar />, {
       preloadedState: stateWith({ localPlayerId: 1, activePlayerId: 2 }),
       webClient,
     });
@@ -132,7 +133,7 @@ describe('PhaseBar', () => {
   });
 
   it('enables buttons for a judge regardless of active player (matches desktop)', () => {
-    renderWithProviders(<PhaseBar gameId={1} />, {
+    renderWithProviders(<PhaseBar />, {
       preloadedState: stateWith({
         localPlayerId: 1,
         activePlayerId: 2,
@@ -146,7 +147,7 @@ describe('PhaseBar', () => {
 
   it('dispatches setActivePhase when a phase button is clicked', () => {
     const webClient = createMockWebClient();
-    renderWithProviders(<PhaseBar gameId={1} />, {
+    renderWithProviders(<PhaseBar />, {
       preloadedState: stateWith(),
       webClient,
     });
@@ -160,7 +161,7 @@ describe('PhaseBar', () => {
 
   it('dispatches nextTurn when PASS is clicked', () => {
     const webClient = createMockWebClient();
-    renderWithProviders(<PhaseBar gameId={1} />, {
+    renderWithProviders(<PhaseBar />, {
       preloadedState: stateWith(),
       webClient,
     });
@@ -196,7 +197,7 @@ describe('PhaseBar', () => {
 
     it('double-click on UNTAP dispatches a single bulk setCardAttr with cardId=-1', () => {
       const webClient = createMockWebClient();
-      renderWithProviders(<PhaseBar gameId={1} />, {
+      renderWithProviders(<PhaseBar />, {
         preloadedState: stateWithTapped([
           makeCard({ id: 1, tapped: true }),
           makeCard({ id: 2, tapped: false }),
@@ -220,7 +221,7 @@ describe('PhaseBar', () => {
     // "is anything tapped?" check; the server is the source of truth.
     it('double-click on UNTAP still sends the bulk command even when no cards are tapped', () => {
       const webClient = createMockWebClient();
-      renderWithProviders(<PhaseBar gameId={1} />, {
+      renderWithProviders(<PhaseBar />, {
         preloadedState: stateWithTapped([makeCard({ id: 1, tapped: false })]),
         webClient,
       });
@@ -237,7 +238,7 @@ describe('PhaseBar', () => {
 
     it('double-click on DRAW dispatches drawCards({ number: 1 })', () => {
       const webClient = createMockWebClient();
-      renderWithProviders(<PhaseBar gameId={1} />, {
+      renderWithProviders(<PhaseBar />, {
         preloadedState: stateWith(),
         webClient,
       });
@@ -249,7 +250,7 @@ describe('PhaseBar', () => {
 
     it('double-click does nothing when the local player is not active', () => {
       const webClient = createMockWebClient();
-      renderWithProviders(<PhaseBar gameId={1} />, {
+      renderWithProviders(<PhaseBar />, {
         preloadedState: stateWith({ localPlayerId: 1, activePlayerId: 2 }),
         webClient,
       });
@@ -263,7 +264,7 @@ describe('PhaseBar', () => {
 
     it('double-click on other phases (UPKP, M1, etc.) does not fire any built-in', () => {
       const webClient = createMockWebClient();
-      renderWithProviders(<PhaseBar gameId={1} />, {
+      renderWithProviders(<PhaseBar />, {
         preloadedState: stateWith(),
         webClient,
       });

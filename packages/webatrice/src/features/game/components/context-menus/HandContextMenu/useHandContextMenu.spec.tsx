@@ -105,7 +105,7 @@ describe('useHandContextMenu', () => {
     expect(onRequestMoveHandToDeck).toHaveBeenCalledWith(true);
   });
 
-  it('no-ops every action when gameId is non-positive (no live game)', () => {
+  it('no-ops every action when gameId is absent (no live game)', () => {
     const {
       result,
       webClient,
@@ -113,7 +113,7 @@ describe('useHandContextMenu', () => {
       onRequestChooseMulligan,
       onRequestRevealHand,
       onRequestSortHandBy,
-    } = setup({ gameId: 0 });
+    } = setup({ gameId: undefined });
 
     act(() => {
       result.current.handleSameSize();

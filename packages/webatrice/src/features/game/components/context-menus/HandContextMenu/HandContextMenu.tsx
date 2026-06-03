@@ -1,43 +1,36 @@
+import { memo } from 'react';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import Divider from '@mui/material/Divider';
 
-import { Enriched } from '@cockatrice/datatrice';
+import { Enriched, games } from '@cockatrice/datatrice';
+import { useAppSelector } from '@app/store';
 import NestedMenuItem from '../CardContextMenu/NestedMenuItem';
+import { useGameDialogsContext } from '../../ui/GameDialogsContext';
+import { useGameId } from '../../ui/GameIdContext';
+import { useLocalIdentity } from '../../../hooks/useLocalIdentity';
 
 import { useHandContextMenu } from './useHandContextMenu';
 
 import './HandContextMenu.css';
 
-export interface HandContextMenuProps {
-  isOpen: boolean;
-  anchorPosition: { top: number; left: number } | null;
-  gameId: number;
-  handSize: number;
-  onClose: () => void;
-  onRequestChooseMulligan: () => void;
-  onRequestRevealHand: () => void;
-  onRequestRevealRandom: () => void;
-  onRequestViewHand: () => void;
-  onRequestSortHandBy: (key: 'name' | 'maintype' | 'manacost') => void;
-  onRequestMoveHandToDeck: (top: boolean) => void;
-  onRequestMoveHandToZone: (zone: string) => void;
-}
+function HandContextMenu() {
+  const dialogs = useGameDialogsContext();
+  const gameId = useGameId();
+  const { localPlayerId } = useLocalIdentity();
+  const handMenu = dialogs.handMenu;
+  const isOpen = handMenu != null;
+  const anchorPosition = handMenu;
 
-function HandContextMenu({
-  isOpen,
-  anchorPosition,
-  gameId,
-  handSize,
-  onClose,
-  onRequestChooseMulligan,
-  onRequestRevealHand,
-  onRequestRevealRandom,
-  onRequestViewHand,
-  onRequestSortHandBy,
-  onRequestMoveHandToDeck,
-  onRequestMoveHandToZone,
-}: HandContextMenuProps) {
+  // Hand size for the mulligan affordances, derived from the local player's HAND
+  // zone (was computed in Game and passed as a prop).
+  const handZone = useAppSelector((state) =>
+    gameId != null && localPlayerId != null
+      ? games.Selectors.getZone(state, gameId, localPlayerId, Enriched.ZoneName.HAND)
+      : undefined,
+  );
+  const handSize = handZone?.cardCount ?? 0;
+
   const {
     handleChoose,
     handleSameSize,
@@ -51,20 +44,20 @@ function HandContextMenu({
   } = useHandContextMenu({
     gameId,
     handSize,
-    onClose,
-    onRequestChooseMulligan,
-    onRequestRevealHand,
-    onRequestRevealRandom,
-    onRequestViewHand,
-    onRequestSortHandBy,
-    onRequestMoveHandToDeck,
-    onRequestMoveHandToZone,
+    onClose: dialogs.closeHandMenu,
+    onRequestChooseMulligan: dialogs.handleRequestChooseMulligan,
+    onRequestRevealHand: dialogs.handleRequestRevealHand,
+    onRequestRevealRandom: dialogs.handleRequestRevealRandom,
+    onRequestViewHand: dialogs.handleRequestViewHand,
+    onRequestSortHandBy: dialogs.handleRequestSortHandBy,
+    onRequestMoveHandToDeck: dialogs.handleRequestMoveHandToDeck,
+    onRequestMoveHandToZone: dialogs.handleRequestMoveHandToZone,
   });
 
   return (
     <Menu
       open={isOpen}
-      onClose={onClose}
+      onClose={dialogs.closeHandMenu}
       anchorReference="anchorPosition"
       anchorPosition={anchorPosition ?? undefined}
       data-testid="hand-context-menu"
@@ -102,4 +95,4 @@ function HandContextMenu({
   );
 }
 
-export default HandContextMenu;
+export default memo(HandContextMenu);

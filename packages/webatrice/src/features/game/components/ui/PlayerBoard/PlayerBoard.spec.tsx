@@ -47,7 +47,7 @@ function buildState() {
 
 describe('PlayerBoard', () => {
   it('renders the info panel, stack column, and battlefield', () => {
-    renderWithProviders(<PlayerBoard gameId={1} playerId={1} />, {
+    renderWithProviders(<PlayerBoard />, {
       preloadedState: buildState(),
     });
 
@@ -58,7 +58,7 @@ describe('PlayerBoard', () => {
 
   it('passes mirrored=false by default so the battlefield uses natural row order', () => {
     const { container } = renderWithProviders(
-      <PlayerBoard gameId={1} playerId={1} />,
+      <PlayerBoard />,
       { preloadedState: buildState() },
     );
 
@@ -70,8 +70,8 @@ describe('PlayerBoard', () => {
 
   it('propagates mirrored=true → battlefield reverses row order', () => {
     const { container } = renderWithProviders(
-      <PlayerBoard gameId={1} playerId={1} mirrored />,
-      { preloadedState: buildState() },
+      <PlayerBoard />,
+      { preloadedState: buildState(), boardCell: { mirrored: true } },
     );
 
     const rowsInOrder = Array.from(
@@ -82,8 +82,8 @@ describe('PlayerBoard', () => {
 
   it('renders info panel, stack column, battlefield left-to-right (even when mirrored)', () => {
     const { container } = renderWithProviders(
-      <PlayerBoard gameId={1} playerId={1} mirrored />,
-      { preloadedState: buildState() },
+      <PlayerBoard />,
+      { preloadedState: buildState(), boardCell: { mirrored: true } },
     );
 
     const children = Array.from(container.querySelector('.player-board')!.children);
@@ -92,14 +92,17 @@ describe('PlayerBoard', () => {
     expect(children[2]).toHaveClass('battlefield');
   });
 
-  it('adds the --mirrored CSS modifier only when mirrored', () => {
-    const { container, rerender } = renderWithProviders(
-      <PlayerBoard gameId={1} playerId={1} />,
+  it('adds the --mirrored CSS modifier only when the cell is mirrored', () => {
+    const { container: upright } = renderWithProviders(
+      <PlayerBoard />,
       { preloadedState: buildState() },
     );
+    expect(upright.querySelector('.player-board--mirrored')).toBeNull();
 
-    expect(container.querySelector('.player-board--mirrored')).toBeNull();
-    rerender(<PlayerBoard gameId={1} playerId={1} mirrored />);
-    expect(container.querySelector('.player-board--mirrored')).not.toBeNull();
+    const { container: mirrored } = renderWithProviders(
+      <PlayerBoard />,
+      { preloadedState: buildState(), boardCell: { mirrored: true } },
+    );
+    expect(mirrored.querySelector('.player-board--mirrored')).not.toBeNull();
   });
 });

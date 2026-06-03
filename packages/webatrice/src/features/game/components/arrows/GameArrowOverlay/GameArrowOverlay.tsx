@@ -1,14 +1,16 @@
+import { useGameId } from '../../ui/GameIdContext';
+
 import { useGameArrowOverlay } from './useGameArrowOverlay';
 
 import './GameArrowOverlay.css';
 
 export interface GameArrowOverlayProps {
-  gameId: number | undefined;
   containerRef: React.RefObject<HTMLElement | null>;
   dragPreview?: { x1: number; y1: number; x2: number; y2: number; color: string } | null;
 }
 
-function GameArrowOverlay({ gameId, containerRef, dragPreview = null }: GameArrowOverlayProps) {
+function GameArrowOverlay({ containerRef, dragPreview = null }: GameArrowOverlayProps) {
+  const gameId = useGameId();
   const { arrows, width, height, handleArrowClick } = useGameArrowOverlay({ gameId, containerRef });
 
   return (

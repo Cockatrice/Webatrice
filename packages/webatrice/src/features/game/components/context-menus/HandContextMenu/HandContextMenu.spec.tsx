@@ -1,42 +1,50 @@
 import { screen, fireEvent } from '@testing-library/react';
+import { Enriched } from '@cockatrice/datatrice';
 
-import { createMockWebClient, renderWithProviders } from '../../../../../__test-utils__';
+import { createMockWebClient, makeStoreState, renderWithProviders } from '../../../../../__test-utils__';
+import {
+  makeGameEntry,
+  makePlayerEntry,
+  makePlayerProperties,
+  makeZoneEntry,
+} from '@cockatrice/datatrice/testing';
+import type { GameDialogs } from '../../../hooks/useGameDialogs';
 import HandContextMenu from './HandContextMenu';
 
-function render(overrides: Partial<React.ComponentProps<typeof HandContextMenu>> = {}) {
-  const props: React.ComponentProps<typeof HandContextMenu> = {
-    isOpen: true,
-    anchorPosition: { top: 10, left: 10 },
-    gameId: 1,
-    handSize: 7,
-    onClose: vi.fn(),
-    onRequestChooseMulligan: vi.fn(),
-    onRequestRevealHand: vi.fn(),
-    onRequestRevealRandom: vi.fn(),
-    onRequestViewHand: vi.fn(),
-    onRequestSortHandBy: vi.fn(),
-    onRequestMoveHandToDeck: vi.fn(),
-    onRequestMoveHandToZone: vi.fn(),
-    ...overrides,
-  };
+// HandContextMenu now self-sources: menu state + action handlers come from
+// GameDialogsContext, and handSize is derived from the local player's HAND zone.
+function render(opts: { handSize?: number; dialogs?: Partial<GameDialogs> } = {}) {
+  const handSize = opts.handSize ?? 7;
+  const hand = makeZoneEntry({ name: Enriched.ZoneName.HAND, cardCount: handSize });
+  const player = makePlayerEntry({
+    properties: makePlayerProperties({ playerId: 1 }),
+    zones: { [Enriched.ZoneName.HAND]: hand },
+  });
+  const preloadedState = makeStoreState({
+    games: { games: { 1: makeGameEntry({ localPlayerId: 1, players: { 1: player } }) } },
+  });
   const webClient = createMockWebClient();
   return {
-    ...renderWithProviders(<HandContextMenu {...props} />, { webClient }),
+    ...renderWithProviders(<HandContextMenu />, {
+      preloadedState,
+      webClient,
+      // handMenu non-null = open.
+      gameDialogs: { handMenu: { top: 10, left: 10 }, ...opts.dialogs },
+    }),
     webClient,
-    props,
   };
 }
 
 describe('HandContextMenu', () => {
-  it('fires onRequestChooseMulligan and closes when the choose-size item is clicked', () => {
-    const onRequestChooseMulligan = vi.fn();
-    const onClose = vi.fn();
-    render({ onRequestChooseMulligan, onClose });
+  it('fires the choose-mulligan request and closes when the choose-size item is clicked', () => {
+    const handleRequestChooseMulligan = vi.fn();
+    const closeHandMenu = vi.fn();
+    render({ dialogs: { handleRequestChooseMulligan, closeHandMenu } });
 
     fireEvent.click(screen.getByRole('menuitem', { name: /choose size/i }));
 
-    expect(onRequestChooseMulligan).toHaveBeenCalled();
-    expect(onClose).toHaveBeenCalled();
+    expect(handleRequestChooseMulligan).toHaveBeenCalled();
+    expect(closeHandMenu).toHaveBeenCalled();
   });
 
   it('dispatches mulligan(number=handSize) on the same-size item', () => {
@@ -72,14 +80,14 @@ describe('HandContextMenu', () => {
     );
   });
 
-  it('fires onRequestRevealHand and closes on reveal-hand item', () => {
-    const onRequestRevealHand = vi.fn();
-    const onClose = vi.fn();
-    render({ onRequestRevealHand, onClose });
+  it('fires the reveal-hand request and closes on reveal-hand item', () => {
+    const handleRequestRevealHand = vi.fn();
+    const closeHandMenu = vi.fn();
+    render({ dialogs: { handleRequestRevealHand, closeHandMenu } });
 
     fireEvent.click(screen.getByRole('menuitem', { name: /reveal hand/i }));
 
-    expect(onRequestRevealHand).toHaveBeenCalled();
-    expect(onClose).toHaveBeenCalled();
+    expect(handleRequestRevealHand).toHaveBeenCalled();
+    expect(closeHandMenu).toHaveBeenCalled();
   });
 });
