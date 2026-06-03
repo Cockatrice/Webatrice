@@ -2,6 +2,7 @@
 
 @import './styles/colors.css';
 @import './styles/thin-scrollbar.css';
+@import './styles/card-flip.css';
 
 * {
   box-sizing: border-box;

@@ -46,11 +46,11 @@ function CardPreview() {
         <div className="card-preview__frame">
           <div
             className={
-              'card-preview__flipper' +
-              (flipped ? ' card-preview__flipper--flipped' : '')
+              'card-preview__flipper cardflip ' +
+              (flipped ? 'cardflip--animate-to-back' : 'cardflip--animate-to-front')
             }
           >
-            <div className="card-preview__face card-preview__face--front">
+            <div className="card-preview__face card-preview__face--front cardflip__face cardflip__face--front">
               <img
                 className="card-preview__image card-preview__image--small"
                 src={smallUrl}
@@ -70,7 +70,7 @@ function CardPreview() {
               )}
             </div>
             <div
-              className="card-preview__face card-preview__face--back scrollable"
+              className="card-preview__face card-preview__face--back cardflip__face cardflip__face--back scrollable"
               data-testid="card-preview-back"
             >
               <CardBackContent dto={dto} fallbackName={card?.name} />

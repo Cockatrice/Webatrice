@@ -1,4 +1,4 @@
-import { useCallback, useId } from 'react';
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import {
   useDraggable,
   useDroppable,
@@ -17,6 +17,9 @@ export interface CardSlot {
   isDragging: boolean;
   dropSide: 'before' | 'after' | null;
   rootRef: (el: HTMLElement | null) => void;
+  // Keyframe spin class, set only after card.faceDown changes on an already-mounted
+  // slot; '' at rest so the ~60 board slots don't animate on initial render.
+  flipClass: string;
 }
 
 export interface UseCardSlotArgs {
@@ -29,6 +32,19 @@ export interface UseCardSlotArgs {
 
 export function useCardSlot({ card, draggable, ownerPlayerId, zone, dropIndex }: UseCardSlotArgs): CardSlot {
   const { smallUrl } = useScryfallCard(card);
+
+  // Play the keyframe flip only when faceDown changes on an already-mounted slot —
+  // not on initial render (a CSS animation fires on mount). The class persists; a
+  // CSS animation re-fires only when its animation-name changes, which it does each
+  // real flip as faceDown alternates, so no onAnimationEnd cleanup is needed.
+  const prevFaceDownRef = useRef(card.faceDown);
+  const [flipClass, setFlipClass] = useState('');
+  useEffect(() => {
+    if (prevFaceDownRef.current !== card.faceDown) {
+      prevFaceDownRef.current = card.faceDown;
+      setFlipClass(card.faceDown ? 'cardflip--animate-to-back' : 'cardflip--animate-to-front');
+    }
+  }, [card.faceDown]);
 
   // useId salt avoids dnd-kit id collisions across disabled-slot duplicates.
   const instanceId = useId();
@@ -96,5 +112,6 @@ export function useCardSlot({ card, draggable, ownerPlayerId, zone, dropIndex }:
     isDragging,
     dropSide,
     rootRef,
+    flipClass,
   };
 }

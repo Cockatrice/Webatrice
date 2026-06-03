@@ -15,12 +15,14 @@ const render = (ui: ReactElement) =>
 describe('CardSlot', () => {
   it('renders the Scryfall image for a normal card', () => {
     const card = makeCard({ name: 'Lightning Bolt', id: 1 });
-    render(<CardSlot card={card} />);
+    const { container } = render(<CardSlot card={card} />);
 
     const img = screen.getByAltText('Lightning Bolt') as HTMLImageElement;
     expect(img.src).toContain('/cards/named');
     expect(img.src).toContain('Lightning%20Bolt');
     expect(img.src).toContain('version=small');
+    expect(container.querySelector('.cardflip--front')).toBeInTheDocument();
+    expect(container.querySelector('.cardflip--back')).toBeNull();
   });
 
   it('uses providerId over name when present', () => {
@@ -31,17 +33,21 @@ describe('CardSlot', () => {
     expect(img.src).toContain('/cards/abc-123');
   });
 
-  it('renders a face-down back and suppresses image/P-T/counters when faceDown', () => {
+  it('rests on the back face and suppresses P-T/counters when faceDown', () => {
     const card = makeCard({
       name: 'Hidden',
       faceDown: true,
       pt: '3/3',
       counterList: [create(ServerInfo_CardCounterSchema, { id: 1, value: 2 })],
     });
-    render(<CardSlot card={card} />);
+    // Both faces always render (so the flip can reveal the other side); a face-down
+    // card rests on the back side (no animation on mount) and hides its P/T + counters.
+    const { container } = render(<CardSlot card={card} />);
 
     expect(screen.getByLabelText('face-down card')).toBeInTheDocument();
-    expect(screen.queryByAltText('Hidden')).not.toBeInTheDocument();
+    expect(container.querySelector('.cardflip--back')).toBeInTheDocument();
+    expect(container.querySelector('.cardflip--front')).toBeNull();
+    expect(container.querySelector('.cardflip--animate-to-back')).toBeNull();
     expect(screen.queryByText('3/3')).not.toBeInTheDocument();
   });
 
