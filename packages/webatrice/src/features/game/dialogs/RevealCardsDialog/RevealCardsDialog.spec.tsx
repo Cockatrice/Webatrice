@@ -73,6 +73,35 @@ describe('RevealCardsDialog', () => {
     expect(onSubmit).toHaveBeenCalledWith({ targetPlayerId: 2, topCards: -1 });
   });
 
+  it('lists reveal targets in store seat order (not numeric)', () => {
+    const stateSeatOrderBobFirst = {
+      games: {
+        games: {
+          1: makeGameEntry({
+            localPlayerId: 1,
+            seatOrder: [2, 1],
+            players: {
+              1: makePlayerEntry({ properties: makePlayerProperties({ playerId: 1, userInfo: { name: 'Alice' } }) }),
+              2: makePlayerEntry({ properties: makePlayerProperties({ playerId: 2, userInfo: { name: 'Bob' } }) }),
+            },
+          }),
+        },
+      },
+    };
+    renderWithProviders(<RevealCardsDialog />, {
+      preloadedState: stateSeatOrderBobFirst,
+      gameDialogs: { revealState: makeRevealState() },
+    });
+
+    fireEvent.mouseDown(screen.getByRole('combobox'));
+    // 'All players' is always first; the seated players follow in seatOrder [2,1].
+    expect(screen.getAllByRole('option').map((o) => o.textContent)).toEqual([
+      'All players',
+      'Bob',
+      'Alice',
+    ]);
+  });
+
   it('falls back to a playerId-based name when a target has no userInfo name', () => {
     renderWithProviders(<RevealCardsDialog />, {
       preloadedState: {

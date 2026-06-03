@@ -44,7 +44,7 @@ export function useGame(): Game {
   const parsed = params.gameId != null ? Number(params.gameId) : NaN;
   const routeGameId = Number.isFinite(parsed) ? parsed : undefined;
   const current = useCurrentGame(routeGameId);
-  const { gameId, game, localPlayer, isSpectator } = current;
+  const { gameId, game, isSpectator } = current;
 
   useGameLifecycleNavigation(gameId);
 
@@ -85,8 +85,6 @@ export function useGame(): Game {
   });
   const dialogs = useGameDialogs({
     gameId,
-    game,
-    localPlayer,
     localAccess,
     isSpectator,
     startPendingArrow: arrows.startPendingArrow,

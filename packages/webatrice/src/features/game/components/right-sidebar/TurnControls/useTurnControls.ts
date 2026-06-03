@@ -7,6 +7,7 @@ import { useAppSelector } from '@app/store';
 
 import { useCurrentGame } from '../../../hooks/useCurrentGame';
 import { useGameAffordances } from '../../../hooks/useGameAffordances';
+import { playerName } from '../../../utils/playerName';
 
 const PHASE_COUNT = 11;
 
@@ -79,7 +80,7 @@ export function useTurnControls({
       .filter((p) => p.properties.playerId !== game.localPlayerId)
       .map((p) => ({
         playerId: p.properties.playerId,
-        name: p.properties.userInfo?.name ?? `p${p.properties.playerId}`,
+        name: playerName(p),
       }));
   }, [game]);
 

@@ -18,7 +18,7 @@ import { useAppSelector } from '@app/store';
 
 import { useGameId } from '../../components/ui/GameIdContext';
 import { useGameDialogsContext } from '../../components/ui/GameDialogsContext';
-import { activePlayersOf } from '../../utils/activePlayers';
+import { playerName } from '../../utils/playerName';
 import { useRevealCardsDialog } from './useRevealCardsDialog';
 
 import './RevealCardsDialog.css';
@@ -43,24 +43,25 @@ export interface RevealCardsSubmit {
 }
 
 const ALL_PLAYERS = -1;
+const EMPTY_SEATED: ReturnType<typeof games.Selectors.getSeatedPlayers> = [];
 
 // Self-sources its reveal request (title/zone/count/onSubmit) from the
 // GameDialogsContext.revealState slice, closes via closeReveal, and folds the
-// reveal-target list (active, non-spectator, non-conceded seats — matching the
-// board layout) from the store. Renders propless and self-gates.
+// reveal-target list (active seats in board/seat order) from the store via
+// getSeatedPlayers. Renders propless and self-gates.
 function RevealCardsDialog() {
   const { revealState, closeReveal } = useGameDialogsContext();
   const gameId = useGameId();
-  const game = useAppSelector((state) =>
-    gameId != null ? games.Selectors.getGame(state, gameId) : undefined,
+  const seated = useAppSelector((state) =>
+    gameId != null ? games.Selectors.getSeatedPlayers(state, gameId) : EMPTY_SEATED,
   );
   const players = useMemo(
     () =>
-      (game ? activePlayersOf(game) : []).map((p) => ({
+      seated.map((p) => ({
         playerId: p.properties.playerId,
-        name: p.properties.userInfo?.name ?? `p${p.properties.playerId}`,
+        name: playerName(p),
       })),
-    [game],
+    [seated],
   );
 
   const isOpen = revealState != null;

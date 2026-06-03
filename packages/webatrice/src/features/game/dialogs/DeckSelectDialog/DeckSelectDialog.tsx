@@ -25,13 +25,11 @@ const StyledDialog = styled(Dialog)(({ theme }) => ({
   },
 }));
 
-export interface DeckSelectDialogProps {
-  handleClose?: () => void;
-}
-
 // Self-sources the active gameId from context and its own open state (derived in
-// useDeckSelectDialog), so Game renders it propless.
-function DeckSelectDialog({ handleClose }: DeckSelectDialogProps) {
+// useDeckSelectDialog), so Game renders it propless. Deck selection is mandatory
+// before a game starts, so the dialog has no backdrop-dismiss close handler — the
+// user leaves via the in-dialog "Leave Game" button.
+function DeckSelectDialog() {
   const gameId = useGameId();
   const {
     isOpen,
@@ -55,7 +53,6 @@ function DeckSelectDialog({ handleClose }: DeckSelectDialogProps) {
     <StyledDialog
       className={'DeckSelectDialog ' + classes.root}
       open={isOpen}
-      onClose={handleClose}
       maxWidth={false}
     >
       <DialogTitle className="dialog-title">

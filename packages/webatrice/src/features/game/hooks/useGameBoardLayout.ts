@@ -1,9 +1,8 @@
-import { useMemo, useRef } from 'react';
+import { useMemo } from 'react';
 
-import { GameEntry } from '@cockatrice/datatrice';
+import { GameEntry, games } from '@cockatrice/datatrice';
 
 import { computeCanAct } from './useGameAccess';
-import { activePlayersOf } from '../utils/activePlayers';
 
 export interface BoardCell {
   playerId: number;
@@ -51,30 +50,15 @@ const EMPTY_LAYOUT: GameBoardLayout = {
  * up the left column (bottom -> top) then down the right column (top -> bottom).
  */
 export function useGameBoardLayout(game: GameEntry | undefined): GameBoardLayout {
-  // Tracks the order in which seated playerIds were first observed, so the ring
-  // follows join order rather than numeric playerId order. A re-join lands last.
-  const joinOrderRef = useRef<number[]>([]);
-
   return useMemo<GameBoardLayout>(() => {
     if (!game) {
-      joinOrderRef.current = [];
       return EMPTY_LAYOUT;
     }
 
-    // Active players only: drop spectators and conceded seats so a conceded
-    // board collapses out (see activePlayersOf / Cockatrice collectActivePlayers).
-    const seated = activePlayersOf(game);
-    const seatedIds = new Set(seated.map((p) => p.properties.playerId));
-    joinOrderRef.current = joinOrderRef.current.filter((id) => seatedIds.has(id));
-    for (const p of seated) {
-      const id = p.properties.playerId;
-      if (!joinOrderRef.current.includes(id)) {
-        joinOrderRef.current.push(id);
-      }
-    }
-    // Active player ids in join order; only the id is needed to seat cells (names
-    // are a presentation concern owned by the consumers that show them).
-    const players = joinOrderRef.current;
+    // Active players (non-spectator, non-conceded) in server seat/join order,
+    // sourced from the store's seatOrder via seatedPlayersOf — only the id is
+    // needed to seat cells (names are a presentation concern owned by consumers).
+    const players = games.seatedPlayersOf(game).map((p) => p.properties.playerId);
 
     const n = players.length;
     if (n === 0) {

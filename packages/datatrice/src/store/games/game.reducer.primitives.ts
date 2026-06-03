@@ -13,15 +13,20 @@ import { pushEventMessage } from './game.reducer.helpers';
 
 export const primitiveReducers = {
   gamePlayersReplaced: ((state, action) => {
-    const { gameId, players } = action.payload;
+    const { gameId, players, order } = action.payload;
     const game = state.games[gameId];
     if (!game) {
       return;
     }
     game.players = players;
+    // Seat order from the server's ordered player list when provided; otherwise
+    // fall back to the map's key order (numeric). Keep only ids that are present.
+    const ids = order ?? Object.keys(players).map(Number);
+    game.seatOrder = ids.filter((id) => players[id] != null);
   }) as CaseReducer<GamesState, PayloadAction<{
     gameId: number;
     players: { [playerId: number]: Enriched.PlayerEntry };
+    order?: number[];
   }>>,
 
   gameInfoUpdated: ((state, action) => {

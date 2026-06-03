@@ -9,6 +9,18 @@ type State = { games: GamesState };
 const EMPTY_ARRAY: ServerInfo_Card[] = [];
 const EMPTY_OBJECT = {} as Record<string, never>;
 const EMPTY_ATTACHMENTS: ReadonlyMap<number, AttachedChild[]> = new Map();
+const EMPTY_PLAYERS: Enriched.PlayerEntry[] = [];
+
+// Seated, in-play players in seat (join) order: a port of Cockatrice's
+// collectActivePlayers (keep !spectator && !conceded) applied over the stored
+// `seatOrder` so callers get a deterministic, server-authoritative ordering
+// rather than the numeric-key order of the `players` map. Shared by the board
+// layout (seating) and the reveal-target list.
+export function seatedPlayersOf(game: Enriched.GameEntry): Enriched.PlayerEntry[] {
+  return game.seatOrder
+    .map((id) => game.players[id])
+    .filter((p) => p != null && !p.properties.spectator && !p.properties.conceded);
+}
 
 export interface AttachedChild {
   card: ServerInfo_Card;
@@ -87,6 +99,11 @@ export const Selectors = {
 
   getPlayers: ({ games }: State, gameId: number): { [playerId: number]: Enriched.PlayerEntry } | undefined =>
     games.games[gameId]?.players,
+
+  getSeatedPlayers: ({ games }: State, gameId: number): Enriched.PlayerEntry[] => {
+    const game = games.games[gameId];
+    return game ? seatedPlayersOf(game) : EMPTY_PLAYERS;
+  },
 
   getPlayer: ({ games }: State, gameId: number, playerId: number): Enriched.PlayerEntry | undefined =>
     games.games[gameId]?.players[playerId],

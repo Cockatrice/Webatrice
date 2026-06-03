@@ -1,4 +1,4 @@
-import { createContext, useContext } from 'react';
+import { createRequiredContext } from './createRequiredContext';
 
 // Game-session actions that open a dialog or confirm rather than dispatching
 // directly. Sourced once from useGameDialogs in Game and consumed by the
@@ -11,14 +11,5 @@ export interface GameDialogActions {
   onRequestGameInfo: () => void;
 }
 
-const GameDialogActionsContext = createContext<GameDialogActions | null>(null);
-
-export const GameDialogActionsProvider = GameDialogActionsContext.Provider;
-
-export function useGameDialogActions(): GameDialogActions {
-  const ctx = useContext(GameDialogActionsContext);
-  if (!ctx) {
-    throw new Error('useGameDialogActions must be used inside <GameDialogActionsProvider>');
-  }
-  return ctx;
-}
+export const [GameDialogActionsProvider, useGameDialogActions] =
+  createRequiredContext<GameDialogActions>('GameDialogActionsContext');

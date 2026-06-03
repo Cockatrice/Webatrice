@@ -50,6 +50,11 @@ export interface GameEntry {
   reversed: boolean;
 
   players: { [playerId: number]: PlayerEntry };
+  // Player ids in server/seat (join) order. `players` is a numeric-keyed map, so
+  // its iteration order is ascending playerId, not seat order — this preserves the
+  // order the server sent (full-state syncs) and append-on-join, for board seating
+  // and reveal-target lists. See seatedPlayersOf / Selectors.getSeatedPlayers.
+  seatOrder: number[];
   messages: GameMessage[];
 }
 

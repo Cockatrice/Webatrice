@@ -15,12 +15,15 @@ function buildGame({
   judge = false,
   omniscient = false,
   playerSpec,
+  seatOrder,
 }: {
   localPlayerId: number;
   spectator?: boolean;
   judge?: boolean;
   omniscient?: boolean;
   playerSpec: Array<{ id: number; name?: string; spectator?: boolean; conceded?: boolean }>;
+  // Explicit seat order; defaults (via makeGameEntry) to the players' key order.
+  seatOrder?: number[];
 }) {
   const players: Record<number, ReturnType<typeof makePlayerEntry>> = {};
   for (const p of playerSpec) {
@@ -38,6 +41,7 @@ function buildGame({
     spectator,
     judge,
     players,
+    ...(seatOrder ? { seatOrder } : {}),
     info: makeGameInfo({ spectatorsOmniscient: omniscient }),
   });
 }
@@ -128,6 +132,14 @@ describe('useGameBoardLayout', () => {
     for (const cell of result.current.cells) {
       expect(cell.mirrored).toBe(cell.row < 2);
     }
+  });
+
+  it('seats in store seatOrder, not numeric-key order', () => {
+    // seatOrder puts 3 before 2; with the local player 1 anchored, the ring
+    // follows seatOrder ([1,3,2]) — numeric order would give [1,2,3].
+    const game = buildGame({ localPlayerId: 1, playerSpec: seats([1, 2, 3]), seatOrder: [1, 3, 2] });
+    const { result } = renderHook(() => useGameBoardLayout(game));
+    expect(result.current.cells.map((c) => c.playerId)).toEqual([1, 3, 2]);
   });
 
   it('rotates the ring so anchoring keeps seating order relative to the local player', () => {

@@ -4,8 +4,6 @@ import MenuItem from '@mui/material/MenuItem';
 import Divider from '@mui/material/Divider';
 
 import { ServerInfo_Card } from '@cockatrice/sockatrice/generated';
-import { games } from '@cockatrice/datatrice';
-import { useAppSelector } from '@app/store';
 import { resolveSelectedCards } from '../../../utils/selection';
 import {
   COUNTER_TYPE_COUNT,
@@ -18,6 +16,7 @@ import { useGameDialogsContext } from '../../ui/GameDialogsContext';
 import { useGameId } from '../../ui/GameIdContext';
 import { useCardVisualState } from '../../ui/CardVisualStateContext';
 import { useLocalIdentity } from '../../../hooks/useLocalIdentity';
+import { useCurrentGame } from '../../../hooks/useCurrentGame';
 import { useCardContextMenu } from './useCardContextMenu';
 
 import './CardContextMenu.css';
@@ -43,9 +42,7 @@ function CardContextMenu() {
 
   // Resolve the multi-selection to live cards for bulk actions (was computed in
   // Game via the same helper and passed as a prop).
-  const game = useAppSelector((state) =>
-    gameId != null ? games.Selectors.getGame(state, gameId) : undefined,
-  );
+  const { game } = useCurrentGame(gameId);
   const selectedCards = useMemo(
     () => (game ? resolveSelectedCards(game, selectedCardKeys) : []),
     [game, selectedCardKeys],

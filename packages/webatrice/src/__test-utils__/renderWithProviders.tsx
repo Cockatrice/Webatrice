@@ -39,7 +39,7 @@ import { GameIdProvider } from '../features/game/components/ui/GameIdContext';
 import { CardPreviewProvider } from '../features/game/components/ui/CardPreviewContext';
 import { GameDialogsProvider } from '../features/game/components/ui/GameDialogsContext';
 import { BoardCellProvider, type BoardCellInfo } from '../features/game/components/ui/BoardCellContext';
-import type { GameDialogs } from '../features/game/hooks/useGameDialogs';
+import { NOOP_GAME_DIALOGS_ACTIONS, type GameDialogs } from '../features/game/hooks/useGameDialogs';
 import type { ServerInfo_Card } from '@cockatrice/sockatrice/generated';
 import { createMockWebClient } from './mockWebClient';
 
@@ -61,82 +61,26 @@ const NOOP_DIALOG_ACTIONS: GameDialogActions = {
   onRequestGameInfo: () => undefined,
 };
 
-// Closed/no-op default for the whole dialogs slice. Typed as GameDialogs so the
-// compiler flags any field a spec forgets — specs override only what they assert.
-const noop = () => undefined;
+// Closed/no-op default for the whole dialogs slice: the closed-state fields plus
+// the canonical no-op action surface (NOOP_GAME_DIALOGS_ACTIONS, kept in sync with
+// the type at its source). Typed as GameDialogs so the compiler flags any state
+// field that drifts — specs override only what they assert.
 const NOOP_GAME_DIALOGS: GameDialogs = {
   cardMenu: null,
   zoneMenu: null,
   playerMenu: null,
   handMenu: null,
-  closeCardMenu: noop,
-  closeZoneMenu: noop,
-  closePlayerMenu: noop,
-  closeHandMenu: noop,
-  handleCardContextMenu: noop,
-  handleZoneContextMenu: noop,
-  handlePlayerContextMenu: noop,
-  handleHandContextMenu: noop,
   zoneViews: [],
-  handleZoneClick: noop,
-  handleCloseZoneView: noop,
   prompt: null,
-  closePrompt: noop,
   rollDieOpen: false,
   lastDieSides: 0,
   lastDieCount: 0,
-  openRollDie: noop,
-  closeRollDie: noop,
-  handleRollDieSubmit: noop,
   createTokenOpen: false,
-  openCreateToken: noop,
-  closeCreateToken: noop,
-  handleCreateTokenSubmit: noop,
   sideboardOpen: false,
-  openSideboard: noop,
-  closeSideboard: noop,
-  handleSideboardSubmit: noop,
-  handleToggleSideboardLock: noop,
   gameInfoOpen: false,
-  openGameInfo: noop,
-  closeGameInfo: noop,
   concedeConfirm: null,
-  openConcede: noop,
-  openUnconcede: noop,
-  closeConcedeConfirm: noop,
-  confirmConcede: noop,
-  confirmUnconcede: noop,
   revealState: null,
-  closeReveal: noop,
-  handleRequestSetPT: noop,
-  handleRequestSetAnnotation: noop,
-  handleRequestSetCardCounter: noop,
-  handleRequestDrawArrow: noop,
-  handleRequestAttach: noop,
-  handleRequestPlayFromCardMenu: noop,
-  handleRequestMoveToLibraryAt: noop,
-  handleRequestDrawN: noop,
-  handleRequestDumpN: noop,
-  handleRequestRevealTopN: noop,
-  handleRequestRevealZone: noop,
-  handleRequestUndoDraw: noop,
-  handleRequestDrawBottom: noop,
-  handleRequestMoveTopCardToZone: noop,
-  handleRequestPlayTop: noop,
-  handleRequestMoveTopNToZone: noop,
-  handleRequestShuffleTopN: noop,
-  handleRequestShuffleBottomN: noop,
-  handleRequestViewZone: noop,
-  handleRequestMoveAllFromZoneToDeck: noop,
-  handleRequestMoveAllFromZoneTo: noop,
-  handleRequestRevealRandomFromZone: noop,
-  handleRequestChooseMulligan: noop,
-  handleRequestRevealHand: noop,
-  handleRequestRevealRandom: noop,
-  handleRequestViewHand: noop,
-  handleRequestSortHandBy: noop,
-  handleRequestMoveHandToDeck: noop,
-  handleRequestMoveHandToZone: noop,
+  ...NOOP_GAME_DIALOGS_ACTIONS,
 };
 
 interface CardVisualStateOverride {
@@ -150,8 +94,10 @@ const EMPTY_SELECTION: ReadonlySet<string> = new Set();
 const DENY_ALL: CanActFor = () => false;
 
 // Board components (PlayerBoard, StackColumn, Battlefield, PlayerInfoPanel,
-// ZoneStack) read their seat from BoardCellContext; default to the local seat 1.
-const DEFAULT_BOARD_CELL: BoardCellInfo = { playerId: 1, mirrored: false, isLocal: false };
+// ZoneStack) read their seat from BoardCellContext; default to the local seat 1
+// (matching the dominant localPlayerId: 1 fixture — so isLocal is true). Opponent
+// specs override with boardCell: { playerId: 2, isLocal: false }.
+const DEFAULT_BOARD_CELL: BoardCellInfo = { playerId: 1, mirrored: false, isLocal: true };
 
 let defaultWebClient: WebClient | undefined;
 function getDefaultWebClient(): WebClient {
