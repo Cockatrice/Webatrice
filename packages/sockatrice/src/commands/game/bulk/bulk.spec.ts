@@ -182,6 +182,17 @@ describe('bulk actions — judge override', () => {
   });
 });
 
+describe('empty selection', () => {
+  it('every bulk command sends nothing for an empty selection', () => {
+    bulkTap(gameId, []);
+    bulkDoesntUntap(gameId, []);
+    bulkFlip(gameId, []);
+    bulkPeek(gameId, [], 0);
+    bulkMove(gameId, [], { targetPlayerId: 0, targetZone: 'grave', x: 0, y: 0 });
+    expect(WebClient.instance.protobuf.sendGameCommands).not.toHaveBeenCalled();
+  });
+});
+
 describe('moveTargetPlayerId', () => {
   it('routes a non-table move to the card owner, ignoring the requested table target', () => {
     expect(moveTargetPlayerId(2, 'grave', 1)).toBe(2);

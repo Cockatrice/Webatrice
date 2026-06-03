@@ -32,8 +32,5 @@ export function bulkFlip(
       judgeTargetId: judgeTarget(t.ownerPlayerId),
     });
   });
-  if (entries.length === 0) {
-    return;
-  }
   WebClient.instance.protobuf.sendGameCommands(gameId, entries);
 }
