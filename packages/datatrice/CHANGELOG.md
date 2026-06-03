@@ -1,5 +1,43 @@
 # @cockatrice/datatrice
 
+## 4.2.4
+
+### Patch Changes
+
+- b2a9b58: Close four behavior gaps in the game reducer layer found while reviewing the
+  opponent-mulligan fix.
+
+  - A shuffle now clears the shuffled zone's known-card tracking (order/byId) and any
+    open "View library" snapshot, preserving cardCount. Servatrice reveals real card ids
+    to the owner when cards move from the hand (a PrivateZone) into the library (a
+    HiddenZone), so the client tracked them and rendered a face-up known card on top of
+    the library after a mulligan; Event_Shuffle is the only post-shuffle signal, so the
+    client must drop those now-randomized positions on it.
+  - getSeatedPlayers is memoized so an unchanged seating returns the prior array by
+    reference, sparing board/reveal consumers a re-render on every unrelated mutation.
+  - activePlayerSet no longer logs a turn change before the game has started, matching the
+    existing activePhaseSet guard.
+  - A full gameStateChanged resync (e.g. a spectator joining) now carries an open "View
+    library" snapshot (revealedCards) forward per zone, the same way it preserves userInfo,
+    instead of dropping it.
+
+- b2a9b58: Keep an opponent's hand and library counts in sync through a mulligan.
+
+  When an opponent mulligans, Servatrice returns their whole hand to the library and
+  redraws (N x `Event_MoveCard` hand-to-library, then `Event_Shuffle`, then
+  `Event_DrawCards`). For an observer the hand and library are hidden zones, so each
+  hand-to-library `Event_MoveCard` carries `card_id = -1` with an unresolvable position.
+  The `cardMoved` listener previously early-returned on any move it couldn't tie to a
+  known card, so those transfers never adjusted the zone totals -- the subsequent draw
+  then inflated the hand and shrank the library (a same-size mulligan left the hand at
+  double size and the library short by a full hand).
+
+  The listener now performs a count-only transfer for genuinely hidden cross-zone moves,
+  decrementing the source zone's `cardCount` and incrementing the target's (reusing the
+  existing `zoneCardCountAdjusted` primitive). The fix is general: it also corrects any
+  other hidden opponent move, such as a discard from hand or a hand to top-of-library
+  move. The local player's own mulligan was unaffected because their cards carry real ids.
+
 ## 4.2.3
 
 ### Patch Changes
