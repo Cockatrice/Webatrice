@@ -71,9 +71,11 @@ function playerWithZones(playerId: number, name: string): ServerInfo_Player {
     }),
     deckList: '',
     zoneList: [
-      { name: 'hand', type: 1, withCoords: false, cardCount: 0, cardList: [], alwaysRevealTopCard: false, alwaysLookAtTopCard: false },
-      { name: 'deck', type: 1, withCoords: false, cardCount: 40, cardList: [], alwaysRevealTopCard: false, alwaysLookAtTopCard: false },
-      { name: 'table', type: 2, withCoords: true, cardCount: 0, cardList: [], alwaysRevealTopCard: false, alwaysLookAtTopCard: false },
+      // Realistic Cockatrice zone types: hand = PrivateZone(0), deck = HiddenZone(2),
+      // table = PublicZone(1), grave = PublicZone(1).
+      { name: 'hand', type: 0, withCoords: false, cardCount: 0, cardList: [], alwaysRevealTopCard: false, alwaysLookAtTopCard: false },
+      { name: 'deck', type: 2, withCoords: false, cardCount: 40, cardList: [], alwaysRevealTopCard: false, alwaysLookAtTopCard: false },
+      { name: 'table', type: 1, withCoords: true, cardCount: 0, cardList: [], alwaysRevealTopCard: false, alwaysLookAtTopCard: false },
       { name: 'grave', type: 1, withCoords: false, cardCount: 0, cardList: [], alwaysRevealTopCard: false, alwaysLookAtTopCard: false },
     ],
     counterList: [],
@@ -262,6 +264,17 @@ describe('integration: game chat and table events', () => {
     expect(games.Selectors.getCards(store.getState(), GAME_ID, 1, 'deck')).toEqual([]);
     expect(after?.cardCount).toBe(countBefore);
     expect(games.Selectors.getRevealedCards(store.getState(), GAME_ID, 1, 'deck')).toEqual([]);
+  });
+
+  it('zoneShuffled does NOT clear a non-hidden zone (owner still knows its cards)', () => {
+    const { store, response } = seedGame();
+    // Hand is a PrivateZone: the owner sees its cards, so a shuffle must not blank them.
+    response.game.cardsDrawn(GAME_ID, 1, create(Event_DrawCardsSchema, {
+      number: 1, cards: [tableCard(200, 'Plains')],
+    }));
+    response.game.zoneShuffled(GAME_ID, 1, create(Event_ShuffleSchema, { zoneName: 'hand' }));
+
+    expect(games.Selectors.getCards(store.getState(), GAME_ID, 1, 'hand').map(c => c.id)).toEqual([200]);
   });
 
   it('zoneDumped logs the dump', () => {

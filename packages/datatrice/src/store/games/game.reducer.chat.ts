@@ -1,7 +1,12 @@
 import { CaseReducer, PayloadAction } from '@reduxjs/toolkit';
-import { Event_DumpZone, Event_RollDie, Event_Shuffle } from '@cockatrice/sockatrice/generated';
+import {
+  Event_DumpZone,
+  Event_RollDie,
+  Event_Shuffle,
+  ServerInfo_Zone_ZoneType,
+} from '@cockatrice/sockatrice/generated';
 import { GamesState } from './game.interfaces';
-import { MAX_GAME_MESSAGES, pushEventMessage } from './game.reducer.helpers';
+import { MAX_GAME_MESSAGES, clearZoneKnownCards, pushEventMessage } from './game.reducer.helpers';
 import {
   formatDieRolled,
   formatZoneDumped,
@@ -31,13 +36,11 @@ export const chatReducers = {
     // moved into a hidden library before the shuffle (e.g. a mulligan's hand→library
     // returns) were tracked in order/byId by cardMovedBetweenZones; drop that
     // identity tracking so the library doesn't render a known face-up top card or
-    // leak the moved cards. cardCount stays authoritative. Also discard any open
-    // "View library" snapshot, which now shows a stale (pre-shuffle) order.
+    // leak the moved cards. Only hidden zones lose knowledge this way — a visible or
+    // private zone's identities are still known to its owner, so never blank those.
     const zone = game.players[playerId]?.zones[data.zoneName];
-    if (zone) {
-      zone.order = [];
-      zone.byId = {};
-      delete zone.revealedCards;
+    if (zone?.type === ServerInfo_Zone_ZoneType.HiddenZone) {
+      clearZoneKnownCards(zone);
     }
     pushEventMessage(game, playerId, formatZoneShuffled(game, playerId));
   }) as CaseReducer<GamesState, PayloadAction<{ gameId: number; playerId: number; data: Event_Shuffle }>>,

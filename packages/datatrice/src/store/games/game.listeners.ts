@@ -58,6 +58,12 @@ export function registerGameListeners(mw: ListenerMiddlewareInstance<unknown>): 
         return;
       }
 
+      // Whether this event actually relocates the card to a different (player, zone).
+      // Drives the hidden-move count transfer, the same-zone reorder branch, and the
+      // open-zone-view prune below — keep it single-sourced so they can't disagree.
+      const movedAcrossZones =
+        startPlayerId !== targetPlayerId || startZone !== effectiveTargetZone;
+
       let resolvedCardId = -1;
       if (cardId >= 0) {
         resolvedCardId = cardId;
@@ -71,8 +77,6 @@ export function registerGameListeners(mw: ListenerMiddlewareInstance<unknown>): 
         // Adjust cardCount on both ends so hidden hand/library counts stay in sync. A
         // same-zone "move" of a hidden card is unrepresentable, so it's a no-op.
         // See datatrice-game.instructions.md#servatrice-game-event-quirks.
-        const movedAcrossZones =
-          startPlayerId !== targetPlayerId || startZone !== effectiveTargetZone;
         if (movedAcrossZones) {
           api.dispatch(Actions.zoneCardCountAdjusted({
             gameId, playerId: startPlayerId, zoneName: startZone, delta: -1,
@@ -110,15 +114,13 @@ export function registerGameListeners(mw: ListenerMiddlewareInstance<unknown>): 
       // holds this zone, the moved card must be pruned from it (see below).
       const hadRevealedSnapshot = !!sourceZone.revealedCards;
 
-      const sameZone =
-        startPlayerId === targetPlayerId && startZone === effectiveTargetZone;
       const isPositionalReorderZone =
         effectiveTargetZone === Enriched.ZoneName.HAND ||
         effectiveTargetZone === Enriched.ZoneName.STACK ||
         effectiveTargetZone === Enriched.ZoneName.GRAVE ||
         effectiveTargetZone === Enriched.ZoneName.EXILE;
 
-      if (sameZone && hadRevealedSnapshot && position >= 0) {
+      if (!movedAcrossZones && hadRevealedSnapshot && position >= 0) {
         api.dispatch(Actions.zoneViewCardReordered({
           gameId,
           playerId: startPlayerId,
@@ -126,7 +128,7 @@ export function registerGameListeners(mw: ListenerMiddlewareInstance<unknown>): 
           fromPosition: position,
           toPosition: x,
         }));
-      } else if (sameZone && isPositionalReorderZone && resolvedCardId >= 0) {
+      } else if (!movedAcrossZones && isPositionalReorderZone && resolvedCardId >= 0) {
         api.dispatch(Actions.cardMovedInSameZone({
           gameId,
           playerId: startPlayerId,
@@ -152,8 +154,7 @@ export function registerGameListeners(mw: ListenerMiddlewareInstance<unknown>): 
       // mirroring Cockatrice's live view (ZoneViewZoneLogic::removeCard). The
       // snapshot is deck-only (HiddenZone), so the event's `position` is the
       // index to prune. Same-zone reorders don't move the card out, so skip.
-      const movedOut = startPlayerId !== targetPlayerId || startZone !== effectiveTargetZone;
-      if (hadRevealedSnapshot && movedOut && position >= 0) {
+      if (hadRevealedSnapshot && movedAcrossZones && position >= 0) {
         api.dispatch(Actions.zoneViewCardRemoved({
           gameId,
           playerId: startPlayerId,
