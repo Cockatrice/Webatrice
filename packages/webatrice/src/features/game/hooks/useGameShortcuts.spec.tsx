@@ -1,7 +1,8 @@
+import { ZoneName } from '@cockatrice/sockatrice';
 import { renderHook } from '@testing-library/react';
 import { combineReducers } from '@reduxjs/toolkit';
 
-import { games, Enriched, type GamesState } from '@cockatrice/datatrice';
+import { games, type GamesState } from '@cockatrice/datatrice';
 import {
   makeCard,
   makeGameEntry,
@@ -77,13 +78,13 @@ function setup(opts: SetupOpts = {}) {
       [localPlayerId]: makePlayerEntry({
         properties: makePlayerProperties({ playerId: localPlayerId, conceded }),
         zones: {
-          [Enriched.ZoneName.TABLE]: makeZoneEntry({
-            name: Enriched.ZoneName.TABLE,
+          [ZoneName.TABLE]: makeZoneEntry({
+            name: ZoneName.TABLE,
             cards: tableCards,
             cardCount: tableCards.length,
           }),
-          [Enriched.ZoneName.HAND]: makeZoneEntry({ name: Enriched.ZoneName.HAND }),
-          [Enriched.ZoneName.DECK]: makeZoneEntry({ name: Enriched.ZoneName.DECK }),
+          [ZoneName.HAND]: makeZoneEntry({ name: ZoneName.HAND }),
+          [ZoneName.DECK]: makeZoneEntry({ name: ZoneName.DECK }),
         },
       }),
     },
@@ -140,7 +141,7 @@ describe('useGameShortcuts', () => {
     expect(webClient.request.game.setCardAttr).toHaveBeenCalledWith(
       1,
       expect.objectContaining({
-        zone: Enriched.ZoneName.TABLE,
+        zone: ZoneName.TABLE,
         cardId: -1,
         attribute: CardAttribute.AttrTapped,
         attrValue: '0',

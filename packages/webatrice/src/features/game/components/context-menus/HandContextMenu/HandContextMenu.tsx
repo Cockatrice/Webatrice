@@ -1,9 +1,10 @@
+import { ZoneName } from '@cockatrice/sockatrice';
 import { memo } from 'react';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import Divider from '@mui/material/Divider';
 
-import { Enriched, games } from '@cockatrice/datatrice';
+import { games } from '@cockatrice/datatrice';
 import { useAppSelector } from '@app/store';
 import NestedMenuItem from '../CardContextMenu/NestedMenuItem';
 import { useGameDialogsContext } from '../../ui/GameDialogsContext';
@@ -26,7 +27,7 @@ function HandContextMenu() {
   // zone (was computed in Game and passed as a prop).
   const handZone = useAppSelector((state) =>
     gameId != null && localPlayerId != null
-      ? games.Selectors.getZone(state, gameId, localPlayerId, Enriched.ZoneName.HAND)
+      ? games.Selectors.getZone(state, gameId, localPlayerId, ZoneName.HAND)
       : undefined,
   );
   const handSize = handZone?.cardCount ?? 0;
@@ -88,8 +89,8 @@ function HandContextMenu() {
       <NestedMenuItem label="Move hand to" parentMenuOpen={isOpen} disabled={handSize === 0}>
         <MenuItem onClick={() => handleMoveToDeck(true)}>Top of library</MenuItem>
         <MenuItem onClick={() => handleMoveToDeck(false)}>Bottom of library</MenuItem>
-        <MenuItem onClick={() => handleMoveToZone(Enriched.ZoneName.GRAVE)}>Graveyard</MenuItem>
-        <MenuItem onClick={() => handleMoveToZone(Enriched.ZoneName.EXILE)}>Exile</MenuItem>
+        <MenuItem onClick={() => handleMoveToZone(ZoneName.GRAVE)}>Graveyard</MenuItem>
+        <MenuItem onClick={() => handleMoveToZone(ZoneName.EXILE)}>Exile</MenuItem>
       </NestedMenuItem>
     </Menu>
   );

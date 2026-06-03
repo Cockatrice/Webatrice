@@ -1,5 +1,5 @@
+import { ZoneName } from '@cockatrice/sockatrice';
 import { screen, fireEvent } from '@testing-library/react';
-import { Enriched } from '@cockatrice/datatrice';
 
 import { createMockWebClient, makeStoreState, renderWithProviders } from '../../../../../__test-utils__';
 import {
@@ -15,10 +15,10 @@ import HandContextMenu from './HandContextMenu';
 // GameDialogsContext, and handSize is derived from the local player's HAND zone.
 function render(opts: { handSize?: number; dialogs?: Partial<GameDialogs> } = {}) {
   const handSize = opts.handSize ?? 7;
-  const hand = makeZoneEntry({ name: Enriched.ZoneName.HAND, cardCount: handSize });
+  const hand = makeZoneEntry({ name: ZoneName.HAND, cardCount: handSize });
   const player = makePlayerEntry({
     properties: makePlayerProperties({ playerId: 1 }),
-    zones: { [Enriched.ZoneName.HAND]: hand },
+    zones: { [ZoneName.HAND]: hand },
   });
   const preloadedState = makeStoreState({
     games: { games: { 1: makeGameEntry({ localPlayerId: 1, players: { 1: player } }) } },

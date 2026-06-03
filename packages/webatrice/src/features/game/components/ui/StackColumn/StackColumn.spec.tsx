@@ -1,5 +1,5 @@
+import { ZoneName } from '@cockatrice/sockatrice';
 import { screen, fireEvent } from '@testing-library/react';
-import { Enriched } from '@cockatrice/datatrice';
 vi.mock('../../../../../hooks/useSettings');
 vi.mock('../../../hooks/useScryfallCard', () => ({
   useScryfallCard: () => ({ smallUrl: null, normalUrl: null, isLoading: false }),
@@ -17,7 +17,7 @@ import StackColumn from './StackColumn';
 
 function stateWithStack(cards: ReturnType<typeof makeCard>[] = []) {
   const stack = makeZoneEntry({
-    name: Enriched.ZoneName.STACK,
+    name: ZoneName.STACK,
     cards,
     cardCount: cards.length,
   });
@@ -26,7 +26,7 @@ function stateWithStack(cards: ReturnType<typeof makeCard>[] = []) {
       playerId: 1,
       userInfo: makeUser({ name: 'Alice' }),
     }),
-    zones: { [Enriched.ZoneName.STACK]: stack },
+    zones: { [ZoneName.STACK]: stack },
   });
   return makeStoreState({
     games: { games: { 1: makeGameEntry({ localPlayerId: 1, players: { 1: player } }) } },
@@ -66,6 +66,6 @@ describe('StackColumn', () => {
     expect(onCardContextMenu).toHaveBeenCalled();
     const [ownerPlayerId, zoneName] = onCardContextMenu.mock.calls[0];
     expect(ownerPlayerId).toBe(1);
-    expect(zoneName).toBe(Enriched.ZoneName.STACK);
+    expect(zoneName).toBe(ZoneName.STACK);
   });
 });

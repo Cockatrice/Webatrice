@@ -1,7 +1,8 @@
+import { ZoneName } from '@cockatrice/sockatrice';
+import type { CardLocation } from '@cockatrice/sockatrice';
 import { renderHook } from '@testing-library/react';
 import type { DragEndEvent } from '@dnd-kit/core';
 import { ServerInfo_Card } from '@cockatrice/sockatrice/generated';
-import { Enriched } from '@cockatrice/datatrice';
 import { makeCard } from '@cockatrice/datatrice/testing';
 import {
   CARD_WIDTH_PX,
@@ -107,6 +108,11 @@ function makeWebClient() {
   return {
     request: {
       game: {
+        // All drop kinds now route the whole selection through bulkMove; the
+        // dragged card alone is the n=1 case. Routing-to-owner and judge-wrapping
+        // happen inside bulkMove (covered by sockatrice's bulk command tests), so
+        // here we assert the (targets, dest, judgeTarget) the hook hands it.
+        bulkMove: vi.fn(),
         moveCard: vi.fn(),
         attachCard: vi.fn(),
       },
@@ -114,18 +120,36 @@ function makeWebClient() {
   } as any;
 }
 
+// The (targets, dest, judgeTarget) of the hook's most recent bulkMove call.
+function lastBulkMove(webClient: any): {
+  targets: readonly CardLocation[];
+  dest: { targetPlayerId: number; targetZone: string; x: number; y: number };
+  judge: (ownerPlayerId: number) => number | undefined;
+} {
+  const call = webClient.request.game.bulkMove.mock.calls.at(-1);
+  return { targets: call[1], dest: call[2], judge: call[3] };
+}
+
 function setupHook(
-  { judgeTarget = () => undefined }: { judgeTarget?: (ownerPlayerId: number) => number | undefined } = {},
+  {
+    judgeTarget = () => undefined,
+    selectedCards = [],
+  }: {
+    judgeTarget?: (ownerPlayerId: number) => number | undefined;
+    selectedCards?: readonly CardLocation[];
+  } = {},
 ) {
   const webClient = makeWebClient();
   mockUseWebClient.mockReturnValue(webClient);
   const cancelPendingArrow = vi.fn();
   const collapseUnlessSelected = vi.fn();
+  const getSelectedCards = () => selectedCards;
   const { result } = renderHook(() =>
-    useGameDnd({ gameId: 42, judgeTarget, cancelPendingArrow, collapseUnlessSelected }),
+    useGameDnd({ gameId: 42, judgeTarget, cancelPendingArrow, collapseUnlessSelected, getSelectedCards }),
   );
   return {
     webClient,
+    judgeTarget,
     cancelPendingArrow,
     collapseUnlessSelected,
     handleDragStart: result.current.handleDragStart,
@@ -158,10 +182,10 @@ function buildCollisionArgs(pointer: { x: number; y: number }) {
   const popupRect = clientRect(60, 60, 400, 300); // floating overlay
   const boardRect = clientRect(0, 0, 800, 600); // board underneath, larger
 
-  const popup = makeContainer('zoneview-1-rfg', popupBody, { targetZone: Enriched.ZoneName.EXILE });
+  const popup = makeContainer('zoneview-1-rfg', popupBody, { targetZone: ZoneName.EXILE });
   const board = makeContainer('battlefield-1-0', boardRow, {
     targetPlayerId: 1,
-    targetZone: Enriched.ZoneName.TABLE,
+    targetZone: ZoneName.TABLE,
     row: 0,
   });
 
@@ -197,10 +221,10 @@ describe('useGameDnd', () => {
     it('cancels the pending arrow and collapses the selection to the dragged card', () => {
       const { handleDragStart, cancelPendingArrow, collapseUnlessSelected } = setupHook();
       const card = makeCard({ id: 7 });
-      handleDragStart(buildStartEvent({ card, sourcePlayerId: 1, sourceZone: Enriched.ZoneName.TABLE }));
+      handleDragStart(buildStartEvent({ card, sourcePlayerId: 1, sourceZone: ZoneName.TABLE }));
 
       expect(cancelPendingArrow).toHaveBeenCalledTimes(1);
-      expect(collapseUnlessSelected).toHaveBeenCalledWith(1, Enriched.ZoneName.TABLE, card);
+      expect(collapseUnlessSelected).toHaveBeenCalledWith(1, ZoneName.TABLE, card);
     });
 
     it('still cancels the pending arrow when the drag carries no card data', () => {
@@ -213,30 +237,30 @@ describe('useGameDnd', () => {
   });
 
   describe('drops on battlefield', () => {
-    it('sends moveCard with gridX=0 when dropping into an empty row', () => {
+    it('moves with gridX=0 when dropping into an empty row', () => {
       const { webClient, handleDragEnd } = setupHook();
       const card = makeCard({ id: 10, x: 0, y: 0 });
       handleDragEnd(
         buildEvent({
           sourceCard: card,
           sourcePlayerId: 1,
-          sourceZone: Enriched.ZoneName.HAND,
+          sourceZone: ZoneName.HAND,
           targetPlayerId: 1,
-          targetZone: Enriched.ZoneName.TABLE,
+          targetZone: ZoneName.TABLE,
           targetRow: 1,
           rowCards: [],
           pointerXInRow: 10,
         }),
       );
 
-      expect(webClient.request.game.moveCard).toHaveBeenCalledTimes(1);
-      const args = webClient.request.game.moveCard.mock.calls[0][1];
-      expect(args.x).toBe(0);
-      expect(args.y).toBe(1);
-      expect(args.targetZone).toBe(Enriched.ZoneName.TABLE);
+      expect(webClient.request.game.bulkMove).toHaveBeenCalledTimes(1);
+      const { dest } = lastBulkMove(webClient);
+      expect(dest.x).toBe(0);
+      expect(dest.y).toBe(1);
+      expect(dest.targetZone).toBe(ZoneName.TABLE);
     });
 
-    it('sends moveCard with gridX=3 when dropping into the next stack past a 1-card stack', () => {
+    it('moves with gridX=3 when dropping into the next stack past a 1-card stack', () => {
       const { webClient, handleDragEnd } = setupHook();
       const existing = makeCard({ id: 20, x: 0, y: 0 });
       const dragging = makeCard({ id: 21, x: 0, y: 2 }); // from a different row
@@ -244,9 +268,9 @@ describe('useGameDnd', () => {
         buildEvent({
           sourceCard: dragging,
           sourcePlayerId: 1,
-          sourceZone: Enriched.ZoneName.TABLE,
+          sourceZone: ZoneName.TABLE,
           targetPlayerId: 1,
-          targetZone: Enriched.ZoneName.TABLE,
+          targetZone: ZoneName.TABLE,
           targetRow: 0,
           rowCards: [existing],
           // Pointer well inside stack 1's territory.
@@ -254,8 +278,7 @@ describe('useGameDnd', () => {
         }),
       );
 
-      const args = webClient.request.game.moveCard.mock.calls[0][1];
-      expect(args.x).toBe(3);
+      expect(lastBulkMove(webClient).dest.x).toBe(3);
     });
 
     it('allows in-row reorder (same-row drop no longer silently rejected)', () => {
@@ -266,9 +289,9 @@ describe('useGameDnd', () => {
         buildEvent({
           sourceCard: dragged,
           sourcePlayerId: 1,
-          sourceZone: Enriched.ZoneName.TABLE,
+          sourceZone: ZoneName.TABLE,
           targetPlayerId: 1,
-          targetZone: Enriched.ZoneName.TABLE,
+          targetZone: ZoneName.TABLE,
           targetRow: 1,
           // Dragged card still appears in rowCards from Redux during the drag.
           rowCards: [leftmost, dragged],
@@ -277,9 +300,9 @@ describe('useGameDnd', () => {
         }),
       );
 
-      expect(webClient.request.game.moveCard).toHaveBeenCalledTimes(1);
+      expect(webClient.request.game.bulkMove).toHaveBeenCalledTimes(1);
       // Dragged card excluded from occupancy → stack 1 base (3) is free.
-      expect(webClient.request.game.moveCard.mock.calls[0][1].x).toBe(3);
+      expect(lastBulkMove(webClient).dest.x).toBe(3);
     });
 
     it('places into sub-position 1 when the stack base is occupied by another card', () => {
@@ -290,9 +313,9 @@ describe('useGameDnd', () => {
         buildEvent({
           sourceCard: dragging,
           sourcePlayerId: 1,
-          sourceZone: Enriched.ZoneName.TABLE,
+          sourceZone: ZoneName.TABLE,
           targetPlayerId: 1,
-          targetZone: Enriched.ZoneName.TABLE,
+          targetZone: ZoneName.TABLE,
           targetRow: 0,
           rowCards: [occupying],
           // Inside stack 0's territory (mapToGridX returns something in [0,2]).
@@ -301,7 +324,7 @@ describe('useGameDnd', () => {
       );
 
       // base 0 occupied → closestGridPoint bumps to 1.
-      expect(webClient.request.game.moveCard.mock.calls[0][1].x).toBe(1);
+      expect(lastBulkMove(webClient).dest.x).toBe(1);
     });
 
     it('rejects a drop silently when the target stack is fully occupied', () => {
@@ -316,16 +339,16 @@ describe('useGameDnd', () => {
         buildEvent({
           sourceCard: dragging,
           sourcePlayerId: 1,
-          sourceZone: Enriched.ZoneName.TABLE,
+          sourceZone: ZoneName.TABLE,
           targetPlayerId: 1,
-          targetZone: Enriched.ZoneName.TABLE,
+          targetZone: ZoneName.TABLE,
           targetRow: 0,
           rowCards: full,
           pointerXInRow: 0, // mapToGridX → 0; all three sub-slots full.
         }),
       );
 
-      expect(webClient.request.game.moveCard).not.toHaveBeenCalled();
+      expect(webClient.request.game.bulkMove).not.toHaveBeenCalled();
     });
 
     it('sends the logical y from target.row without re-inverting (mirrored boards)', () => {
@@ -340,16 +363,16 @@ describe('useGameDnd', () => {
         buildEvent({
           sourceCard: dragging,
           sourcePlayerId: 1,
-          sourceZone: Enriched.ZoneName.HAND,
+          sourceZone: ZoneName.HAND,
           targetPlayerId: 2,
-          targetZone: Enriched.ZoneName.TABLE,
+          targetZone: ZoneName.TABLE,
           targetRow: 2, // visual top of mirrored opponent = logical y=2
           rowCards: [],
           pointerXInRow: 0,
         }),
       );
 
-      expect(webClient.request.game.moveCard.mock.calls[0][1].y).toBe(2);
+      expect(lastBulkMove(webClient).dest.y).toBe(2);
     });
 
     it('keeps the dropped-on player as target for cross-player TABLE moves (control-change)', () => {
@@ -362,16 +385,16 @@ describe('useGameDnd', () => {
         buildEvent({
           sourceCard: dragging,
           sourcePlayerId: 1,
-          sourceZone: Enriched.ZoneName.HAND,
+          sourceZone: ZoneName.HAND,
           targetPlayerId: 2,
-          targetZone: Enriched.ZoneName.TABLE,
+          targetZone: ZoneName.TABLE,
           targetRow: 0,
           rowCards: [],
           pointerXInRow: 0,
         }),
       );
 
-      expect(webClient.request.game.moveCard.mock.calls[0][1].targetPlayerId).toBe(2);
+      expect(lastBulkMove(webClient).dest.targetPlayerId).toBe(2);
     });
   });
 
@@ -383,41 +406,41 @@ describe('useGameDnd', () => {
         buildEvent({
           sourceCard: card,
           sourcePlayerId: 1,
-          sourceZone: Enriched.ZoneName.TABLE,
+          sourceZone: ZoneName.TABLE,
           targetPlayerId: 1,
-          targetZone: Enriched.ZoneName.GRAVE,
+          targetZone: ZoneName.GRAVE,
           targetRow: 0,
           pointerXInRow: 500, // ignored for non-TABLE
         }),
       );
 
-      const args = webClient.request.game.moveCard.mock.calls[0][1];
-      expect(args.x).toBe(0);
-      expect(args.y).toBe(0);
-      expect(args.targetZone).toBe(Enriched.ZoneName.GRAVE);
+      const { dest } = lastBulkMove(webClient);
+      expect(dest.x).toBe(0);
+      expect(dest.y).toBe(0);
+      expect(dest.targetZone).toBe(ZoneName.GRAVE);
     });
 
     it('routes a foreign-owned card to its OWNER tree, not the dropped-on zone owner', () => {
       // A controlled card sits in its owner's tree (player 2). Dropping it on
       // the local player's (player 1) graveyard stack must target player 2 —
-      // Servatrice rejects cross-player non-table moves, so the destination is
-      // always the card's source tree.
+      // classifyDrop runs moveTargetPlayerId for cross-zone drops, so the dest
+      // already carries the owner. Servatrice rejects cross-player non-table moves.
       const { webClient, handleDragEnd } = setupHook();
       const card = makeCard({ id: 71, x: 0, y: 0 });
       handleDragEnd(
         buildEvent({
           sourceCard: card,
           sourcePlayerId: 2,
-          sourceZone: Enriched.ZoneName.TABLE,
+          sourceZone: ZoneName.TABLE,
           targetPlayerId: 1,
-          targetZone: Enriched.ZoneName.GRAVE,
+          targetZone: ZoneName.GRAVE,
         }),
       );
 
-      const args = webClient.request.game.moveCard.mock.calls[0][1];
-      expect(args.startPlayerId).toBe(2);
-      expect(args.targetPlayerId).toBe(2);
-      expect(args.targetZone).toBe(Enriched.ZoneName.GRAVE);
+      const { targets, dest } = lastBulkMove(webClient);
+      expect(targets[0].ownerPlayerId).toBe(2);
+      expect(dest.targetPlayerId).toBe(2);
+      expect(dest.targetZone).toBe(ZoneName.GRAVE);
     });
 
     it('skips dispatch for same-zone hand drop on zone background (no slot resolved)', () => {
@@ -427,15 +450,15 @@ describe('useGameDnd', () => {
         buildEvent({
           sourceCard: card,
           sourcePlayerId: 1,
-          sourceZone: Enriched.ZoneName.HAND,
+          sourceZone: ZoneName.HAND,
           sourceIndex: 0,
           targetPlayerId: 1,
-          targetZone: Enriched.ZoneName.HAND,
+          targetZone: ZoneName.HAND,
           targetRow: 0,
         }),
       );
 
-      expect(webClient.request.game.moveCard).not.toHaveBeenCalled();
+      expect(webClient.request.game.bulkMove).not.toHaveBeenCalled();
     });
 
     it('skips dispatch for same-zone non-hand-or-stack drops (e.g. deck → deck)', () => {
@@ -445,107 +468,149 @@ describe('useGameDnd', () => {
         buildEvent({
           sourceCard: card,
           sourcePlayerId: 1,
-          sourceZone: Enriched.ZoneName.DECK,
+          sourceZone: ZoneName.DECK,
           targetPlayerId: 1,
-          targetZone: Enriched.ZoneName.DECK,
+          targetZone: ZoneName.DECK,
           targetRow: 0,
         }),
       );
 
-      expect(webClient.request.game.moveCard).not.toHaveBeenCalled();
+      expect(webClient.request.game.bulkMove).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('multi-selection (bulk drag)', () => {
+    it('moves every selected card when the dragged card is part of a ≥2 selection', () => {
+      const dragged = makeCard({ id: 110, x: 0, y: 0 });
+      const other = makeCard({ id: 111, x: 1, y: 0 });
+      const selectedCards: CardLocation[] = [
+        { ownerPlayerId: 1, zone: ZoneName.TABLE, card: dragged },
+        { ownerPlayerId: 1, zone: ZoneName.TABLE, card: other },
+      ];
+      const { webClient, handleDragEnd } = setupHook({ selectedCards });
+      handleDragEnd(
+        buildEvent({
+          sourceCard: dragged,
+          sourcePlayerId: 1,
+          sourceZone: ZoneName.TABLE,
+          targetPlayerId: 1,
+          targetZone: ZoneName.GRAVE,
+        }),
+      );
+
+      const { targets } = lastBulkMove(webClient);
+      expect(targets.map((t) => t.card.id)).toEqual([110, 111]);
+    });
+
+    it('moves only the dragged card when it is not part of the selection', () => {
+      const dragged = makeCard({ id: 120, x: 0, y: 0 });
+      const unrelated = makeCard({ id: 121, x: 1, y: 0 });
+      const selectedCards: CardLocation[] = [
+        { ownerPlayerId: 1, zone: ZoneName.TABLE, card: unrelated },
+      ];
+      const { webClient, handleDragEnd } = setupHook({ selectedCards });
+      handleDragEnd(
+        buildEvent({
+          sourceCard: dragged,
+          sourcePlayerId: 1,
+          sourceZone: ZoneName.TABLE,
+          targetPlayerId: 1,
+          targetZone: ZoneName.GRAVE,
+        }),
+      );
+
+      const { targets } = lastBulkMove(webClient);
+      expect(targets.map((t) => t.card.id)).toEqual([120]);
     });
   });
 
   describe('judge override (drag)', () => {
-    it('wraps a judge dragging a foreign card to a non-table zone in Command_Judge (target=owner)', () => {
+    it('forwards the judge resolver and routes a foreign card to the owner tree', () => {
       // Judge resolver: foreign owner wraps as itself, own (player 1) stays bare.
-      const { webClient, handleDragEnd } = setupHook({ judgeTarget: (o) => (o === 1 ? undefined : o) });
+      // bulkMove does the per-group wrapping; the hook just forwards the resolver.
+      const judgeTarget = (o: number) => (o === 1 ? undefined : o);
+      const { webClient, handleDragEnd } = setupHook({ judgeTarget });
       const card = makeCard({ id: 200, x: 0, y: 0 });
       handleDragEnd(
         buildEvent({
           sourceCard: card,
           sourcePlayerId: 2, // foreign card; local judge is player 1
-          sourceZone: Enriched.ZoneName.TABLE,
+          sourceZone: ZoneName.TABLE,
           targetPlayerId: 2,
-          targetZone: Enriched.ZoneName.GRAVE,
+          targetZone: ZoneName.GRAVE,
         }),
       );
 
-      expect(webClient.request.game.moveCard).toHaveBeenCalledWith(
-        42,
-        expect.objectContaining({
-          startPlayerId: 2,
-          targetPlayerId: 2, // non-table routes to the owner tree
-          targetZone: Enriched.ZoneName.GRAVE,
-        }),
-        2, // judge wrap target = owner
-      );
+      const { targets, dest, judge } = lastBulkMove(webClient);
+      expect(targets[0].ownerPlayerId).toBe(2);
+      expect(dest.targetPlayerId).toBe(2); // non-table routes to the owner tree
+      expect(dest.targetZone).toBe(ZoneName.GRAVE);
+      expect(judge).toBe(judgeTarget);
+      expect(judge(2)).toBe(2);
     });
 
-    it('sends bare (no Command_Judge) when a judge drags their own card', () => {
-      const { webClient, handleDragEnd } = setupHook({ judgeTarget: (o) => (o === 1 ? undefined : o) });
+    it('forwards the resolver for a judge dragging their own card (resolves bare)', () => {
+      const judgeTarget = (o: number) => (o === 1 ? undefined : o);
+      const { webClient, handleDragEnd } = setupHook({ judgeTarget });
       const card = makeCard({ id: 201, x: 0, y: 0 });
       handleDragEnd(
         buildEvent({
           sourceCard: card,
           sourcePlayerId: 1, // own card
-          sourceZone: Enriched.ZoneName.TABLE,
+          sourceZone: ZoneName.TABLE,
           targetPlayerId: 1,
-          targetZone: Enriched.ZoneName.GRAVE,
+          targetZone: ZoneName.GRAVE,
         }),
       );
 
-      // Own card → judgeTargetId is undefined (unwrapped).
-      expect(webClient.request.game.moveCard).toHaveBeenCalledWith(
-        42,
-        expect.objectContaining({ startPlayerId: 1, targetZone: Enriched.ZoneName.GRAVE }),
-        undefined,
-      );
+      const { targets, judge } = lastBulkMove(webClient);
+      expect(targets[0].ownerPlayerId).toBe(1);
+      expect(judge(1)).toBeUndefined();
     });
   });
 
   describe('hand/stack reorder', () => {
-    it('sends moveCard with x=targetIndex when dragging within the hand', () => {
+    it('moves with x=targetIndex when dragging within the hand', () => {
       const { webClient, handleDragEnd } = setupHook();
       const card = makeCard({ id: 100, x: 0, y: 0 });
       handleDragEnd(
         buildEvent({
           sourceCard: card,
           sourcePlayerId: 1,
-          sourceZone: Enriched.ZoneName.HAND,
+          sourceZone: ZoneName.HAND,
           sourceIndex: 0,
           targetPlayerId: 1,
-          targetZone: Enriched.ZoneName.HAND,
+          targetZone: ZoneName.HAND,
           targetIndex: 3,
         }),
       );
 
-      expect(webClient.request.game.moveCard).toHaveBeenCalledTimes(1);
-      const args = webClient.request.game.moveCard.mock.calls[0][1];
-      expect(args.x).toBe(3);
-      expect(args.y).toBe(0);
-      expect(args.startZone).toBe(Enriched.ZoneName.HAND);
-      expect(args.targetZone).toBe(Enriched.ZoneName.HAND);
+      expect(webClient.request.game.bulkMove).toHaveBeenCalledTimes(1);
+      const { targets, dest } = lastBulkMove(webClient);
+      expect(dest.x).toBe(3);
+      expect(dest.y).toBe(0);
+      expect(targets[0].zone).toBe(ZoneName.HAND);
+      expect(dest.targetZone).toBe(ZoneName.HAND);
     });
 
-    it('sends moveCard with x=targetIndex when dragging within the stack pile', () => {
+    it('moves with x=targetIndex when dragging within the stack pile', () => {
       const { webClient, handleDragEnd } = setupHook();
       const card = makeCard({ id: 101 });
       handleDragEnd(
         buildEvent({
           sourceCard: card,
           sourcePlayerId: 2,
-          sourceZone: Enriched.ZoneName.STACK,
+          sourceZone: ZoneName.STACK,
           sourceIndex: 2,
           targetPlayerId: 2,
-          targetZone: Enriched.ZoneName.STACK,
+          targetZone: ZoneName.STACK,
           targetIndex: 0,
         }),
       );
 
-      const args = webClient.request.game.moveCard.mock.calls[0][1];
-      expect(args.x).toBe(0);
-      expect(args.targetZone).toBe(Enriched.ZoneName.STACK);
+      const { dest } = lastBulkMove(webClient);
+      expect(dest.x).toBe(0);
+      expect(dest.targetZone).toBe(ZoneName.STACK);
     });
 
     it('reorders within a zone-view popup (e.g. library) via a reorder slot', () => {
@@ -557,18 +622,18 @@ describe('useGameDnd', () => {
         buildEvent({
           sourceCard: card,
           sourcePlayerId: 5,
-          sourceZone: Enriched.ZoneName.DECK,
+          sourceZone: ZoneName.DECK,
           sourceIndex: 1,
           targetPlayerId: 5,
-          targetZone: Enriched.ZoneName.DECK,
+          targetZone: ZoneName.DECK,
           targetIndex: 4,
         }),
       );
 
-      expect(webClient.request.game.moveCard).toHaveBeenCalledTimes(1);
-      const args = webClient.request.game.moveCard.mock.calls[0][1];
-      expect(args.x).toBe(4);
-      expect(args.targetZone).toBe(Enriched.ZoneName.DECK);
+      expect(webClient.request.game.bulkMove).toHaveBeenCalledTimes(1);
+      const { dest } = lastBulkMove(webClient);
+      expect(dest.x).toBe(4);
+      expect(dest.targetZone).toBe(ZoneName.DECK);
     });
 
     it('skips dispatch when targetIndex equals sourceIndex (drop on same slot)', () => {
@@ -578,15 +643,15 @@ describe('useGameDnd', () => {
         buildEvent({
           sourceCard: card,
           sourcePlayerId: 1,
-          sourceZone: Enriched.ZoneName.HAND,
+          sourceZone: ZoneName.HAND,
           sourceIndex: 2,
           targetPlayerId: 1,
-          targetZone: Enriched.ZoneName.HAND,
+          targetZone: ZoneName.HAND,
           targetIndex: 2,
         }),
       );
 
-      expect(webClient.request.game.moveCard).not.toHaveBeenCalled();
+      expect(webClient.request.game.bulkMove).not.toHaveBeenCalled();
     });
   });
 
@@ -610,7 +675,7 @@ describe('useGameDnd', () => {
   });
 
   describe('drag-drop never attaches (Cockatrice parity)', () => {
-    it('dispatches moveCard, not attachCard, even when targeting a table row that contains another card', () => {
+    it('dispatches a move, not attachCard, even when targeting a table row that contains another card', () => {
       // Card slots are no longer drop targets; drops always land on the row
       // and resolve via grid math. Attach is right-click-menu-only — see
       // cockatrice/src/game/board/card_item.cpp `drawAttachArrow`.
@@ -621,9 +686,9 @@ describe('useGameDnd', () => {
         buildEvent({
           sourceCard: source,
           sourcePlayerId: 1,
-          sourceZone: Enriched.ZoneName.TABLE,
+          sourceZone: ZoneName.TABLE,
           targetPlayerId: 1,
-          targetZone: Enriched.ZoneName.TABLE,
+          targetZone: ZoneName.TABLE,
           targetRow: 0,
           rowCards: [occupant],
           pointerXInRow: 0,
@@ -631,9 +696,9 @@ describe('useGameDnd', () => {
       );
 
       expect(webClient.request.game.attachCard).not.toHaveBeenCalled();
-      expect(webClient.request.game.moveCard).toHaveBeenCalledTimes(1);
+      expect(webClient.request.game.bulkMove).toHaveBeenCalledTimes(1);
       // closestGridPoint bumps to subPos 1 since base is occupied → x=1.
-      expect(webClient.request.game.moveCard.mock.calls[0][1].x).toBe(1);
+      expect(lastBulkMove(webClient).dest.x).toBe(1);
     });
   });
 });

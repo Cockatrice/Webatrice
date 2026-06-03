@@ -1,5 +1,5 @@
+import { ZoneName } from '@cockatrice/sockatrice';
 import { screen, fireEvent } from '@testing-library/react';
-import { Enriched } from '@cockatrice/datatrice';
 import { makeStoreState, renderWithProviders } from '../../../../../__test-utils__';
 import {
   makeCard,
@@ -11,7 +11,7 @@ import HandZone from './HandZone';
 
 function stateWithHand(cards: ReturnType<typeof makeCard>[]) {
   const hand = makeZoneEntry({
-    name: Enriched.ZoneName.HAND,
+    name: ZoneName.HAND,
     type: 0,
     cardCount: cards.length,
     cards,
@@ -22,7 +22,7 @@ function stateWithHand(cards: ReturnType<typeof makeCard>[]) {
         1: makeGameEntry({
           localPlayerId: 1,
           players: {
-            1: makePlayerEntry({ zones: { [Enriched.ZoneName.HAND]: hand } }),
+            1: makePlayerEntry({ zones: { [ZoneName.HAND]: hand } }),
           },
         }),
       },

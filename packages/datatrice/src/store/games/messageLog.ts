@@ -1,3 +1,4 @@
+import { ZoneName } from '@cockatrice/sockatrice';
 import { App, Enriched } from '../../types';
 import {
   CardAttribute,
@@ -28,13 +29,13 @@ function nameOf(game: Enriched.GameEntry, playerId: number): string {
 
 function zoneLabel(zoneName: string): string {
   switch (zoneName) {
-    case Enriched.ZoneName.TABLE: return 'the battlefield';
-    case Enriched.ZoneName.HAND: return 'their hand';
-    case Enriched.ZoneName.GRAVE: return 'their graveyard';
-    case Enriched.ZoneName.EXILE: return 'exile';
-    case Enriched.ZoneName.DECK: return 'their library';
-    case Enriched.ZoneName.SIDEBOARD: return 'their sideboard';
-    case Enriched.ZoneName.STACK: return 'the stack';
+    case ZoneName.TABLE: return 'the battlefield';
+    case ZoneName.HAND: return 'their hand';
+    case ZoneName.GRAVE: return 'their graveyard';
+    case ZoneName.EXILE: return 'exile';
+    case ZoneName.DECK: return 'their library';
+    case ZoneName.SIDEBOARD: return 'their sideboard';
+    case ZoneName.STACK: return 'the stack';
     default: return `custom zone '${zoneName}'`;
   }
 }
@@ -65,13 +66,13 @@ function cardDescriptor(cardName: string | undefined): string {
 }
 
 function isSameZoneReorder(startZone: string, targetZone: string, sameOwner: boolean): boolean {
-  if (!sameOwner && (startZone === Enriched.ZoneName.TABLE && targetZone === Enriched.ZoneName.TABLE)) {
+  if (!sameOwner && (startZone === ZoneName.TABLE && targetZone === ZoneName.TABLE)) {
     return false;
   }
   return (
-    (sameOwner && startZone === Enriched.ZoneName.TABLE && targetZone === Enriched.ZoneName.TABLE) ||
-    (startZone === Enriched.ZoneName.HAND && targetZone === Enriched.ZoneName.HAND) ||
-    (startZone === Enriched.ZoneName.EXILE && targetZone === Enriched.ZoneName.EXILE)
+    (sameOwner && startZone === ZoneName.TABLE && targetZone === ZoneName.TABLE) ||
+    (startZone === ZoneName.HAND && targetZone === ZoneName.HAND) ||
+    (startZone === ZoneName.EXILE && targetZone === ZoneName.EXILE)
   );
 }
 
@@ -97,11 +98,11 @@ export function formatCardMoved(
     return `${actor} gives ${nameOf(game, data.targetPlayerId)} control over ${card}.`;
   }
 
-  if (data.startZone === Enriched.ZoneName.HAND && data.targetZone === Enriched.ZoneName.TABLE) {
+  if (data.startZone === ZoneName.HAND && data.targetZone === ZoneName.TABLE) {
     return `${actor} plays ${card}.`;
   }
 
-  if (data.targetZone === Enriched.ZoneName.HAND && data.startZone !== Enriched.ZoneName.HAND) {
+  if (data.targetZone === ZoneName.HAND && data.startZone !== ZoneName.HAND) {
     return `${actor} puts ${card} into ${sameOwner ? 'their hand' : `${nameOf(game, data.targetPlayerId)}'s hand`}.`;
   }
 

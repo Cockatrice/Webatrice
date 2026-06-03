@@ -1,5 +1,5 @@
+import { ZoneName } from '@cockatrice/sockatrice';
 import { renderHook } from '@testing-library/react';
-import { Enriched } from '@cockatrice/datatrice';
 vi.mock('@app/hooks', async (orig) => {
   const actual = await orig<typeof import('@app/hooks')>();
   return {
@@ -46,7 +46,7 @@ describe('useCardSlot', () => {
   it('registers a draggable for an unattached TABLE card', () => {
     const card = makeCard({ id: 1 });
     renderHook(() =>
-      useCardSlot({ card, draggable: true, ownerPlayerId: 1, zone: Enriched.ZoneName.TABLE }),
+      useCardSlot({ card, draggable: true, ownerPlayerId: 1, zone: ZoneName.TABLE }),
     );
     expect(useDraggableMock).toHaveBeenCalledTimes(1);
     const dragCall = useDraggableMock.mock.calls[0][0] as { disabled: boolean };
@@ -56,7 +56,7 @@ describe('useCardSlot', () => {
   it('disables the draggable when ownerPlayerId or zone is unknown', () => {
     const card = makeCard({ id: 2 });
     renderHook(() =>
-      useCardSlot({ card, draggable: true, ownerPlayerId: undefined, zone: Enriched.ZoneName.TABLE }),
+      useCardSlot({ card, draggable: true, ownerPlayerId: undefined, zone: ZoneName.TABLE }),
     );
     const dragCall = useDraggableMock.mock.calls[0][0] as { disabled: boolean };
     expect(dragCall.disabled).toBe(true);
@@ -65,7 +65,7 @@ describe('useCardSlot', () => {
   it('disables the draggable when the caller passes draggable=false', () => {
     const card = makeCard({ id: 3 });
     renderHook(() =>
-      useCardSlot({ card, draggable: false, ownerPlayerId: 1, zone: Enriched.ZoneName.TABLE }),
+      useCardSlot({ card, draggable: false, ownerPlayerId: 1, zone: ZoneName.TABLE }),
     );
     const dragCall = useDraggableMock.mock.calls[0][0] as { disabled: boolean };
     expect(dragCall.disabled).toBe(true);
@@ -74,7 +74,7 @@ describe('useCardSlot', () => {
   it('disables the droppable when no dropIndex is provided (TABLE)', () => {
     const card = makeCard({ id: 4 });
     renderHook(() =>
-      useCardSlot({ card, draggable: true, ownerPlayerId: 1, zone: Enriched.ZoneName.TABLE }),
+      useCardSlot({ card, draggable: true, ownerPlayerId: 1, zone: ZoneName.TABLE }),
     );
     const dropCall = useDroppableMock.mock.calls[0][0] as { disabled: boolean };
     expect(dropCall.disabled).toBe(true);
@@ -83,7 +83,7 @@ describe('useCardSlot', () => {
   it('registers a droppable with the slot index when dropIndex is provided', () => {
     const card = makeCard({ id: 5 });
     renderHook(() =>
-      useCardSlot({ card, draggable: true, ownerPlayerId: 7, zone: Enriched.ZoneName.HAND, dropIndex: 3 }),
+      useCardSlot({ card, draggable: true, ownerPlayerId: 7, zone: ZoneName.HAND, dropIndex: 3 }),
     );
     const dropCall = useDroppableMock.mock.calls[0][0] as {
       disabled: boolean;
@@ -92,7 +92,7 @@ describe('useCardSlot', () => {
     expect(dropCall.disabled).toBe(false);
     expect(dropCall.data).toEqual({
       targetPlayerId: 7,
-      targetZone: Enriched.ZoneName.HAND,
+      targetZone: ZoneName.HAND,
       targetIndex: 3,
       asReorderSlot: true,
     });
@@ -101,7 +101,7 @@ describe('useCardSlot', () => {
   it('carries the slot index on the draggable data for reorder', () => {
     const card = makeCard({ id: 6 });
     renderHook(() =>
-      useCardSlot({ card, draggable: true, ownerPlayerId: 1, zone: Enriched.ZoneName.HAND, dropIndex: 2 }),
+      useCardSlot({ card, draggable: true, ownerPlayerId: 1, zone: ZoneName.HAND, dropIndex: 2 }),
     );
     const dragCall = useDraggableMock.mock.calls[0][0] as { data: { sourceIndex: number } };
     expect(dragCall.data.sourceIndex).toBe(2);
@@ -115,7 +115,7 @@ describe('useCardSlot', () => {
           data: {
             current: {
               sourcePlayerId: 1,
-              sourceZone: Enriched.ZoneName.HAND,
+              sourceZone: ZoneName.HAND,
               sourceIndex: 0,
             },
           },
@@ -123,7 +123,7 @@ describe('useCardSlot', () => {
       };
       const card = makeCard({ id: 7 });
       const { result } = renderHook(() =>
-        useCardSlot({ card, draggable: true, ownerPlayerId: 1, zone: Enriched.ZoneName.HAND, dropIndex: 3 }),
+        useCardSlot({ card, draggable: true, ownerPlayerId: 1, zone: ZoneName.HAND, dropIndex: 3 }),
       );
       expect(result.current.dropSide).toBe('after');
     });
@@ -135,7 +135,7 @@ describe('useCardSlot', () => {
           data: {
             current: {
               sourcePlayerId: 1,
-              sourceZone: Enriched.ZoneName.HAND,
+              sourceZone: ZoneName.HAND,
               sourceIndex: 4,
             },
           },
@@ -143,7 +143,7 @@ describe('useCardSlot', () => {
       };
       const card = makeCard({ id: 8 });
       const { result } = renderHook(() =>
-        useCardSlot({ card, draggable: true, ownerPlayerId: 1, zone: Enriched.ZoneName.HAND, dropIndex: 1 }),
+        useCardSlot({ card, draggable: true, ownerPlayerId: 1, zone: ZoneName.HAND, dropIndex: 1 }),
       );
       expect(result.current.dropSide).toBe('before');
     });
@@ -155,7 +155,7 @@ describe('useCardSlot', () => {
           data: {
             current: {
               sourcePlayerId: 1,
-              sourceZone: Enriched.ZoneName.GRAVE,
+              sourceZone: ZoneName.GRAVE,
               sourceIndex: 0,
             },
           },
@@ -163,7 +163,7 @@ describe('useCardSlot', () => {
       };
       const card = makeCard({ id: 9 });
       const { result } = renderHook(() =>
-        useCardSlot({ card, draggable: true, ownerPlayerId: 1, zone: Enriched.ZoneName.HAND, dropIndex: 2 }),
+        useCardSlot({ card, draggable: true, ownerPlayerId: 1, zone: ZoneName.HAND, dropIndex: 2 }),
       );
       expect(result.current.dropSide).toBeNull();
     });
@@ -172,7 +172,7 @@ describe('useCardSlot', () => {
       droppableState = { isOver: false, active: null };
       const card = makeCard({ id: 10 });
       const { result } = renderHook(() =>
-        useCardSlot({ card, draggable: true, ownerPlayerId: 1, zone: Enriched.ZoneName.HAND, dropIndex: 2 }),
+        useCardSlot({ card, draggable: true, ownerPlayerId: 1, zone: ZoneName.HAND, dropIndex: 2 }),
       );
       expect(result.current.dropSide).toBeNull();
     });

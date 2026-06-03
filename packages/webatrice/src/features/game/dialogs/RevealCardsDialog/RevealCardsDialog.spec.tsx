@@ -1,5 +1,5 @@
+import { ZoneName } from '@cockatrice/sockatrice';
 import { screen, fireEvent } from '@testing-library/react';
-import { Enriched } from '@cockatrice/datatrice';
 import {
   makeGameEntry,
   makePlayerEntry,
@@ -28,7 +28,7 @@ const PRELOADED_STATE = {
 function makeRevealState(overrides: Partial<RevealState> = {}): RevealState {
   return {
     title: 'Reveal hand',
-    zoneName: Enriched.ZoneName.HAND,
+    zoneName: ZoneName.HAND,
     zoneLabel: 'Hand',
     showCountInput: false,
     defaultCount: 1,

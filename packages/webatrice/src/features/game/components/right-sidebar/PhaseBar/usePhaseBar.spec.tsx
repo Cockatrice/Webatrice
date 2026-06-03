@@ -1,7 +1,8 @@
+import { ZoneName } from '@cockatrice/sockatrice';
 import { renderHook, act } from '@testing-library/react';
 import { combineReducers } from '@reduxjs/toolkit';
 import { CardAttribute } from '@cockatrice/sockatrice/generated';
-import { Enriched, Phase, games, type GamesState } from '@cockatrice/datatrice';
+import { Phase, games, type GamesState } from '@cockatrice/datatrice';
 import {
   makeGameEntry,
   makePlayerEntry,
@@ -31,8 +32,8 @@ function stateWith({
   const player = makePlayerEntry({
     properties: makePlayerProperties({ playerId: localPlayerId }),
     zones: {
-      [Enriched.ZoneName.TABLE]: makeZoneEntry({
-        name: Enriched.ZoneName.TABLE,
+      [ZoneName.TABLE]: makeZoneEntry({
+        name: ZoneName.TABLE,
         type: 1,
         withCoords: true,
       }),
@@ -106,7 +107,7 @@ describe('usePhaseBar', () => {
     expect(webClient.request.game.setCardAttr).toHaveBeenCalledWith(
       1,
       {
-        zone: Enriched.ZoneName.TABLE,
+        zone: ZoneName.TABLE,
         cardId: -1,
         attribute: CardAttribute.AttrTapped,
         attrValue: '0',

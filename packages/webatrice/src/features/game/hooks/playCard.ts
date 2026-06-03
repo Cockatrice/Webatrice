@@ -1,6 +1,7 @@
+import { ZoneName } from '@cockatrice/sockatrice';
 import type { WebClient } from '@cockatrice/sockatrice';
 import { ServerInfo_Card } from '@cockatrice/sockatrice/generated';
-import { Enriched, ZoneEntry } from '@cockatrice/datatrice';
+import { ZoneEntry } from '@cockatrice/datatrice';
 import { CardDTO } from '../../../services/dexie/DexieDTOs/CardDTO';
 import {
   applyInvertY,
@@ -47,12 +48,12 @@ export async function playCardViaTableRow({
       startZone: sourceZone,
       cardsToMove: { card: [{ cardId: card.id, faceDown }] },
       targetPlayerId: sourcePlayerId,
-      targetZone: Enriched.ZoneName.STACK,
+      targetZone: ZoneName.STACK,
       x: 0,
       y: 0,
       isReversed: false,
     }, judgeTargetId);
-    return Enriched.ZoneName.STACK;
+    return ZoneName.STACK;
   }
 
   // tablerow 0/1/2 → visualY 2/1/0 (top-of-player-view); unknown → top row.
@@ -71,10 +72,10 @@ export async function playCardViaTableRow({
     startZone: sourceZone,
     cardsToMove: { card: [{ cardId: card.id, faceDown }] },
     targetPlayerId: sourcePlayerId,
-    targetZone: Enriched.ZoneName.TABLE,
+    targetZone: ZoneName.TABLE,
     x: gridXFromColumn(nextCol),
     y: wireY,
     isReversed: false,
   }, judgeTargetId);
-  return Enriched.ZoneName.TABLE;
+  return ZoneName.TABLE;
 }

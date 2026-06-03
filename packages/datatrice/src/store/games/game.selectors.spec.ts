@@ -1,4 +1,4 @@
-﻿import { Enriched } from '../../types';
+import { ZoneName } from '@cockatrice/sockatrice';
 
 import { Selectors, seatedPlayersOf } from './game.selectors';
 import { gamesReducer } from './game.reducer';
@@ -338,8 +338,8 @@ describe('Selectors', () => {
             players: {
               1: makePlayerEntry({
                 zones: {
-                  [Enriched.ZoneName.TABLE]: makeZoneEntry({
-                    name: Enriched.ZoneName.TABLE,
+                  [ZoneName.TABLE]: makeZoneEntry({
+                    name: ZoneName.TABLE,
                     withCoords: true,
                     cardCount: cards.length,
                     cards,
@@ -363,8 +363,8 @@ describe('Selectors', () => {
             players: {
               1: makePlayerEntry({
                 zones: {
-                  [Enriched.ZoneName.TABLE]: makeZoneEntry({
-                    name: Enriched.ZoneName.TABLE,
+                  [ZoneName.TABLE]: makeZoneEntry({
+                    name: ZoneName.TABLE,
                     withCoords: true,
                     cardCount: player1Cards.length,
                     cards: player1Cards,
@@ -373,8 +373,8 @@ describe('Selectors', () => {
               }),
               2: makePlayerEntry({
                 zones: {
-                  [Enriched.ZoneName.TABLE]: makeZoneEntry({
-                    name: Enriched.ZoneName.TABLE,
+                  [ZoneName.TABLE]: makeZoneEntry({
+                    name: ZoneName.TABLE,
                     withCoords: true,
                     cardCount: player2Cards.length,
                     cards: player2Cards,
@@ -424,7 +424,7 @@ describe('Selectors', () => {
         makeCard({ id: 10, name: 'Creature' }),
         makeCard({
           id: 11, name: 'Aura',
-          attachPlayerId: 1, attachZone: Enriched.ZoneName.TABLE, attachCardId: 10,
+          attachPlayerId: 1, attachZone: ZoneName.TABLE, attachCardId: 10,
         }),
       ];
       const state = stateWithTable(cards);
@@ -443,15 +443,15 @@ describe('Selectors', () => {
         makeCard({ id: 5, name: 'Creature' }),
         makeCard({
           id: 30, name: 'Aura first',
-          attachPlayerId: 1, attachZone: Enriched.ZoneName.TABLE, attachCardId: 5,
+          attachPlayerId: 1, attachZone: ZoneName.TABLE, attachCardId: 5,
         }),
         makeCard({
           id: 10, name: 'Aura middle',
-          attachPlayerId: 1, attachZone: Enriched.ZoneName.TABLE, attachCardId: 5,
+          attachPlayerId: 1, attachZone: ZoneName.TABLE, attachCardId: 5,
         }),
         makeCard({
           id: 20, name: 'Aura last',
-          attachPlayerId: 1, attachZone: Enriched.ZoneName.TABLE, attachCardId: 5,
+          attachPlayerId: 1, attachZone: ZoneName.TABLE, attachCardId: 5,
         }),
       ];
       const state = stateWithTable(cards);
@@ -468,7 +468,7 @@ describe('Selectors', () => {
         makeCard({ id: 1, name: 'Creature' }),
         makeCard({
           id: 2, name: 'Non-table ref',
-          attachPlayerId: 1, attachZone: Enriched.ZoneName.HAND, attachCardId: 1,
+          attachPlayerId: 1, attachZone: ZoneName.HAND, attachCardId: 1,
         }),
       ];
       const state = stateWithTable(cards);
@@ -481,7 +481,7 @@ describe('Selectors', () => {
         makeCard({ id: 1, name: 'Creature' }),
         makeCard({
           id: 2, name: 'Aura',
-          attachPlayerId: 1, attachZone: Enriched.ZoneName.TABLE, attachCardId: 1,
+          attachPlayerId: 1, attachZone: ZoneName.TABLE, attachCardId: 1,
         }),
       ];
       const state = stateWithTable(cards);
@@ -501,12 +501,12 @@ describe('Selectors', () => {
               players: {
                 1: makePlayerEntry({
                   zones: {
-                    [Enriched.ZoneName.TABLE]: makeZoneEntry({
-                      name: Enriched.ZoneName.TABLE, withCoords: true,
+                    [ZoneName.TABLE]: makeZoneEntry({
+                      name: ZoneName.TABLE, withCoords: true,
                       cardCount: tableCards.length, cards: tableCards,
                     }),
-                    [Enriched.ZoneName.HAND]: makeZoneEntry({
-                      name: Enriched.ZoneName.HAND,
+                    [ZoneName.HAND]: makeZoneEntry({
+                      name: ZoneName.HAND,
                       cardCount: handCards.length, cards: handCards,
                     }),
                   },
@@ -521,13 +521,13 @@ describe('Selectors', () => {
         const state = stateWithTableAndHand(
           [
             makeCard({ id: 1, name: 'Creature' }),
-            makeCard({ id: 2, name: 'Aura', attachPlayerId: 1, attachZone: Enriched.ZoneName.TABLE, attachCardId: 1 }),
+            makeCard({ id: 2, name: 'Aura', attachPlayerId: 1, attachZone: ZoneName.TABLE, attachCardId: 1 }),
           ],
           [makeCard({ id: 99, name: 'In hand' })],
         );
         const before = Selectors.getAttachmentsByParent(rootState(state), 1, 1);
         const next = gamesReducer(state, Actions.cardFieldsUpdated({
-          gameId: 1, playerId: 1, zoneName: Enriched.ZoneName.HAND, cardId: 99, fields: { tapped: true },
+          gameId: 1, playerId: 1, zoneName: ZoneName.HAND, cardId: 99, fields: { tapped: true },
         }));
         const after = Selectors.getAttachmentsByParent(rootState(next), 1, 1);
         expect(after).toBe(before);
@@ -536,14 +536,14 @@ describe('Selectors', () => {
       it('returns the SAME sub-map after a TABLE mutation that does not change attachments', () => {
         const state = stateWithTable([
           makeCard({ id: 1, name: 'Creature' }),
-          makeCard({ id: 2, name: 'Aura', attachPlayerId: 1, attachZone: Enriched.ZoneName.TABLE, attachCardId: 1 }),
+          makeCard({ id: 2, name: 'Aura', attachPlayerId: 1, attachZone: ZoneName.TABLE, attachCardId: 1 }),
           makeCard({ id: 3, name: 'Other creature' }),
         ]);
         const before = Selectors.getAttachmentsByParent(rootState(state), 1, 1);
         // Tap an unrelated creature — its card object is cloned (TABLE zone ref changes) but
         // the attachment graph is identical, so the reconciled result is reference-stable.
         const next = gamesReducer(state, Actions.cardFieldsUpdated({
-          gameId: 1, playerId: 1, zoneName: Enriched.ZoneName.TABLE, cardId: 3, fields: { tapped: true },
+          gameId: 1, playerId: 1, zoneName: ZoneName.TABLE, cardId: 3, fields: { tapped: true },
         }));
         const after = Selectors.getAttachmentsByParent(rootState(next), 1, 1);
         expect(after).toBe(before);
@@ -552,12 +552,12 @@ describe('Selectors', () => {
       it('returns a new result when an attachment is actually added', () => {
         const state = stateWithTable([
           makeCard({ id: 11, name: 'Creature' }),
-          makeCard({ id: 12, name: 'Aura', attachPlayerId: 1, attachZone: Enriched.ZoneName.TABLE, attachCardId: 11 }),
+          makeCard({ id: 12, name: 'Aura', attachPlayerId: 1, attachZone: ZoneName.TABLE, attachCardId: 11 }),
         ]);
         const before = Selectors.getAttachmentsByParent(rootState(state), 1, 1);
         const next = gamesReducer(state, Actions.cardInsertedIntoZone({
-          gameId: 1, playerId: 1, zoneName: Enriched.ZoneName.TABLE,
-          card: makeCard({ id: 13, name: 'Aura 2', attachPlayerId: 1, attachZone: Enriched.ZoneName.TABLE, attachCardId: 11 }),
+          gameId: 1, playerId: 1, zoneName: ZoneName.TABLE,
+          card: makeCard({ id: 13, name: 'Aura 2', attachPlayerId: 1, attachZone: ZoneName.TABLE, attachCardId: 11 }),
         }));
         const after = Selectors.getAttachmentsByParent(rootState(next), 1, 1);
         // attachment graph changed → fresh reference
@@ -575,7 +575,7 @@ describe('Selectors', () => {
         const player1Cards = [
           makeCard({
             id: 11, name: 'Aura on enemy',
-            attachPlayerId: 2, attachZone: Enriched.ZoneName.TABLE, attachCardId: 21,
+            attachPlayerId: 2, attachZone: ZoneName.TABLE, attachCardId: 21,
           }),
         ];
         const player2Cards = [
@@ -598,14 +598,14 @@ describe('Selectors', () => {
           makeCard({ id: 11, name: 'P1 creature' }),
           makeCard({
             id: 12, name: 'P1 aura',
-            attachPlayerId: 2, attachZone: Enriched.ZoneName.TABLE, attachCardId: 21,
+            attachPlayerId: 2, attachZone: ZoneName.TABLE, attachCardId: 21,
           }),
         ];
         const player2Cards = [
           makeCard({ id: 21, name: 'P2 creature' }),
           makeCard({
             id: 22, name: 'P2 aura',
-            attachPlayerId: 2, attachZone: Enriched.ZoneName.TABLE, attachCardId: 21,
+            attachPlayerId: 2, attachZone: ZoneName.TABLE, attachCardId: 21,
           }),
         ];
         const state = stateWithTwoTables(player1Cards, player2Cards);

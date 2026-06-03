@@ -7,7 +7,7 @@ vi.mock('@bufbuild/protobuf', async (importOriginal) => ({
   setExtension: vi.fn(),
 }));
 
-import { create, fromBinary, hasExtension, getExtension, setExtension } from '@bufbuild/protobuf';
+import { create, fromBinary, hasExtension, getExtension, setExtension, toBinary } from '@bufbuild/protobuf';
 import type { GenExtension } from '@bufbuild/protobuf/codegenv2';
 
 import { ProtobufService, type EventRegistries } from './ProtobufService';
@@ -17,6 +17,8 @@ import type { SessionExtensionRegistry } from '../events/session';
 
 import type {
   AdminCommand,
+  CommandContainer,
+  Command_Judge,
   GameCommand,
   GameEvent,
   ModeratorCommand,
@@ -288,6 +290,79 @@ describe('ProtobufService', () => {
       );
     });
 
+  });
+
+  describe('sendGameCommands (batching)', () => {
+    // The CommandContainer handed to transport.send (via the mocked toBinary).
+    const lastContainer = (): CommandContainer =>
+      vi.mocked(toBinary).mock.calls.at(-1)![1] as CommandContainer;
+
+    it('returns early for an empty batch (no cmdId, no send)', () => {
+      const service = makeService();
+      service.sendGameCommands(7, []);
+      expect((service as ProtobufInternal).cmdId).toBe(0);
+      expect(mockSocket.send).not.toHaveBeenCalled();
+    });
+
+    it('packs multiple bare commands into one container with one cmdId', () => {
+      vi.mocked(toBinary).mockClear();
+      const service = makeService();
+      service.sendGameCommands(7, [
+        { ext: gameExt, value: {} },
+        { ext: gameExt, value: {} },
+      ]);
+      expect((service as ProtobufInternal).cmdId).toBe(1);
+      const container = lastContainer();
+      expect(container.gameCommand).toHaveLength(2);
+      expect(container.cmdId).toBe(BigInt(1));
+    });
+
+    it('groups same-target judge commands into a single Command_Judge wrapper', () => {
+      vi.mocked(setExtension).mockClear();
+      vi.mocked(toBinary).mockClear();
+      const service = makeService();
+      // First entry is bare; the two judge-targeted entries (target 5) group together.
+      service.sendGameCommands(7, [
+        { ext: gameExt, value: {} },
+        { ext: gameExt, value: {}, judgeTargetId: 5 },
+        { ext: gameExt, value: {}, judgeTargetId: 5 },
+      ]);
+      // One bare command + one judge wrapper = two top-level game commands.
+      expect(lastContainer().gameCommand).toHaveLength(2);
+      const judgeCall = vi.mocked(setExtension).mock.calls.find((c) => c[1] === Command_Judge_ext);
+      expect(judgeCall).toBeDefined();
+      expect((judgeCall![2] as Command_Judge).targetId).toBe(5);
+      expect((judgeCall![2] as Command_Judge).gameCommand).toHaveLength(2);
+    });
+
+    it('creates one Command_Judge per distinct target', () => {
+      vi.mocked(setExtension).mockClear();
+      vi.mocked(toBinary).mockClear();
+      const service = makeService();
+      service.sendGameCommands(7, [
+        { ext: gameExt, value: {}, judgeTargetId: 5 },
+        { ext: gameExt, value: {}, judgeTargetId: 6 },
+      ]);
+      // Two judge wrappers, no bare command.
+      expect(lastContainer().gameCommand).toHaveLength(2);
+      const judgeTargets = vi.mocked(setExtension).mock.calls
+        .filter((c) => c[1] === Command_Judge_ext)
+        .map((c) => (c[2] as Command_Judge).targetId);
+      expect(judgeTargets.sort()).toEqual([5, 6]);
+    });
+
+    it('fires a single batch callback once for the whole container', () => {
+      const service = makeService();
+      const cb = vi.fn();
+      service.sendGameCommands(7, [
+        { ext: gameExt, value: {} },
+        { ext: gameExt, value: {} },
+      ], { onResponse: cb });
+      expect((service as ProtobufInternal).pendingCommands.size).toBe(1);
+      const storedCb = (service as ProtobufInternal).pendingCommands.get(1)!;
+      storedCb(create(ResponseSchema));
+      expect(cb).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe('sendModeratorCommand', () => {

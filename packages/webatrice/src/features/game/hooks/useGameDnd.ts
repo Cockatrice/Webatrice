@@ -1,3 +1,4 @@
+import { ZoneName, moveTargetPlayerId } from '@cockatrice/sockatrice';
 import { useCallback } from 'react';
 import { pointerWithin, rectIntersection } from '@dnd-kit/core';
 import type {
@@ -9,9 +10,9 @@ import type {
 } from '@dnd-kit/core';
 
 import { useWebClient } from '@cockatrice/datatrice/react';
-import type { WebClient } from '@cockatrice/sockatrice';
+import type { BulkMoveDestination, WebClient } from '@cockatrice/sockatrice';
 import { ServerInfo_Card } from '@cockatrice/sockatrice/generated';
-import { Enriched } from '@cockatrice/datatrice';
+import { effectiveTargets, type SelectedCard } from '../utils/selection';
 import {
   MARGIN_LEFT_PX,
   PADDING_X_PX,
@@ -20,7 +21,6 @@ import {
   mapToGridX,
   stackCountsForRow,
 } from '../components/battlefield/Battlefield/gridMath';
-import { moveTargetPlayerId } from '../utils/moveTarget';
 
 export interface GameDnd {
   handleDragStart: (event: DragStartEvent) => void;
@@ -40,6 +40,9 @@ export interface UseGameDndArgs {
     zone: string | undefined,
     card: ServerInfo_Card,
   ) => void;
+  // Call-time getter for the live multi-selection, so a drop moves the whole
+  // selection (when the dragged card is part of it) and not just the dragged card.
+  getSelectedCards: () => readonly SelectedCard[];
 }
 
 // Reorder slots (small per-card droppables) are nested inside a much larger
@@ -136,11 +139,11 @@ function classifyDrop(event: DragEndEvent): DropContext {
     return { kind: 'reorder', source, target, targetIndex: target.targetIndex };
   }
 
-  if (target.targetZone === Enriched.ZoneName.TABLE) {
+  if (target.targetZone === ZoneName.TABLE) {
     const targetRow = target.row ?? 0;
     const sameRow =
       sameZone &&
-      source.sourceZone === Enriched.ZoneName.TABLE &&
+      source.sourceZone === ZoneName.TABLE &&
       (source.card.y ?? 0) === targetRow;
     return { kind: 'table', source, target, targetRow, sameRow };
   }
@@ -201,25 +204,24 @@ function resolveTableGridX(
   return closestGridPoint(rawGridX, occupied);
 }
 
-function sendMoveCard(
+// Move the whole selection (the dragged card alone when it isn't part of a ≥2
+// selection — byte-identical to the old single moveCard) to one destination.
+// bulkMove groups by (owner, zone), routes each group via moveTargetPlayerId, and
+// judge-wraps per owner — so all drop kinds share this one path.
+function sendBulkMove(
   webClient: WebClient,
   gameId: number,
   source: DragSource,
-  target: DragTarget,
-  x: number,
-  y: number,
-  judgeTargetId?: number,
+  dest: BulkMoveDestination,
+  selectedCards: readonly SelectedCard[],
+  judgeTarget: (ownerPlayerId: number) => number | undefined,
 ): void {
-  webClient.request.game.moveCard(gameId, {
-    startPlayerId: source.sourcePlayerId,
-    startZone: source.sourceZone,
-    cardsToMove: { card: [{ cardId: source.card.id }] },
-    targetPlayerId: target.targetPlayerId,
-    targetZone: target.targetZone,
-    x,
-    y,
-    isReversed: false,
-  }, judgeTargetId);
+  const targets = effectiveTargets(selectedCards, {
+    ownerPlayerId: source.sourcePlayerId,
+    zone: source.sourceZone,
+    card: source.card,
+  });
+  webClient.request.game.bulkMove(gameId, targets, dest, judgeTarget);
 }
 
 export function useGameDnd({
@@ -227,6 +229,7 @@ export function useGameDnd({
   judgeTarget,
   cancelPendingArrow,
   collapseUnlessSelected,
+  getSelectedCards,
 }: UseGameDndArgs): GameDnd {
   const webClient = useWebClient();
 
@@ -252,10 +255,21 @@ export function useGameDnd({
       if (ctx.kind === 'noop') {
         return;
       }
-      const judgeTargetId = judgeTarget(ctx.source.sourcePlayerId);
+      // Each kind keeps the destination it has always computed; the only change is
+      // that the whole selection rides the move (effectiveTargets in sendBulkMove).
+      const selectedCards = getSelectedCards();
+      const move = (x: number, y: number): void =>
+        sendBulkMove(
+          webClient,
+          gameId,
+          ctx.source,
+          { targetPlayerId: ctx.target.targetPlayerId, targetZone: ctx.target.targetZone, x, y },
+          selectedCards,
+          judgeTarget,
+        );
       switch (ctx.kind) {
         case 'reorder':
-          sendMoveCard(webClient, gameId, ctx.source, ctx.target, ctx.targetIndex, 0, judgeTargetId);
+          move(ctx.targetIndex, 0);
           return;
         case 'table': {
           const gridX = resolveTableGridX(event, ctx.source, ctx.target, ctx.sameRow);
@@ -263,15 +277,15 @@ export function useGameDnd({
           if (gridX == null) {
             return;
           }
-          sendMoveCard(webClient, gameId, ctx.source, ctx.target, gridX, ctx.targetRow, judgeTargetId);
+          move(gridX, ctx.targetRow);
           return;
         }
         case 'cross-zone':
-          sendMoveCard(webClient, gameId, ctx.source, ctx.target, 0, 0, judgeTargetId);
+          move(0, 0);
           return;
       }
     },
-    [gameId, webClient, judgeTarget],
+    [gameId, webClient, judgeTarget, getSelectedCards],
   );
 
   return { handleDragStart, handleDragEnd, collisionDetection };

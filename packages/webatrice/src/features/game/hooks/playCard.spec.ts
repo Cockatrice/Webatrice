@@ -1,6 +1,6 @@
+import { ZoneName } from '@cockatrice/sockatrice';
 import { describe, expect, it, vi } from 'vitest';
 
-import { Enriched } from '@cockatrice/datatrice';
 
 import { CardDTO } from '../../../services/dexie/DexieDTOs/CardDTO';
 import { playCardViaTableRow } from './playCard';
@@ -16,7 +16,7 @@ function makeWebClient() {
 
 const baseArgs = {
   gameId: 1,
-  sourceZone: Enriched.ZoneName.HAND,
+  sourceZone: ZoneName.HAND,
   card: { id: 7, name: 'Bear' } as never,
   faceDown: false,
   isInverted: false,
@@ -35,7 +35,7 @@ describe('playCardViaTableRow — owner routing + judge wrap', () => {
       expect.objectContaining({
         startPlayerId: 1,
         targetPlayerId: 1,
-        targetZone: Enriched.ZoneName.TABLE,
+        targetZone: ZoneName.TABLE,
       }),
       undefined,
     );
@@ -53,7 +53,7 @@ describe('playCardViaTableRow — owner routing + judge wrap', () => {
       expect.objectContaining({
         startPlayerId: 2,
         targetPlayerId: 2,
-        targetZone: Enriched.ZoneName.TABLE,
+        targetZone: ZoneName.TABLE,
       }),
       2,
     );
@@ -70,7 +70,7 @@ describe('playCardViaTableRow — owner routing + judge wrap', () => {
       expect.objectContaining({
         startPlayerId: 2,
         targetPlayerId: 2,
-        targetZone: Enriched.ZoneName.STACK,
+        targetZone: ZoneName.STACK,
       }),
       2,
     );

@@ -1,8 +1,8 @@
+import { ZoneName } from '@cockatrice/sockatrice';
 import { useDroppable } from '@dnd-kit/core';
 import type { Ref } from 'react';
 
 import { ServerInfo_Card } from '@cockatrice/sockatrice/generated';
-import { Enriched } from '@cockatrice/datatrice';
 import { games } from '@cockatrice/datatrice';
 import { useAppSelector } from '@app/store';
 
@@ -27,13 +27,13 @@ export function useHandZone({
   onZoneContextMenu,
 }: UseHandZoneArgs): HandZone {
   const cards = useAppSelector((state) =>
-    games.Selectors.getCards(state, gameId, playerId, Enriched.ZoneName.HAND),
+    games.Selectors.getCards(state, gameId, playerId, ZoneName.HAND),
   );
 
   // Can't drop into someone else's hand; future-proofs opponent-hand mirrors.
   const { setNodeRef, isOver } = useDroppable({
     id: `hand-${playerId}`,
-    data: { targetPlayerId: playerId, targetZone: Enriched.ZoneName.HAND },
+    data: { targetPlayerId: playerId, targetZone: ZoneName.HAND },
     disabled: !canAct,
   });
 

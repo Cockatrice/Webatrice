@@ -1,7 +1,8 @@
+import { ZoneName } from '@cockatrice/sockatrice';
 import { act, renderHook } from '@testing-library/react';
 import { combineReducers } from '@reduxjs/toolkit';
 
-import { games, Enriched, type GamesState } from '@cockatrice/datatrice';
+import { games, type GamesState } from '@cockatrice/datatrice';
 import {
   makeCard,
   makeGameEntry,
@@ -9,7 +10,7 @@ import {
   makePlayerProperties,
   makeZoneEntry,
 } from '@cockatrice/datatrice/testing';
-import { CardAttribute } from '@cockatrice/sockatrice/generated';
+import type { CardLocation } from '@cockatrice/sockatrice';
 
 import { makeReduxWebClientHookWrapper } from '../../../__test-utils__/makeHookWrapper';
 
@@ -24,6 +25,7 @@ interface SetupOpts {
   canAct?: boolean;
   cardId?: number;
   judge?: boolean;
+  selectedCards?: readonly CardLocation[];
 }
 
 function setup(opts: SetupOpts = {}) {
@@ -35,24 +37,24 @@ function setup(opts: SetupOpts = {}) {
   const localPlayer = makePlayerEntry({
     properties: makePlayerProperties({ playerId: localPlayerId }),
     zones: {
-      [Enriched.ZoneName.HAND]: makeZoneEntry({
-        name: Enriched.ZoneName.HAND,
+      [ZoneName.HAND]: makeZoneEntry({
+        name: ZoneName.HAND,
         cardCount: 0,
         order: [],
         byId: {},
       }),
-      [Enriched.ZoneName.DECK]: makeZoneEntry({
-        name: Enriched.ZoneName.DECK,
+      [ZoneName.DECK]: makeZoneEntry({
+        name: ZoneName.DECK,
         cardCount: 60,
       }),
-      [Enriched.ZoneName.TABLE]: makeZoneEntry({ name: Enriched.ZoneName.TABLE }),
-      [Enriched.ZoneName.GRAVE]: makeZoneEntry({ name: Enriched.ZoneName.GRAVE }),
+      [ZoneName.TABLE]: makeZoneEntry({ name: ZoneName.TABLE }),
+      [ZoneName.GRAVE]: makeZoneEntry({ name: ZoneName.GRAVE }),
     },
   });
 
   const opponent = makePlayerEntry({
     properties: makePlayerProperties({ playerId: 2 }),
-    zones: { [Enriched.ZoneName.DECK]: makeZoneEntry({ name: Enriched.ZoneName.DECK, cardCount: 60 }) },
+    zones: { [ZoneName.DECK]: makeZoneEntry({ name: ZoneName.DECK, cardCount: 60 }) },
   });
   const game = makeGameEntry({
     localPlayerId,
@@ -89,6 +91,7 @@ function setup(opts: SetupOpts = {}) {
         startPendingArrow,
         startPendingAttach,
         collapseUnlessSelected: vi.fn(),
+        getSelectedCards: () => opts.selectedCards ?? [],
       }),
     { wrapper: Wrapper },
   );
@@ -137,7 +140,7 @@ describe('useGameDialogs', () => {
     const event = makeMouseEvent();
 
     act(() => {
-      result.current.handleCardContextMenu(1, Enriched.ZoneName.TABLE, card, event);
+      result.current.handleCardContextMenu(1, ZoneName.TABLE, card, event);
     });
 
     expect(event.preventDefault).toHaveBeenCalled();
@@ -151,12 +154,12 @@ describe('useGameDialogs', () => {
     expect(result.current.cardMenu).toBeNull();
   });
 
-  it('opens a set-PT prompt from the card menu and dispatches setCardAttr on submit', () => {
+  it('opens a set-PT prompt from the card menu and dispatches bulkSetPT on submit', () => {
     const { result, webClient } = setup();
     const card = makeCard({ id: 5, pt: '2/2' });
 
     act(() => {
-      result.current.handleCardContextMenu(1, Enriched.ZoneName.TABLE, card, makeMouseEvent());
+      result.current.handleCardContextMenu(1, ZoneName.TABLE, card, makeMouseEvent());
     });
     act(() => {
       result.current.handleRequestSetPT();
@@ -170,16 +173,38 @@ describe('useGameDialogs', () => {
       result.current.prompt!.onSubmit('3/3');
     });
 
-    expect(webClient.request.game.setCardAttr).toHaveBeenCalledWith(
+    // No multi-selection → the bulk dispatcher acts on just the menu card (n=1).
+    expect(webClient.request.game.bulkSetPT).toHaveBeenCalledWith(
       1,
-      expect.objectContaining({
-        cardId: 5,
-        attribute: CardAttribute.AttrPT,
-        attrValue: '3/3',
-      }),
-      undefined, // own card → no Command_Judge wrap
+      [expect.objectContaining({ ownerPlayerId: 1, zone: ZoneName.TABLE, card: expect.objectContaining({ id: 5 }) })],
+      '3/3',
+      expect.any(Function), // judge resolver forwarded; own card resolves bare
     );
     expect(result.current.prompt).toBeNull();
+  });
+
+  it('applies set-PT to the whole selection when the menu card is part of a ≥2 selection', () => {
+    const a = makeCard({ id: 5, pt: '2/2' });
+    const b = makeCard({ id: 6, pt: '1/1' });
+    const selectedCards: CardLocation[] = [
+      { ownerPlayerId: 1, zone: ZoneName.TABLE, card: a },
+      { ownerPlayerId: 1, zone: ZoneName.TABLE, card: b },
+    ];
+    const { result, webClient } = setup({ selectedCards });
+
+    act(() => {
+      result.current.handleCardContextMenu(1, ZoneName.TABLE, a, makeMouseEvent());
+    });
+    act(() => {
+      result.current.handleRequestSetPT();
+    });
+    act(() => {
+      result.current.prompt!.onSubmit('3/3');
+    });
+
+    const [, targets, value] = vi.mocked(webClient.request.game.bulkSetPT).mock.calls.at(-1)!;
+    expect(targets.map((t: CardLocation) => t.card.id)).toEqual([5, 6]);
+    expect(value).toBe('3/3');
   });
 
   it('move-to-library-at on an OWN card targets self and sends bare', () => {
@@ -187,7 +212,7 @@ describe('useGameDialogs', () => {
     const card = makeCard({ id: 9 });
 
     act(() => {
-      result.current.handleCardContextMenu(1, Enriched.ZoneName.GRAVE, card, makeMouseEvent());
+      result.current.handleCardContextMenu(1, ZoneName.GRAVE, card, makeMouseEvent());
     });
     act(() => {
       result.current.handleRequestMoveToLibraryAt();
@@ -201,7 +226,7 @@ describe('useGameDialogs', () => {
       expect.objectContaining({
         startPlayerId: 1,
         targetPlayerId: 1,
-        targetZone: Enriched.ZoneName.DECK,
+        targetZone: ZoneName.DECK,
         x: 1, // 1-indexed prompt → 0-indexed wire
       }),
       undefined, // own card → no Command_Judge wrap
@@ -213,7 +238,7 @@ describe('useGameDialogs', () => {
     const card = makeCard({ id: 10 });
 
     act(() => {
-      result.current.handleCardContextMenu(2, Enriched.ZoneName.GRAVE, card, makeMouseEvent());
+      result.current.handleCardContextMenu(2, ZoneName.GRAVE, card, makeMouseEvent());
     });
     act(() => {
       result.current.handleRequestMoveToLibraryAt();
@@ -227,7 +252,7 @@ describe('useGameDialogs', () => {
       expect.objectContaining({
         startPlayerId: 2,
         targetPlayerId: 2, // owner tree, not the judge
-        targetZone: Enriched.ZoneName.DECK,
+        targetZone: ZoneName.DECK,
       }),
       2, // judge wrap target = owner
     );
@@ -255,19 +280,19 @@ describe('useGameDialogs', () => {
     const { result } = setup({ localPlayerId: 1 });
 
     act(() => {
-      result.current.handleZoneContextMenu(1, Enriched.ZoneName.TABLE, makeMouseEvent());
+      result.current.handleZoneContextMenu(1, ZoneName.TABLE, makeMouseEvent());
     });
     expect(result.current.zoneMenu).toBeNull();
 
     act(() => {
-      result.current.handleZoneContextMenu(2, Enriched.ZoneName.GRAVE, makeMouseEvent());
+      result.current.handleZoneContextMenu(2, ZoneName.GRAVE, makeMouseEvent());
     });
     expect(result.current.zoneMenu).toBeNull();
 
     act(() => {
-      result.current.handleZoneContextMenu(1, Enriched.ZoneName.GRAVE, makeMouseEvent());
+      result.current.handleZoneContextMenu(1, ZoneName.GRAVE, makeMouseEvent());
     });
-    expect(result.current.zoneMenu?.zoneName).toBe(Enriched.ZoneName.GRAVE);
+    expect(result.current.zoneMenu?.zoneName).toBe(ZoneName.GRAVE);
   });
 
   it('blocks the player and hand context menus for spectators', () => {
@@ -290,7 +315,7 @@ describe('useGameDialogs', () => {
     act(() => {
       result.current.handleRequestRevealTopN();
     });
-    expect(result.current.revealState?.zoneName).toBe(Enriched.ZoneName.DECK);
+    expect(result.current.revealState?.zoneName).toBe(ZoneName.DECK);
     expect(result.current.revealState?.showCountInput).toBe(true);
 
     act(() => {
@@ -300,7 +325,7 @@ describe('useGameDialogs', () => {
     expect(webClient.request.game.revealCards).toHaveBeenCalledWith(
       1,
       expect.objectContaining({
-        zoneName: Enriched.ZoneName.DECK,
+        zoneName: ZoneName.DECK,
         playerId: 1,
         topCards: 3,
       }),
@@ -312,13 +337,13 @@ describe('useGameDialogs', () => {
     const { result, webClient } = setup({ localPlayerId: 1 });
 
     act(() => {
-      result.current.handleZoneClick(1, Enriched.ZoneName.DECK);
+      result.current.handleZoneClick(1, ZoneName.DECK);
     });
 
-    expect(result.current.zoneViews).toEqual([{ playerId: 1, zoneName: Enriched.ZoneName.DECK }]);
+    expect(result.current.zoneViews).toEqual([{ playerId: 1, zoneName: ZoneName.DECK }]);
     expect(webClient.request.game.dumpZone).toHaveBeenCalledWith(
       1,
-      { playerId: 1, zoneName: Enriched.ZoneName.DECK, numberCards: -1, isReversed: false },
+      { playerId: 1, zoneName: ZoneName.DECK, numberCards: -1, isReversed: false },
     );
   });
 
@@ -326,10 +351,10 @@ describe('useGameDialogs', () => {
     const { result, webClient } = setup({ localPlayerId: 1 });
 
     act(() => {
-      result.current.handleZoneClick(1, Enriched.ZoneName.DECK);
+      result.current.handleZoneClick(1, ZoneName.DECK);
     });
     act(() => {
-      result.current.handleZoneClick(1, Enriched.ZoneName.DECK);
+      result.current.handleZoneClick(1, ZoneName.DECK);
     });
 
     expect(result.current.zoneViews).toHaveLength(1);
@@ -340,7 +365,7 @@ describe('useGameDialogs', () => {
     const { result, webClient } = setup({ localPlayerId: 1 });
 
     act(() => {
-      result.current.handleZoneClick(1, Enriched.ZoneName.GRAVE);
+      result.current.handleZoneClick(1, ZoneName.GRAVE);
     });
 
     expect(result.current.zoneViews).toHaveLength(1);
@@ -352,18 +377,18 @@ describe('useGameDialogs', () => {
     const dispatchSpy = vi.spyOn(games.Actions, 'zoneViewCleared');
 
     act(() => {
-      result.current.handleZoneClick(1, Enriched.ZoneName.DECK);
+      result.current.handleZoneClick(1, ZoneName.DECK);
     });
     act(() => {
-      result.current.handleCloseZoneView(1, Enriched.ZoneName.DECK, true);
+      result.current.handleCloseZoneView(1, ZoneName.DECK, true);
     });
 
     expect(result.current.zoneViews).toHaveLength(0);
     expect(webClient.request.game.shuffle).toHaveBeenCalledWith(
       1,
-      { zoneName: Enriched.ZoneName.DECK, start: 0, end: -1 },
+      { zoneName: ZoneName.DECK, start: 0, end: -1 },
     );
-    expect(dispatchSpy).toHaveBeenCalledWith({ gameId: 1, playerId: 1, zoneName: Enriched.ZoneName.DECK });
+    expect(dispatchSpy).toHaveBeenCalledWith({ gameId: 1, playerId: 1, zoneName: ZoneName.DECK });
     dispatchSpy.mockRestore();
   });
 
@@ -371,10 +396,10 @@ describe('useGameDialogs', () => {
     const { result, webClient } = setup({ localPlayerId: 1 });
 
     act(() => {
-      result.current.handleZoneClick(1, Enriched.ZoneName.DECK);
+      result.current.handleZoneClick(1, ZoneName.DECK);
     });
     act(() => {
-      result.current.handleCloseZoneView(1, Enriched.ZoneName.DECK, false);
+      result.current.handleCloseZoneView(1, ZoneName.DECK, false);
     });
 
     expect(webClient.request.game.shuffle).not.toHaveBeenCalled();
@@ -385,10 +410,10 @@ describe('useGameDialogs', () => {
     const dispatchSpy = vi.spyOn(games.Actions, 'zoneViewCleared');
 
     act(() => {
-      result.current.handleZoneClick(1, Enriched.ZoneName.GRAVE);
+      result.current.handleZoneClick(1, ZoneName.GRAVE);
     });
     act(() => {
-      result.current.handleCloseZoneView(1, Enriched.ZoneName.GRAVE, true);
+      result.current.handleCloseZoneView(1, ZoneName.GRAVE, true);
     });
 
     expect(webClient.request.game.shuffle).not.toHaveBeenCalled();

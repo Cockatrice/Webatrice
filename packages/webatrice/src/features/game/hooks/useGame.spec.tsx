@@ -1,10 +1,11 @@
+import { ZoneName } from '@cockatrice/sockatrice';
 import { ReactNode } from 'react';
 import { renderHook } from '@testing-library/react';
 import { combineReducers } from '@reduxjs/toolkit';
 import { Provider } from 'react-redux';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 
-import { games, Enriched, type GamesState } from '@cockatrice/datatrice';
+import { games, type GamesState } from '@cockatrice/datatrice';
 import {
   makeGameEntry,
   makePlayerEntry,
@@ -58,9 +59,9 @@ function setup(opts: SetupOpts = {}) {
     players[localPlayerId] = makePlayerEntry({
       properties: makePlayerProperties({ playerId: localPlayerId, readyStart }),
       zones: {
-        [Enriched.ZoneName.HAND]: makeZoneEntry({ name: Enriched.ZoneName.HAND }),
-        [Enriched.ZoneName.DECK]: makeZoneEntry({ name: Enriched.ZoneName.DECK }),
-        [Enriched.ZoneName.TABLE]: makeZoneEntry({ name: Enriched.ZoneName.TABLE }),
+        [ZoneName.HAND]: makeZoneEntry({ name: ZoneName.HAND }),
+        [ZoneName.DECK]: makeZoneEntry({ name: ZoneName.DECK }),
+        [ZoneName.TABLE]: makeZoneEntry({ name: ZoneName.TABLE }),
       },
     });
   }

@@ -102,6 +102,8 @@ describe('Game card tap', () => {
     expect(cmds).toHaveLength(2);
     expect(cmds.map((c) => c.value.cardId).sort()).toEqual([101, 102]);
     expect(cmds.every((c) => c.value.attrValue === '1')).toBe(true);
+    // Both commands ride in a single CommandContainer (one cmdId) — Cockatrice parity.
+    expect(new Set(cmds.map((c) => c.cmdId)).size).toBe(1);
   });
 
   it('bulk-untaps every selected card when all are already tapped', async () => {
@@ -118,5 +120,7 @@ describe('Game card tap', () => {
     expect(cmds).toHaveLength(2);
     expect(cmds.map((c) => c.value.cardId).sort()).toEqual([101, 102]);
     expect(cmds.every((c) => c.value.attrValue === '0')).toBe(true);
+    // Both commands ride in a single CommandContainer (one cmdId) — Cockatrice parity.
+    expect(new Set(cmds.map((c) => c.cmdId)).size).toBe(1);
   });
 });

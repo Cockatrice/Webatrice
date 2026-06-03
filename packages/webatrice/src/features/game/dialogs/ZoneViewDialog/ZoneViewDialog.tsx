@@ -1,3 +1,4 @@
+import { ZoneName } from '@cockatrice/sockatrice';
 import { useCallback, useEffect, useState } from 'react';
 import { useDroppable } from '@dnd-kit/core';
 import IconButton from '@mui/material/IconButton';
@@ -5,7 +6,6 @@ import CloseIcon from '@mui/icons-material/Close';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Checkbox from '@mui/material/Checkbox';
 
-import { Enriched } from '@cockatrice/datatrice';
 import { cx } from '@app/utils';
 
 import CardSlot from '../../components/ui/CardSlot/CardSlot';
@@ -58,7 +58,7 @@ function ZoneViewDialog({
   });
 
   // "Shuffle on close" applies to the library only (desktop parity); defaults on.
-  const isDeck = zoneName === Enriched.ZoneName.DECK;
+  const isDeck = zoneName === ZoneName.DECK;
   const [shuffleOnClose, setShuffleOnClose] = useState(true);
   const onClose = useCallback(
     () => handleClose(isDeck ? shuffleOnClose : false),

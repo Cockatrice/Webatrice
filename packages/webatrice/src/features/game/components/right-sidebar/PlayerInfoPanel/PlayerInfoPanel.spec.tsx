@@ -1,7 +1,7 @@
+import { ZoneName } from '@cockatrice/sockatrice';
 import { screen, fireEvent } from '@testing-library/react';
 import { create } from '@bufbuild/protobuf';
 import { colorSchema } from '@cockatrice/sockatrice/generated';
-import { Enriched } from '@cockatrice/datatrice';
 import { createMockWebClient, makeStoreState, renderWithProviders, makeUser } from '../../../../../__test-utils__';
 import {
   makeCounter,
@@ -395,7 +395,7 @@ describe('PlayerInfoPanel', () => {
         },
       );
 
-      fireEvent.contextMenu(screen.getByTestId(`zone-stack-${Enriched.ZoneName.DECK}`));
+      fireEvent.contextMenu(screen.getByTestId(`zone-stack-${ZoneName.DECK}`));
 
       expect(onZoneContextMenu).toHaveBeenCalled();
       expect(onContextMenu).not.toHaveBeenCalled();

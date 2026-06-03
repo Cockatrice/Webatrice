@@ -1,7 +1,7 @@
+import { ZoneName } from '@cockatrice/sockatrice';
 import { create, isFieldSet } from '@bufbuild/protobuf';
 import type { ListenerMiddlewareInstance } from '@reduxjs/toolkit';
 
-import { Enriched } from '../../types';
 import {
   CardAttribute,
   Event_DeleteArrowSchema,
@@ -94,7 +94,7 @@ export function registerGameListeners(mw: ListenerMiddlewareInstance<unknown>): 
       newCardId >= 0 ? newCardId : (removedCard?.id ?? resolvedCardId);
 
       const isLeavingBattlefield =
-      startZone === Enriched.ZoneName.TABLE && effectiveTargetZone !== Enriched.ZoneName.TABLE;
+      startZone === ZoneName.TABLE && effectiveTargetZone !== ZoneName.TABLE;
 
       const baseCard: ServerInfo_Card = removedCard
         ? cloneWith(ServerInfo_CardSchema, removedCard, {
@@ -115,10 +115,10 @@ export function registerGameListeners(mw: ListenerMiddlewareInstance<unknown>): 
       const hadRevealedSnapshot = !!sourceZone.revealedCards;
 
       const isPositionalReorderZone =
-        effectiveTargetZone === Enriched.ZoneName.HAND ||
-        effectiveTargetZone === Enriched.ZoneName.STACK ||
-        effectiveTargetZone === Enriched.ZoneName.GRAVE ||
-        effectiveTargetZone === Enriched.ZoneName.EXILE;
+        effectiveTargetZone === ZoneName.HAND ||
+        effectiveTargetZone === ZoneName.STACK ||
+        effectiveTargetZone === ZoneName.GRAVE ||
+        effectiveTargetZone === ZoneName.EXILE;
 
       if (!movedAcrossZones && hadRevealedSnapshot && position >= 0) {
         api.dispatch(Actions.zoneViewCardReordered({
@@ -199,8 +199,8 @@ export function registerGameListeners(mw: ListenerMiddlewareInstance<unknown>): 
 
       if (
         resolvedCardId >= 0 &&
-      startZone === Enriched.ZoneName.TABLE &&
-      effectiveTargetZone === Enriched.ZoneName.TABLE
+      startZone === ZoneName.TABLE &&
+      effectiveTargetZone === ZoneName.TABLE
       ) {
         api.dispatch(Actions.cardAttachmentReparented({
           gameId,
@@ -445,20 +445,20 @@ export function registerGameListeners(mw: ListenerMiddlewareInstance<unknown>): 
       const state = api.getState() as { games: GamesState };
       const game = state.games.games[gameId];
       const player = game?.players[playerId];
-      const handZone = player?.zones[Enriched.ZoneName.HAND];
+      const handZone = player?.zones[ZoneName.HAND];
       if (!game || !player || !handZone) {
         return;
       }
 
-      if (player.zones[Enriched.ZoneName.DECK]) {
+      if (player.zones[ZoneName.DECK]) {
         api.dispatch(Actions.zoneCardCountAdjusted({
-          gameId, playerId, zoneName: Enriched.ZoneName.DECK, delta: -drawCount,
+          gameId, playerId, zoneName: ZoneName.DECK, delta: -drawCount,
         }));
       }
 
       for (const card of cards) {
         api.dispatch(Actions.cardInsertedIntoZone({
-          gameId, playerId, zoneName: Enriched.ZoneName.HAND, card,
+          gameId, playerId, zoneName: ZoneName.HAND, card,
         }));
       }
 
@@ -466,7 +466,7 @@ export function registerGameListeners(mw: ListenerMiddlewareInstance<unknown>): 
       // See .github/instructions/datatrice-game.instructions.md#servatrice-game-event-quirks.
       if (drawCount > cards.length) {
         api.dispatch(Actions.zoneCardCountAdjusted({
-          gameId, playerId, zoneName: Enriched.ZoneName.HAND,
+          gameId, playerId, zoneName: ZoneName.HAND,
           delta: drawCount - cards.length,
         }));
       }

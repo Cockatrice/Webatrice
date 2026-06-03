@@ -1,8 +1,9 @@
+import { ZoneName } from '@cockatrice/sockatrice';
 import { useWebClient } from '@cockatrice/datatrice/react';
 import { games } from '@cockatrice/datatrice';
 import { useAppSelector } from '@app/store';
 import { CardAttribute } from '@cockatrice/sockatrice/generated';
-import { Enriched, Phase } from '@cockatrice/datatrice';
+import { Phase } from '@cockatrice/datatrice';
 import { useGameAffordances } from '../../../hooks/useGameAffordances';
 
 export interface PhaseBar {
@@ -42,7 +43,7 @@ export function usePhaseBar(gameId: number | undefined): PhaseBar {
       return;
     }
     webClient.request.game.setCardAttr(gameId, {
-      zone: Enriched.ZoneName.TABLE,
+      zone: ZoneName.TABLE,
       cardId: -1,
       attribute: CardAttribute.AttrTapped,
       attrValue: '0',

@@ -1,6 +1,6 @@
+import { ZoneName } from '@cockatrice/sockatrice';
 import { memo } from 'react';
 
-import { Enriched } from '@cockatrice/datatrice';
 import { cx } from '@app/utils';
 
 import CardSlot from '../CardSlot/CardSlot';
@@ -41,14 +41,14 @@ function HandZone({
     >
       <div className="hand-zone__cards scrollable" data-zone-box-select="">
         {cards.map((card, idx) => {
-          const key = makeCardKey(playerId, Enriched.ZoneName.HAND, card.id);
+          const key = makeCardKey(playerId, ZoneName.HAND, card.id);
           return (
             <CardSlot
               key={card.id}
               card={card}
               draggable={canAct}
               ownerPlayerId={playerId}
-              zone={Enriched.ZoneName.HAND}
+              zone={ZoneName.HAND}
               dropIndex={idx}
               isArrowSource={arrowSourceKey === key}
               isArrowTarget={arrowTargetKey === key}

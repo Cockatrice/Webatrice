@@ -1,7 +1,8 @@
+import { ZoneName } from '@cockatrice/sockatrice';
 import { act, renderHook } from '@testing-library/react';
 import { combineReducers } from '@reduxjs/toolkit';
 
-import { Enriched, games, type GamesState } from '@cockatrice/datatrice';
+import { games, type GamesState } from '@cockatrice/datatrice';
 import {
   makeCard,
   makeGameEntry,
@@ -47,7 +48,7 @@ describe('useZoneViewDialog', () => {
 
   it('builds a title from the player name, zone label, and card count', () => {
     const { Wrapper } = setup({
-      name: Enriched.ZoneName.GRAVE,
+      name: ZoneName.GRAVE,
       cards: [makeCard({ id: 1 }), makeCard({ id: 2 })],
       cardCount: 2,
     });
@@ -57,7 +58,7 @@ describe('useZoneViewDialog', () => {
         useZoneViewDialog({
           gameId: 1,
           playerId: 1,
-          zoneName: Enriched.ZoneName.GRAVE,
+          zoneName: ZoneName.GRAVE,
           initialPosition: { x: 0, y: 0 },
         }),
       { wrapper: Wrapper },
@@ -70,7 +71,7 @@ describe('useZoneViewDialog', () => {
 
   it('prefers the revealed dump snapshot over the zone byId cards (hidden deck)', () => {
     const { Wrapper } = setup({
-      name: Enriched.ZoneName.DECK,
+      name: ZoneName.DECK,
       cards: [],
       cardCount: 3,
       revealedCards: [makeCard({ id: 0, name: 'Forest' }), makeCard({ id: 1, name: 'Island' })],
@@ -81,7 +82,7 @@ describe('useZoneViewDialog', () => {
         useZoneViewDialog({
           gameId: 1,
           playerId: 1,
-          zoneName: Enriched.ZoneName.DECK,
+          zoneName: ZoneName.DECK,
           initialPosition: { x: 0, y: 0 },
         }),
       { wrapper: Wrapper },
@@ -93,14 +94,14 @@ describe('useZoneViewDialog', () => {
   });
 
   it('falls back to an empty result when gameId or playerId is undefined (no current game)', () => {
-    const { Wrapper } = setup({ name: Enriched.ZoneName.GRAVE, cardCount: 0 });
+    const { Wrapper } = setup({ name: ZoneName.GRAVE, cardCount: 0 });
 
     const { result } = renderHook(
       () =>
         useZoneViewDialog({
           gameId: undefined,
           playerId: undefined,
-          zoneName: Enriched.ZoneName.GRAVE,
+          zoneName: ZoneName.GRAVE,
           initialPosition: { x: 10, y: 20 },
         }),
       { wrapper: Wrapper },
@@ -112,14 +113,14 @@ describe('useZoneViewDialog', () => {
   });
 
   it('honors initialPosition on mount and updates position when the user drags the header', () => {
-    const { Wrapper } = setup({ name: Enriched.ZoneName.GRAVE, cardCount: 0 });
+    const { Wrapper } = setup({ name: ZoneName.GRAVE, cardCount: 0 });
 
     const { result } = renderHook(
       () =>
         useZoneViewDialog({
           gameId: 1,
           playerId: 1,
-          zoneName: Enriched.ZoneName.GRAVE,
+          zoneName: ZoneName.GRAVE,
           initialPosition: { x: 100, y: 50 },
         }),
       { wrapper: Wrapper },
@@ -163,14 +164,14 @@ describe('useZoneViewDialog', () => {
   });
 
   it('ignores pointerdown when the pointer originates on an interactive child (button)', () => {
-    const { Wrapper } = setup({ name: Enriched.ZoneName.GRAVE, cardCount: 0 });
+    const { Wrapper } = setup({ name: ZoneName.GRAVE, cardCount: 0 });
 
     const { result } = renderHook(
       () =>
         useZoneViewDialog({
           gameId: 1,
           playerId: 1,
-          zoneName: Enriched.ZoneName.GRAVE,
+          zoneName: ZoneName.GRAVE,
           initialPosition: { x: 0, y: 0 },
         }),
       { wrapper: Wrapper },
