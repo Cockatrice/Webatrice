@@ -7,6 +7,7 @@ import {
   ServerInfo_Counter,
   ServerInfo_Player,
 } from '@cockatrice/sockatrice/generated';
+import { cloneWith } from '../../common';
 
 export const MAX_GAME_MESSAGES = 1000;
 
@@ -110,11 +111,10 @@ export function buildEmptyCard(
 // Port of desktop Cockatrice CardItem::resetState(): wipes battlefield-only transient
 // state when a card leaves the table. Event_MoveCard carries none of these fields and
 // Servatrice emits no per-attribute reset event, so the client applies it on
-// TABLE -> non-TABLE moves (see game.listeners.ts). Returns a fresh object (Immer does
-// not draft protobuf-es messages).
+// TABLE -> non-TABLE moves (see game.listeners.ts). Returns a fresh proto via cloneWith
+// (a spread would drop the card's unset proto2 fields — see cloneWith).
 export function resetCardState(card: ServerInfo_Card): ServerInfo_Card {
-  return {
-    ...card,
+  return cloneWith(ServerInfo_CardSchema, card, {
     tapped: false,
     attacking: false,
     doesntUntap: false,
@@ -122,5 +122,5 @@ export function resetCardState(card: ServerInfo_Card): ServerInfo_Card {
     color: '',
     annotation: '',
     counterList: [],
-  };
+  });
 }
