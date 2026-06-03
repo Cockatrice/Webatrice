@@ -285,6 +285,30 @@ describe('integration: card events', () => {
     expect(messages.some(m => m.message === 'Alice draws 2 cards.')).toBe(true);
   });
 
+  it('opponent mulligan keeps hidden hand/deck counts in sync', () => {
+    const { store, response } = seedGame();
+    // Bob (id 2) is the opponent: his draws and hand→deck moves are all hidden,
+    // so cardsDrawn carries only a count and each cardMoved has cardId = -1.
+    response.game.cardsDrawn(GAME_ID, 2, create(Event_DrawCardsSchema, { number: 7, cards: [] }));
+    expect(games.Selectors.getZone(store.getState(), GAME_ID, 2, 'hand')?.cardCount).toBe(7);
+    expect(games.Selectors.getZone(store.getState(), GAME_ID, 2, 'deck')?.cardCount).toBe(33);
+
+    // Mulligan bundle: 7 hidden hand→deck moves, a shuffle, then a fresh hidden draw.
+    for (let i = 0; i < 7; i++) {
+      response.game.cardMoved(GAME_ID, 2, create(Event_MoveCardSchema, {
+        cardId: -1, startPlayerId: 2, startZone: 'hand',
+        targetPlayerId: 2, targetZone: 'deck',
+        position: -1, x: -1, y: 0, newCardId: -1, faceDown: false, newCardProviderId: '',
+      }));
+    }
+    response.game.zoneShuffled(GAME_ID, 2, create(Event_ShuffleSchema, { zoneName: 'deck' }));
+    response.game.cardsDrawn(GAME_ID, 2, create(Event_DrawCardsSchema, { number: 7, cards: [] }));
+
+    const state = store.getState();
+    expect(games.Selectors.getZone(state, GAME_ID, 2, 'hand')?.cardCount).toBe(7);
+    expect(games.Selectors.getZone(state, GAME_ID, 2, 'deck')?.cardCount).toBe(33);
+  });
+
   it('cardsRevealed inserts revealed cards into the target zone', () => {
     const { store, response } = seedGame();
     response.game.cardsRevealed(GAME_ID, 1, create(Event_RevealCardsSchema, {

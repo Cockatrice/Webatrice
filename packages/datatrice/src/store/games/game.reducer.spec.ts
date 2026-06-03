@@ -718,7 +718,7 @@ describe('2C: CARD_MOVED', () => {
     expect(result.games[1].players[1].zones['nonexistent']).toBeUndefined();
   });
 
-  it('CARD_MOVED → no-ops when neither cardId nor position resolve and newCardId < 0', () => {
+  it('CARD_MOVED → shifts hidden zone counts when a hidden card moves cross-zone', () => {
     const state = makeState({
       games: {
         1: makeGameEntry({
@@ -734,6 +734,9 @@ describe('2C: CARD_MOVED', () => {
       },
     });
 
+    // A hidden card (cardId -1, position unresolvable, newCardId -1) still moves
+    // between zones — e.g. an opponent's hand→library return during a mulligan. We
+    // can't identify it, so cardCount shifts on both ends and order stays empty.
     const result = dispatchCardMoved(state, Actions.cardMoved({
       gameId: 1,
       playerId: 1,
@@ -744,7 +747,8 @@ describe('2C: CARD_MOVED', () => {
       },
     }));
 
-    expect(result.games[1].players[1].zones['deck'].cardCount).toBe(5);
+    expect(result.games[1].players[1].zones['deck'].cardCount).toBe(4);
+    expect(result.games[1].players[1].zones['hand'].cardCount).toBe(1);
     expect(cardsIn(result, 1, 1, 'hand')).toHaveLength(0);
   });
 

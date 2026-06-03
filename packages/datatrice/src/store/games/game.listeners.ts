@@ -66,6 +66,21 @@ export function registerGameListeners(mw: ListenerMiddlewareInstance<unknown>): 
       }
 
       if (resolvedCardId < 0 && newCardId < 0) {
+        // Fully hidden card (e.g. an opponent's hand card returning to library during a
+        // mulligan): identity is unknown, but a cross-zone move still shifts zone totals.
+        // Adjust cardCount on both ends so hidden hand/library counts stay in sync. A
+        // same-zone "move" of a hidden card is unrepresentable, so it's a no-op.
+        // See datatrice-game.instructions.md#servatrice-game-event-quirks.
+        const movedAcrossZones =
+          startPlayerId !== targetPlayerId || startZone !== effectiveTargetZone;
+        if (movedAcrossZones) {
+          api.dispatch(Actions.zoneCardCountAdjusted({
+            gameId, playerId: startPlayerId, zoneName: startZone, delta: -1,
+          }));
+          api.dispatch(Actions.zoneCardCountAdjusted({
+            gameId, playerId: targetPlayerId, zoneName: effectiveTargetZone, delta: 1,
+          }));
+        }
         return;
       }
 
