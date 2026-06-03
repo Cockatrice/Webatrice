@@ -52,7 +52,6 @@
     "test:integration:coverage": "vitest run --config vitest.integration.config.ts --coverage",
     "golden": "npm run lint && npm run test && npm run test:integration",
     "golden:coverage": "npm run lint && npm run test:coverage && npm run test:integration:coverage",
-    "prepack": "npm run build",
     "pack": "npm pack"
   },
   "peerDependencies": {

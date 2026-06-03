@@ -64,7 +64,6 @@
     "golden": "npm run lint && npm run test && npm run test:integration",
     "golden:coverage": "npm run test:coverage && npm run test:integration:coverage",
     "proto:generate": "npx buf generate",
-    "prepack": "npm run build",
     "pack": "npm pack"
   },
   "dependencies": {
