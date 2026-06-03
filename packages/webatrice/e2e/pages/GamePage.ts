@@ -179,4 +179,26 @@ export class GamePage {
     await expect(menu).toBeVisible();
     await menu.getByRole('menuitem', { name: item }).click();
   }
+
+  // Rubber-band select every card on the local battlefield. The battlefield
+  // surface (`[data-testid="battlefield"]`, `data-zone-box-select`) starts a
+  // box-select only on empty space — a mousedown on a card begins a card
+  // interaction instead — so the drag begins at the top-left corner and sweeps
+  // corner-to-corner over the rows below.
+  async boxSelectBattlefield(): Promise<void> {
+    const battlefield = this.localBoard.locator('[data-testid="battlefield"]');
+    const box = await battlefield.boundingBox();
+    if (!box) {
+      throw new Error('battlefield not visible');
+    }
+    const x0 = box.x + 4;
+    const y0 = box.y + 4;
+    const x1 = box.x + box.width - 4;
+    const y1 = box.y + box.height - 4;
+    await this.page.mouse.move(x0, y0);
+    await this.page.mouse.down();
+    await this.page.mouse.move((x0 + x1) / 2, (y0 + y1) / 2, { steps: 5 });
+    await this.page.mouse.move(x1, y1, { steps: 5 });
+    await this.page.mouse.up();
+  }
 }
