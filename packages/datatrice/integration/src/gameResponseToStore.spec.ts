@@ -71,9 +71,11 @@ function playerWithZones(playerId: number, name: string): ServerInfo_Player {
     }),
     deckList: '',
     zoneList: [
-      { name: 'hand', type: 1, withCoords: false, cardCount: 0, cardList: [], alwaysRevealTopCard: false, alwaysLookAtTopCard: false },
-      { name: 'deck', type: 1, withCoords: false, cardCount: 40, cardList: [], alwaysRevealTopCard: false, alwaysLookAtTopCard: false },
-      { name: 'table', type: 2, withCoords: true, cardCount: 0, cardList: [], alwaysRevealTopCard: false, alwaysLookAtTopCard: false },
+      // Realistic Cockatrice zone types: hand = PrivateZone(0), deck = HiddenZone(2),
+      // table = PublicZone(1), grave = PublicZone(1).
+      { name: 'hand', type: 0, withCoords: false, cardCount: 0, cardList: [], alwaysRevealTopCard: false, alwaysLookAtTopCard: false },
+      { name: 'deck', type: 2, withCoords: false, cardCount: 40, cardList: [], alwaysRevealTopCard: false, alwaysLookAtTopCard: false },
+      { name: 'table', type: 1, withCoords: true, cardCount: 0, cardList: [], alwaysRevealTopCard: false, alwaysLookAtTopCard: false },
       { name: 'grave', type: 1, withCoords: false, cardCount: 0, cardList: [], alwaysRevealTopCard: false, alwaysLookAtTopCard: false },
     ],
     counterList: [],
@@ -235,6 +237,46 @@ describe('integration: game chat and table events', () => {
     expect(messages.some(m => m.message === 'Alice shuffles their library.')).toBe(true);
   });
 
+  it('zoneShuffled clears the shuffled zone\'s known cards and any open view', () => {
+    const { store, response } = seedGame();
+    // Draw a known card to Alice, then return it to her library so the hidden deck
+    // tracks its identity (order/byId), and open a "View library" snapshot.
+    response.game.cardsDrawn(GAME_ID, 1, create(Event_DrawCardsSchema, {
+      number: 1, cards: [tableCard(100, 'Island')],
+    }));
+    response.game.cardMoved(GAME_ID, 1, create(Event_MoveCardSchema, {
+      cardId: 100, startPlayerId: 1, startZone: 'hand',
+      targetPlayerId: 1, targetZone: 'deck',
+      position: -1, x: 0, y: 0, newCardId: -1, faceDown: false, newCardProviderId: '',
+    }));
+    response.game.zoneViewRevealed(GAME_ID, 1, 'deck', [
+      create(ServerInfo_CardSchema, { id: 0, name: 'Island' }),
+    ]);
+    const before = games.Selectors.getZone(store.getState(), GAME_ID, 1, 'deck');
+    expect(before?.order).toContain(100);
+    const countBefore = before?.cardCount ?? 0;
+
+    response.game.zoneShuffled(GAME_ID, 1, create(Event_ShuffleSchema, { zoneName: 'deck' }));
+
+    const after = games.Selectors.getZone(store.getState(), GAME_ID, 1, 'deck');
+    // Shuffle invalidates known positions: identities are dropped, count preserved.
+    expect(after?.order).toEqual([]);
+    expect(games.Selectors.getCards(store.getState(), GAME_ID, 1, 'deck')).toEqual([]);
+    expect(after?.cardCount).toBe(countBefore);
+    expect(games.Selectors.getRevealedCards(store.getState(), GAME_ID, 1, 'deck')).toEqual([]);
+  });
+
+  it('zoneShuffled does NOT clear a non-hidden zone (owner still knows its cards)', () => {
+    const { store, response } = seedGame();
+    // Hand is a PrivateZone: the owner sees its cards, so a shuffle must not blank them.
+    response.game.cardsDrawn(GAME_ID, 1, create(Event_DrawCardsSchema, {
+      number: 1, cards: [tableCard(200, 'Plains')],
+    }));
+    response.game.zoneShuffled(GAME_ID, 1, create(Event_ShuffleSchema, { zoneName: 'hand' }));
+
+    expect(games.Selectors.getCards(store.getState(), GAME_ID, 1, 'hand').map(c => c.id)).toEqual([200]);
+  });
+
   it('zoneDumped logs the dump', () => {
     const { store, response } = seedGame();
     response.game.zoneDumped(GAME_ID, 1, create(Event_DumpZoneSchema, {
@@ -253,6 +295,39 @@ describe('integration: game chat and table events', () => {
     response.game.zoneViewRevealed(GAME_ID, 1, 'deck', cards);
     const revealed = games.Selectors.getRevealedCards(store.getState(), GAME_ID, 1, 'deck');
     expect(revealed.map(c => c.name)).toEqual(['Forest', 'Island']);
+  });
+
+  it('gameStateChanged resync preserves an open "View library" snapshot', () => {
+    const { store, response } = seedGame();
+    response.game.zoneViewRevealed(GAME_ID, 1, 'deck', [
+      create(ServerInfo_CardSchema, { id: 0, name: 'Forest' }),
+    ]);
+    // A mid-game resync (e.g. a spectator joining) re-sends the full playerList,
+    // which carries no revealedCards. The transient view must survive it.
+    response.game.gameStateChanged(GAME_ID, create(Event_GameStateChangedSchema, {
+      playerList: [playerWithZones(1, 'Alice'), playerWithZones(2, 'Bob')],
+    }));
+    const revealed = games.Selectors.getRevealedCards(store.getState(), GAME_ID, 1, 'deck');
+    expect(revealed.map(c => c.name)).toEqual(['Forest']);
+  });
+
+  it('activePlayerSet does not log a turn change before the game has started', () => {
+    const store = createStore();
+    const response = attachResponseHandlers(store);
+    response.session.gameJoined(makeJoinedData());
+    response.game.gameStateChanged(GAME_ID, create(Event_GameStateChangedSchema, {
+      playerList: [playerWithZones(1, 'Alice'), playerWithZones(2, 'Bob')],
+    }));
+    // Game not started: the initial active-player assignment must not log a turn.
+    response.game.activePlayerSet(GAME_ID, 1);
+    expect(games.Selectors.getMessages(store.getState(), GAME_ID)
+      .some(m => m.message.includes('turn'))).toBe(false);
+
+    // Once started, a real active-player change logs as before.
+    response.game.gameStateChanged(GAME_ID, create(Event_GameStateChangedSchema, { gameStarted: true }));
+    response.game.activePlayerSet(GAME_ID, 2);
+    expect(games.Selectors.getMessages(store.getState(), GAME_ID)
+      .some(m => m.message === 'It is now Bob\'s turn.')).toBe(true);
   });
 
   it('zonePropertiesChanged flips alwaysRevealTopCard and logs it', () => {
@@ -283,6 +358,30 @@ describe('integration: card events', () => {
     expect(games.Selectors.getZone(state, GAME_ID, 1, 'deck')?.cardCount).toBe(38);
     const messages = games.Selectors.getMessages(state, GAME_ID);
     expect(messages.some(m => m.message === 'Alice draws 2 cards.')).toBe(true);
+  });
+
+  it('opponent mulligan keeps hidden hand/deck counts in sync', () => {
+    const { store, response } = seedGame();
+    // Bob (id 2) is the opponent: his draws and hand→deck moves are all hidden,
+    // so cardsDrawn carries only a count and each cardMoved has cardId = -1.
+    response.game.cardsDrawn(GAME_ID, 2, create(Event_DrawCardsSchema, { number: 7, cards: [] }));
+    expect(games.Selectors.getZone(store.getState(), GAME_ID, 2, 'hand')?.cardCount).toBe(7);
+    expect(games.Selectors.getZone(store.getState(), GAME_ID, 2, 'deck')?.cardCount).toBe(33);
+
+    // Mulligan bundle: 7 hidden hand→deck moves, a shuffle, then a fresh hidden draw.
+    for (let i = 0; i < 7; i++) {
+      response.game.cardMoved(GAME_ID, 2, create(Event_MoveCardSchema, {
+        cardId: -1, startPlayerId: 2, startZone: 'hand',
+        targetPlayerId: 2, targetZone: 'deck',
+        position: -1, x: -1, y: 0, newCardId: -1, faceDown: false, newCardProviderId: '',
+      }));
+    }
+    response.game.zoneShuffled(GAME_ID, 2, create(Event_ShuffleSchema, { zoneName: 'deck' }));
+    response.game.cardsDrawn(GAME_ID, 2, create(Event_DrawCardsSchema, { number: 7, cards: [] }));
+
+    const state = store.getState();
+    expect(games.Selectors.getZone(state, GAME_ID, 2, 'hand')?.cardCount).toBe(7);
+    expect(games.Selectors.getZone(state, GAME_ID, 2, 'deck')?.cardCount).toBe(33);
   });
 
   it('cardsRevealed inserts revealed cards into the target zone', () => {

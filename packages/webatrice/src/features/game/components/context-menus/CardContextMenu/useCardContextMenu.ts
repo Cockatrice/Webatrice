@@ -33,7 +33,6 @@ export interface CardContextMenu {
   canPlay: boolean;
   canPeek: boolean;
   moveTargets: ReadonlyArray<MoveTarget>;
-  handleFlip: () => void;
   handleTapToggle: () => void;
   handleFaceDownToggle: () => void;
   handleDoesntUntapToggle: () => void;
@@ -126,19 +125,6 @@ export function useCardContextMenu({
     }, judgeTargetId);
   };
 
-  const handleFlip = () => {
-    if (!ready || gameId == null) {
-      return;
-    }
-    // TODO(card-db): forward stored P/T once a name-keyed card DB is wired in (server re-derives for known names).
-    webClient.request.game.flipCard(gameId, {
-      zone: sourceZone!,
-      cardId: card!.id,
-      faceDown: !card!.faceDown,
-    }, judgeTargetId);
-    onClose();
-  };
-
   const handleTapToggle = () => {
     if (!ready || gameId == null) {
       return;
@@ -156,7 +142,15 @@ export function useCardContextMenu({
     if (!ready || gameId == null) {
       return;
     }
-    setAttr(CardAttribute.AttrFaceDown, card!.faceDown ? '0' : '1');
+    // Use Command_FlipCard rather than setCardAttr(AttrFaceDown): only the flip command's
+    // event carries the revealed name/providerId when a card turns face-up, so a card
+    // revealed after resuming a game (where the server stripped its name) still renders.
+    // TODO(card-db): forward stored P/T once a name-keyed card DB is wired in (server re-derives for known names).
+    webClient.request.game.flipCard(gameId, {
+      zone: sourceZone!,
+      cardId: card!.id,
+      faceDown: !card!.faceDown,
+    }, judgeTargetId);
     onClose();
   };
 
@@ -286,7 +280,6 @@ export function useCardContextMenu({
     canPlay,
     canPeek,
     moveTargets: CARD_MOVE_TARGETS,
-    handleFlip,
     handleTapToggle,
     handleFaceDownToggle,
     handleDoesntUntapToggle,

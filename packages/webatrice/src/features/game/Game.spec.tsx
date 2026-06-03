@@ -384,7 +384,7 @@ describe('Game container', () => {
       const slot = screen.getByTestId('player-board-1').querySelector('[data-testid="card-slot"]')!;
       fireEvent.contextMenu(slot);
 
-      expect(screen.getByText('Flip')).toBeInTheDocument();
+      expect(screen.getByText('Face Down')).toBeInTheDocument();
       expect(screen.getByText('Tap')).toBeInTheDocument();
     });
 
@@ -435,7 +435,7 @@ describe('Game container', () => {
       fireEvent.contextMenu(slot);
 
       expect(screen.queryByText('Draw a card')).not.toBeInTheDocument();
-      expect(screen.getByText('Flip')).toBeInTheDocument();
+      expect(screen.getByText('Face Down')).toBeInTheDocument();
     });
 
     it('dispatches drawCards(1) when "Draw a card" is chosen from the deck menu', () => {

@@ -124,3 +124,13 @@ export function resetCardState(card: ServerInfo_Card): ServerInfo_Card {
     counterList: [],
   });
 }
+
+// Drops a zone's known-card tracking — the revealed identities (`byId`/`order`) and any open
+// "View library" snapshot — while preserving the authoritative `cardCount`. Used when a shuffle
+// randomizes a hidden zone: any previously-known card positions are now meaningless, so the
+// client must stop rendering a stale top card or leaking cards moved in before the shuffle.
+export function clearZoneKnownCards(zone: Enriched.ZoneEntry): void {
+  zone.order = [];
+  zone.byId = {};
+  delete zone.revealedCards;
+}

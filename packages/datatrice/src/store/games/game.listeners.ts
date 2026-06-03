@@ -58,6 +58,12 @@ export function registerGameListeners(mw: ListenerMiddlewareInstance<unknown>): 
         return;
       }
 
+      // Whether this event actually relocates the card to a different (player, zone).
+      // Drives the hidden-move count transfer, the same-zone reorder branch, and the
+      // open-zone-view prune below — keep it single-sourced so they can't disagree.
+      const movedAcrossZones =
+        startPlayerId !== targetPlayerId || startZone !== effectiveTargetZone;
+
       let resolvedCardId = -1;
       if (cardId >= 0) {
         resolvedCardId = cardId;
@@ -66,6 +72,19 @@ export function registerGameListeners(mw: ListenerMiddlewareInstance<unknown>): 
       }
 
       if (resolvedCardId < 0 && newCardId < 0) {
+        // Fully hidden card (e.g. an opponent's hand card returning to library during a
+        // mulligan): identity is unknown, but a cross-zone move still shifts zone totals.
+        // Adjust cardCount on both ends so hidden hand/library counts stay in sync. A
+        // same-zone "move" of a hidden card is unrepresentable, so it's a no-op.
+        // See datatrice-game.instructions.md#servatrice-game-event-quirks.
+        if (movedAcrossZones) {
+          api.dispatch(Actions.zoneCardCountAdjusted({
+            gameId, playerId: startPlayerId, zoneName: startZone, delta: -1,
+          }));
+          api.dispatch(Actions.zoneCardCountAdjusted({
+            gameId, playerId: targetPlayerId, zoneName: effectiveTargetZone, delta: 1,
+          }));
+        }
         return;
       }
 
@@ -95,15 +114,13 @@ export function registerGameListeners(mw: ListenerMiddlewareInstance<unknown>): 
       // holds this zone, the moved card must be pruned from it (see below).
       const hadRevealedSnapshot = !!sourceZone.revealedCards;
 
-      const sameZone =
-        startPlayerId === targetPlayerId && startZone === effectiveTargetZone;
       const isPositionalReorderZone =
         effectiveTargetZone === Enriched.ZoneName.HAND ||
         effectiveTargetZone === Enriched.ZoneName.STACK ||
         effectiveTargetZone === Enriched.ZoneName.GRAVE ||
         effectiveTargetZone === Enriched.ZoneName.EXILE;
 
-      if (sameZone && hadRevealedSnapshot && position >= 0) {
+      if (!movedAcrossZones && hadRevealedSnapshot && position >= 0) {
         api.dispatch(Actions.zoneViewCardReordered({
           gameId,
           playerId: startPlayerId,
@@ -111,7 +128,7 @@ export function registerGameListeners(mw: ListenerMiddlewareInstance<unknown>): 
           fromPosition: position,
           toPosition: x,
         }));
-      } else if (sameZone && isPositionalReorderZone && resolvedCardId >= 0) {
+      } else if (!movedAcrossZones && isPositionalReorderZone && resolvedCardId >= 0) {
         api.dispatch(Actions.cardMovedInSameZone({
           gameId,
           playerId: startPlayerId,
@@ -137,8 +154,7 @@ export function registerGameListeners(mw: ListenerMiddlewareInstance<unknown>): 
       // mirroring Cockatrice's live view (ZoneViewZoneLogic::removeCard). The
       // snapshot is deck-only (HiddenZone), so the event's `position` is the
       // index to prune. Same-zone reorders don't move the card out, so skip.
-      const movedOut = startPlayerId !== targetPlayerId || startZone !== effectiveTargetZone;
-      if (hadRevealedSnapshot && movedOut && position >= 0) {
+      if (hadRevealedSnapshot && movedAcrossZones && position >= 0) {
         api.dispatch(Actions.zoneViewCardRemoved({
           gameId,
           playerId: startPlayerId,
@@ -224,9 +240,22 @@ export function registerGameListeners(mw: ListenerMiddlewareInstance<unknown>): 
         const next = normalizePlayers(data.playerList);
         for (const idStr of Object.keys(next)) {
           const id = Number(idStr);
-          const prevUserInfo = previous[id]?.properties.userInfo;
+          const prevPlayer = previous[id];
+          const prevUserInfo = prevPlayer?.properties.userInfo;
           if (prevUserInfo && !next[id].properties.userInfo) {
             next[id].properties.userInfo = prevUserInfo;
+          }
+          // Carry forward any open "View library" snapshot. revealedCards is a
+          // transient, local-only overlay (the resync wire data never includes it),
+          // so without this a mid-game resync — e.g. a spectator joining — would
+          // collapse an open zone-view popup. Same spirit as the userInfo carry above.
+          if (prevPlayer) {
+            for (const zoneName of Object.keys(next[id].zones)) {
+              const prevRevealed = prevPlayer.zones[zoneName]?.revealedCards;
+              if (prevRevealed) {
+                next[id].zones[zoneName].revealedCards = prevRevealed;
+              }
+            }
           }
         }
         const order = data.playerList.map((p) => p.properties.playerId);
@@ -598,7 +627,10 @@ export function registerGameListeners(mw: ListenerMiddlewareInstance<unknown>): 
       if (!preGame) {
         return;
       }
-      if (preGame.activePlayerId === activePlayerId) {
+      // Suppress the turn-change log before the game starts (the initial active-player
+      // assignment moves from -1 during setup/resume) and when it didn't change —
+      // matching activePhaseSet's `!preGame.started` guard.
+      if (preGame.activePlayerId === activePlayerId || !preGame.started) {
         return;
       }
       const postState = api.getState() as { games: GamesState };
