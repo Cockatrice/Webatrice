@@ -1,5 +1,24 @@
 # @cockatrice/datatrice
 
+## 4.2.3
+
+### Patch Changes
+
+- e0a1d55: Track server seat/join order in the games slice.
+
+  `GameEntry` gains a `seatOrder: number[]` maintained by the reducers (`gameJoined` inits it,
+  `playerJoined` appends, `playerLeft` removes, `gamePlayersReplaced` accepts an optional `order`),
+  populated from the server's ordered `playerList` in the full-sync listener. A new pure helper
+  `games.seatedPlayersOf(game)` and selector `games.Selectors.getSeatedPlayers(state, gameId)` return
+  the active (non-spectator, non-conceded) players in that seat order — the single authority consumed
+  by the board layout and the reveal-target list, replacing per-consumer numeric-key ordering.
+
+- 7e02622: Harden the game store against the Immer / protobuf-es hazard and optimize game-board rendering.
+
+  - **Store (datatrice):** reducers across the games/rooms/server slices now clone-and-reassign protobuf-es messages instead of mutating them in place. Immer can't draft proto2 messages, so in-place writes (`counterSet`, `adjustMod`, `replayModifyMatch`, `playerPropertiesUpdated`, and the room/game list merges) went untracked, and several spreads dropped unset proto2 fields. Adds a `cloneWith` helper and a `dequal` dependency.
+  - **Attachment selector:** `getAttachmentsByParent` returns a stable reference when the attachment graph is unchanged (reselect `lruMemoize` + `dequal`), so a single card mutation no longer rebuilds-and-re-renders the whole battlefield.
+  - **Render (webatrice):** battlefield row/column card arrays are reference-stabilized, and `Battlefield`/`HandZone`/`PlayerList`/`PlayerInfoPanel` are memoized, so tapping one creature re-renders only that card's subtree instead of the entire board and sidebar.
+
 ## 4.2.2
 
 ### Patch Changes
