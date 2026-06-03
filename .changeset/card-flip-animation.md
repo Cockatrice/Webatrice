@@ -1,5 +1,5 @@
 ---
-"@cockatrice/webatrice": minor
+"@cockatrice/webatrice": patch
 ---
 
 Animate battlefield cards with the Card Preview's 3D flip when they are turned face-up/face-down.

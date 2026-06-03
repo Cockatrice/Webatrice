@@ -127,9 +127,9 @@ describe('ZoneViewDialog', () => {
     expect(screen.getByText(/40 hidden cards/i)).toBeInTheDocument();
   });
 
-  it('hides the image and shows "Face Down" for face-down cards', () => {
+  it('rests on the back face for face-down cards', () => {
     const faceDown = makeCard({ id: 1, name: 'Secret', faceDown: true });
-    renderWithProviders(
+    const { container } = renderWithProviders(
       <ZoneViewDialog
         isOpen
         playerId={1}
@@ -145,8 +145,11 @@ describe('ZoneViewDialog', () => {
       },
     );
 
+    // Both faces render so the flip can reveal the other side; a face-down card rests
+    // flipped to the back (its image is rotated away, not removed from the DOM).
     expect(screen.getByLabelText('face-down card')).toBeInTheDocument();
-    expect(screen.queryByAltText('Secret')).not.toBeInTheDocument();
+    expect(container.querySelector('.cardflip--back')).toBeInTheDocument();
+    expect(container.querySelector('.cardflip--front')).toBeNull();
   });
 
   it('fires handleClose when the ✕ button is clicked', () => {
