@@ -1,5 +1,51 @@
 # @cockatrice/webatrice
 
+## 4.1.8
+
+### Patch Changes
+
+- 1aa18d0: Extend the bulk card-action surface to drag-moves, P/T, annotation, and counters.
+
+  `request.game.*` gains four more multi-card commands (one file each, in
+  `commands/game/bulk/`): `bulkSetPT`, `bulkSetAnnotation`, `bulkIncCardCounter`, and
+  `bulkSetCardCounter`. Each batches one per-card command into a single
+  `CommandContainer` and judge-wraps per owner, matching the existing bulk commands.
+
+  webatrice now routes these through the selection instead of acting on one card:
+
+  - **Drag-and-drop** — every drop kind (battlefield reposition, hand/stack/popup
+    reorder, and cross-zone) moves the whole selection via `bulkMove`. The dragged
+    card alone is the unchanged single-card case.
+  - **Set P/T** and **Set annotation** (card menu) apply the entered value to every
+    selected card.
+  - **Counters** — the inline +/- delta and the "Set counter" prompt apply across the
+    selection.
+
+  A multi-selection only takes effect when the acted-on card is part of it; otherwise
+  each action behaves exactly as before on the single card.
+
+- fd8aea4: Make the card drag preview match the resting card.
+
+  While dragging, the floating preview rendered only the card image and ignored
+  tapped state. It now reuses the resting slot's presentation: `CardSlotContent` is
+  extracted from `CardSlot` and shared with `CardDragOverlay`, so the preview shows
+  the same name, P/T, owner/annotation pill, and counters, and stays rotated 90°
+  when the dragged card is tapped.
+
+- 1aa18d0: Consume the bulk card-command surface from sockatrice instead of local dispatchers.
+
+  The local `bulkCardActions.ts` and `moveTarget.ts` utils are removed; the card context
+  menu and double-click tap now call `webClient.request.game.bulkTap` / `bulkFlip` /
+  `bulkDoesntUntap` / `bulkPeek` / `bulkMove`, and `moveTargetPlayerId` is imported from
+  `@cockatrice/sockatrice` (used by drag-and-drop and the move-to-library dialog).
+  `SelectedCard` aliases sockatrice's `CardLocation`. Zone-name references now import
+  `ZoneName` from `@cockatrice/sockatrice`. No user-facing behavior change — single and
+  multi-card Tap / Doesn't Untap / Flip / Peek / Move still produce one atomic command
+  per gesture, judge-wrapped for foreign owners.
+
+- Updated dependencies [1aa18d0]
+  - @cockatrice/datatrice@4.3.0
+
 ## 4.1.7
 
 ### Patch Changes

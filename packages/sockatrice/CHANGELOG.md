@@ -1,5 +1,45 @@
 # @cockatrice/sockatrice
 
+## 4.1.2
+
+### Patch Changes
+
+- 1aa18d0: Extend the bulk card-action surface to drag-moves, P/T, annotation, and counters.
+
+  `request.game.*` gains four more multi-card commands (one file each, in
+  `commands/game/bulk/`): `bulkSetPT`, `bulkSetAnnotation`, `bulkIncCardCounter`, and
+  `bulkSetCardCounter`. Each batches one per-card command into a single
+  `CommandContainer` and judge-wraps per owner, matching the existing bulk commands.
+
+  webatrice now routes these through the selection instead of acting on one card:
+
+  - **Drag-and-drop** — every drop kind (battlefield reposition, hand/stack/popup
+    reorder, and cross-zone) moves the whole selection via `bulkMove`. The dragged
+    card alone is the unchanged single-card case.
+  - **Set P/T** and **Set annotation** (card menu) apply the entered value to every
+    selected card.
+  - **Counters** — the inline +/- delta and the "Set counter" prompt apply across the
+    selection.
+
+  A multi-selection only takes effect when the acted-on card is part of it; otherwise
+  each action behaves exactly as before on the single card.
+
+- 1aa18d0: Own the bulk card-command surface and the canonical zone-name wire constants.
+
+  `ZoneName` (and `ZoneNameValue`) — the server-defined zone wire strings
+  (`table`/`grave`/`rfg`/`hand`/`deck`/`sb`/`stack`) — now live here and are exported
+  from the package entry, since they are a protocol concern rather than a store one.
+
+  A new `commands/game/bulk/` module exposes the multi-card commands on
+  `request.game.*` — `bulkTap`, `bulkDoesntUntap`, `bulkFlip`, `bulkPeek`, `bulkMove`
+  (one file per command). Each applies Cockatrice's collective rule (e.g. any untapped
+  => tap all), skips no-op cards, and batches every per-card command into a single
+  `CommandContainer` (one `cmd_id`, one atomic server response), grouping foreign-owner
+  commands under one `Command_Judge` per target. Also adds `moveTargetPlayerId` (the
+  Servatrice non-table move-routing rule) and the `CardLocation` / `BulkMoveDestination`
+  / `JudgeTarget` types. These previously lived in webatrice; relocating them keeps the
+  Cockatrice command surface defined once in the protocol layer.
+
 ## 4.1.1
 
 ### Patch Changes
