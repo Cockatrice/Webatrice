@@ -235,6 +235,35 @@ describe('integration: game chat and table events', () => {
     expect(messages.some(m => m.message === 'Alice shuffles their library.')).toBe(true);
   });
 
+  it('zoneShuffled clears the shuffled zone\'s known cards and any open view', () => {
+    const { store, response } = seedGame();
+    // Draw a known card to Alice, then return it to her library so the hidden deck
+    // tracks its identity (order/byId), and open a "View library" snapshot.
+    response.game.cardsDrawn(GAME_ID, 1, create(Event_DrawCardsSchema, {
+      number: 1, cards: [tableCard(100, 'Island')],
+    }));
+    response.game.cardMoved(GAME_ID, 1, create(Event_MoveCardSchema, {
+      cardId: 100, startPlayerId: 1, startZone: 'hand',
+      targetPlayerId: 1, targetZone: 'deck',
+      position: -1, x: 0, y: 0, newCardId: -1, faceDown: false, newCardProviderId: '',
+    }));
+    response.game.zoneViewRevealed(GAME_ID, 1, 'deck', [
+      create(ServerInfo_CardSchema, { id: 0, name: 'Island' }),
+    ]);
+    const before = games.Selectors.getZone(store.getState(), GAME_ID, 1, 'deck');
+    expect(before?.order).toContain(100);
+    const countBefore = before?.cardCount ?? 0;
+
+    response.game.zoneShuffled(GAME_ID, 1, create(Event_ShuffleSchema, { zoneName: 'deck' }));
+
+    const after = games.Selectors.getZone(store.getState(), GAME_ID, 1, 'deck');
+    // Shuffle invalidates known positions: identities are dropped, count preserved.
+    expect(after?.order).toEqual([]);
+    expect(games.Selectors.getCards(store.getState(), GAME_ID, 1, 'deck')).toEqual([]);
+    expect(after?.cardCount).toBe(countBefore);
+    expect(games.Selectors.getRevealedCards(store.getState(), GAME_ID, 1, 'deck')).toEqual([]);
+  });
+
   it('zoneDumped logs the dump', () => {
     const { store, response } = seedGame();
     response.game.zoneDumped(GAME_ID, 1, create(Event_DumpZoneSchema, {
@@ -253,6 +282,39 @@ describe('integration: game chat and table events', () => {
     response.game.zoneViewRevealed(GAME_ID, 1, 'deck', cards);
     const revealed = games.Selectors.getRevealedCards(store.getState(), GAME_ID, 1, 'deck');
     expect(revealed.map(c => c.name)).toEqual(['Forest', 'Island']);
+  });
+
+  it('gameStateChanged resync preserves an open "View library" snapshot', () => {
+    const { store, response } = seedGame();
+    response.game.zoneViewRevealed(GAME_ID, 1, 'deck', [
+      create(ServerInfo_CardSchema, { id: 0, name: 'Forest' }),
+    ]);
+    // A mid-game resync (e.g. a spectator joining) re-sends the full playerList,
+    // which carries no revealedCards. The transient view must survive it.
+    response.game.gameStateChanged(GAME_ID, create(Event_GameStateChangedSchema, {
+      playerList: [playerWithZones(1, 'Alice'), playerWithZones(2, 'Bob')],
+    }));
+    const revealed = games.Selectors.getRevealedCards(store.getState(), GAME_ID, 1, 'deck');
+    expect(revealed.map(c => c.name)).toEqual(['Forest']);
+  });
+
+  it('activePlayerSet does not log a turn change before the game has started', () => {
+    const store = createStore();
+    const response = attachResponseHandlers(store);
+    response.session.gameJoined(makeJoinedData());
+    response.game.gameStateChanged(GAME_ID, create(Event_GameStateChangedSchema, {
+      playerList: [playerWithZones(1, 'Alice'), playerWithZones(2, 'Bob')],
+    }));
+    // Game not started: the initial active-player assignment must not log a turn.
+    response.game.activePlayerSet(GAME_ID, 1);
+    expect(games.Selectors.getMessages(store.getState(), GAME_ID)
+      .some(m => m.message.includes('turn'))).toBe(false);
+
+    // Once started, a real active-player change logs as before.
+    response.game.gameStateChanged(GAME_ID, create(Event_GameStateChangedSchema, { gameStarted: true }));
+    response.game.activePlayerSet(GAME_ID, 2);
+    expect(games.Selectors.getMessages(store.getState(), GAME_ID)
+      .some(m => m.message === 'It is now Bob\'s turn.')).toBe(true);
   });
 
   it('zonePropertiesChanged flips alwaysRevealTopCard and logs it', () => {

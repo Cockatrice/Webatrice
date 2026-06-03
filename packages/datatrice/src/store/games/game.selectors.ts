@@ -22,6 +22,22 @@ export function seatedPlayersOf(game: Enriched.GameEntry): Enriched.PlayerEntry[
     .filter((p) => p != null && !p.properties.spectator && !p.properties.conceded);
 }
 
+// Seating changes far less often than the per-player entries it references, but
+// `seatedPlayersOf` allocates a fresh array on every call — and reducers
+// clone-and-reassign, so Immer hands a new `game` ref on every card mutation.
+// A naive `getSeatedPlayers` would therefore return a new array on every tap /
+// counter / P-T change, re-rendering seat/reveal consumers. Memoize so an
+// unchanged seating returns the PRIOR array by reference. Unlike
+// `selectAllAttachments` (derived data → `dequal`), this returns stored
+// `PlayerEntry` refs, so a shallow per-element ref check is both correct — Immer
+// reassigns any entry that actually changed, flipping its ref — and far cheaper
+// than deep-walking every zone on each dispatch (the hot path this is meant to
+// relieve). maxSize 1 fits the single on-screen game.
+const seatedPlayersEqual = (a: Enriched.PlayerEntry[], b: Enriched.PlayerEntry[]): boolean =>
+  a.length === b.length && a.every((p, i) => p === b[i]);
+
+const selectSeatedPlayers = lruMemoize(seatedPlayersOf, { resultEqualityCheck: seatedPlayersEqual });
+
 export interface AttachedChild {
   card: ServerInfo_Card;
   ownerPlayerId: number;
@@ -102,7 +118,7 @@ export const Selectors = {
 
   getSeatedPlayers: ({ games }: State, gameId: number): Enriched.PlayerEntry[] => {
     const game = games.games[gameId];
-    return game ? seatedPlayersOf(game) : EMPTY_PLAYERS;
+    return game ? selectSeatedPlayers(game) : EMPTY_PLAYERS;
   },
 
   getPlayer: ({ games }: State, gameId: number, playerId: number): Enriched.PlayerEntry | undefined =>

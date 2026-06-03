@@ -21,12 +21,23 @@ export const chatReducers = {
     game.messages.push({ playerId, message, timeReceived, kind: 'chat' });
   }) as CaseReducer<GamesState, PayloadAction<{ gameId: number; playerId: number; message: string; timeReceived: number }>>,
 
-  // Logged-only actions: no state mutation but an event-log entry.
   zoneShuffled: ((state, action) => {
-    const { gameId, playerId } = action.payload;
+    const { gameId, playerId, data } = action.payload;
     const game = state.games[gameId];
     if (!game) {
       return;
+    }
+    // A shuffle randomizes the zone, invalidating any known card positions. Cards
+    // moved into a hidden library before the shuffle (e.g. a mulligan's hand→library
+    // returns) were tracked in order/byId by cardMovedBetweenZones; drop that
+    // identity tracking so the library doesn't render a known face-up top card or
+    // leak the moved cards. cardCount stays authoritative. Also discard any open
+    // "View library" snapshot, which now shows a stale (pre-shuffle) order.
+    const zone = game.players[playerId]?.zones[data.zoneName];
+    if (zone) {
+      zone.order = [];
+      zone.byId = {};
+      delete zone.revealedCards;
     }
     pushEventMessage(game, playerId, formatZoneShuffled(game, playerId));
   }) as CaseReducer<GamesState, PayloadAction<{ gameId: number; playerId: number; data: Event_Shuffle }>>,

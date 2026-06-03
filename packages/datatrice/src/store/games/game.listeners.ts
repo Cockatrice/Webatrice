@@ -239,9 +239,22 @@ export function registerGameListeners(mw: ListenerMiddlewareInstance<unknown>): 
         const next = normalizePlayers(data.playerList);
         for (const idStr of Object.keys(next)) {
           const id = Number(idStr);
-          const prevUserInfo = previous[id]?.properties.userInfo;
+          const prevPlayer = previous[id];
+          const prevUserInfo = prevPlayer?.properties.userInfo;
           if (prevUserInfo && !next[id].properties.userInfo) {
             next[id].properties.userInfo = prevUserInfo;
+          }
+          // Carry forward any open "View library" snapshot. revealedCards is a
+          // transient, local-only overlay (the resync wire data never includes it),
+          // so without this a mid-game resync — e.g. a spectator joining — would
+          // collapse an open zone-view popup. Same spirit as the userInfo carry above.
+          if (prevPlayer) {
+            for (const zoneName of Object.keys(next[id].zones)) {
+              const prevRevealed = prevPlayer.zones[zoneName]?.revealedCards;
+              if (prevRevealed) {
+                next[id].zones[zoneName].revealedCards = prevRevealed;
+              }
+            }
           }
         }
         const order = data.playerList.map((p) => p.properties.playerId);
@@ -613,7 +626,10 @@ export function registerGameListeners(mw: ListenerMiddlewareInstance<unknown>): 
       if (!preGame) {
         return;
       }
-      if (preGame.activePlayerId === activePlayerId) {
+      // Suppress the turn-change log before the game starts (the initial active-player
+      // assignment moves from -1 during setup/resume) and when it didn't change —
+      // matching activePhaseSet's `!preGame.started` guard.
+      if (preGame.activePlayerId === activePlayerId || !preGame.started) {
         return;
       }
       const postState = api.getState() as { games: GamesState };

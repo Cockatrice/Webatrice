@@ -77,6 +77,20 @@ describe('Selectors', () => {
       const state = makeState();
       expect(Selectors.getSeatedPlayers(rootState(state), 999)).toEqual([]);
     });
+
+    it('getSeatedPlayers → returns a stable array ref when seating is unchanged', () => {
+      const game = gameWith([{ id: 1 }, { id: 2 }], [1, 2]);
+      const first = Selectors.getSeatedPlayers(rootState(makeState({ games: { 1: game } })), 1);
+
+      // A game-level mutation (e.g. an activePhase change) hands a new `game` object
+      // but reuses the same PlayerEntry refs — seating is unchanged, so the memoized
+      // selector must return the prior array by reference (no re-render churn).
+      const game2 = { ...game, activePhase: game.activePhase + 1 };
+      const second = Selectors.getSeatedPlayers(rootState(makeState({ games: { 1: game2 } })), 1);
+
+      expect(second).toBe(first);
+      expect(second.map((p) => p.properties.playerId)).toEqual([1, 2]);
+    });
   });
 
   it('getPlayer → returns a specific player', () => {
