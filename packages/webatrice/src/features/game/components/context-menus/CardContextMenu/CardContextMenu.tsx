@@ -56,7 +56,6 @@ function CardContextMenu() {
     canPlay,
     canPeek,
     moveTargets,
-    handleFlip,
     handleTapToggle,
     handleFaceDownToggle,
     handleDoesntUntapToggle,
@@ -111,7 +110,6 @@ function CardContextMenu() {
       )}
       {canActOnCard && (
         <>
-          <MenuItem onClick={handleFlip}>Flip</MenuItem>
           <MenuItem onClick={handleTapToggle}>{card.tapped ? 'Untap' : 'Tap'}</MenuItem>
           <MenuItem onClick={handleFaceDownToggle}>
             {card.faceDown ? 'Face Up' : 'Face Down'}

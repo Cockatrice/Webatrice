@@ -345,7 +345,7 @@ describe('useCardContextMenu', () => {
 
     act(() => {
       result.current.handleTapToggle();
-      result.current.handleFlip();
+      result.current.handleFaceDownToggle();
       result.current.handleCardCounterDelta(1, 1);
       result.current.handleMove(CARD_MOVE_TARGETS[0]);
       result.current.handleUnattach();

@@ -56,7 +56,6 @@ describe('CardContextMenu', () => {
   it('renders all expected menu items', () => {
     renderMenu({ card: makeCard({ tapped: false, faceDown: false }) });
 
-    expect(screen.getByText('Flip')).toBeInTheDocument();
     expect(screen.getByText('Tap')).toBeInTheDocument();
     expect(screen.getByText('Face Down')).toBeInTheDocument();
     expect(screen.getByText('Doesn\'t Untap')).toBeInTheDocument();
@@ -70,12 +69,12 @@ describe('CardContextMenu', () => {
     expect(screen.getByText('Send to Library (bottom)')).toBeInTheDocument();
   });
 
-  it('flips the card via flipCard and closes the menu', () => {
+  it('turns a face-up card face down via flipCard and closes the menu', () => {
     const webClient = createMockWebClient();
     const closeCardMenu = vi.fn();
     renderMenu({ card: makeCard({ id: 10, faceDown: false }), webClient, dialogs: { closeCardMenu } });
 
-    fireEvent.click(screen.getByText('Flip'));
+    fireEvent.click(screen.getByText('Face Down'));
 
     expect(webClient.request.game.flipCard).toHaveBeenCalledWith(1, {
       zone: Enriched.ZoneName.TABLE,
@@ -114,19 +113,22 @@ describe('CardContextMenu', () => {
     }, undefined);
   });
 
-  it('toggles Face Down and shows Face Up when already face-down', () => {
+  // Regression: revealing a face-down card must go through Command_FlipCard, whose event
+  // carries the revealed name/providerId — setCardAttr(AttrFaceDown) does not, so a card
+  // revealed after resuming a game (no local identity) would render blank.
+  it('turns a face-down card face up via flipCard and shows the Face Up label', () => {
     const webClient = createMockWebClient();
     renderMenu({ card: makeCard({ id: 5, faceDown: true }), webClient });
 
     expect(screen.getByText('Face Up')).toBeInTheDocument();
     fireEvent.click(screen.getByText('Face Up'));
 
-    expect(webClient.request.game.setCardAttr).toHaveBeenCalledWith(1, {
+    expect(webClient.request.game.flipCard).toHaveBeenCalledWith(1, {
       zone: Enriched.ZoneName.TABLE,
       cardId: 5,
-      attribute: CardAttribute.AttrFaceDown,
-      attrValue: '0',
+      faceDown: false,
     }, undefined);
+    expect(webClient.request.game.setCardAttr).not.toHaveBeenCalled();
   });
 
   it('toggles Doesn\'t Untap and shows Allow Untap when already set', () => {
@@ -182,10 +184,10 @@ describe('CardContextMenu', () => {
     }, undefined);
   });
 
-  it('hides mutator items (tap, flip, move, counters, P/T) for opponent-owned cards (desktop parity)', () => {
+  it('hides mutator items (tap, face up/down, move, counters, P/T) for opponent-owned cards (desktop parity)', () => {
     renderMenu({ localPlayerId: 1, ownerPlayerId: 2, card: makeCard({ id: 7 }) });
 
-    expect(screen.queryByText('Flip')).not.toBeInTheDocument();
+    expect(screen.queryByText('Face Down')).not.toBeInTheDocument();
     expect(screen.queryByText('Tap')).not.toBeInTheDocument();
     expect(screen.queryByText('Set P/T…')).not.toBeInTheDocument();
     expect(screen.queryByText('Counters')).not.toBeInTheDocument();
