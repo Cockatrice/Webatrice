@@ -1,3 +1,4 @@
+import { ZoneName } from '@cockatrice/sockatrice';
 // Phase 4 G — drag-drop orchestration coverage.
 //
 // dnd-kit's PointerSensor doesn't work reliably in jsdom (no layout,
@@ -12,7 +13,6 @@
 
 import { screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { ServerInfo_Card } from '@cockatrice/sockatrice/generated';
-import { Enriched } from '@cockatrice/datatrice';
 vi.mock('../../components/Layout/Layout', () => ({
   default: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
@@ -35,25 +35,25 @@ function buildGame(card: ServerInfo_Card) {
       userInfo: makeUser({ name: 'P1' }),
     }),
     zones: {
-      [Enriched.ZoneName.TABLE]: makeZoneEntry({
-        name: Enriched.ZoneName.TABLE,
+      [ZoneName.TABLE]: makeZoneEntry({
+        name: ZoneName.TABLE,
         cards: [card],
         cardCount: 1,
       }),
-      [Enriched.ZoneName.HAND]: makeZoneEntry({ name: Enriched.ZoneName.HAND }),
-      [Enriched.ZoneName.DECK]: makeZoneEntry({ name: Enriched.ZoneName.DECK, cardCount: 40 }),
-      [Enriched.ZoneName.GRAVE]: makeZoneEntry({ name: Enriched.ZoneName.GRAVE }),
-      [Enriched.ZoneName.EXILE]: makeZoneEntry({ name: Enriched.ZoneName.EXILE }),
+      [ZoneName.HAND]: makeZoneEntry({ name: ZoneName.HAND }),
+      [ZoneName.DECK]: makeZoneEntry({ name: ZoneName.DECK, cardCount: 40 }),
+      [ZoneName.GRAVE]: makeZoneEntry({ name: ZoneName.GRAVE }),
+      [ZoneName.EXILE]: makeZoneEntry({ name: ZoneName.EXILE }),
     },
   });
   const opponent = makePlayerEntry({
     properties: makePlayerProperties({ playerId: 2, userInfo: makeUser({ name: 'P2' }) }),
     zones: {
-      [Enriched.ZoneName.TABLE]: makeZoneEntry({ name: Enriched.ZoneName.TABLE }),
-      [Enriched.ZoneName.HAND]: makeZoneEntry({ name: Enriched.ZoneName.HAND }),
-      [Enriched.ZoneName.DECK]: makeZoneEntry({ name: Enriched.ZoneName.DECK }),
-      [Enriched.ZoneName.GRAVE]: makeZoneEntry({ name: Enriched.ZoneName.GRAVE }),
-      [Enriched.ZoneName.EXILE]: makeZoneEntry({ name: Enriched.ZoneName.EXILE }),
+      [ZoneName.TABLE]: makeZoneEntry({ name: ZoneName.TABLE }),
+      [ZoneName.HAND]: makeZoneEntry({ name: ZoneName.HAND }),
+      [ZoneName.DECK]: makeZoneEntry({ name: ZoneName.DECK }),
+      [ZoneName.GRAVE]: makeZoneEntry({ name: ZoneName.GRAVE }),
+      [ZoneName.EXILE]: makeZoneEntry({ name: ZoneName.EXILE }),
     },
   });
   return makeStoreState({
@@ -98,7 +98,7 @@ describe('Game drag-drop (keyboard sensor)', () => {
 
     const grave = screen
       .getByTestId('player-board-1')
-      .querySelector(`[data-testid="zone-stack-${Enriched.ZoneName.GRAVE}"]`) as HTMLElement;
+      .querySelector(`[data-testid="zone-stack-${ZoneName.GRAVE}"]`) as HTMLElement;
 
     expect(grave).not.toBeNull();
     expect(grave.getAttribute('tabindex')).toBe('0');
@@ -128,7 +128,7 @@ describe('Game drag-drop (keyboard sensor)', () => {
     // Tab to the graveyard droppable and drop.
     const grave = screen
       .getByTestId('player-board-1')
-      .querySelector(`[data-testid="zone-stack-${Enriched.ZoneName.GRAVE}"]`) as HTMLElement;
+      .querySelector(`[data-testid="zone-stack-${ZoneName.GRAVE}"]`) as HTMLElement;
     await act(async () => {
       grave.focus();
       fireEvent.keyDown(grave, { key: ' ', code: 'Space' });

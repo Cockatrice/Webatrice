@@ -1,9 +1,9 @@
+import { ZoneName } from '@cockatrice/sockatrice';
 import { ReactElement } from 'react';
 import { render as rtlRender, screen, fireEvent } from '@testing-library/react';
 import { create } from '@bufbuild/protobuf';
 import { DndContext } from '@dnd-kit/core';
 import { ServerInfo_CardCounterSchema } from '@cockatrice/sockatrice/generated';
-import { Enriched } from '@cockatrice/datatrice';
 import { makeCard } from '@cockatrice/datatrice/testing';
 import CardSlot from './CardSlot';
 
@@ -65,19 +65,19 @@ describe('CardSlot', () => {
 
   it('does not render the annotation when zone is not TABLE', () => {
     const card = makeCard({ annotation: 'note' });
-    render(<CardSlot card={card} zone={Enriched.ZoneName.HAND} />);
+    render(<CardSlot card={card} zone={ZoneName.HAND} />);
     expect(screen.queryByText('note')).not.toBeInTheDocument();
   });
 
   it('renders card.annotation as the owner pill on the battlefield', () => {
     const card = makeCard({ annotation: 'Bob' });
-    render(<CardSlot card={card} zone={Enriched.ZoneName.TABLE} />);
+    render(<CardSlot card={card} zone={ZoneName.TABLE} />);
     expect(screen.getByText('Bob')).toBeInTheDocument();
   });
 
   it('does not render any pill when annotation is empty even on battlefield', () => {
     const card = makeCard({ annotation: '' });
-    const { container } = render(<CardSlot card={card} zone={Enriched.ZoneName.TABLE} />);
+    const { container } = render(<CardSlot card={card} zone={ZoneName.TABLE} />);
     expect(container.querySelector('.card-slot__owner')).toBeNull();
   });
 
@@ -85,13 +85,13 @@ describe('CardSlot', () => {
     // The server populates card.annotation whenever the card's owner differs
     // from the controller — including stolen / cloned cards on YOUR table.
     const card = makeCard({ annotation: 'Owner: Bob' });
-    render(<CardSlot card={card} zone={Enriched.ZoneName.TABLE} />);
+    render(<CardSlot card={card} zone={ZoneName.TABLE} />);
     expect(screen.getByText('Bob')).toBeInTheDocument();
   });
 
   it('strips a leading "Owner: " prefix from the annotation pill', () => {
     const card = makeCard({ annotation: 'Owner: Bob' });
-    render(<CardSlot card={card} zone={Enriched.ZoneName.TABLE} />);
+    render(<CardSlot card={card} zone={ZoneName.TABLE} />);
     expect(screen.getByText('Bob')).toBeInTheDocument();
     expect(screen.queryByText('Owner: Bob')).not.toBeInTheDocument();
   });
@@ -111,13 +111,13 @@ describe('CardSlot', () => {
     expect(screen.queryByText('Alice')).not.toBeInTheDocument();
     unmount();
 
-    render(<CardSlot card={card} zone={Enriched.ZoneName.TABLE} />);
+    render(<CardSlot card={card} zone={ZoneName.TABLE} />);
     expect(screen.getByText('Alice')).toBeInTheDocument();
   });
 
   it('suppresses name and annotation overlays when face-down', () => {
     const card = makeCard({ name: 'Hidden', annotation: 'Alice', faceDown: true });
-    render(<CardSlot card={card} zone={Enriched.ZoneName.TABLE} />);
+    render(<CardSlot card={card} zone={ZoneName.TABLE} />);
     expect(screen.queryByText('Hidden')).not.toBeInTheDocument();
     expect(screen.queryByText('Alice')).not.toBeInTheDocument();
   });
@@ -150,7 +150,7 @@ describe('CardSlot', () => {
       <CardSlot
         card={card}
         ownerPlayerId={42}
-        zone={Enriched.ZoneName.TABLE}
+        zone={ZoneName.TABLE}
         onClick={onClick}
         onDoubleClick={onDoubleClick}
         onContextMenu={onContextMenu}
@@ -164,11 +164,11 @@ describe('CardSlot', () => {
     fireEvent.contextMenu(el);
     fireEvent.mouseEnter(el);
 
-    expect(onClick).toHaveBeenCalledWith(42, Enriched.ZoneName.TABLE, card);
-    expect(onDoubleClick).toHaveBeenCalledWith(42, Enriched.ZoneName.TABLE, card);
+    expect(onClick).toHaveBeenCalledWith(42, ZoneName.TABLE, card);
+    expect(onDoubleClick).toHaveBeenCalledWith(42, ZoneName.TABLE, card);
     expect(onContextMenu).toHaveBeenCalled();
     expect(onContextMenu.mock.calls[0][0]).toBe(42);
-    expect(onContextMenu.mock.calls[0][1]).toBe(Enriched.ZoneName.TABLE);
+    expect(onContextMenu.mock.calls[0][1]).toBe(ZoneName.TABLE);
     expect(onContextMenu.mock.calls[0][2]).toBe(card);
     expect(onMouseEnter).toHaveBeenCalledWith(card);
   });

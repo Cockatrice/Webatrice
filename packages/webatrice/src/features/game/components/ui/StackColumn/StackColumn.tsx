@@ -1,8 +1,8 @@
+import { ZoneName } from '@cockatrice/sockatrice';
 import { useDroppable } from '@dnd-kit/core';
 
 import { games } from '@cockatrice/datatrice';
 import { useAppSelector } from '@app/store';
-import { Enriched } from '@cockatrice/datatrice';
 import { cx } from '@app/utils';
 
 import CardSlot from '../CardSlot/CardSlot';
@@ -21,13 +21,13 @@ function StackColumn() {
   const { arrowSourceKey, arrowTargetKey, selectedCardKeys } = useCardVisualState();
   const canAct = useCanActFor()(playerId);
   const zone = useAppSelector((state) =>
-    games.Selectors.getZone(state, gameId, playerId, Enriched.ZoneName.STACK),
+    games.Selectors.getZone(state, gameId, playerId, ZoneName.STACK),
   );
   const cards = zone ? zone.order.map((id) => zone.byId[id]).filter(Boolean) : [];
 
   const { setNodeRef, isOver } = useDroppable({
     id: `stack-${playerId}`,
-    data: { targetPlayerId: playerId, targetZone: Enriched.ZoneName.STACK },
+    data: { targetPlayerId: playerId, targetZone: ZoneName.STACK },
     disabled: !canAct,
   });
 
@@ -42,14 +42,14 @@ function StackColumn() {
     >
       <div className="stack-column__cards scrollable" data-testid={`stack-column-cards-${playerId}`} data-zone-box-select="">
         {cards.map((card, idx) => {
-          const key = makeCardKey(playerId, Enriched.ZoneName.STACK, card.id);
+          const key = makeCardKey(playerId, ZoneName.STACK, card.id);
           return (
             <CardSlot
               key={card.id}
               card={card}
               draggable={canAct}
               ownerPlayerId={playerId}
-              zone={Enriched.ZoneName.STACK}
+              zone={ZoneName.STACK}
               dropIndex={idx}
               isArrowSource={arrowSourceKey === key}
               isArrowTarget={arrowTargetKey === key}

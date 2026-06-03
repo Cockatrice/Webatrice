@@ -9,6 +9,7 @@ import type {
   ServerInfo_Room,
   ServerInfo_User,
 } from '@cockatrice/sockatrice/generated';
+import type { ZoneNameValue } from '@cockatrice/sockatrice';
 
 // @critical `info` is the wire snapshot; repeated collections on it go stale. Read normalized siblings.
 // See .github/instructions/datatrice-store.instructions.md#data-structure-invariants.
@@ -65,19 +66,6 @@ export interface PlayerEntry {
   counters: { [counterId: number]: ServerInfo_Counter };
   arrows: { [arrowId: number]: ServerInfo_Arrow };
 }
-
-// Canonical wire values for `ZoneEntry.name`. Server-defined and stable.
-export const ZoneName = {
-  TABLE: 'table',
-  GRAVE: 'grave',
-  EXILE: 'rfg',
-  HAND: 'hand',
-  DECK: 'deck',
-  SIDEBOARD: 'sb',
-  STACK: 'stack',
-} as const;
-
-export type ZoneNameValue = typeof ZoneName[keyof typeof ZoneName];
 
 export interface ZoneEntry {
   name: ZoneNameValue;

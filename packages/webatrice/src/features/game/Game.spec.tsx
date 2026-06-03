@@ -1,6 +1,6 @@
+import { ZoneName } from '@cockatrice/sockatrice';
 import { screen, fireEvent, waitFor } from '@testing-library/react';
 import { CardAttribute } from '@cockatrice/sockatrice/generated';
-import { Enriched } from '@cockatrice/datatrice';
 import { createMockWebClient, makeStoreState, renderWithProviders, connectedState, makeUser } from '../../__test-utils__';
 import {
   makeCard,
@@ -54,19 +54,19 @@ function buildGame({
         readyStart: pid === localId ? localReadyStart : false,
       }),
       zones: {
-        [Enriched.ZoneName.TABLE]: makeZoneEntry({
-          name: Enriched.ZoneName.TABLE,
+        [ZoneName.TABLE]: makeZoneEntry({
+          name: ZoneName.TABLE,
           cards: pid === localId ? tableCards : [],
           cardCount: pid === localId ? tableCards.length : 0,
         }),
-        [Enriched.ZoneName.HAND]: makeZoneEntry({ name: Enriched.ZoneName.HAND }),
-        [Enriched.ZoneName.DECK]: makeZoneEntry({ name: Enriched.ZoneName.DECK, cardCount: 40 }),
-        [Enriched.ZoneName.GRAVE]: makeZoneEntry({
-          name: Enriched.ZoneName.GRAVE,
+        [ZoneName.HAND]: makeZoneEntry({ name: ZoneName.HAND }),
+        [ZoneName.DECK]: makeZoneEntry({ name: ZoneName.DECK, cardCount: 40 }),
+        [ZoneName.GRAVE]: makeZoneEntry({
+          name: ZoneName.GRAVE,
           cards: pid === localId ? graveCards : [],
           cardCount: pid === localId ? graveCards.length : 0,
         }),
-        [Enriched.ZoneName.EXILE]: makeZoneEntry({ name: Enriched.ZoneName.EXILE }),
+        [ZoneName.EXILE]: makeZoneEntry({ name: ZoneName.EXILE }),
       },
     });
   }
@@ -306,7 +306,7 @@ describe('Game container', () => {
       });
 
       const localBoard = screen.getByTestId('player-board-1');
-      const graveStack = localBoard.querySelector(`[data-testid="zone-stack-${Enriched.ZoneName.GRAVE}"]`)!;
+      const graveStack = localBoard.querySelector(`[data-testid="zone-stack-${ZoneName.GRAVE}"]`)!;
       fireEvent.click(graveStack);
 
       expect(screen.getByRole('button', { name: /close zone view/i })).toBeInTheDocument();
@@ -320,7 +320,7 @@ describe('Game container', () => {
 
       const graveStack = screen
         .getByTestId('player-board-1')
-        .querySelector(`[data-testid="zone-stack-${Enriched.ZoneName.GRAVE}"]`)!;
+        .querySelector(`[data-testid="zone-stack-${ZoneName.GRAVE}"]`)!;
       fireEvent.click(graveStack);
       fireEvent.click(screen.getByRole('button', { name: /close zone view/i }));
 
@@ -338,7 +338,7 @@ describe('Game container', () => {
       });
 
       const opponentBoard = screen.getByTestId('player-board-2');
-      const graveStack = opponentBoard.querySelector(`[data-testid="zone-stack-${Enriched.ZoneName.GRAVE}"]`)!;
+      const graveStack = opponentBoard.querySelector(`[data-testid="zone-stack-${ZoneName.GRAVE}"]`)!;
       fireEvent.click(graveStack);
 
       const panel = screen.getByTestId('zone-view-dialog');
@@ -347,7 +347,7 @@ describe('Game container', () => {
   });
 
   describe('Card interactions (M3)', () => {
-    it('double-clicking a battlefield card toggles tap via setCardAttr', () => {
+    it('double-clicking a battlefield card taps it via the bulkTap command surface', () => {
       const webClient = createMockWebClient();
       const card = makeCard({ id: 7, name: 'Creature', x: 0, y: 0, tapped: false });
       renderWithProviders(<Game />, {
@@ -363,12 +363,10 @@ describe('Game container', () => {
       const slot = localBoard.querySelector('[data-testid="card-slot"]')!;
       fireEvent.doubleClick(slot);
 
-      expect(webClient.request.game.setCardAttr).toHaveBeenCalledWith(1, {
-        zone: Enriched.ZoneName.TABLE,
-        cardId: 7,
-        attribute: CardAttribute.AttrTapped,
-        attrValue: '1',
-      }, undefined); // own card → no Command_Judge wrap
+      // Double-click routes through the sockatrice bulkTap surface (single = n=1).
+      const [gameId, targets] = vi.mocked(webClient.request.game.bulkTap).mock.calls[0];
+      expect(gameId).toBe(1);
+      expect(targets.map((t) => t.card.id)).toEqual([7]);
     });
 
     it('right-clicking a local card opens the card context menu', () => {
@@ -395,7 +393,7 @@ describe('Game container', () => {
 
       const localDeck = screen
         .getByTestId('player-board-1')
-        .querySelector(`[data-testid="zone-stack-${Enriched.ZoneName.DECK}"]`)!;
+        .querySelector(`[data-testid="zone-stack-${ZoneName.DECK}"]`)!;
       fireEvent.contextMenu(localDeck);
 
       expect(screen.getByText('Draw a card')).toBeInTheDocument();
@@ -409,7 +407,7 @@ describe('Game container', () => {
 
       const opponentDeck = screen
         .getByTestId('player-board-2')
-        .querySelector(`[data-testid="zone-stack-${Enriched.ZoneName.DECK}"]`)!;
+        .querySelector(`[data-testid="zone-stack-${ZoneName.DECK}"]`)!;
       fireEvent.contextMenu(opponentDeck);
 
       expect(screen.queryByText('Draw a card')).not.toBeInTheDocument();
@@ -427,7 +425,7 @@ describe('Game container', () => {
 
       const localDeck = screen
         .getByTestId('player-board-1')
-        .querySelector(`[data-testid="zone-stack-${Enriched.ZoneName.DECK}"]`)!;
+        .querySelector(`[data-testid="zone-stack-${ZoneName.DECK}"]`)!;
       fireEvent.contextMenu(localDeck);
       expect(screen.getByText('Draw a card')).toBeInTheDocument();
 
@@ -446,7 +444,7 @@ describe('Game container', () => {
       });
 
       fireEvent.contextMenu(
-        screen.getByTestId('player-board-1').querySelector(`[data-testid="zone-stack-${Enriched.ZoneName.DECK}"]`)!,
+        screen.getByTestId('player-board-1').querySelector(`[data-testid="zone-stack-${ZoneName.DECK}"]`)!,
       );
       fireEvent.click(screen.getByText('Draw a card'));
 
@@ -475,7 +473,7 @@ describe('Game container', () => {
       fireEvent.click(screen.getByRole('button', { name: /ok/i }));
 
       expect(webClient.request.game.setCardAttr).toHaveBeenCalledWith(1, {
-        zone: Enriched.ZoneName.TABLE,
+        zone: ZoneName.TABLE,
         cardId: 7,
         attribute: CardAttribute.AttrPT,
         attrValue: '3/3',

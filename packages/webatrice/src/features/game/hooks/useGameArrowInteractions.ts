@@ -1,12 +1,12 @@
+import { ZoneName } from '@cockatrice/sockatrice';
 import { RefObject, useCallback, useEffect, useMemo, useState } from 'react';
 
 import { useSettings } from '@app/hooks';
 import { useWebClient } from '@cockatrice/datatrice/react';
 import { ServerInfo_Card } from '@cockatrice/sockatrice/generated';
-import { Enriched, GameEntry } from '@cockatrice/datatrice';
+import { GameEntry } from '@cockatrice/datatrice';
 import { ArrowColor, ColorRGBA, rgbaToCss } from '@app/types';
 import { makeCardKey, makePlayerKey, type CardRegistry } from '../utils/CardRegistry/CardRegistryContext';
-import { dispatchBulkTap } from '../utils/bulkCardActions';
 import { useJudgeTarget } from './useJudgeTarget';
 import { bulkTargetsFor, type SelectedCard } from '../utils/selection';
 
@@ -249,11 +249,11 @@ export function useGameArrowInteractions({
       // the post-play zone (TABLE or STACK) while start_card_id stays the
       // hand-side id; Servatrice resolves it against the freshly-moved card.
       if (
-        drag.sourceZone === Enriched.ZoneName.HAND &&
+        drag.sourceZone === ZoneName.HAND &&
         drag.sourcePlayerId === game?.localPlayerId &&
-        targetZone !== Enriched.ZoneName.HAND
+        targetZone !== ZoneName.HAND
       ) {
-        const sourceCard = game?.players[drag.sourcePlayerId]?.zones[Enriched.ZoneName.HAND]?.byId[drag.sourceCardId];
+        const sourceCard = game?.players[drag.sourcePlayerId]?.zones[ZoneName.HAND]?.byId[drag.sourceCardId];
         const arrowColor = arrowColorForModifiers(e);
         if (sourceCard) {
           void (async () => {
@@ -261,11 +261,11 @@ export function useGameArrowInteractions({
               webClient,
               gameId,
               sourcePlayerId: drag.sourcePlayerId,
-              sourceZone: Enriched.ZoneName.HAND,
+              sourceZone: ZoneName.HAND,
               card: sourceCard,
               faceDown: false,
               isInverted: invertVerticalCoordinate,
-              tableZone: game?.players[drag.sourcePlayerId]?.zones[Enriched.ZoneName.TABLE],
+              tableZone: game?.players[drag.sourcePlayerId]?.zones[ZoneName.TABLE],
               judgeTargetId: judgeTarget(drag.sourcePlayerId),
             });
             webClient.request.game.createArrow(gameId, {
@@ -394,22 +394,22 @@ export function useGameArrowInteractions({
       // Local-hand arrow → non-hand plays the card AND draws the arrow.
       // Mirrors desktop arrow_item.cpp:223-282.
       if (
-        src.sourceZone === Enriched.ZoneName.HAND &&
+        src.sourceZone === ZoneName.HAND &&
         src.sourcePlayerId === game?.localPlayerId &&
-        zone !== Enriched.ZoneName.HAND
+        zone !== ZoneName.HAND
       ) {
-        const sourceCard = game?.players[src.sourcePlayerId]?.zones[Enriched.ZoneName.HAND]?.byId[src.sourceCardId];
+        const sourceCard = game?.players[src.sourcePlayerId]?.zones[ZoneName.HAND]?.byId[src.sourceCardId];
         if (sourceCard) {
           void (async () => {
             const postPlayZone = await playCardViaTableRow({
               webClient,
               gameId,
               sourcePlayerId: src.sourcePlayerId,
-              sourceZone: Enriched.ZoneName.HAND,
+              sourceZone: ZoneName.HAND,
               card: sourceCard,
               faceDown: false,
               isInverted: invertVerticalCoordinate,
-              tableZone: game?.players[src.sourcePlayerId]?.zones[Enriched.ZoneName.TABLE],
+              tableZone: game?.players[src.sourcePlayerId]?.zones[ZoneName.TABLE],
               judgeTargetId: judgeTarget(src.sourcePlayerId),
             });
             webClient.request.game.createArrow(gameId, {
@@ -449,35 +449,34 @@ export function useGameArrowInteractions({
       if (pending) {
         return;
       }
-      // Double-clicking a card that's part of a multi-selection bulk-taps the
-      // TABLE subset (Cockatrice collective rule); the selection is preserved.
-      // A judge tapping foreign cards wraps each as its owner; own cards send bare.
-      if (sourceZone === Enriched.ZoneName.TABLE && sourcePlayerId != null) {
+      // Double-click tap always goes through bulkTap (single = the n=1 case,
+      // applying the same collective rule and judge wrapping). A card that's
+      // part of a multi-selection taps the TABLE subset and keeps the selection; a
+      // lone card collapses the selection first, then taps just itself.
+      if (sourceZone === ZoneName.TABLE && sourcePlayerId != null) {
         const bulk = bulkTargetsFor(selectedCards, makeCardKey(sourcePlayerId, sourceZone, card.id));
-        if (bulk.length) {
-          dispatchBulkTap(webClient, gameId, bulk.filter((t) => t.zone === Enriched.ZoneName.TABLE), judgeTarget);
-          return;
+        const tapTargets = bulk.length
+          ? bulk.filter((t) => t.zone === ZoneName.TABLE)
+          : [{ ownerPlayerId: sourcePlayerId, zone: sourceZone, card }];
+        if (!bulk.length) {
+          collapseUnlessSelected(sourcePlayerId, sourceZone, card);
         }
-      }
-      collapseUnlessSelected(sourcePlayerId, sourceZone, card);
-      if (sourceZone === Enriched.ZoneName.TABLE && sourcePlayerId != null) {
-        // Single-card tap routes through the same helper so the judge rule is
-        // applied identically to the bulk path. See useJudgeTarget.
-        dispatchBulkTap(webClient, gameId, [{ ownerPlayerId: sourcePlayerId, zone: sourceZone, card }], judgeTarget);
+        webClient.request.game.bulkTap(gameId, tapTargets, judgeTarget);
         return;
       }
-      if (sourceZone === Enriched.ZoneName.HAND && sourcePlayerId != null && game != null) {
+      collapseUnlessSelected(sourcePlayerId, sourceZone, card);
+      if (sourceZone === ZoneName.HAND && sourcePlayerId != null && game != null) {
         // Play onto the card owner's table; a judge playing a foreign hand card
         // wraps as the owner, own cards send bare. Mirrors the card-menu play.
         void playCardViaTableRow({
           webClient,
           gameId,
           sourcePlayerId,
-          sourceZone: Enriched.ZoneName.HAND,
+          sourceZone: ZoneName.HAND,
           card,
           faceDown: false,
           isInverted: invertVerticalCoordinate,
-          tableZone: game.players[sourcePlayerId]?.zones[Enriched.ZoneName.TABLE],
+          tableZone: game.players[sourcePlayerId]?.zones[ZoneName.TABLE],
           judgeTargetId: judgeTarget(sourcePlayerId),
         });
       }

@@ -42,6 +42,15 @@ export interface EventRegistries {
   session: SessionExtensionRegistry;
 }
 
+// One game command in a batch. `judgeTargetId` undefined sends it bare; when set,
+// the command nests inside a Command_Judge for that owner (entries sharing a
+// target are grouped into a single judge wrapper). See sendGameCommands.
+export interface GameCommandEntry<V = unknown> {
+  ext: GenExtension<GameCommand, V>;
+  value: V;
+  judgeTargetId?: number;
+}
+
 export class ProtobufService {
   private cmdId = 0;
   private pendingCommands = new Map<number, (response: Response) => void>();
@@ -62,16 +71,72 @@ export class ProtobufService {
     value: V,
     options?: CommandOptions<R>
   ): void {
-    const gameCmd = create(GameCommandSchema);
-    setExtension(gameCmd, ext, value);
+    this.sendGameCommands(gameId, [{ ext, value, judgeTargetId: options?.judgeTargetId }], options);
+  }
 
-    if (options?.judgeTargetId !== undefined) {
-      this.sendJudgeCommand(gameId, gameCmd, options);
+  // Sends many game commands in ONE CommandContainer (one cmd_id, one server
+  // response), mirroring Cockatrice's prepareGameCommand(commandList). Bare
+  // entries ride directly in the container; judge-targeted entries are grouped
+  // by target into one Command_Judge wrapper each (its game_command field is
+  // repeated). Used for bulk card actions on a multi-selection.
+  public sendGameCommands<R = unknown>(
+    gameId: number,
+    entries: ReadonlyArray<GameCommandEntry>,
+    options?: CommandOptions<R>
+  ): void {
+    if (entries.length === 0) {
       return;
     }
 
-    const cmd = create(CommandContainerSchema, { gameId, gameCommand: [gameCmd] });
-    this.dispatchCommand(ext.typeName, cmd, options);
+    const gameCommand = this.createGameCommands(entries);
+
+    // A single bare command keeps its own type name (legacy single-command
+    // callers); anything batched is labelled generically for response logging.
+    const typeName = entries.length === 1 && entries[0].judgeTargetId === undefined
+      ? entries[0].ext.typeName
+      : 'GameCommand[batch]';
+
+    const cmd = create(CommandContainerSchema, { gameId, gameCommand });
+    this.dispatchCommand(typeName, cmd, options);
+  }
+
+  // Builds the top-level GameCommand[] for a CommandContainer: bare entries ride
+  // directly; judge-targeted entries are grouped by target into one Command_Judge
+  // wrapper each. Mirrors Cockatrice's prepareGameCommand(commandList).
+  private createGameCommands(entries: ReadonlyArray<GameCommandEntry>): GameCommand[] {
+    const gameCommand: GameCommand[] = [];
+    const judgeGroups = new Map<number, GameCommand[]>();
+
+    for (const entry of entries) {
+      const gameCmd = create(GameCommandSchema);
+      setExtension(gameCmd, entry.ext, entry.value);
+      if (entry.judgeTargetId === undefined) {
+        gameCommand.push(gameCmd);
+      } else {
+        const group = judgeGroups.get(entry.judgeTargetId);
+        if (group) {
+          group.push(gameCmd);
+        } else {
+          judgeGroups.set(entry.judgeTargetId, [gameCmd]);
+        }
+      }
+    }
+
+    for (const [targetId, cmds] of judgeGroups) {
+      gameCommand.push(this.createJudgeCommand(targetId, cmds));
+    }
+    return gameCommand;
+  }
+
+  // Nests a list of game commands under a Command_Judge so the server runs them
+  // as targetId. Command_Judge.game_command is repeated, so one wrapper carries
+  // every command for that owner.
+  private createJudgeCommand(targetId: number, gameCommands: GameCommand[]): GameCommand {
+    const judgeCmd = create(GameCommandSchema);
+    setExtension(judgeCmd, Command_Judge_ext, create(Command_JudgeSchema, {
+      targetId, gameCommand: gameCommands,
+    }));
+    return judgeCmd;
   }
 
   public sendRoomCommand<V, R = unknown>(
@@ -117,23 +182,6 @@ export class ProtobufService {
     setExtension(adminCmd, ext, value);
     const cmd = create(CommandContainerSchema, { adminCommand: [adminCmd] });
     this.dispatchCommand(ext.typeName, cmd, options);
-  }
-
-  // Internal: wraps an already-built game command in Command_Judge so the server
-  // runs it as options.judgeTargetId. Only reached from sendGameCommand, which has
-  // already narrowed judgeTargetId to a defined player id.
-  private sendJudgeCommand<R = unknown>(
-    gameId: number,
-    gameCmd: GameCommand,
-    options: CommandOptions<R>,
-  ): void {
-    const judgeCmd = create(GameCommandSchema);
-    setExtension(judgeCmd, Command_Judge_ext, create(Command_JudgeSchema, {
-      targetId: options.judgeTargetId, gameCommand: [gameCmd],
-    }));
-
-    const cmd = create(CommandContainerSchema, { gameId, gameCommand: [judgeCmd] });
-    this.dispatchCommand(Command_Judge_ext.typeName, cmd, options);
   }
 
   private dispatchCommand<R>(typeName: string, cmd: CommandContainer, options?: CommandOptions<R>): void {

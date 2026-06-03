@@ -1,6 +1,7 @@
+import { ZoneName } from '@cockatrice/sockatrice';
 import { renderHook } from '@testing-library/react';
 import { combineReducers } from '@reduxjs/toolkit';
-import { Enriched, games, type GamesState } from '@cockatrice/datatrice';
+import { games, type GamesState } from '@cockatrice/datatrice';
 import {
   makeCard,
   makeGameEntry,
@@ -17,13 +18,13 @@ import { useBattlefield } from './useBattlefield';
 
 function stateWith(cards: ReturnType<typeof makeCard>[]): GamesState {
   const table = makeZoneEntry({
-    name: Enriched.ZoneName.TABLE,
+    name: ZoneName.TABLE,
     type: 1,
     withCoords: true,
     cardCount: cards.length,
     cards,
   });
-  const player = makePlayerEntry({ zones: { [Enriched.ZoneName.TABLE]: table } });
+  const player = makePlayerEntry({ zones: { [ZoneName.TABLE]: table } });
   const game = makeGameEntry({ localPlayerId: 1, players: { 1: player } });
   return { games: { 1: game } };
 }

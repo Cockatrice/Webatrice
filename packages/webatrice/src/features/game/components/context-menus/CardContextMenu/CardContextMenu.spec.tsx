@@ -1,11 +1,10 @@
+import { ZoneName, type CardLocation } from '@cockatrice/sockatrice';
 import { screen, fireEvent } from '@testing-library/react';
 import { create } from '@bufbuild/protobuf';
 import {
-  CardAttribute,
   ServerInfo_Card,
   ServerInfo_CardCounterSchema,
 } from '@cockatrice/sockatrice/generated';
-import { Enriched } from '@cockatrice/datatrice';
 import { createMockWebClient, makeStoreState, renderWithProviders } from '../../../../../__test-utils__';
 import {
   makeCard,
@@ -30,7 +29,7 @@ function renderMenu(opts: {
   const card = opts.card === undefined ? makeCard() : opts.card;
   const localPlayerId = opts.localPlayerId ?? 1;
   const ownerPlayerId = opts.ownerPlayerId ?? 1;
-  const sourceZone = opts.sourceZone ?? Enriched.ZoneName.TABLE;
+  const sourceZone = opts.sourceZone ?? ZoneName.TABLE;
   const player = makePlayerEntry({
     properties: makePlayerProperties({ playerId: localPlayerId }),
   });
@@ -45,6 +44,19 @@ function renderMenu(opts: {
     webClient: opts.webClient,
     gameDialogs: { cardMenu, ...opts.dialogs },
   });
+}
+
+// Card actions invoke the sockatrice bulk command surface (request.game.bulk*);
+// here we assert the menu fired the right command for the right card. The
+// command-building itself is covered by sockatrice's bulkCardActions.spec.
+type BulkFn = 'bulkTap' | 'bulkFlip' | 'bulkDoesntUntap' | 'bulkPeek' | 'bulkMove';
+function lastBulk(webClient: ReturnType<typeof createMockWebClient>, fn: BulkFn) {
+  const calls = vi.mocked(webClient.request.game[fn] as (...a: unknown[]) => void).mock.calls;
+  expect(calls.length).toBeGreaterThan(0);
+  return calls[calls.length - 1];
+}
+function targetIds(targets: readonly CardLocation[]): number[] {
+  return targets.map((t) => t.card.id).sort((a, b) => a - b);
 }
 
 describe('CardContextMenu', () => {
@@ -76,74 +88,52 @@ describe('CardContextMenu', () => {
 
     fireEvent.click(screen.getByText('Face Down'));
 
-    expect(webClient.request.game.flipCard).toHaveBeenCalledWith(1, {
-      zone: Enriched.ZoneName.TABLE,
-      cardId: 10,
-      faceDown: true,
-    }, undefined);
+    const [gameId, targets] = lastBulk(webClient, 'bulkFlip');
+    expect(gameId).toBe(1);
+    expect(targetIds(targets as CardLocation[])).toEqual([10]);
     expect(closeCardMenu).toHaveBeenCalled();
   });
 
-  it('toggles tap via setCardAttr (untapped → tapped)', () => {
+  it('taps via bulkTap (Tap label when untapped)', () => {
     const webClient = createMockWebClient();
     renderMenu({ card: makeCard({ id: 5, tapped: false }), webClient });
 
+    expect(screen.getByText('Tap')).toBeInTheDocument();
     fireEvent.click(screen.getByText('Tap'));
 
-    expect(webClient.request.game.setCardAttr).toHaveBeenCalledWith(1, {
-      zone: Enriched.ZoneName.TABLE,
-      cardId: 5,
-      attribute: CardAttribute.AttrTapped,
-      attrValue: '1',
-    }, undefined);
+    expect(targetIds(lastBulk(webClient, 'bulkTap')[1] as CardLocation[])).toEqual([5]);
   });
 
-  it('shows Untap label and sends "0" when the card is already tapped', () => {
+  it('shows the Untap label and taps via bulkTap when the card is already tapped', () => {
     const webClient = createMockWebClient();
     renderMenu({ card: makeCard({ id: 5, tapped: true }), webClient });
 
     expect(screen.getByText('Untap')).toBeInTheDocument();
     fireEvent.click(screen.getByText('Untap'));
 
-    expect(webClient.request.game.setCardAttr).toHaveBeenCalledWith(1, {
-      zone: Enriched.ZoneName.TABLE,
-      cardId: 5,
-      attribute: CardAttribute.AttrTapped,
-      attrValue: '0',
-    }, undefined);
+    expect(targetIds(lastBulk(webClient, 'bulkTap')[1] as CardLocation[])).toEqual([5]);
   });
 
-  // Regression: revealing a face-down card must go through Command_FlipCard, whose event
-  // carries the revealed name/providerId — setCardAttr(AttrFaceDown) does not, so a card
-  // revealed after resuming a game (no local identity) would render blank.
-  it('turns a face-down card face up via flipCard and shows the Face Up label', () => {
+  // Face-up/down both route through bulkFlip (which uses Command_FlipCard, whose
+  // event carries the revealed name/providerId — see sockatrice bulkCardActions).
+  it('turns a face-down card face up via bulkFlip and shows the Face Up label', () => {
     const webClient = createMockWebClient();
     renderMenu({ card: makeCard({ id: 5, faceDown: true }), webClient });
 
     expect(screen.getByText('Face Up')).toBeInTheDocument();
     fireEvent.click(screen.getByText('Face Up'));
 
-    expect(webClient.request.game.flipCard).toHaveBeenCalledWith(1, {
-      zone: Enriched.ZoneName.TABLE,
-      cardId: 5,
-      faceDown: false,
-    }, undefined);
-    expect(webClient.request.game.setCardAttr).not.toHaveBeenCalled();
+    expect(targetIds(lastBulk(webClient, 'bulkFlip')[1] as CardLocation[])).toEqual([5]);
   });
 
-  it('toggles Doesn\'t Untap and shows Allow Untap when already set', () => {
+  it('toggles Doesn\'t Untap via bulkDoesntUntap and shows Allow Untap when already set', () => {
     const webClient = createMockWebClient();
     renderMenu({ card: makeCard({ id: 5, doesntUntap: true }), webClient });
 
     expect(screen.getByText('Allow Untap')).toBeInTheDocument();
     fireEvent.click(screen.getByText('Allow Untap'));
 
-    expect(webClient.request.game.setCardAttr).toHaveBeenCalledWith(1, {
-      zone: Enriched.ZoneName.TABLE,
-      cardId: 5,
-      attribute: CardAttribute.AttrDoesntUntap,
-      attrValue: '0',
-    }, undefined);
+    expect(targetIds(lastBulk(webClient, 'bulkDoesntUntap')[1] as CardLocation[])).toEqual([5]);
   });
 
   it('requests the PT prompt via parent callback', () => {
@@ -172,16 +162,10 @@ describe('CardContextMenu', () => {
 
     fireEvent.click(screen.getByText('Send to Hand'));
 
-    expect(webClient.request.game.moveCard).toHaveBeenCalledWith(1, {
-      startPlayerId: 1,
-      startZone: Enriched.ZoneName.TABLE,
-      cardsToMove: { card: [{ cardId: 7 }] },
-      targetPlayerId: 1,
-      targetZone: Enriched.ZoneName.HAND,
-      x: -1,
-      y: 0,
-      isReversed: false,
-    }, undefined);
+    const [gameId, targets, dest] = lastBulk(webClient, 'bulkMove');
+    expect(gameId).toBe(1);
+    expect(targetIds(targets as CardLocation[])).toEqual([7]);
+    expect(dest).toEqual({ targetPlayerId: 1, targetZone: ZoneName.HAND, x: -1, y: 0 });
   });
 
   it('hides mutator items (tap, face up/down, move, counters, P/T) for opponent-owned cards (desktop parity)', () => {
@@ -203,10 +187,10 @@ describe('CardContextMenu', () => {
 
     fireEvent.click(screen.getByText('Send to Hand'));
 
-    expect(webClient.request.game.moveCard).toHaveBeenCalledWith(1, expect.objectContaining({
-      startPlayerId: 1,
-      targetPlayerId: 1,
-    }), undefined);
+    // handleMove hands bulkMove the acting (local) player as the requested target;
+    // sockatrice's bulkMove applies the owner-routing rule. See moveTargetPlayerId.
+    const [, , dest] = lastBulk(webClient, 'bulkMove');
+    expect(dest).toEqual(expect.objectContaining({ targetPlayerId: 1 }));
   });
 
   it('moves to library top vs bottom with distinct x values', () => {
@@ -214,16 +198,14 @@ describe('CardContextMenu', () => {
     renderMenu({ card: makeCard({ id: 7 }), webClient });
 
     fireEvent.click(screen.getByText('Send to Library (top)'));
-    expect(webClient.request.game.moveCard).toHaveBeenLastCalledWith(1, expect.objectContaining({
-      targetZone: Enriched.ZoneName.DECK,
-      x: 0,
-    }), undefined);
+    expect(lastBulk(webClient, 'bulkMove')[2]).toEqual(
+      expect.objectContaining({ targetZone: ZoneName.DECK, x: 0 }),
+    );
 
     fireEvent.click(screen.getByText('Send to Library (bottom)'));
-    expect(webClient.request.game.moveCard).toHaveBeenLastCalledWith(1, expect.objectContaining({
-      targetZone: Enriched.ZoneName.DECK,
-      x: -1,
-    }), undefined);
+    expect(lastBulk(webClient, 'bulkMove')[2]).toEqual(
+      expect.objectContaining({ targetZone: ZoneName.DECK, x: -1 }),
+    );
   });
 
   // Per-counter actions live three levels deep: Counters ▸ {label} ▸
@@ -241,7 +223,7 @@ describe('CardContextMenu', () => {
     fireEvent.click(screen.getByText('Add Counter'));
 
     expect(webClient.request.game.incCardCounter).toHaveBeenCalledWith(1, {
-      zone: Enriched.ZoneName.TABLE,
+      zone: ZoneName.TABLE,
       cardId: 9,
       counterId: 0,
       counterDelta: 1,
@@ -256,7 +238,7 @@ describe('CardContextMenu', () => {
     fireEvent.click(screen.getByText('Add Counter'));
 
     expect(webClient.request.game.incCardCounter).toHaveBeenCalledWith(1, {
-      zone: Enriched.ZoneName.TABLE,
+      zone: ZoneName.TABLE,
       cardId: 9,
       counterId: 1,
       counterDelta: 1,
@@ -285,7 +267,7 @@ describe('CardContextMenu', () => {
     fireEvent.click(screen.getByText('Remove Counter'));
 
     expect(webClient.request.game.incCardCounter).toHaveBeenCalledWith(1, {
-      zone: Enriched.ZoneName.TABLE,
+      zone: ZoneName.TABLE,
       cardId: 9,
       counterId: 0,
       counterDelta: -1,
@@ -337,14 +319,14 @@ describe('CardContextMenu', () => {
       fireEvent.click(screen.getByText('Unattach'));
 
       expect(webClient.request.game.attachCard).toHaveBeenCalledWith(1, {
-        startZone: Enriched.ZoneName.TABLE,
+        startZone: ZoneName.TABLE,
         cardId: 11,
       }, undefined);
       expect(closeCardMenu).toHaveBeenCalled();
     });
 
     it('hides Attach / Unattach when the source card is not on the table', () => {
-      renderMenu({ sourceZone: Enriched.ZoneName.HAND, card: makeCard({ attachCardId: 99 }) });
+      renderMenu({ sourceZone: ZoneName.HAND, card: makeCard({ attachCardId: 99 }) });
 
       expect(screen.queryByText('Attach to card…')).not.toBeInTheDocument();
       expect(screen.queryByText('Unattach')).not.toBeInTheDocument();

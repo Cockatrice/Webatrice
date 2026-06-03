@@ -1,7 +1,7 @@
+import { ZoneName } from '@cockatrice/sockatrice';
 import { memo, useCallback } from 'react';
 
 import { ServerInfo_Card } from '@cockatrice/sockatrice/generated';
-import { Enriched } from '@cockatrice/datatrice';
 import { cx } from '@app/utils';
 
 import { counterColorForId } from './counterColors';
@@ -61,10 +61,10 @@ const CardSlotContent = memo(function CardSlotContent({
         </div>
       </div>
 
-      {!card.faceDown && (card.name || (zone === Enriched.ZoneName.TABLE && card.annotation)) && (
+      {!card.faceDown && (card.name || (zone === ZoneName.TABLE && card.annotation)) && (
         <div className="card-slot__top">
           {card.name && <div className="card-slot__name">{card.name}</div>}
-          {zone === Enriched.ZoneName.TABLE && card.annotation && (
+          {zone === ZoneName.TABLE && card.annotation && (
             <div className="card-slot__owner">
               {card.annotation.replace(/^Owner:\s*/i, '')}
             </div>

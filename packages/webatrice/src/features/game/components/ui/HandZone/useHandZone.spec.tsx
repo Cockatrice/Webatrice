@@ -1,6 +1,7 @@
+import { ZoneName } from '@cockatrice/sockatrice';
 import { renderHook } from '@testing-library/react';
 import { combineReducers } from '@reduxjs/toolkit';
-import { Enriched, games, type GamesState } from '@cockatrice/datatrice';
+import { games, type GamesState } from '@cockatrice/datatrice';
 import {
   makeCard,
   makeGameEntry,
@@ -21,11 +22,11 @@ import { useHandZone, type UseHandZoneArgs } from './useHandZone';
 
 function stateWithHand(cards: ReturnType<typeof makeCard>[]): GamesState {
   const hand = makeZoneEntry({
-    name: Enriched.ZoneName.HAND,
+    name: ZoneName.HAND,
     cardCount: cards.length,
     cards,
   });
-  const player = makePlayerEntry({ zones: { [Enriched.ZoneName.HAND]: hand } });
+  const player = makePlayerEntry({ zones: { [ZoneName.HAND]: hand } });
   const game = makeGameEntry({ localPlayerId: 1, players: { 1: player } });
   return { games: { 1: game } };
 }
@@ -70,7 +71,7 @@ describe('useHandZone', () => {
     };
     expect(callArgs.id).toBe('hand-1');
     expect(callArgs.disabled).toBe(false);
-    expect(callArgs.data.targetZone).toBe(Enriched.ZoneName.HAND);
+    expect(callArgs.data.targetZone).toBe(ZoneName.HAND);
   });
 
   it('disables the droppable when canAct is false', () => {

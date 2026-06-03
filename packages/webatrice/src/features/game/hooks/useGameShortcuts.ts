@@ -1,7 +1,7 @@
+import { ZoneName } from '@cockatrice/sockatrice';
 import { ShortcutScope, useShortcut } from '@app/feature-widgets/shortcuts';
 import { useWebClient } from '@cockatrice/datatrice/react';
 import { CardAttribute } from '@cockatrice/sockatrice/generated';
-import { Enriched } from '@cockatrice/datatrice';
 import { useCurrentGame } from './useCurrentGame';
 import { useGameAffordances } from './useGameAffordances';
 
@@ -32,7 +32,7 @@ export function useGameShortcuts({ gameId, onRequestConcede }: UseGameShortcutsA
         return;
       }
       webClient.request.game.setCardAttr(gameId, {
-        zone: Enriched.ZoneName.TABLE,
+        zone: ZoneName.TABLE,
         cardId: -1,
         attribute: CardAttribute.AttrTapped,
         attrValue: '0',

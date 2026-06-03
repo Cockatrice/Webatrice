@@ -1,3 +1,4 @@
+import { ZoneName } from '@cockatrice/sockatrice';
 import { CaseReducer, PayloadAction } from '@reduxjs/toolkit';
 import { clone } from '@bufbuild/protobuf';
 import { Enriched } from '../../types';
@@ -122,7 +123,7 @@ export const primitiveReducers = {
       return;
     }
     for (const otherPlayer of Object.values(game.players)) {
-      const otherTable = otherPlayer?.zones[Enriched.ZoneName.TABLE];
+      const otherTable = otherPlayer?.zones[ZoneName.TABLE];
       if (!otherTable) {
         continue;
       }
@@ -133,7 +134,7 @@ export const primitiveReducers = {
         }
         if (
           child.attachPlayerId === fromPlayerId &&
-          child.attachZone === Enriched.ZoneName.TABLE &&
+          child.attachZone === ZoneName.TABLE &&
           child.attachCardId === fromCardId
         ) {
           otherTable.byId[childId] = cloneWith(ServerInfo_CardSchema, child, {

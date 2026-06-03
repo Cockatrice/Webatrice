@@ -169,6 +169,7 @@ export const WebClient = {
       sendSessionCommand: vi.fn(),
       sendRoomCommand: vi.fn(),
       sendGameCommand: vi.fn(),
+      sendGameCommands: vi.fn(),
       sendAdminCommand: vi.fn(),
       sendModeratorCommand: vi.fn(),
       resetCommands: vi.fn(),

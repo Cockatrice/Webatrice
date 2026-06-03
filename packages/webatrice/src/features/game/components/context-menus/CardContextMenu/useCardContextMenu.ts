@@ -1,11 +1,8 @@
+import { ZoneName } from '@cockatrice/sockatrice';
 import { useWebClient } from '@cockatrice/datatrice/react';
-import { CardAttribute, ServerInfo_Card } from '@cockatrice/sockatrice/generated';
-import { Enriched } from '@cockatrice/datatrice';
-import { dispatchBulkMove, dispatchBulkTap } from '../../../utils/bulkCardActions';
-import { moveTargetPlayerId } from '../../../utils/moveTarget';
+import { ServerInfo_Card } from '@cockatrice/sockatrice/generated';
 import { useJudgeTarget } from '../../../hooks/useJudgeTarget';
-import { bulkTargetsFor, type SelectedCard } from '../../../utils/selection';
-import { makeCardKey } from '../../../utils/CardRegistry/CardRegistryContext';
+import { effectiveTargets, type SelectedCard } from '../../../utils/selection';
 interface MoveTarget {
   label: string;
   zone: string;
@@ -15,12 +12,12 @@ interface MoveTarget {
 
 // Desktop 7-entry move menu. See .github/instructions/webatrice-game.instructions.md#dialog-parity.
 export const CARD_MOVE_TARGETS: ReadonlyArray<MoveTarget> = [
-  { label: 'Send to Hand', zone: Enriched.ZoneName.HAND, x: -1, y: 0 },
-  { label: 'Send to Battlefield', zone: Enriched.ZoneName.TABLE, x: 0, y: 0 },
-  { label: 'Send to Graveyard', zone: Enriched.ZoneName.GRAVE, x: 0, y: 0 },
-  { label: 'Send to Exile', zone: Enriched.ZoneName.EXILE, x: 0, y: 0 },
-  { label: 'Send to Library (top)', zone: Enriched.ZoneName.DECK, x: 0, y: 0 },
-  { label: 'Send to Library (bottom)', zone: Enriched.ZoneName.DECK, x: -1, y: 0 },
+  { label: 'Send to Hand', zone: ZoneName.HAND, x: -1, y: 0 },
+  { label: 'Send to Battlefield', zone: ZoneName.TABLE, x: 0, y: 0 },
+  { label: 'Send to Graveyard', zone: ZoneName.GRAVE, x: 0, y: 0 },
+  { label: 'Send to Exile', zone: ZoneName.EXILE, x: 0, y: 0 },
+  { label: 'Send to Library (top)', zone: ZoneName.DECK, x: 0, y: 0 },
+  { label: 'Send to Library (bottom)', zone: ZoneName.DECK, x: -1, y: 0 },
 ];
 
 export interface CardContextMenu {
@@ -93,9 +90,11 @@ export function useCardContextMenu({
 
   const ready = card != null && ownerPlayerId != null && sourceZone != null && localPlayerId != null;
 
-  // The set the menu acts on, or empty when this is a single-card interaction.
-  const bulkTargets = ready
-    ? bulkTargetsFor(selectedCards, makeCardKey(ownerPlayerId!, sourceZone!, card!.id))
+  // The set every card action operates on: the multi-selection when this card is
+  // part of one, else just this card. Always ≥1, so each handler feeds it to a
+  // bulk dispatcher unconditionally (single = the n=1 case). See effectiveTargets.
+  const actionTargets = ready
+    ? effectiveTargets(selectedCards, { ownerPlayerId: ownerPlayerId!, zone: sourceZone!, card: card! })
     : EMPTY_SELECTED_CARDS;
 
   // Card-menu affordance gates. See .github/instructions/webatrice-game.instructions.md#dialog-parity.
@@ -106,35 +105,23 @@ export function useCardContextMenu({
   // Writeable-card gate: own card, or a judge acting on a foreign card.
   const canActOnCard = ready && (isOwnedByLocal || judgeTargetId !== undefined);
   const isAttached = ready && (card!.attachCardId ?? -1) >= 0;
-  const canAttach = ready && sourceZone === Enriched.ZoneName.TABLE;
+  const canAttach = ready && sourceZone === ZoneName.TABLE;
   // A judge may play a foreign card onto its owner's table (playCard.ts targets the
   // owner and judge-wraps), matching Cockatrice's getLocalOrJudge() play gate.
-  const canPlay = ready && canActOnCard && sourceZone !== Enriched.ZoneName.TABLE;
+  const canPlay = ready && canActOnCard && sourceZone !== ZoneName.TABLE;
   const canPeek =
-    ready && canActOnCard && sourceZone === Enriched.ZoneName.TABLE && (card!.faceDown ?? false);
+    ready && canActOnCard && sourceZone === ZoneName.TABLE && (card!.faceDown ?? false);
 
-  const setAttr = (attribute: CardAttribute, value: string) => {
-    if (!ready || gameId == null) {
-      return;
-    }
-    webClient.request.game.setCardAttr(gameId, {
-      zone: sourceZone!,
-      cardId: card!.id,
-      attribute,
-      attrValue: value,
-    }, judgeTargetId);
-  };
+  // Tap/flip/doesn't-untap act on the TABLE subset of the selection. The bulk
+  // dispatchers apply Cockatrice's collective rule (which reduces to a plain
+  // toggle for a single card) and judge-wrap per owner. See bulkCardActions.
+  const tableTargets = () => actionTargets.filter((t) => t.zone === ZoneName.TABLE);
 
   const handleTapToggle = () => {
     if (!ready || gameId == null) {
       return;
     }
-    const tableTargets = bulkTargets.filter((t) => t.zone === Enriched.ZoneName.TABLE);
-    if (tableTargets.length > 1) {
-      dispatchBulkTap(webClient, gameId, tableTargets, judgeTarget);
-    } else {
-      setAttr(CardAttribute.AttrTapped, card!.tapped ? '0' : '1');
-    }
+    webClient.request.game.bulkTap(gameId, tableTargets(), judgeTarget);
     onClose();
   };
 
@@ -142,15 +129,7 @@ export function useCardContextMenu({
     if (!ready || gameId == null) {
       return;
     }
-    // Use Command_FlipCard rather than setCardAttr(AttrFaceDown): only the flip command's
-    // event carries the revealed name/providerId when a card turns face-up, so a card
-    // revealed after resuming a game (where the server stripped its name) still renders.
-    // TODO(card-db): forward stored P/T once a name-keyed card DB is wired in (server re-derives for known names).
-    webClient.request.game.flipCard(gameId, {
-      zone: sourceZone!,
-      cardId: card!.id,
-      faceDown: !card!.faceDown,
-    }, judgeTargetId);
+    webClient.request.game.bulkFlip(gameId, tableTargets(), judgeTarget);
     onClose();
   };
 
@@ -158,7 +137,7 @@ export function useCardContextMenu({
     if (!ready || gameId == null) {
       return;
     }
-    setAttr(CardAttribute.AttrDoesntUntap, card!.doesntUntap ? '0' : '1');
+    webClient.request.game.bulkDoesntUntap(gameId, tableTargets(), judgeTarget);
     onClose();
   };
 
@@ -213,27 +192,15 @@ export function useCardContextMenu({
     if (!ready || gameId == null) {
       return;
     }
-    // Non-table moves route to the card's owner tree; TABLE keeps the local
-    // player (a legal cross-player control-change). See moveTargetPlayerId.
-    if (bulkTargets.length > 1) {
-      dispatchBulkMove(webClient, gameId, bulkTargets, {
-        targetPlayerId: localPlayerId!,
-        targetZone: target.zone,
-        x: target.x,
-        y: target.y,
-      }, judgeTarget);
-    } else {
-      webClient.request.game.moveCard(gameId, {
-        startPlayerId: ownerPlayerId!,
-        startZone: sourceZone!,
-        cardsToMove: { card: [{ cardId: card!.id }] },
-        targetPlayerId: moveTargetPlayerId(ownerPlayerId!, target.zone, localPlayerId!),
-        targetZone: target.zone,
-        x: target.x,
-        y: target.y,
-        isReversed: false,
-      }, judgeTargetId);
-    }
+    // dispatchBulkMove groups by (owner, zone) and routes each group: non-table
+    // moves go to the card's owner tree; TABLE keeps the local player (a legal
+    // cross-player control-change). See moveTargetPlayerId / bulkCardActions.
+    webClient.request.game.bulkMove(gameId, actionTargets, {
+      targetPlayerId: localPlayerId!,
+      targetZone: target.zone,
+      x: target.x,
+      y: target.y,
+    }, judgeTarget);
     onClose();
   };
 
@@ -263,12 +230,7 @@ export function useCardContextMenu({
       return;
     }
     // actPeek reveals to local player only; scope via playerId.
-    webClient.request.game.revealCards(gameId, {
-      zoneName: sourceZone!,
-      cardId: [card!.id],
-      playerId: localPlayerId!,
-      topCards: -1,
-    }, judgeTargetId);
+    webClient.request.game.bulkPeek(gameId, actionTargets, localPlayerId!, judgeTarget);
     onClose();
   };
 

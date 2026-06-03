@@ -1,4 +1,4 @@
-import { ServerInfo_Card } from '@cockatrice/sockatrice/generated';
+import type { CardLocation } from '@cockatrice/sockatrice';
 import { GameEntry } from '@cockatrice/datatrice';
 
 import { makeCardKey, parseCardKey } from './CardRegistry/CardRegistryContext';
@@ -6,11 +6,9 @@ import { makeCardKey, parseCardKey } from './CardRegistry/CardRegistryContext';
 // Shared default so containers don't each allocate a per-render empty Set.
 export const EMPTY_SELECTION: ReadonlySet<string> = new Set<string>();
 
-export interface SelectedCard {
-  ownerPlayerId: number;
-  zone: string;
-  card: ServerInfo_Card;
-}
+// A selected card is a card located in a zone — the protocol-level CardLocation
+// the sockatrice bulk commands consume. Aliased here to keep the UI vocabulary.
+export type SelectedCard = CardLocation;
 
 const EMPTY_SELECTED_CARDS: readonly SelectedCard[] = [];
 
@@ -48,4 +46,15 @@ export function bulkTargetsFor(
     return selectedCards;
   }
   return EMPTY_SELECTED_CARDS;
+}
+
+// The set a card interaction acts on: the multi-selection when `card` is part of
+// a ≥2 selection, otherwise just `card`. Always ≥1 element, so callers feed it
+// straight to a bulk dispatcher (single = the n=1 case) with no single/bulk fork.
+export function effectiveTargets(
+  selectedCards: readonly SelectedCard[],
+  card: SelectedCard,
+): readonly SelectedCard[] {
+  const bulk = bulkTargetsFor(selectedCards, selectionKeyOf(card));
+  return bulk.length ? bulk : [card];
 }

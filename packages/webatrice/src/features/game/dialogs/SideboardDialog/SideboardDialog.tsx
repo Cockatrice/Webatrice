@@ -1,3 +1,4 @@
+import { ZoneName } from '@cockatrice/sockatrice';
 import { memo, useEffect, useMemo, useState } from 'react';
 import { styled } from '@mui/material/styles';
 import Dialog from '@mui/material/Dialog';
@@ -9,7 +10,7 @@ import FormControlLabel from '@mui/material/FormControlLabel';
 import Checkbox from '@mui/material/Checkbox';
 import Tooltip from '@mui/material/Tooltip';
 
-import { Enriched, ZoneEntry, games } from '@cockatrice/datatrice';
+import { ZoneEntry, games } from '@cockatrice/datatrice';
 import { useAppSelector } from '@app/store';
 
 import { useGameId } from '../../components/ui/GameIdContext';
@@ -46,8 +47,8 @@ function applyMoves(
   const deck = [...initialDeck];
   const sideboard = [...initialSideboard];
   for (const move of moves) {
-    const from = move.startZone === Enriched.ZoneName.DECK ? deck : sideboard;
-    const to = move.targetZone === Enriched.ZoneName.DECK ? deck : sideboard;
+    const from = move.startZone === ZoneName.DECK ? deck : sideboard;
+    const to = move.targetZone === ZoneName.DECK ? deck : sideboard;
     const idx = from.findIndex((c) => c.name === move.cardName);
     if (idx < 0) {
       continue;
@@ -75,8 +76,8 @@ function SideboardDialog() {
   const playerName = localPlayer?.properties.userInfo?.name ?? '';
   // Keyed on the zone refs (stable unless the zone changes) so applyMoves below
   // doesn't recompute on every unrelated render.
-  const deckZone = localPlayer?.zones[Enriched.ZoneName.DECK];
-  const sideboardZone = localPlayer?.zones[Enriched.ZoneName.SIDEBOARD];
+  const deckZone = localPlayer?.zones[ZoneName.DECK];
+  const sideboardZone = localPlayer?.zones[ZoneName.SIDEBOARD];
   const deckCards = useMemo(() => cardsFromZone(deckZone), [deckZone]);
   const sideboardCards = useMemo(() => cardsFromZone(sideboardZone), [sideboardZone]);
   const isLocked = localPlayer?.properties.sideboardLocked ?? false;
@@ -103,14 +104,14 @@ function SideboardDialog() {
     if (isLocked) {
       return;
     }
-    addMove(card.name, Enriched.ZoneName.DECK, Enriched.ZoneName.SIDEBOARD);
+    addMove(card.name, ZoneName.DECK, ZoneName.SIDEBOARD);
   };
 
   const handleMoveToDeck = (card: Card) => {
     if (isLocked) {
       return;
     }
-    addMove(card.name, Enriched.ZoneName.SIDEBOARD, Enriched.ZoneName.DECK);
+    addMove(card.name, ZoneName.SIDEBOARD, ZoneName.DECK);
   };
 
   const handleApply = () => {

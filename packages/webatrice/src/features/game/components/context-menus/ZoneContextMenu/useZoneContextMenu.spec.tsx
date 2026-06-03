@@ -1,6 +1,7 @@
+import { ZoneName } from '@cockatrice/sockatrice';
 import { renderHook, act } from '@testing-library/react';
 import { combineReducers } from '@reduxjs/toolkit';
-import { Enriched, games, type GamesState } from '@cockatrice/datatrice';
+import { games, type GamesState } from '@cockatrice/datatrice';
 import {
   makeGameEntry,
   makePlayerEntry,
@@ -15,12 +16,12 @@ function stateWithDeck({
   alwaysLookAtTopCard = false,
 }: { alwaysRevealTopCard?: boolean; alwaysLookAtTopCard?: boolean } = {}): GamesState {
   const deck = makeZoneEntry({
-    name: Enriched.ZoneName.DECK,
+    name: ZoneName.DECK,
     alwaysRevealTopCard,
     alwaysLookAtTopCard,
   });
   const player = makePlayerEntry({
-    zones: { [Enriched.ZoneName.DECK]: deck },
+    zones: { [ZoneName.DECK]: deck },
   });
   const game = makeGameEntry({
     localPlayerId: 1,
@@ -42,7 +43,7 @@ function setup(
   const args: UseZoneContextMenuArgs = {
     gameId: 1,
     playerId: 1,
-    zoneName: Enriched.ZoneName.DECK,
+    zoneName: ZoneName.DECK,
     onClose,
     ...overrides,
   };
@@ -88,7 +89,7 @@ describe('useZoneContextMenu', () => {
 
     expect(webClient.request.game.changeZoneProperties).toHaveBeenCalledWith(
       1,
-      { zoneName: Enriched.ZoneName.DECK, alwaysRevealTopCard: false },
+      { zoneName: ZoneName.DECK, alwaysRevealTopCard: false },
     );
   });
 

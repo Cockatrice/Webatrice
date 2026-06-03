@@ -1,5 +1,6 @@
+import { ZoneName } from '@cockatrice/sockatrice';
 import { act, screen, fireEvent, within } from '@testing-library/react';
-import { Enriched, games } from '@cockatrice/datatrice';
+import { games } from '@cockatrice/datatrice';
 import {
   makeCard,
   makeGameEntry,
@@ -25,8 +26,8 @@ function makeLocalPlayer(opts: { sideboardLocked?: boolean; sideboard?: ReturnTy
       userInfo: { name: 'P1' },
     }),
     zones: {
-      deck: makeZoneEntry({ name: Enriched.ZoneName.DECK, cards: DECK_CARDS }),
-      sb: makeZoneEntry({ name: Enriched.ZoneName.SIDEBOARD, cards: opts.sideboard ?? SIDEBOARD_CARDS }),
+      deck: makeZoneEntry({ name: ZoneName.DECK, cards: DECK_CARDS }),
+      sb: makeZoneEntry({ name: ZoneName.SIDEBOARD, cards: opts.sideboard ?? SIDEBOARD_CARDS }),
     },
   });
 }
@@ -89,8 +90,8 @@ describe('SideboardDialog', () => {
     fireEvent.click(screen.getByRole('button', { name: /apply plan/i }));
 
     expect(handleSideboardSubmit).toHaveBeenCalledWith([
-      { cardName: 'Island', startZone: Enriched.ZoneName.DECK, targetZone: Enriched.ZoneName.SIDEBOARD },
-      { cardName: 'Counterspell', startZone: Enriched.ZoneName.SIDEBOARD, targetZone: Enriched.ZoneName.DECK },
+      { cardName: 'Island', startZone: ZoneName.DECK, targetZone: ZoneName.SIDEBOARD },
+      { cardName: 'Counterspell', startZone: ZoneName.SIDEBOARD, targetZone: ZoneName.DECK },
     ]);
   });
 
@@ -155,8 +156,8 @@ describe('applyMoves', () => {
     const sb = [{ id: 3, name: 'C' }];
 
     const result = applyMoves(deck, sb, [
-      { cardName: 'A', startZone: Enriched.ZoneName.DECK, targetZone: Enriched.ZoneName.SIDEBOARD },
-      { cardName: 'C', startZone: Enriched.ZoneName.SIDEBOARD, targetZone: Enriched.ZoneName.DECK },
+      { cardName: 'A', startZone: ZoneName.DECK, targetZone: ZoneName.SIDEBOARD },
+      { cardName: 'C', startZone: ZoneName.SIDEBOARD, targetZone: ZoneName.DECK },
     ]);
 
     expect(result.deck.map((c) => c.name).sort()).toEqual(['B', 'C']);
@@ -166,7 +167,7 @@ describe('applyMoves', () => {
   it('drops moves that reference cards not present in the source zone', () => {
     const deck = [{ id: 1, name: 'A' }];
     const result = applyMoves(deck, [], [
-      { cardName: 'Missing', startZone: Enriched.ZoneName.DECK, targetZone: Enriched.ZoneName.SIDEBOARD },
+      { cardName: 'Missing', startZone: ZoneName.DECK, targetZone: ZoneName.SIDEBOARD },
     ]);
 
     expect(result.deck).toHaveLength(1);

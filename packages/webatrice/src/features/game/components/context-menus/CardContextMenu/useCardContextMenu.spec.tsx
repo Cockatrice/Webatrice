@@ -1,7 +1,7 @@
+import { ZoneName, type CardLocation } from '@cockatrice/sockatrice';
 import { renderHook, act } from '@testing-library/react';
 import { combineReducers } from '@reduxjs/toolkit';
-import { CardAttribute } from '@cockatrice/sockatrice/generated';
-import { Enriched, games, type GamesState } from '@cockatrice/datatrice';
+import { games, type GamesState } from '@cockatrice/datatrice';
 import { makeCard } from '@cockatrice/datatrice/testing';
 
 import { makeReduxWebClientHookWrapper } from '../../../../../__test-utils__/makeHookWrapper';
@@ -37,7 +37,7 @@ function setup(
     localPlayerId: 1,
     card: makeCard({ id: 5, tapped: false, faceDown: false }),
     ownerPlayerId: 1,
-    sourceZone: Enriched.ZoneName.TABLE,
+    sourceZone: ZoneName.TABLE,
     onClose,
     onRequestSetPT,
     onRequestSetAnnotation,
@@ -61,6 +61,23 @@ function setup(
   };
 }
 
+// The bulk command surface lives in sockatrice (exposed on request.game.bulk*);
+// here we only assert the menu invoked the right command with the right targets
+// + judge resolver. The entry-building / collective rules / judge grouping are
+// covered by sockatrice's bulkCardActions.spec.
+type GameApi = ReturnType<typeof setup>['webClient']['request']['game'];
+type BulkFn = 'bulkTap' | 'bulkFlip' | 'bulkDoesntUntap' | 'bulkPeek' | 'bulkMove';
+
+function lastBulkCall(webClient: ReturnType<typeof setup>['webClient'], fn: BulkFn) {
+  const calls = vi.mocked(webClient.request.game[fn] as GameApi[BulkFn]).mock.calls;
+  expect(calls.length).toBeGreaterThan(0);
+  return calls[calls.length - 1] as unknown[];
+}
+
+function targetIds(targets: readonly CardLocation[]): number[] {
+  return targets.map((t) => t.card.id).sort((a, b) => a - b);
+}
+
 describe('useCardContextMenu', () => {
   it('reports ready + writeable flags for a local TABLE card', () => {
     const { result } = setup();
@@ -75,35 +92,27 @@ describe('useCardContextMenu', () => {
 
   it('canPlay is true for owned non-TABLE cards and false for TABLE / opponent cards', () => {
     expect(
-      setup({ sourceZone: Enriched.ZoneName.HAND }).result.current.canPlay,
+      setup({ sourceZone: ZoneName.HAND }).result.current.canPlay,
     ).toBe(true);
     expect(
-      setup({ sourceZone: Enriched.ZoneName.HAND, ownerPlayerId: 2 }).result.current.canPlay,
+      setup({ sourceZone: ZoneName.HAND, ownerPlayerId: 2 }).result.current.canPlay,
     ).toBe(false);
     expect(
-      setup({ sourceZone: Enriched.ZoneName.TABLE }).result.current.canPlay,
+      setup({ sourceZone: ZoneName.TABLE }).result.current.canPlay,
     ).toBe(false);
   });
 
-  it('handleTapToggle dispatches setCardAttr with the negated tapped value and closes', () => {
-    const { result, webClient, onClose } = setup({
-      card: makeCard({ id: 9, tapped: false }),
-    });
+  it('handleTapToggle bulk-taps just the menu card and closes', () => {
+    const { result, webClient, onClose } = setup({ card: makeCard({ id: 9, tapped: false }) });
 
     act(() => {
       result.current.handleTapToggle();
     });
 
-    expect(webClient.request.game.setCardAttr).toHaveBeenCalledWith(
-      1,
-      {
-        zone: Enriched.ZoneName.TABLE,
-        cardId: 9,
-        attribute: CardAttribute.AttrTapped,
-        attrValue: '1',
-      },
-      undefined, // own card → no judge wrap
-    );
+    const [gameId, targets, judgeTarget] = lastBulkCall(webClient, 'bulkTap');
+    expect(gameId).toBe(1);
+    expect(targetIds(targets as CardLocation[])).toEqual([9]);
+    expect((judgeTarget as (o: number) => number | undefined)(1)).toBeUndefined(); // own card → bare
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
@@ -112,10 +121,10 @@ describe('useCardContextMenu', () => {
     const { result, webClient } = setup({
       card: menuCard,
       ownerPlayerId: 1,
-      sourceZone: Enriched.ZoneName.TABLE,
+      sourceZone: ZoneName.TABLE,
       selectedCards: [
-        { ownerPlayerId: 1, zone: Enriched.ZoneName.TABLE, card: menuCard },
-        { ownerPlayerId: 1, zone: Enriched.ZoneName.TABLE, card: makeCard({ id: 10, tapped: false }) },
+        { ownerPlayerId: 1, zone: ZoneName.TABLE, card: menuCard },
+        { ownerPlayerId: 1, zone: ZoneName.TABLE, card: makeCard({ id: 10, tapped: false }) },
       ],
     });
 
@@ -123,29 +132,19 @@ describe('useCardContextMenu', () => {
       result.current.handleTapToggle();
     });
 
-    // Both untapped TABLE cards get a tap command (collective rule).
-    expect(webClient.request.game.setCardAttr).toHaveBeenCalledTimes(2);
-    expect(webClient.request.game.setCardAttr).toHaveBeenCalledWith(
-      1,
-      expect.objectContaining({ cardId: 9, attrValue: '1' }),
-      undefined,
-    );
-    expect(webClient.request.game.setCardAttr).toHaveBeenCalledWith(
-      1,
-      expect.objectContaining({ cardId: 10, attrValue: '1' }),
-      undefined,
-    );
+    const [, targets] = lastBulkCall(webClient, 'bulkTap');
+    expect(targetIds(targets as CardLocation[])).toEqual([9, 10]);
   });
 
-  it('falls back to single-card tap when the menu card is not in the selection', () => {
+  it('acts on just the menu card when it is not part of the selection', () => {
     const { result, webClient } = setup({
       card: makeCard({ id: 9, tapped: false }),
       ownerPlayerId: 1,
-      sourceZone: Enriched.ZoneName.TABLE,
+      sourceZone: ZoneName.TABLE,
       // A multi-selection that does NOT include the right-clicked card.
       selectedCards: [
-        { ownerPlayerId: 1, zone: Enriched.ZoneName.TABLE, card: makeCard({ id: 1 }) },
-        { ownerPlayerId: 1, zone: Enriched.ZoneName.TABLE, card: makeCard({ id: 2 }) },
+        { ownerPlayerId: 1, zone: ZoneName.TABLE, card: makeCard({ id: 1 }) },
+        { ownerPlayerId: 1, zone: ZoneName.TABLE, card: makeCard({ id: 2 }) },
       ],
     });
 
@@ -153,88 +152,56 @@ describe('useCardContextMenu', () => {
       result.current.handleTapToggle();
     });
 
-    expect(webClient.request.game.setCardAttr).toHaveBeenCalledTimes(1);
-    expect(webClient.request.game.setCardAttr).toHaveBeenCalledWith(
-      1,
-      expect.objectContaining({ cardId: 9 }),
-      undefined,
-    );
+    const [, targets] = lastBulkCall(webClient, 'bulkTap');
+    expect(targetIds(targets as CardLocation[])).toEqual([9]);
   });
 
-  it('handleMove routes a non-table move to the card owner (not the local actor)', () => {
-    // Card owned by player 2, acted on by local player 1. Servatrice only
-    // accepts a non-table move into the card's own tree, so "Send to Hand"
-    // must target the owner (2), not the local player.
+  it('handleFaceDownToggle / handleDoesntUntapToggle act on the TABLE subset via their bulk commands', () => {
+    const { result, webClient } = setup({ card: makeCard({ id: 9 }) });
+
+    act(() => {
+      result.current.handleFaceDownToggle();
+    });
+    act(() => {
+      result.current.handleDoesntUntapToggle();
+    });
+
+    expect(targetIds(lastBulkCall(webClient, 'bulkFlip')[1] as CardLocation[])).toEqual([9]);
+    expect(targetIds(lastBulkCall(webClient, 'bulkDoesntUntap')[1] as CardLocation[])).toEqual([9]);
+  });
+
+  it('handlePeek reveals the menu card to the local player', () => {
+    const { result, webClient } = setup({ card: makeCard({ id: 9, faceDown: true }) });
+
+    act(() => {
+      result.current.handlePeek();
+    });
+
+    const [gameId, targets, revealTo] = lastBulkCall(webClient, 'bulkPeek');
+    expect(gameId).toBe(1);
+    expect(targetIds(targets as CardLocation[])).toEqual([9]);
+    expect(revealTo).toBe(1); // local player
+  });
+
+  it('handleMove passes the local player as the move target and the selection to bulkMove', () => {
+    // The owner-routing of non-table moves now lives in sockatrice's bulkMove;
+    // the menu just hands it the requested target (the local actor) + targets.
     const { result, webClient } = setup({
       card: makeCard({ id: 13 }),
       ownerPlayerId: 2,
       localPlayerId: 1,
-      sourceZone: Enriched.ZoneName.TABLE,
+      sourceZone: ZoneName.TABLE,
     });
 
     act(() => {
       result.current.handleMove(CARD_MOVE_TARGETS[0]); // Send to Hand
     });
 
-    expect(webClient.request.game.moveCard).toHaveBeenCalledWith(
-      1,
-      expect.objectContaining({
-        startPlayerId: 2,
-        startZone: Enriched.ZoneName.TABLE,
-        cardsToMove: { card: [{ cardId: 13 }] },
-        targetPlayerId: 2,
-        targetZone: Enriched.ZoneName.HAND,
-        x: -1,
-        y: 0,
-      }),
-      undefined, // non-judge actor → no judge wrap
-    );
-  });
-
-  it('handleMove keeps the local player as target for a TABLE move (control-change)', () => {
-    const { result, webClient } = setup({
-      card: makeCard({ id: 14 }),
-      ownerPlayerId: 2,
-      localPlayerId: 1,
-      sourceZone: Enriched.ZoneName.GRAVE,
-    });
-
-    act(() => {
-      result.current.handleMove(CARD_MOVE_TARGETS[1]); // Send to Battlefield
-    });
-
-    expect(webClient.request.game.moveCard).toHaveBeenCalledWith(
-      1,
-      expect.objectContaining({
-        startPlayerId: 2,
-        targetPlayerId: 1,
-        targetZone: Enriched.ZoneName.TABLE,
-      }),
-      undefined, // non-judge actor → no judge wrap
-    );
-  });
-
-  it('handleMove keeps the local player as target for a TABLE move (control-change)', () => {
-    const { result, webClient } = setup({
-      card: makeCard({ id: 14 }),
-      ownerPlayerId: 2,
-      localPlayerId: 1,
-      sourceZone: Enriched.ZoneName.GRAVE,
-    });
-
-    act(() => {
-      result.current.handleMove(CARD_MOVE_TARGETS[1]); // Send to Battlefield
-    });
-
-    expect(webClient.request.game.moveCard).toHaveBeenCalledWith(
-      1,
-      expect.objectContaining({
-        startPlayerId: 2,
-        targetPlayerId: 1,
-        targetZone: Enriched.ZoneName.TABLE,
-      }),
-      undefined, // non-judge actor → no judge wrap
-    );
+    const [gameId, targets, dest, judgeTarget] = lastBulkCall(webClient, 'bulkMove');
+    expect(gameId).toBe(1);
+    expect(targetIds(targets as CardLocation[])).toEqual([13]);
+    expect(dest).toEqual({ targetPlayerId: 1, targetZone: ZoneName.HAND, x: -1, y: 0 });
+    expect((judgeTarget as (o: number) => number | undefined)(2)).toBeUndefined(); // non-judge actor
   });
 
   it('handleUnattach omits target fields so the server treats the call as detach', () => {
@@ -247,14 +214,14 @@ describe('useCardContextMenu', () => {
     });
 
     const call = vi.mocked(webClient.request.game.attachCard).mock.calls[0]?.[1] as Record<string, unknown>;
-    expect(call).toEqual({ startZone: Enriched.ZoneName.TABLE, cardId: 21 });
+    expect(call).toEqual({ startZone: ZoneName.TABLE, cardId: 21 });
     expect(call).not.toHaveProperty('targetPlayerId');
     expect(call).not.toHaveProperty('targetCardId');
   });
 
   it('forwards prompt-requests (setPT, setCounter, play) to their callbacks', () => {
     const { result, onRequestSetPT, onRequestSetCounter, onRequestPlay } = setup({
-      sourceZone: Enriched.ZoneName.HAND,
+      sourceZone: ZoneName.HAND,
     });
 
     act(() => {
@@ -285,28 +252,13 @@ describe('useCardContextMenu', () => {
 
     it('canPlay opens for a judge on a foreign non-table card (parity with getLocalOrJudge)', () => {
       const { result } = setup(
-        { ownerPlayerId: 2, localPlayerId: 1, sourceZone: Enriched.ZoneName.HAND },
+        { ownerPlayerId: 2, localPlayerId: 1, sourceZone: ZoneName.HAND },
         { judge: true },
       );
       expect(result.current.canPlay).toBe(true);
     });
 
-    it('handleMove wraps a judge non-table move in Command_Judge (target=owner)', () => {
-      const { result, webClient } = setup(
-        { card: makeCard({ id: 40 }), ownerPlayerId: 2, localPlayerId: 1, sourceZone: Enriched.ZoneName.TABLE },
-        { judge: true },
-      );
-      act(() => {
-        result.current.handleMove(CARD_MOVE_TARGETS[2]); // Send to Graveyard
-      });
-      expect(webClient.request.game.moveCard).toHaveBeenCalledWith(
-        1,
-        expect.objectContaining({ startPlayerId: 2, targetPlayerId: 2, targetZone: Enriched.ZoneName.GRAVE }),
-        2, // judge wrap target = owner
-      );
-    });
-
-    it('handleTapToggle wraps a judge tap of a foreign card in Command_Judge', () => {
+    it('passes a judge resolver that wraps a foreign card as its owner', () => {
       const { result, webClient } = setup(
         { card: makeCard({ id: 41, tapped: false }), ownerPlayerId: 2, localPlayerId: 1 },
         { judge: true },
@@ -314,27 +266,20 @@ describe('useCardContextMenu', () => {
       act(() => {
         result.current.handleTapToggle();
       });
-      expect(webClient.request.game.setCardAttr).toHaveBeenCalledWith(
-        1,
-        expect.objectContaining({ cardId: 41, attribute: CardAttribute.AttrTapped, attrValue: '1' }),
-        2,
-      );
+      const [, , judgeTarget] = lastBulkCall(webClient, 'bulkTap');
+      expect((judgeTarget as (o: number) => number | undefined)(2)).toBe(2); // foreign → wrap as owner
     });
 
-    it('sends a judge action on their OWN card bare (no Command_Judge wrap)', () => {
+    it('passes a judge resolver that leaves their OWN card bare', () => {
       const { result, webClient } = setup(
-        { card: makeCard({ id: 42 }), ownerPlayerId: 1, localPlayerId: 1, sourceZone: Enriched.ZoneName.TABLE },
+        { card: makeCard({ id: 42 }), ownerPlayerId: 1, localPlayerId: 1, sourceZone: ZoneName.TABLE },
         { judge: true },
       );
       act(() => {
         result.current.handleMove(CARD_MOVE_TARGETS[2]); // Send to Graveyard
       });
-      // Own card → judgeTargetId is undefined (sent bare, not wrapped).
-      expect(webClient.request.game.moveCard).toHaveBeenCalledWith(
-        1,
-        expect.objectContaining({ startPlayerId: 1, targetPlayerId: 1, targetZone: Enriched.ZoneName.GRAVE }),
-        undefined,
-      );
+      const [, , , judgeTarget] = lastBulkCall(webClient, 'bulkMove');
+      expect((judgeTarget as (o: number) => number | undefined)(1)).toBeUndefined();
     });
   });
 
@@ -351,10 +296,10 @@ describe('useCardContextMenu', () => {
       result.current.handleUnattach();
     });
 
-    expect(webClient.request.game.setCardAttr).not.toHaveBeenCalled();
-    expect(webClient.request.game.flipCard).not.toHaveBeenCalled();
+    expect(webClient.request.game.bulkTap).not.toHaveBeenCalled();
+    expect(webClient.request.game.bulkFlip).not.toHaveBeenCalled();
+    expect(webClient.request.game.bulkMove).not.toHaveBeenCalled();
     expect(webClient.request.game.incCardCounter).not.toHaveBeenCalled();
-    expect(webClient.request.game.moveCard).not.toHaveBeenCalled();
     expect(webClient.request.game.attachCard).not.toHaveBeenCalled();
     expect(onClose).not.toHaveBeenCalled();
   });

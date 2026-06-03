@@ -1,3 +1,4 @@
+import { ZoneName, moveTargetPlayerId } from '@cockatrice/sockatrice';
 import { useCallback } from 'react';
 import { pointerWithin, rectIntersection } from '@dnd-kit/core';
 import type {
@@ -11,7 +12,6 @@ import type {
 import { useWebClient } from '@cockatrice/datatrice/react';
 import type { WebClient } from '@cockatrice/sockatrice';
 import { ServerInfo_Card } from '@cockatrice/sockatrice/generated';
-import { Enriched } from '@cockatrice/datatrice';
 import {
   MARGIN_LEFT_PX,
   PADDING_X_PX,
@@ -20,7 +20,6 @@ import {
   mapToGridX,
   stackCountsForRow,
 } from '../components/battlefield/Battlefield/gridMath';
-import { moveTargetPlayerId } from '../utils/moveTarget';
 
 export interface GameDnd {
   handleDragStart: (event: DragStartEvent) => void;
@@ -136,11 +135,11 @@ function classifyDrop(event: DragEndEvent): DropContext {
     return { kind: 'reorder', source, target, targetIndex: target.targetIndex };
   }
 
-  if (target.targetZone === Enriched.ZoneName.TABLE) {
+  if (target.targetZone === ZoneName.TABLE) {
     const targetRow = target.row ?? 0;
     const sameRow =
       sameZone &&
-      source.sourceZone === Enriched.ZoneName.TABLE &&
+      source.sourceZone === ZoneName.TABLE &&
       (source.card.y ?? 0) === targetRow;
     return { kind: 'table', source, target, targetRow, sameRow };
   }

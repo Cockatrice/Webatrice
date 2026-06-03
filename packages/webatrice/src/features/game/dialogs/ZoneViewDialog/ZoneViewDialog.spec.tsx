@@ -1,5 +1,5 @@
+import { ZoneName } from '@cockatrice/sockatrice';
 import { screen, fireEvent } from '@testing-library/react';
-import { Enriched } from '@cockatrice/datatrice';
 import { makeStoreState, renderWithProviders, makeUser } from '../../../../__test-utils__';
 import {
   makeCard,
@@ -39,10 +39,10 @@ describe('ZoneViewDialog', () => {
       <ZoneViewDialog
         isOpen={false}
         playerId={1}
-        zoneName={Enriched.ZoneName.GRAVE}
+        zoneName={ZoneName.GRAVE}
         handleClose={() => {}}
       />,
-      { preloadedState: stateWith({ name: Enriched.ZoneName.GRAVE, cardCount: 0 }) },
+      { preloadedState: stateWith({ name: ZoneName.GRAVE, cardCount: 0 }) },
     );
 
     expect(screen.queryByTestId('zone-view-dialog')).not.toBeInTheDocument();
@@ -57,12 +57,12 @@ describe('ZoneViewDialog', () => {
       <ZoneViewDialog
         isOpen
         playerId={1}
-        zoneName={Enriched.ZoneName.GRAVE}
+        zoneName={ZoneName.GRAVE}
         handleClose={() => {}}
       />,
       {
         preloadedState: stateWith({
-          name: Enriched.ZoneName.GRAVE,
+          name: ZoneName.GRAVE,
           cards,
           cardCount: 2,
         }),
@@ -78,12 +78,12 @@ describe('ZoneViewDialog', () => {
       <ZoneViewDialog
         isOpen
         playerId={1}
-        zoneName={Enriched.ZoneName.GRAVE}
+        zoneName={ZoneName.GRAVE}
         handleClose={() => {}}
       />,
       {
         preloadedState: stateWith({
-          name: Enriched.ZoneName.GRAVE,
+          name: ZoneName.GRAVE,
           cards: [makeCard({ id: 1 })],
           cardCount: 1,
         }),
@@ -98,10 +98,10 @@ describe('ZoneViewDialog', () => {
       <ZoneViewDialog
         isOpen
         playerId={1}
-        zoneName={Enriched.ZoneName.EXILE}
+        zoneName={ZoneName.EXILE}
         handleClose={() => {}}
       />,
-      { preloadedState: stateWith({ name: Enriched.ZoneName.EXILE, cardCount: 0 }) },
+      { preloadedState: stateWith({ name: ZoneName.EXILE, cardCount: 0 }) },
     );
 
     expect(screen.getByText(/this zone is empty/i)).toBeInTheDocument();
@@ -112,12 +112,12 @@ describe('ZoneViewDialog', () => {
       <ZoneViewDialog
         isOpen
         playerId={1}
-        zoneName={Enriched.ZoneName.DECK}
+        zoneName={ZoneName.DECK}
         handleClose={() => {}}
       />,
       {
         preloadedState: stateWith({
-          name: Enriched.ZoneName.DECK,
+          name: ZoneName.DECK,
           cardCount: 40,
           cards: [],
         }),
@@ -133,12 +133,12 @@ describe('ZoneViewDialog', () => {
       <ZoneViewDialog
         isOpen
         playerId={1}
-        zoneName={Enriched.ZoneName.EXILE}
+        zoneName={ZoneName.EXILE}
         handleClose={() => {}}
       />,
       {
         preloadedState: stateWith({
-          name: Enriched.ZoneName.EXILE,
+          name: ZoneName.EXILE,
           cards: [faceDown],
           cardCount: 1,
         }),
@@ -158,10 +158,10 @@ describe('ZoneViewDialog', () => {
       <ZoneViewDialog
         isOpen
         playerId={1}
-        zoneName={Enriched.ZoneName.GRAVE}
+        zoneName={ZoneName.GRAVE}
         handleClose={handleClose}
       />,
-      { preloadedState: stateWith({ name: Enriched.ZoneName.GRAVE, cardCount: 0 }) },
+      { preloadedState: stateWith({ name: ZoneName.GRAVE, cardCount: 0 }) },
     );
 
     fireEvent.click(screen.getByRole('button', { name: /close zone view/i }));
@@ -174,11 +174,11 @@ describe('ZoneViewDialog', () => {
       <ZoneViewDialog
         isOpen
         playerId={1}
-        zoneName={Enriched.ZoneName.GRAVE}
+        zoneName={ZoneName.GRAVE}
         handleClose={() => {}}
         initialPosition={{ x: 200, y: 150 }}
       />,
-      { preloadedState: stateWith({ name: Enriched.ZoneName.GRAVE, cardCount: 0 }) },
+      { preloadedState: stateWith({ name: ZoneName.GRAVE, cardCount: 0 }) },
     );
 
     const panel = screen.getByTestId('zone-view-dialog');
@@ -187,13 +187,13 @@ describe('ZoneViewDialog', () => {
   });
 
   it('renders the revealed library cards for the deck even though byId is empty', () => {
-    const state = stateWith({ name: Enriched.ZoneName.DECK, cardCount: 2, cards: [] });
-    state.games.games[1].players[1].zones[Enriched.ZoneName.DECK].revealedCards = [
+    const state = stateWith({ name: ZoneName.DECK, cardCount: 2, cards: [] });
+    state.games.games[1].players[1].zones[ZoneName.DECK].revealedCards = [
       makeCard({ id: 0, name: 'Forest' }),
       makeCard({ id: 1, name: 'Island' }),
     ];
     renderWithProviders(
-      <ZoneViewDialog isOpen playerId={1} zoneName={Enriched.ZoneName.DECK} handleClose={() => {}} />,
+      <ZoneViewDialog isOpen playerId={1} zoneName={ZoneName.DECK} handleClose={() => {}} />,
       { preloadedState: state },
     );
 
@@ -204,8 +204,8 @@ describe('ZoneViewDialog', () => {
   it('shows a "Shuffle on close" checkbox (default checked) for the library and passes the flag on close', () => {
     const handleClose = vi.fn();
     renderWithProviders(
-      <ZoneViewDialog isOpen playerId={1} zoneName={Enriched.ZoneName.DECK} handleClose={handleClose} />,
-      { preloadedState: stateWith({ name: Enriched.ZoneName.DECK, cardCount: 0 }) },
+      <ZoneViewDialog isOpen playerId={1} zoneName={ZoneName.DECK} handleClose={handleClose} />,
+      { preloadedState: stateWith({ name: ZoneName.DECK, cardCount: 0 }) },
     );
 
     expect(screen.getByRole('checkbox', { name: /shuffle on close/i })).toBeChecked();
@@ -217,8 +217,8 @@ describe('ZoneViewDialog', () => {
   it('passes shuffleOnClose=false when the library checkbox is unchecked', () => {
     const handleClose = vi.fn();
     renderWithProviders(
-      <ZoneViewDialog isOpen playerId={1} zoneName={Enriched.ZoneName.DECK} handleClose={handleClose} />,
-      { preloadedState: stateWith({ name: Enriched.ZoneName.DECK, cardCount: 0 }) },
+      <ZoneViewDialog isOpen playerId={1} zoneName={ZoneName.DECK} handleClose={handleClose} />,
+      { preloadedState: stateWith({ name: ZoneName.DECK, cardCount: 0 }) },
     );
 
     fireEvent.click(screen.getByRole('checkbox', { name: /shuffle on close/i }));
@@ -228,8 +228,8 @@ describe('ZoneViewDialog', () => {
 
   it('does not show the shuffle-on-close checkbox for non-deck zones', () => {
     renderWithProviders(
-      <ZoneViewDialog isOpen playerId={1} zoneName={Enriched.ZoneName.GRAVE} handleClose={() => {}} />,
-      { preloadedState: stateWith({ name: Enriched.ZoneName.GRAVE, cardCount: 0 }) },
+      <ZoneViewDialog isOpen playerId={1} zoneName={ZoneName.GRAVE} handleClose={() => {}} />,
+      { preloadedState: stateWith({ name: ZoneName.GRAVE, cardCount: 0 }) },
     );
 
     expect(screen.queryByRole('checkbox', { name: /shuffle on close/i })).not.toBeInTheDocument();

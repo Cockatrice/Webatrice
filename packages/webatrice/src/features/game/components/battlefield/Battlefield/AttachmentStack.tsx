@@ -1,7 +1,7 @@
+import { ZoneName } from '@cockatrice/sockatrice';
 import { memo } from 'react';
 
 import { ServerInfo_Card } from '@cockatrice/sockatrice/generated';
-import { Enriched } from '@cockatrice/datatrice';
 import { games } from '@cockatrice/datatrice';
 
 import CardSlot from '../../ui/CardSlot/CardSlot';
@@ -27,7 +27,7 @@ function AttachmentStack({
 }: AttachmentStackProps) {
   const { onCardHover, onCardClick, onCardContextMenu, onCardDoubleClick, onCardFocus, onCardBlur } = useGameInteraction();
   const { arrowSourceKey, arrowTargetKey, selectedCardKeys } = useCardVisualState();
-  const parentKey = makeCardKey(ownerPlayerId, Enriched.ZoneName.TABLE, parent.id);
+  const parentKey = makeCardKey(ownerPlayerId, ZoneName.TABLE, parent.id);
 
   const N = attachments.length;
   const parentSlot = attachmentSlotLayout(N, -1);
@@ -47,7 +47,7 @@ function AttachmentStack({
           card={parent}
           draggable={draggable}
           ownerPlayerId={ownerPlayerId}
-          zone={Enriched.ZoneName.TABLE}
+          zone={ZoneName.TABLE}
           isArrowSource={arrowSourceKey === parentKey}
           isArrowTarget={arrowTargetKey === parentKey}
           isSelected={selectedCardKeys.has(parentKey)}
@@ -61,7 +61,7 @@ function AttachmentStack({
       </div>
       {attachments.map((entry, i) => {
         const { card: child, ownerPlayerId: childOwnerId } = entry;
-        const childKey = makeCardKey(childOwnerId, Enriched.ZoneName.TABLE, child.id);
+        const childKey = makeCardKey(childOwnerId, ZoneName.TABLE, child.id);
         const slot = attachmentSlotLayout(N, i);
         return (
           <div
@@ -78,7 +78,7 @@ function AttachmentStack({
               card={child}
               draggable={draggable}
               ownerPlayerId={childOwnerId}
-              zone={Enriched.ZoneName.TABLE}
+              zone={ZoneName.TABLE}
               isArrowSource={arrowSourceKey === childKey}
               isArrowTarget={arrowTargetKey === childKey}
               isSelected={selectedCardKeys.has(childKey)}

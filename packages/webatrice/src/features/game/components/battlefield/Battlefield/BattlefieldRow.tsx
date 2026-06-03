@@ -1,7 +1,7 @@
+import { ZoneName } from '@cockatrice/sockatrice';
 import { ReactNode, useMemo } from 'react';
 import { useDroppable } from '@dnd-kit/core';
 import { ServerInfo_Card } from '@cockatrice/sockatrice/generated';
-import { Enriched } from '@cockatrice/datatrice';
 import { cx } from '@app/utils';
 
 export interface BattlefieldRowProps {
@@ -18,7 +18,7 @@ function BattlefieldRow({ playerId, row, rowCards, children }: BattlefieldRowPro
   const data = useMemo(
     () => ({
       targetPlayerId: playerId,
-      targetZone: Enriched.ZoneName.TABLE,
+      targetZone: ZoneName.TABLE,
       row,
       rowCards,
     }),

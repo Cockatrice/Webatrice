@@ -1,4 +1,4 @@
-import { Enriched } from '@cockatrice/datatrice';
+import { ZoneName } from '../../../zoneNames';
 
 /**
  * Resolve the destination player for a moveCard command.
@@ -18,5 +18,5 @@ export function moveTargetPlayerId(
   targetZone: string,
   tableTargetPlayerId: number,
 ): number {
-  return targetZone === Enriched.ZoneName.TABLE ? tableTargetPlayerId : ownerPlayerId;
+  return targetZone === ZoneName.TABLE ? tableTargetPlayerId : ownerPlayerId;
 }

@@ -1,3 +1,4 @@
+import { ZoneName } from '@cockatrice/sockatrice';
 import { createSelector, lruMemoize } from '@reduxjs/toolkit';
 import { dequal } from 'dequal';
 import { Enriched } from '../../types';
@@ -74,7 +75,7 @@ function buildAttachments(
   const result = new Map<number, Map<number, AttachedChild[]>>();
   const playerIds = Object.keys(players).map(Number).sort((a, b) => a - b);
   for (const ownerPlayerId of playerIds) {
-    const tableZone = players[ownerPlayerId]?.zones[Enriched.ZoneName.TABLE];
+    const tableZone = players[ownerPlayerId]?.zones[ZoneName.TABLE];
     if (!tableZone) {
       continue;
     }
@@ -82,7 +83,7 @@ function buildAttachments(
       if (card.attachCardId == null || card.attachCardId === -1) {
         continue;
       }
-      if (card.attachZone !== Enriched.ZoneName.TABLE) {
+      if (card.attachZone !== ZoneName.TABLE) {
         continue;
       }
       const parentPlayerId = card.attachPlayerId;

@@ -10,7 +10,6 @@ export type {
   GameEntry,
   PlayerEntry,
   ZoneEntry,
-  ZoneNameValue,
   GameMessage,
   Message,
   GametypeMap,
