@@ -35,7 +35,7 @@ jobs:
       webatriceReleased: ${{ steps.filter.outputs.webatriceReleased }}
     steps:
       - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
           # depth 2 so HEAD~1 exists for the paths-filter diff base
@@ -70,7 +70,7 @@ jobs:
       attestations: write
     steps:
       - name: Checkout (with submodules)
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
           fetch-depth: 0
@@ -101,7 +101,7 @@ jobs:
 
       - name: Publish to GitHub Packages
         id: changesets
-        uses: changesets/action@63a615b9cd06ba9a3e6d13796c7fbcb080a60a0b  # v1.8.0
+        uses: changesets/action@a45c4d594aa4e2c509dc14a9f2b3b67ba3780d0d  # v1.9.0
         with:
           publish: npx changeset publish
         env:
@@ -121,7 +121,7 @@ jobs:
 
       - name: Attest build provenance
         if: steps.changesets.outputs.published == 'true'
-        uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32  # v4.1.0
+        uses: actions/attest-build-provenance@0f67c3f4856b2e3261c31976d6725780e5e4c373  # v4.1.1
         with:
           subject-path: 'attest/*.tgz'
 
@@ -147,7 +147,7 @@ jobs:
       id-token: write
     steps:
       - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
           persist-credentials: false
@@ -187,12 +187,12 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
       - name: Attest build provenance
-        uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32  # v4.1.0
+        uses: actions/attest-build-provenance@0f67c3f4856b2e3261c31976d6725780e5e4c373  # v4.1.1
         with:
           subject-path: ${{ steps.meta.outputs.archive }}
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda  # v3.0.0
+        uses: softprops/action-gh-release@718ea10b132b3b2eba29c1007bb80653f286566b  # v3.0.1
         with:
           tag_name: ${{ steps.meta.outputs.tag }}
           name: ${{ steps.meta.outputs.tag }}
