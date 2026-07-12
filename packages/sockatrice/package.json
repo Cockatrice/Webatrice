@@ -67,8 +67,8 @@
     "pack": "npm pack"
   },
   "dependencies": {
-    "@bufbuild/protobuf": "^2.11.0",
-    "dompurify": "^3.4.0"
+    "@bufbuild/protobuf": "^2.12.1",
+    "dompurify": "^3.4.12"
   },
   "devDependencies": {
     "@bufbuild/buf": "^1.68.1",
