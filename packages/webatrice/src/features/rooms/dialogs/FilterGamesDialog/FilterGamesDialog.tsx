@@ -1,21 +1,9 @@
-import { useEffect, useMemo, useState } from 'react';
-import Button from '@mui/material/Button';
-import Checkbox from '@mui/material/Checkbox';
-import Dialog from '@mui/material/Dialog';
-import DialogActions from '@mui/material/DialogActions';
-import DialogContent from '@mui/material/DialogContent';
-import DialogTitle from '@mui/material/DialogTitle';
-import FormControl from '@mui/material/FormControl';
-import FormControlLabel from '@mui/material/FormControlLabel';
-import InputLabel from '@mui/material/InputLabel';
-import MenuItem from '@mui/material/MenuItem';
-import Select from '@mui/material/Select';
-import TextField from '@mui/material/TextField';
-import Typography from '@mui/material/Typography';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
+import { X, Check, ChevronDown } from 'lucide-react';
 
 import { rooms, type GameFilters } from '@cockatrice/datatrice';
 import { GametypeMap } from '@cockatrice/datatrice';
-import './FilterGamesDialog.css';
 
 export interface FilterGamesDialogProps {
   isOpen: boolean;
@@ -40,7 +28,7 @@ const MAX_AGE_OPTIONS: MaxAgeOption[] = [
   { label: '2 hours', seconds: 2 * 60 * 60 },
 ];
 
-function FilterGamesDialog({
+export default function FilterGamesDialog({
   isOpen,
   initialFilters,
   gametypeMap,
@@ -48,7 +36,9 @@ function FilterGamesDialog({
   onSubmit,
 }: FilterGamesDialogProps) {
   const [form, setForm] = useState<GameFilters>(initialFilters);
-  const [creatorNamesText, setCreatorNamesText] = useState<string>(initialFilters.creatorNameFilters.join(', '));
+  const [creatorNamesText, setCreatorNamesText] = useState<string>(
+    initialFilters.creatorNameFilters.join(', '),
+  );
 
   useEffect(() => {
     if (isOpen) {
@@ -57,9 +47,20 @@ function FilterGamesDialog({
     }
   }, [isOpen, initialFilters]);
 
-  const gameTypes = useMemo(() => {
-    return Object.entries(gametypeMap).map(([id, name]) => ({ id: Number(id), name }));
-  }, [gametypeMap]);
+  // Close on Escape.
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onCancel();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [isOpen, onCancel]);
+
+  const gameTypes = useMemo(
+    () => Object.entries(gametypeMap).map(([id, name]) => ({ id: Number(id), name })),
+    [gametypeMap],
+  );
 
   const update = <K extends keyof GameFilters>(key: K, value: GameFilters[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -68,11 +69,8 @@ function FilterGamesDialog({
   const toggleGameType = (id: number) => {
     setForm((prev) => {
       const set = new Set(prev.gameTypeFilter);
-      if (set.has(id)) {
-        set.delete(id);
-      } else {
-        set.add(id);
-      }
+      if (set.has(id)) set.delete(id);
+      else set.add(id);
       return { ...prev, gameTypeFilter: Array.from(set) };
     });
   };
@@ -91,187 +89,328 @@ function FilterGamesDialog({
     setCreatorNamesText('');
   };
 
-  return (
-    <Dialog className="FilterGamesDialog" open={isOpen} onClose={onCancel} maxWidth="sm" fullWidth>
-      <DialogTitle>Filter games</DialogTitle>
-      <form onSubmit={handleSubmit}>
-        <DialogContent className="dialog-content filter-games-dialog__body">
-          <TextField
-            autoFocus
-            fullWidth
-            margin="dense"
-            size="small"
-            label="Game description contains"
-            value={form.gameNameFilter}
-            onChange={(e) => update('gameNameFilter', e.target.value)}
-          />
-          <TextField
-            fullWidth
-            margin="dense"
-            size="small"
-            label="Creator names (comma-separated)"
-            value={creatorNamesText}
-            onChange={(e) => setCreatorNamesText(e.target.value)}
-          />
-          <div className="filter-games-dialog__row">
-            <TextField
-              margin="dense"
-              size="small"
-              label="Min players"
-              type="number"
-              slotProps={{ htmlInput: { min: 0, max: 99 } }}
-              value={form.maxPlayersFilterMin}
-              onChange={(e) => update('maxPlayersFilterMin', Number(e.target.value))}
-            />
-            <TextField
-              margin="dense"
-              size="small"
-              label="Max players"
-              type="number"
-              slotProps={{ htmlInput: { min: 0, max: 99 } }}
-              value={form.maxPlayersFilterMax}
-              onChange={(e) => update('maxPlayersFilterMax', Number(e.target.value))}
-            />
-          </div>
+  if (!isOpen) return null;
 
-          <FormControl margin="dense" size="small" fullWidth>
-            <InputLabel id="filter-games-max-age-label">Max age</InputLabel>
-            <Select
-              labelId="filter-games-max-age-label"
+  return createPortal(
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Filter games"
+    >
+      {/* Backdrop */}
+      <div
+        className="absolute inset-0 bg-black/60 backdrop-blur-[2px]"
+        onClick={onCancel}
+      />
+
+      {/* Card */}
+      <div className="relative z-10 w-full max-w-lg max-h-[90vh] flex flex-col rounded-xl bg-bg-surface border border-border-subtle shadow-glow overflow-hidden">
+        <header className="shrink-0 flex items-center justify-between px-5 py-4 border-b border-border-subtle">
+          <h2 className="font-modern text-lg font-semibold text-text-primary">Filter games</h2>
+          <button
+            type="button"
+            onClick={onCancel}
+            className="p-1 rounded text-text-muted hover:text-text-primary hover:bg-bg-elevated transition-colors"
+            title="Close"
+            aria-label="Close"
+          >
+            <X size={16} />
+          </button>
+        </header>
+
+        <form onSubmit={handleSubmit} className="flex flex-col min-h-0 flex-1">
+          <div className="flex-1 min-h-0 overflow-y-auto px-5 py-4 space-y-4">
+            <TextInput
+              label="Game description contains"
+              value={form.gameNameFilter}
+              onChange={(v) => update('gameNameFilter', v)}
+              autoFocus
+            />
+            <TextInput
+              label="Creator names (comma-separated)"
+              value={creatorNamesText}
+              onChange={setCreatorNamesText}
+            />
+            <div className="grid grid-cols-2 gap-3">
+              <NumberInput
+                label="Min players"
+                value={form.maxPlayersFilterMin}
+                onChange={(v) => update('maxPlayersFilterMin', v)}
+                min={0}
+                max={99}
+              />
+              <NumberInput
+                label="Max players"
+                value={form.maxPlayersFilterMax}
+                onChange={(v) => update('maxPlayersFilterMax', v)}
+                min={0}
+                max={99}
+              />
+            </div>
+
+            <SelectInput
               label="Max age"
               value={form.maxGameAgeSeconds}
-              onChange={(e) => update('maxGameAgeSeconds', Number(e.target.value))}
+              onChange={(v) => update('maxGameAgeSeconds', v)}
+              options={MAX_AGE_OPTIONS.map((o) => ({ value: o.seconds, label: o.label }))}
+            />
+
+            {gameTypes.length > 0 && (
+              <Section title="Game types">
+                {gameTypes.map(({ id, name }) => (
+                  <Checkbox
+                    key={id}
+                    label={name}
+                    checked={form.gameTypeFilter.includes(id)}
+                    onChange={() => toggleGameType(id)}
+                  />
+                ))}
+              </Section>
+            )}
+
+            <Section title="Hide">
+              <Checkbox
+                label="Hide full games"
+                checked={form.hideFullGames}
+                onChange={(c) => update('hideFullGames', c)}
+              />
+              <Checkbox
+                label="Hide games that started"
+                checked={form.hideGamesThatStarted}
+                onChange={(c) => update('hideGamesThatStarted', c)}
+              />
+              <Checkbox
+                label="Hide password-protected games"
+                checked={form.hidePasswordProtectedGames}
+                onChange={(c) => update('hidePasswordProtectedGames', c)}
+              />
+              <Checkbox
+                label="Hide buddies-only games"
+                checked={form.hideBuddiesOnlyGames}
+                onChange={(c) => update('hideBuddiesOnlyGames', c)}
+              />
+              <Checkbox
+                label="Hide games created by ignored users"
+                checked={form.hideIgnoredUserGames}
+                onChange={(c) => update('hideIgnoredUserGames', c)}
+              />
+              <Checkbox
+                label="Hide games not created by buddies"
+                checked={form.hideNotBuddyCreatedGames}
+                onChange={(c) => update('hideNotBuddyCreatedGames', c)}
+              />
+              <Checkbox
+                label="Hide open-decklist games"
+                checked={form.hideOpenDecklistGames}
+                onChange={(c) => update('hideOpenDecklistGames', c)}
+              />
+            </Section>
+
+            <Section title="Spectator filters">
+              <Checkbox
+                label="Show only games where spectators can watch"
+                checked={form.showOnlyIfSpectatorsCanWatch}
+                onChange={(c) => update('showOnlyIfSpectatorsCanWatch', c)}
+              />
+              <Checkbox
+                label="Show games where spectators need a password"
+                checked={form.showSpectatorPasswordProtected}
+                onChange={(c) => update('showSpectatorPasswordProtected', c)}
+                disabled={!form.showOnlyIfSpectatorsCanWatch}
+              />
+              <Checkbox
+                label="Show only games where spectators can chat"
+                checked={form.showOnlyIfSpectatorsCanChat}
+                onChange={(c) => update('showOnlyIfSpectatorsCanChat', c)}
+                disabled={!form.showOnlyIfSpectatorsCanWatch}
+              />
+              <Checkbox
+                label="Show only games where spectators see hands"
+                checked={form.showOnlyIfSpectatorsCanSeeHands}
+                onChange={(c) => update('showOnlyIfSpectatorsCanSeeHands', c)}
+                disabled={!form.showOnlyIfSpectatorsCanWatch}
+              />
+            </Section>
+          </div>
+
+          <footer className="shrink-0 flex items-center justify-end gap-2 px-5 py-3 border-t border-border-subtle bg-bg-surface">
+            <button
+              type="button"
+              onClick={handleReset}
+              className="px-4 py-1.5 rounded-md text-sm font-medium text-text-secondary hover:text-text-primary hover:bg-bg-elevated transition-colors"
             >
-              {MAX_AGE_OPTIONS.map((opt) => (
-                <MenuItem key={opt.seconds} value={opt.seconds}>{opt.label}</MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-
-          {gameTypes.length > 0 && (
-            <div className="filter-games-dialog__section">
-              <Typography variant="subtitle2">Game types</Typography>
-              {gameTypes.map(({ id, name }) => (
-                <FormControlLabel
-                  key={id}
-                  control={
-                    <Checkbox
-                      size="small"
-                      checked={form.gameTypeFilter.includes(id)}
-                      onChange={() => toggleGameType(id)}
-                    />
-                  }
-                  label={name}
-                />
-              ))}
-            </div>
-          )}
-
-          <div className="filter-games-dialog__section">
-            <Typography variant="subtitle2">Hide</Typography>
-            <FormControlLabel
-              control={<Checkbox size="small" checked={form.hideFullGames} onChange={(_, c) => update('hideFullGames', c)} />}
-              label="Hide full games"
-            />
-            <FormControlLabel
-              control={<Checkbox size="small" checked={form.hideGamesThatStarted} onChange={(_, c) => update('hideGamesThatStarted', c)} />}
-              label="Hide games that started"
-            />
-            <FormControlLabel
-              control={
-                <Checkbox
-                  size="small"
-                  checked={form.hidePasswordProtectedGames}
-                  onChange={(_, c) => update('hidePasswordProtectedGames', c)}
-                />
-              }
-              label="Hide password-protected games"
-            />
-            <FormControlLabel
-              control={<Checkbox size="small" checked={form.hideBuddiesOnlyGames} onChange={(_, c) => update('hideBuddiesOnlyGames', c)} />}
-              label="Hide buddies-only games"
-            />
-            <FormControlLabel
-              control={<Checkbox size="small" checked={form.hideIgnoredUserGames} onChange={(_, c) => update('hideIgnoredUserGames', c)} />}
-              label="Hide games created by ignored users"
-            />
-            <FormControlLabel
-              control={
-                <Checkbox
-                  size="small"
-                  checked={form.hideNotBuddyCreatedGames}
-                  onChange={(_, c) => update('hideNotBuddyCreatedGames', c)}
-                />
-              }
-              label="Hide games not created by buddies"
-            />
-            <FormControlLabel
-              control={
-                <Checkbox
-                  size="small"
-                  checked={form.hideOpenDecklistGames}
-                  onChange={(_, c) => update('hideOpenDecklistGames', c)}
-                />
-              }
-              label="Hide open-decklist games"
-            />
-          </div>
-
-          <div className="filter-games-dialog__section">
-            <Typography variant="subtitle2">Spectator filters</Typography>
-            <FormControlLabel
-              control={
-                <Checkbox
-                  size="small"
-                  checked={form.showOnlyIfSpectatorsCanWatch}
-                  onChange={(_, c) => update('showOnlyIfSpectatorsCanWatch', c)}
-                />
-              }
-              label="Show only games where spectators can watch"
-            />
-            <FormControlLabel
-              control={
-                <Checkbox
-                  size="small"
-                  checked={form.showSpectatorPasswordProtected}
-                  onChange={(_, c) => update('showSpectatorPasswordProtected', c)}
-                  disabled={!form.showOnlyIfSpectatorsCanWatch}
-                />
-              }
-              label="Show games where spectators need a password"
-            />
-            <FormControlLabel
-              control={
-                <Checkbox
-                  size="small"
-                  checked={form.showOnlyIfSpectatorsCanChat}
-                  onChange={(_, c) => update('showOnlyIfSpectatorsCanChat', c)}
-                  disabled={!form.showOnlyIfSpectatorsCanWatch}
-                />
-              }
-              label="Show only games where spectators can chat"
-            />
-            <FormControlLabel
-              control={
-                <Checkbox
-                  size="small"
-                  checked={form.showOnlyIfSpectatorsCanSeeHands}
-                  onChange={(_, c) => update('showOnlyIfSpectatorsCanSeeHands', c)}
-                  disabled={!form.showOnlyIfSpectatorsCanWatch}
-                />
-              }
-              label="Show only games where spectators see hands"
-            />
-          </div>
-        </DialogContent>
-        <DialogActions>
-          <Button type="button" onClick={handleReset}>Reset</Button>
-          <Button type="button" onClick={onCancel}>Cancel</Button>
-          <Button type="submit" variant="contained" color="primary">Apply</Button>
-        </DialogActions>
-      </form>
-    </Dialog>
+              Reset
+            </button>
+            <button
+              type="button"
+              onClick={onCancel}
+              className="px-4 py-1.5 rounded-md text-sm font-medium text-text-secondary hover:text-text-primary hover:bg-bg-elevated transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="px-4 py-1.5 rounded-md text-sm font-semibold bg-accent text-white hover:bg-accent-hover shadow-glow transition-colors"
+            >
+              Apply
+            </button>
+          </footer>
+        </form>
+      </div>
+    </div>,
+    document.body,
   );
 }
 
-export default FilterGamesDialog;
+/* --- Field primitives, kept in-file since only this dialog uses them
+       right now. When we build another Tailwind dialog we'll lift the
+       shared ones into `dialogs/` or `components/`. --- */
+
+function Section({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <div>
+      <h3 className="font-modern text-xs font-bold uppercase tracking-wider text-text-muted mb-2">
+        {title}
+      </h3>
+      <div className="space-y-1">{children}</div>
+    </div>
+  );
+}
+
+interface TextInputProps {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  autoFocus?: boolean;
+}
+
+function TextInput({ label, value, onChange, autoFocus }: TextInputProps) {
+  return (
+    <label className="block">
+      <span className="block text-xs font-medium text-text-muted mb-1">{label}</span>
+      <input
+        type="text"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        autoFocus={autoFocus}
+        className="w-full px-3 py-2 rounded-md bg-bg-elevated border border-border-subtle text-sm text-text-primary focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-colors"
+      />
+    </label>
+  );
+}
+
+interface NumberInputProps {
+  label: string;
+  value: number;
+  onChange: (v: number) => void;
+  min?: number;
+  max?: number;
+}
+
+function NumberInput({ label, value, onChange, min, max }: NumberInputProps) {
+  return (
+    <label className="block">
+      <span className="block text-xs font-medium text-text-muted mb-1">{label}</span>
+      <input
+        type="number"
+        value={value}
+        min={min}
+        max={max}
+        onChange={(e) => onChange(Number(e.target.value))}
+        className="w-full px-3 py-2 rounded-md bg-bg-elevated border border-border-subtle text-sm text-text-primary tabular-nums focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-colors"
+      />
+    </label>
+  );
+}
+
+interface SelectInputProps<V extends string | number> {
+  label: string;
+  value: V;
+  onChange: (v: V) => void;
+  options: Array<{ value: V; label: string }>;
+}
+
+function SelectInput<V extends string | number>({
+  label,
+  value,
+  onChange,
+  options,
+}: SelectInputProps<V>) {
+  return (
+    <label className="block">
+      <span className="block text-xs font-medium text-text-muted mb-1">{label}</span>
+      <div className="relative">
+        <select
+          value={value}
+          onChange={(e) => {
+            const raw = e.target.value;
+            const casted = typeof value === 'number' ? (Number(raw) as V) : (raw as V);
+            onChange(casted);
+          }}
+          className="w-full appearance-none px-3 py-2 pr-8 rounded-md bg-bg-elevated border border-border-subtle text-sm text-text-primary focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-colors"
+        >
+          {options.map((opt) => (
+            <option
+              key={String(opt.value)}
+              value={opt.value}
+              className="bg-bg-surface text-text-primary"
+            >
+              {opt.label}
+            </option>
+          ))}
+        </select>
+        <ChevronDown
+          size={14}
+          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none"
+        />
+      </div>
+    </label>
+  );
+}
+
+interface CheckboxProps {
+  label: string;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  disabled?: boolean;
+}
+
+/** Custom checkbox with visible checked/unchecked/disabled states.
+ *  Disabled dims the whole row (box + label) to 60% so it reads as
+ *  "off" without the MUI-era feeling of being broken. */
+function Checkbox({ label, checked, onChange, disabled }: CheckboxProps) {
+  return (
+    <label
+      className={[
+        'flex items-center gap-2 py-1 select-none transition-opacity',
+        disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer',
+      ].join(' ')}
+    >
+      <span className="relative inline-flex shrink-0">
+        <input
+          type="checkbox"
+          checked={checked}
+          disabled={disabled}
+          onChange={(e) => onChange(e.target.checked)}
+          className="peer sr-only"
+        />
+        <span
+          className={[
+            'h-4 w-4 rounded border flex items-center justify-center transition-colors',
+            checked
+              ? 'bg-accent border-accent'
+              : 'bg-bg-elevated border-border-strong',
+            !disabled && !checked && 'peer-hover:border-accent',
+            !disabled && 'peer-focus-visible:ring-2 peer-focus-visible:ring-accent peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-bg-surface',
+          ]
+            .filter(Boolean)
+            .join(' ')}
+        >
+          {checked && <Check size={11} strokeWidth={3} className="text-white" />}
+        </span>
+      </span>
+      <span className="text-sm text-text-secondary">{label}</span>
+    </label>
+  );
+}

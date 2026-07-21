@@ -1,18 +1,22 @@
-import ListItemButton from '@mui/material/ListItemButton';
-import Paper from '@mui/material/Paper';
-
-import { ScrollToBottomOnChanges, ThreePaneLayout, UserDisplay, VirtualList, AuthGuard } from '@app/components';
+import { AuthGuard } from '@app/components';
 import { Layout } from '@app/feature-wrappers/layout';
 
-import GameSelector from './components/GameSelector/GameSelector';
-import Messages from './components/Messages';
-import SayMessage from './components/SayMessage';
+import GamesList from './components/GamesList';
+import RoomChat from './components/RoomChat';
+import RoomUsers from './components/RoomUsers';
 import { useRoom } from './useRoom';
 
-import './Room.css';
-
+/**
+ * Room page — reached after joining a server room (auto-join can send
+ * users here directly on login if `clientOptions.autojoinrooms` is on).
+ * Rebuilt on fancy webatrice's grid: games table top-left, room chat
+ * bottom-left, users column on the right spanning both rows.
+ *
+ * og's `<Layout>` (LeftNav shell) is kept intact for this piece; a
+ * follow-up will replace it with fancy's TopBar + Tabs.
+ */
 const Room = () => {
-  const { room, roomMessages, users, handleRoomSay } = useRoom();
+  const { room, roomMessages, handleRoomSay } = useRoom();
 
   if (!room) {
     return null;
@@ -22,45 +26,26 @@ const Room = () => {
     <Layout className="room-view">
       <AuthGuard />
 
-      <div className="room-view__main">
-        <ThreePaneLayout
-          fixedHeight
-
-          top={(
-            <div className="room-view__games">
-              <GameSelector room={room} />
-            </div>
-          )}
-
-          bottom={(
-            <div className="room-view__messages">
-              <Paper className="room-view__messages-content scrollable no-gutter">
-                <ScrollToBottomOnChanges changes={roomMessages} content={(
-                  <Messages messages={roomMessages} />
-                )} />
-              </Paper>
-              <Paper className="room-view__messages-sayMessage">
-                <SayMessage onSubmit={handleRoomSay} />
-              </Paper>
-            </div>
-          )}
-
-          side={(
-            <Paper className="room-view__side scrollable no-gutter">
-              <div className="room-view__side-label">
-                Users in this room: {users.length}
-              </div>
-              <VirtualList
-                className="room-view__side-list"
-                items={users.map(user => (
-                  <ListItemButton key={user.name} className="room-view__side-list__item">
-                    <UserDisplay user={user} />
-                  </ListItemButton>
-                ))}
-              />
-            </Paper>
-          )}
-        />
+      <div
+        className="grid h-full min-h-0 gap-3 p-3 bg-bg-base"
+        style={{
+          gridTemplateColumns: '1fr 320px',
+          gridTemplateRows: '1fr 280px',
+        }}
+      >
+        <div className="min-h-0 min-w-0">
+          <GamesList room={room} />
+        </div>
+        <div className="row-span-2 min-h-0 min-w-0">
+          <RoomUsers />
+        </div>
+        <div className="min-h-0 min-w-0">
+          <RoomChat
+            roomName={room.info.name}
+            messages={roomMessages}
+            onSay={handleRoomSay}
+          />
+        </div>
       </div>
     </Layout>
   );

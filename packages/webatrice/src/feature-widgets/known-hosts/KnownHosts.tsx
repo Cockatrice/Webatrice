@@ -1,50 +1,21 @@
-import { styled } from '@mui/material/styles';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Select, MenuItem, SelectChangeEvent } from '@mui/material';
-import Button from '@mui/material/Button';
-import FormControl from '@mui/material/FormControl';
-import IconButton from '@mui/material/IconButton';
-import WifiTetheringIcon from '@mui/icons-material/WifiTethering';
-import PortableWifiOffIcon from '@mui/icons-material/PortableWifiOff';
-import InputLabel from '@mui/material/InputLabel';
-import Check from '@mui/icons-material/Check';
-import AddIcon from '@mui/icons-material/Add';
-import EditRoundedIcon from '@mui/icons-material/Edit';
-import ErrorOutlinedIcon from '@mui/icons-material/ErrorOutlined';
+import {
+  ChevronDown,
+  Wifi,
+  WifiOff,
+  Plus,
+  Pencil,
+  Check,
+  AlertCircle,
+  Loader2,
+} from 'lucide-react';
 
 import { HostDTO } from '@app/services';
 import { getHostPort } from '@app/utils';
 
 import KnownHostDialog from './KnownHostDialog';
 import { TestConnection, useKnownHostsComponent } from './useKnownHostsComponent';
-
-import './KnownHosts.css';
-
-const PREFIX = 'KnownHosts';
-
-const classes = {
-  root: `${PREFIX}-root`,
-};
-
-const Root = styled('div')(({ theme }) => ({
-  [`&.${classes.root}`]: {
-    '& .KnownHosts-error': {
-      color: theme.palette.error.main,
-    },
-
-    '& .KnownHosts-item': {
-      [`& .${TestConnection.TESTING}`]: {
-        color: theme.palette.warning.main,
-      },
-      [`& .${TestConnection.FAILED}`]: {
-        color: theme.palette.error.main,
-      },
-      [`& .${TestConnection.SUCCESS}`]: {
-        color: theme.palette.success.main,
-      },
-    },
-  },
-}));
 
 interface KnownHostsProps {
   value: HostDTO | undefined;
@@ -55,7 +26,6 @@ interface KnownHostsProps {
 }
 
 const KnownHosts = ({ onChange, error, touched, disabled }: KnownHostsProps) => {
-
   const { t } = useTranslation();
   const {
     hosts,
@@ -70,85 +40,140 @@ const KnownHosts = ({ onChange, error, touched, disabled }: KnownHostsProps) => 
     handleDialogSubmit,
   } = useKnownHostsComponent({ onChange });
 
-  const selectedId = selectedHost?.id ?? '';
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
 
-  const handleSelectChange = (event: SelectChangeEvent<number | ''>) => {
-    const value = event.target.value;
-    if (typeof value === 'number') {
-      void onPick(value);
-    }
-  };
+  // Close the dropdown when the user clicks outside.
+  useEffect(() => {
+    if (!open) return;
+    const onClick = (e: MouseEvent) => {
+      if (rootRef.current && !rootRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false);
+    };
+    document.addEventListener('mousedown', onClick);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onClick);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [open]);
+
+  const showError = Boolean(touched && error);
 
   return (
-    <Root className={`KnownHosts ${classes.root}`}>
-      <FormControl className="KnownHosts-form" size="small" variant="outlined">
-        {touched && error && (
-          <div className="KnownHosts-validation">
-            <div className="KnownHosts-error">
+    <div ref={rootRef} className="relative">
+      <label className="block">
+        <span className="flex items-center justify-between text-xs font-medium text-text-muted mb-1">
+          <span>{t('KnownHosts.label')}</span>
+          {showError && (
+            <span className="flex items-center gap-1 text-[0.7rem] text-red-400">
+              <AlertCircle size={11} />
               {error}
-              <ErrorOutlinedIcon style={{ fontSize: 'small', fontWeight: 'bold' }} />
-            </div>
-          </div>
-        )}
-
-        <InputLabel id="KnownHosts-label">{t('KnownHosts.label')}</InputLabel>
-        <Select
-          id="KnownHosts-select"
-          labelId="KnownHosts-label"
-          label="Host"
-          margin="dense"
-          name="host"
-          value={selectedId}
-          fullWidth
-          onChange={handleSelectChange}
+            </span>
+          )}
+        </span>
+        <button
+          type="button"
           disabled={disabled}
+          onClick={() => setOpen((o) => !o)}
+          className={[
+            'w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm text-left bg-bg-elevated border transition-colors',
+            showError ? 'border-red-400/60' : 'border-border-subtle hover:border-border-strong',
+            'focus:outline-none focus:ring-1 focus:border-accent focus:ring-accent',
+            disabled ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer',
+          ].join(' ')}
         >
-          <Button onClick={openAddKnownHostDialog}>
-            <span>{t('KnownHosts.add')}</span>
-            <AddIcon fontSize="small" color="primary" />
-          </Button>
+          {selectedHost ? (
+            <SelectedHost host={selectedHost} status={testConnectionStatus} />
+          ) : (
+            <span className="text-text-muted">—</span>
+          )}
+          <ChevronDown
+            size={14}
+            className={[
+              'ml-auto text-text-muted transition-transform',
+              open ? 'rotate-180' : '',
+            ].join(' ')}
+          />
+        </button>
+      </label>
 
+      {open && (
+        <div className="absolute z-30 mt-1 w-full max-h-72 overflow-y-auto rounded-md bg-bg-surface border border-border-subtle shadow-glow py-1">
+          <button
+            type="button"
+            onClick={() => {
+              setOpen(false);
+              openAddKnownHostDialog();
+            }}
+            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-accent hover:bg-bg-elevated transition-colors"
+          >
+            <Plus size={14} /> {t('KnownHosts.add')}
+          </button>
+          <div className="my-1 border-t border-border-subtle" />
           {hosts.map((host) => {
             const hostPort = getHostPort(host);
-
+            const isSelected = selectedHost?.id === host.id;
             return (
-              <MenuItem value={host.id} key={host.id}>
-                <div className="KnownHosts-item">
-                  <div className="KnownHosts-item__wrapper">
-                    <div className={`KnownHosts-item__status ${testConnectionStatus ?? ''}`}>
-                      {testConnectionStatus === TestConnection.FAILED ? (
-                        <PortableWifiOffIcon fontSize="small" />
-                      ) : (
-                        <WifiTetheringIcon fontSize="small" />
-                      )}
-                    </div>
-
-                    <div className="KnownHosts-item__label">
-                      <Check />
-                      <span>
-                        {host.name} ({hostPort.host}:{hostPort.port})
-                      </span>
-                    </div>
-                  </div>
-
-                  {host.editable && (
-                    <IconButton
-                      className="KnownHosts-item__edit"
-                      size="small"
-                      color="primary"
-                      onClick={() => {
-                        openEditKnownHostDialog(host);
-                      }}
-                    >
-                      <EditRoundedIcon fontSize="small" />
-                    </IconButton>
+              <div
+                key={host.id}
+                className={[
+                  'group flex items-center gap-2 px-3 py-1.5 text-sm cursor-pointer transition-colors',
+                  isSelected
+                    ? 'bg-accent/20 text-text-primary'
+                    : 'text-text-secondary hover:text-text-primary hover:bg-bg-elevated',
+                ].join(' ')}
+                onClick={() => {
+                  if (host.id != null) {
+                    void onPick(host.id);
+                    setOpen(false);
+                  }
+                }}
+              >
+                <span className="w-4 shrink-0 flex justify-center">
+                  {isSelected && <Check size={12} className="text-accent" />}
+                </span>
+                <span className="shrink-0">
+                  {testConnectionStatus === TestConnection.FAILED && isSelected ? (
+                    <WifiOff size={14} className="text-red-400" />
+                  ) : testConnectionStatus === TestConnection.SUCCESS && isSelected ? (
+                    <Wifi size={14} className="text-emerald-400" />
+                  ) : testConnectionStatus === TestConnection.TESTING && isSelected ? (
+                    <Loader2 size={14} className="text-yellow-400 animate-spin" />
+                  ) : (
+                    <Wifi size={14} className="text-text-muted" />
                   )}
-                </div>
-              </MenuItem>
+                </span>
+                <span className="flex-1 min-w-0 truncate">
+                  <span className="font-medium">{host.name}</span>
+                  <span className="text-text-muted ml-1.5 text-xs tabular-nums">
+                    {hostPort.host}:{hostPort.port}
+                  </span>
+                </span>
+                {host.editable && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setOpen(false);
+                      openEditKnownHostDialog(host);
+                    }}
+                    className="p-1 rounded text-text-muted hover:text-text-primary hover:bg-border-subtle opacity-0 group-hover:opacity-100 transition-opacity"
+                    title="Edit host"
+                    aria-label="Edit host"
+                  >
+                    <Pencil size={12} />
+                  </button>
+                )}
+              </div>
             );
           })}
-        </Select>
-      </FormControl>
+        </div>
+      )}
 
       <KnownHostDialog
         isOpen={dialogState.open}
@@ -157,8 +182,46 @@ const KnownHosts = ({ onChange, error, touched, disabled }: KnownHostsProps) => 
         onSubmit={handleDialogSubmit}
         handleClose={closeKnownHostDialog}
       />
-    </Root>
+    </div>
   );
 };
+
+/** Compact "selected host" summary shown in the closed dropdown
+ *  button — connection-status icon + `Name (host:port)`. Keeps the
+ *  Login form's Host input readable without expanding the dropdown. */
+function SelectedHost({
+  host,
+  status,
+}: {
+  host: HostDTO;
+  status: TestConnection | null;
+}) {
+  const hostPort = getHostPort(host);
+  const StatusIcon =
+    status === TestConnection.FAILED
+      ? WifiOff
+      : status === TestConnection.TESTING
+      ? Loader2
+      : Wifi;
+  const statusColor =
+    status === TestConnection.FAILED
+      ? 'text-red-400'
+      : status === TestConnection.SUCCESS
+      ? 'text-emerald-400'
+      : status === TestConnection.TESTING
+      ? 'text-yellow-400 animate-spin'
+      : 'text-text-muted';
+  return (
+    <>
+      <StatusIcon size={14} className={statusColor + ' shrink-0'} />
+      <span className="truncate text-text-primary">
+        {host.name}{' '}
+        <span className="text-text-muted text-xs tabular-nums">
+          ({hostPort.host}:{hostPort.port})
+        </span>
+      </span>
+    </>
+  );
+}
 
 export default KnownHosts;

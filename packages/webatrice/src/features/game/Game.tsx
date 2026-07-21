@@ -1,9 +1,12 @@
 import { useMemo } from 'react';
+import { useParams } from 'react-router-dom';
 import { DndContext } from '@dnd-kit/core';
 
 import { AuthGuard } from '@app/components';
 import { Layout } from '@app/feature-wrappers/layout';
 import { ConfirmDialog, PromptDialog } from '@app/dialogs';
+import GameLobby from './GameLobby';
+import { useCurrentGame } from './hooks/useCurrentGame';
 import GameArrowOverlay from './components/arrows/GameArrowOverlay/GameArrowOverlay';
 import BoxSelectOverlay from './components/ui/BoxSelectOverlay/BoxSelectOverlay';
 import CardContextMenu from './components/context-menus/CardContextMenu/CardContextMenu';
@@ -36,7 +39,30 @@ import './Game.css';
 const CONCEDE_CONFIRM_MESSAGE =
   'You\'ll stay seated as a spectator until you click Unconcede or Leave Game. Others will see you as conceded.';
 
+/**
+ * Top-level game route. Splits the render into two paths:
+ *   • Pre-start (game exists but `started === false`): the full-page
+ *     GameLobby handles deck selection, ready toggling, and host
+ *     force-start (via kick).
+ *   • Started: the existing battlefield renders below in GameBoard.
+ * The gate lives outside useGame() so the heavy game infra (DND
+ * sensors, card registry, board layout memoization, arrow overlay)
+ * doesn't initialize while we're still lobbying — cheap since
+ * useCurrentGame is just a couple of Redux selectors.
+ */
 function Game() {
+  const params = useParams<{ gameId?: string }>();
+  const parsed = params.gameId != null ? Number(params.gameId) : NaN;
+  const routeGameId = Number.isFinite(parsed) ? parsed : undefined;
+  const { game, isStarted } = useCurrentGame(routeGameId);
+
+  if (game && !isStarted && routeGameId != null) {
+    return <GameLobby gameId={routeGameId} />;
+  }
+  return <GameBoard />;
+}
+
+function GameBoard() {
   const g = useGame();
   const {
     gameId,

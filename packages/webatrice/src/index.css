@@ -1,12 +1,18 @@
 @import url('https://fonts.googleapis.com/css2?family=Teko&family=Open+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,300;1,400;1,500;1,600;1,700;1,800&display=swap');
 
 @import './styles/colors.css';
+@import './styles/tokens.css';
 @import './styles/thin-scrollbar.css';
 @import './styles/card-flip.css';
+@import './styles/mui-overrides.css';
 
-* {
-  box-sizing: border-box;
-}
+/* Tailwind preflight is on: this emits the button/anchor/heading/
+   box-sizing reset that MUI's CssBaseline used to provide. Bare
+   `<button>` / `<a>` / `<h1>` elements now start neutral so our
+   utility classes aren't fighting user-agent defaults. */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 html,
 body,
@@ -16,21 +22,46 @@ body,
 
 body {
   margin: 0;
-  font-family:
-    -apple-system,
-    BlinkMacSystemFont,
-    "Open Sans",
-    "Segoe UI",
-    "Roboto",
-    "Oxygen",
-    "Ubuntu",
-    "Cantarell",
-    "Fira Sans",
-    "Droid Sans",
-    "Helvetica Neue",
-    sans-serif;
+  /* Body reset. Owned here (not by MUI CssBaseline, which was removed)
+     so the fancy palette + Inter typography apply on every page. */
+  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', 'Open Sans', sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  background-color: rgb(var(--bg-base));
+  color: rgb(var(--text-primary));
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* Chrome / Safari paint autofilled fields with a hardcoded pale-blue
+   background that ignores our theme. The inset box-shadow trick fills
+   the visible surface with our bg-elevated color (since we can't
+   override `background-color` on autofill); `-webkit-text-fill-color`
+   themes the text, and the 600000s transition defers the autofill
+   paint long enough that it never actually renders.
+   `!important` is required to beat MUI OutlinedInput's own rules, and
+   `-internal-autofill-selected`/`-previewed` cover Chrome's newer
+   autofill states (post-90). Repeat the block with `.MuiOutlinedInput-
+   input` prefix so we also win over MUI's higher-specificity input
+   selectors — otherwise MUI's blue focus-ring wrapper leaks through. */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active,
+input:-internal-autofill-selected,
+input:-internal-autofill-previewed,
+.MuiOutlinedInput-input:-webkit-autofill,
+.MuiOutlinedInput-input:-webkit-autofill:hover,
+.MuiOutlinedInput-input:-webkit-autofill:focus,
+.MuiOutlinedInput-input:-internal-autofill-selected {
+  -webkit-box-shadow: 0 0 0 1000px rgb(var(--bg-elevated)) inset !important;
+  -webkit-text-fill-color: rgb(var(--text-primary)) !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  caret-color: rgb(var(--text-primary));
+  transition:
+    background-color 600000s ease-in-out 0s,
+    color 600000s ease-in-out 0s;
 }
 
 code {

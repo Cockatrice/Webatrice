@@ -1,0 +1,203 @@
+/* Global MUI overrides — replaces the ThemeProvider we removed with
+   plain CSS that leans on our fancy tokens. Applies to every MUI
+   component until each is replaced with a Tailwind equivalent.
+
+   Specificity note: every rule is prefixed with `body ` so specificity
+   is (0,1,1) instead of the bare-class (0,1,0) that MUI's emotion-
+   generated `.css-xxxxx-MuiClass` rules use. Without the prefix, ours
+   ties emotion's specificity and only cascade order decides — which
+   is fragile once components mount at runtime. With the prefix, we
+   always win. Per-page overrides can still trump us with either a
+   higher-specificity selector (`.login .MuiButton-contained`) or by
+   nesting inside a scoping class. */
+
+/* --- Surfaces --- */
+body .MuiPaper-root {
+  background-color: rgb(var(--bg-surface));
+  color: rgb(var(--text-primary));
+  background-image: none;
+}
+
+/* Dialog surface + backdrop. */
+body .MuiDialog-paper {
+  background-color: rgb(var(--bg-surface));
+  color: rgb(var(--text-primary));
+  border: 1px solid rgb(var(--border-subtle));
+  border-radius: 12px;
+  box-shadow:
+    0 25px 50px -12px rgba(0, 0, 0, 0.6),
+    0 0 24px -4px rgb(var(--accent-primary) / 0.15);
+}
+body .MuiBackdrop-root {
+  background-color: rgb(0 0 0 / 0.6);
+  backdrop-filter: blur(2px);
+}
+body .MuiDialogTitle-root {
+  color: rgb(var(--text-primary));
+  font-family: 'Inter', system-ui, sans-serif;
+  font-weight: 700;
+  font-size: 18px;
+  padding: 20px 24px 12px;
+  border-bottom: 1px solid rgb(var(--border-subtle));
+}
+body .MuiDialogContent-root {
+  color: rgb(var(--text-secondary));
+  padding: 20px 24px;
+}
+body .MuiDialogActions-root {
+  padding: 12px 20px;
+  border-top: 1px solid rgb(var(--border-subtle));
+  gap: 8px;
+}
+
+/* --- Typography --- */
+body .MuiTypography-root {
+  color: inherit;
+  font-family: inherit;
+}
+body .MuiTypography-h1,
+body .MuiTypography-h2,
+body .MuiTypography-h3,
+body .MuiTypography-h4,
+body .MuiTypography-h5,
+body .MuiTypography-h6 {
+  color: rgb(var(--text-primary));
+}
+body .MuiTypography-subtitle1 {
+  color: rgb(var(--text-secondary));
+}
+body .MuiTypography-subtitle2 {
+  color: rgb(var(--text-muted));
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 4px;
+}
+
+/* --- Buttons --- */
+body .MuiButton-root {
+  text-transform: none;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-weight: 600;
+  letter-spacing: 0;
+  border-radius: 8px;
+}
+body .MuiButton-text {
+  color: rgb(var(--text-secondary));
+}
+body .MuiButton-text:hover {
+  color: rgb(var(--text-primary));
+  background-color: rgb(var(--bg-elevated));
+}
+body .MuiButton-contained {
+  background-color: rgb(var(--accent-primary));
+  color: white;
+  box-shadow: 0 0 24px -4px rgb(var(--accent-primary) / 0.35);
+}
+body .MuiButton-contained:hover {
+  background-color: rgb(var(--accent-primary-hover));
+  box-shadow: 0 0 24px -4px rgb(var(--accent-primary) / 0.5);
+}
+body .MuiButton-contained.Mui-disabled {
+  background-color: rgb(var(--bg-elevated));
+  color: rgb(var(--text-muted));
+  box-shadow: none;
+}
+body .MuiButton-outlined {
+  border-color: rgb(var(--border-subtle));
+  color: rgb(var(--text-secondary));
+}
+body .MuiButton-outlined:hover {
+  border-color: rgb(var(--border-strong));
+  background-color: rgb(var(--bg-elevated));
+  color: rgb(var(--text-primary));
+}
+
+/* --- Text inputs (OutlinedInput + TextField) --- */
+body .MuiOutlinedInput-root {
+  background-color: rgb(var(--bg-elevated));
+  color: rgb(var(--text-primary));
+  border-radius: 8px;
+}
+body .MuiOutlinedInput-notchedOutline {
+  border-color: rgb(var(--border-subtle));
+}
+body .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline {
+  border-color: rgb(var(--border-strong));
+}
+body .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline {
+  border-color: rgb(var(--accent-primary));
+  border-width: 1px;
+}
+body .MuiInputBase-input {
+  color: rgb(var(--text-primary));
+}
+body .MuiInputLabel-root {
+  color: rgb(var(--text-muted));
+}
+body .MuiInputLabel-root.Mui-focused {
+  color: rgb(var(--accent-primary));
+}
+body .MuiFormHelperText-root {
+  color: rgb(var(--text-muted));
+}
+body .MuiFormHelperText-root.Mui-error {
+  color: #f87171;
+}
+body .MuiSelect-icon {
+  color: rgb(var(--text-muted));
+}
+
+/* --- Checkbox + Radio --- */
+body .MuiCheckbox-root,
+body .MuiRadio-root {
+  color: rgb(var(--border-strong));
+}
+body .MuiCheckbox-root.Mui-checked,
+body .MuiRadio-root.Mui-checked {
+  color: rgb(var(--accent-primary));
+}
+/* Disabled: same hue as the enabled state, dropped only slightly in
+   opacity. Reads as "the same thing, temporarily off" rather than a
+   different design element. */
+body .MuiCheckbox-root.Mui-disabled,
+body .MuiRadio-root.Mui-disabled {
+  color: rgb(var(--border-strong));
+  opacity: 1;
+}
+body .MuiFormControlLabel-label {
+  color: rgb(var(--text-secondary));
+  font-size: 14px;
+  font-family: 'Inter', system-ui, sans-serif;
+}
+body .MuiFormControlLabel-label.Mui-disabled {
+  color: rgb(var(--text-secondary));
+  opacity: 1;
+}
+
+/* --- Menu / MenuItem --- */
+body .MuiMenu-paper,
+body .MuiPopover-paper {
+  background-color: rgb(var(--bg-surface));
+  color: rgb(var(--text-primary));
+  border: 1px solid rgb(var(--border-subtle));
+  box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.5);
+}
+body .MuiMenuItem-root {
+  color: rgb(var(--text-secondary));
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 14px;
+}
+body .MuiMenuItem-root:hover,
+body .MuiMenuItem-root.Mui-focusVisible {
+  background-color: rgb(var(--bg-elevated));
+  color: rgb(var(--text-primary));
+}
+body .MuiMenuItem-root.Mui-selected {
+  background-color: rgb(var(--accent-primary) / 0.2);
+  color: rgb(var(--text-primary));
+}
+body .MuiMenuItem-root.Mui-selected:hover {
+  background-color: rgb(var(--accent-primary) / 0.3);
+}

@@ -1,4 +1,3 @@
-import { styled } from '@mui/material/styles';
 import { useTranslation } from 'react-i18next';
 import { Navigate } from 'react-router-dom';
 import Button from '@mui/material/Button';
@@ -19,48 +18,12 @@ import { useLogin } from './useLogin';
 
 import './Login.css';
 
-const PREFIX = 'Login';
-
-const classes = {
-  root: `${PREFIX}-root`,
-};
-
-const Root = styled('div')(({ theme }) => ({
-  [`&.${classes.root}`]: {
-    '& .login-content__header': {
-      color: theme.palette.success.light,
-    },
-
-    '& .login-content__description': {
-      backgroundColor: theme.palette.primary.main,
-      color: theme.palette.primary.contrastText,
-    },
-
-    '& .login-content__description-bar': {
-      backgroundColor: theme.palette.primary.dark,
-    },
-
-    '& .login-content__description-cards__card': {
-      backgroundColor: theme.palette.background.paper,
-      color: theme.palette.primary.main,
-    },
-
-    [theme.breakpoints.up('lg')]: {
-      '& .login-content': {
-        maxWidth: '1000px',
-      },
-
-      '& .login-content__form': {
-        width: '50%',
-      },
-
-      '& .login-content__description': {
-        width: '50%',
-        display: 'flex',
-      },
-    },
-  },
-}));
+// The pre-redo Root was a styled('div') that pulled colors from
+// MUI theme.palette (success.light, primary.main, primary.dark,
+// background.paper). ThemeProvider has been removed, so those lookups
+// silently returned MUI's blue defaults — the source of the bright
+// blue login card. Palette is now driven entirely by Login.css using
+// our fancy tokens.
 
 const Login = () => {
   const { t } = useTranslation();
@@ -88,7 +51,7 @@ const Login = () => {
 
   return (
     <Layout showNav={false} noHeightLimit={true}>
-      <Root className={'login scrollable ' + classes.root}>
+      <div className="login scrollable">
         {isConnected && <Navigate to={RouteEnum.SERVER} />}
 
         <div className="login__wrapper">
@@ -196,7 +159,7 @@ const Login = () => {
           onSubmit={handleAccountActivationDialogSubmit}
           handleClose={closeActivateAccountDialog}
         />
-      </Root>
+      </div>
     </Layout>
   );
 };

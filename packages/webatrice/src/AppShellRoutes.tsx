@@ -2,7 +2,7 @@ import { Route, Routes } from 'react-router-dom';
 
 import { RouteEnum } from '@app/types';
 import { Account } from '@app/features/account';
-import { Decks } from '@app/features/decks';
+import { Decks, DeckEditor } from '@app/features/decks';
 import { Game } from '@app/features/game';
 import { Logs } from '@app/features/logs';
 import { Player } from '@app/features/player';
@@ -19,10 +19,11 @@ const AppShellRoutes = () => (
 
       <Route path={RouteEnum.ACCOUNT} element={<Account />} />
       <Route path={RouteEnum.DECKS} element={<Decks />} />
+      <Route path={RouteEnum.DECK} element={<DeckEditor />} />
       <Route path={RouteEnum.GAME} element={<Game />} />
       <Route path={RouteEnum.LOGS} element={<Logs />} />
       <Route path={RouteEnum.PLAYER} element={<Player />} />
-      {<Route path={RouteEnum.ROOM} element={<Room />} />}
+      <Route path={RouteEnum.ROOM} element={<Room />} />
       <Route path={RouteEnum.SERVER} element={<Server />} />
       <Route path={RouteEnum.SETTINGS} element={<Settings />} />
       <Route path={RouteEnum.LOGIN} element={<Login />} />

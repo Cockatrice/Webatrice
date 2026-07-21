@@ -1,6 +1,45 @@
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap');
+
+/* Scoped casual-font override for a handful of texts on the login
+   page: the "Not registered yet?" prompt, the two description
+   subtitles on the right-side card, and the Username/Password field
+   labels + values. The Register button, header, and MUI buttons stay
+   on the default Inter. */
+.login-footer__register > span,
+.login-content__description-subtitle1,
+.login-content__description-subtitle2,
+.login .MuiInputLabel-root,
+.login .MuiInputBase-input {
+  font-family: 'Nunito', system-ui, sans-serif;
+}
+
+.login .MuiInputLabel-root {
+  font-size: 15px;
+}
+.login .MuiInputBase-input {
+  font-size: 16px;
+}
+
+/* KnownHosts Select renders its selected value inside `.MuiSelect-
+   select`, which MUI doesn't vertically-center by default. Force
+   flex-center so the row lands on the box's vertical midline. */
+.login .MuiSelect-select {
+  display: flex;
+  align-items: center;
+}
+
+/* --- Outer page --- */
 .login {
   height: 100%;
   padding: 50px;
+  /* Same treatment fancy webatrice uses for its main shell. */
+  background-color: rgb(var(--bg-base));
+  background-image: radial-gradient(
+    ellipse at top,
+    rgb(var(--accent-secondary) / 0.18),
+    transparent 60%
+  );
+  color: rgb(var(--text-primary));
 }
 
 .login__wrapper {
@@ -9,14 +48,25 @@
   align-items: center;
 }
 
+/* --- Login card --- */
 .login-content {
   width: 100%;
   max-width: 500px;
   display: flex;
-  border-radius: 8px;
+  border-radius: 12px;
   overflow: hidden;
+  /* Was MUI Paper's `background.paper` (white). Now a proper fancy
+     surface with a subtle border + glow so the card lifts off the
+     radial backdrop. */
+  background-color: rgb(var(--bg-surface));
+  color: rgb(var(--text-primary));
+  border: 1px solid rgb(var(--border-subtle));
+  box-shadow:
+    0 25px 50px -12px rgba(0, 0, 0, 0.5),
+    0 0 24px -4px rgb(var(--accent-primary) / 0.15);
 }
 
+/* Cockatrice logo + wordmark stays green — brand color. */
 .login-content__header {
   font-family: 'Teko', sans-serif;
   font-size: 34px;
@@ -24,6 +74,7 @@
   display: flex;
   align-items: center;
   margin-bottom: 20px;
+  color: #6CDF39;
 }
 
 .login-content__header img {
@@ -38,12 +89,28 @@
 
 .login-content__form h1 {
   margin-bottom: 20px;
+  color: rgb(var(--text-primary));
+  font-size: 32px;
+  font-weight: 700;
+}
+
+/* Subtitle under h1 (MUI subtitle1) */
+.login .MuiTypography-subtitle1 {
+  color: rgb(var(--text-secondary));
+  font-weight: 400;
+}
+/* Footer credit + version (MUI subtitle2) */
+.login .MuiTypography-subtitle2 {
+  color: rgb(var(--text-muted));
+  font-size: 12px;
 }
 
 .login-form {
   margin-top: 30px;
 }
 
+/* --- Right description panel --- */
+/* Replaces MUI's primary.main blue with fancy's accent gradient. */
 .login-content__description {
   display: none;
   position: relative;
@@ -52,6 +119,13 @@
   text-align: center;
   font-size: 24px;
   overflow: hidden;
+  color: rgb(var(--text-primary));
+  background-color: rgb(var(--accent-secondary));
+  background-image: linear-gradient(
+    135deg,
+    rgb(var(--accent-secondary)),
+    rgb(var(--accent-primary))
+  );
 }
 
 .login-content__description-wrapper {
@@ -70,14 +144,20 @@
   justify-content: space-between;
 }
 
+/* The three face-cards on the right. Was MUI Paper (white bg + blue
+   text). Now dark surface + light text so they read against the
+   purple gradient like fancy card tiles. */
 .login-content__description-cards__card {
   position: relative;
   width: 34%;
   padding-bottom: 46%;
   border-radius: 8px;
-  box-shadow: 0 5px 10px 2px rgba(0,0,0,0.20);
+  box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.4);
   font-weight: bold;
   font-size: 16px;
+  background-color: rgb(var(--bg-surface));
+  color: rgb(var(--text-primary));
+  border: 1px solid rgb(var(--border-subtle));
 }
 
 .login-content__description-cards__card-wrapper {
@@ -115,22 +195,28 @@
   margin: 40px 0 20px;
   font-size: 28px;
   font-weight: bold;
+  color: rgb(var(--text-primary));
 }
 
 .login-content__description-subtitle2 {
   font-size: 14px;
+  color: rgb(var(--text-primary) / 0.85);
 }
+
+/* Ambient decorative squares/bars on the description panel. Recolored
+   from raw white to text-primary at higher opacity so they show up on
+   the accent gradient without looking harsh. */
 .login-content__description-square {
   position: absolute;
-  border: 1px solid;
-  opacity: .1;
+  border: 1px solid rgb(var(--text-primary));
+  opacity: 0.15;
 }
 .login-content__description-bar {
   position: absolute;
-  opacity: .1;
+  background-color: rgb(var(--text-primary));
+  opacity: 0.15;
   border-radius: 8px;
 }
-
 
 .login-content__description-square.topLeft {
   transform: rotate(27deg);
@@ -181,6 +267,8 @@
   height: 50px;
   width: 222px;
 }
+
+/* --- Footer --- */
 .login-footer {
   margin-top: 30px;
 }
@@ -188,15 +276,119 @@
 .login-footer__register {
   margin-bottom: 10px;
   font-weight: bold;
+  color: rgb(var(--text-primary));
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .login-footer__language {
   margin-top: 20px;
 }
 
+/* Connection-status message (MUI Paper). Recolored to blend with the
+   card surface instead of raw white. */
 .login-content__connectionStatus {
   text-align: center;
   margin: 20px 0;
   padding: 20px;
   font-weight: bold;
+  background-color: rgb(var(--bg-elevated));
+  color: rgb(var(--text-secondary));
+  border-radius: 8px;
+  box-shadow: none;
+}
+
+/* --- MUI component overrides scoped to .login --- */
+
+/* OutlinedInput fields (Username, Password, Host Select) */
+.login .MuiOutlinedInput-root {
+  background-color: rgb(var(--bg-elevated));
+  color: rgb(var(--text-primary));
+  border-radius: 8px;
+}
+.login .MuiOutlinedInput-notchedOutline {
+  border-color: rgb(var(--border-subtle));
+}
+.login .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline {
+  border-color: rgb(var(--border-strong));
+}
+.login .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline {
+  border-color: rgb(var(--accent-primary));
+  border-width: 1px;
+}
+.login .MuiInputLabel-root {
+  color: rgb(var(--text-muted));
+}
+.login .MuiInputLabel-root.Mui-focused {
+  color: rgb(var(--accent-primary));
+}
+/* Select's dropdown arrow */
+.login .MuiSelect-icon {
+  color: rgb(var(--text-muted));
+}
+
+/* Buttons */
+.login .MuiButton-root {
+  text-transform: none;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+/* "Forgot password", "Create an account" (text buttons) */
+.login .MuiButton-text {
+  color: rgb(var(--accent-primary));
+}
+.login .MuiButton-text:hover {
+  background-color: rgb(var(--accent-primary) / 0.1);
+  color: rgb(var(--accent-primary-hover));
+}
+/* Login button (contained) */
+.login .MuiButton-contained {
+  background-color: rgb(var(--accent-primary));
+  color: white;
+  border-radius: 8px;
+  padding: 10px 20px;
+  box-shadow: 0 0 24px -4px rgb(var(--accent-primary) / 0.35);
+}
+.login .MuiButton-contained:hover {
+  background-color: rgb(var(--accent-primary-hover));
+  box-shadow: 0 0 24px -4px rgb(var(--accent-primary) / 0.5);
+}
+.login .MuiButton-contained.Mui-disabled {
+  background-color: rgb(var(--bg-elevated));
+  color: rgb(var(--text-muted));
+  box-shadow: none;
+}
+
+/* Checkboxes ("Save Password", "Auto Connect") */
+.login .MuiCheckbox-root {
+  color: rgb(var(--border-strong));
+}
+.login .MuiCheckbox-root.Mui-checked {
+  color: rgb(var(--accent-primary));
+}
+.login .MuiFormControlLabel-label {
+  color: rgb(var(--text-secondary));
+  font-size: 14px;
+}
+
+/* Language dropdown floating flag button — kill MUI's white paper */
+.login .MuiPaper-root {
+  background-color: rgb(var(--bg-surface));
+  color: rgb(var(--text-primary));
+}
+
+/* --- Larger card on wide screens (was in Root's breakpoints.up('lg')). */
+@media (min-width: 1024px) {
+  .login-content {
+    max-width: 1000px;
+  }
+  .login-content__form {
+    width: 50%;
+  }
+  .login-content__description {
+    width: 50%;
+    display: flex;
+  }
 }

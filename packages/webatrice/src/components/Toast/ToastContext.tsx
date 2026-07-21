@@ -1,4 +1,5 @@
 import { createContext, FC, PropsWithChildren, ReactNode, useContext, useEffect, useReducer } from 'react';
+import { createPortal } from 'react-dom';
 
 import { ACTIONS, initialState, reducer, ToastEntry } from './reducer';
 import Toast from './Toast';
@@ -28,20 +29,31 @@ export const ToastProvider: FC<PropsWithChildren> = ({ children }) => {
     closeToast: (key) => dispatch({ type: ACTIONS.CLOSE_TOAST, payload: { key } }),
     removeToast: (key) => dispatch({ type: ACTIONS.REMOVE_TOAST, payload: { key } }),
   };
+  // Toasts render into a single fixed portal at bottom-right of the
+  // viewport, stacked with a small gap. Pre-redo, each MUI Snackbar
+  // portalled itself and stacked implicitly by z-index; the new
+  // Toast component is a plain pill with no positioning of its own,
+  // so this container is what puts them on-screen.
+  const portalTarget = typeof document !== 'undefined' ? document.body : null;
+
   return (
     <ToastContext.Provider value={providerState}>
       {children}
-      <div>
-        {Object.entries(state.toasts).map(([key, entry]) => (
-          <Toast
-            key={key}
-            open={entry.isOpen}
-            onClose={() => dispatch({ type: ACTIONS.CLOSE_TOAST, payload: { key } })}
-          >
-            {entry.children}
-          </Toast>
-        ))}
-      </div>
+      {portalTarget &&
+        createPortal(
+          <div className="fixed bottom-6 right-6 z-[9999] flex flex-col gap-2 items-end pointer-events-none">
+            {Object.entries(state.toasts).map(([key, entry]) => (
+              <Toast
+                key={key}
+                open={entry.isOpen}
+                onClose={() => dispatch({ type: ACTIONS.CLOSE_TOAST, payload: { key } })}
+              >
+                {entry.children}
+              </Toast>
+            ))}
+          </div>,
+          portalTarget,
+        )}
     </ToastContext.Provider>
   );
 };

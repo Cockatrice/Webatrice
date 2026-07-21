@@ -1,0 +1,21 @@
+/* Design tokens ported from fancy webatrice. Stored as space-separated
+   RGB channels so Tailwind's <alpha-value> slot works, e.g.
+   rgb(var(--accent-primary) / 0.35). Only the dark palette exists. */
+
+:root {
+  --bg-base: 20 16 31;              /* #14101F */
+  --bg-surface: 31 24 48;           /* #1F1830 */
+  --bg-elevated: 42 33 64;          /* #2A2140 */
+  --border-subtle: 58 46 90;        /* #3A2E5A */
+  --border-strong: 90 74 133;       /* #5A4A85 */
+  --accent-primary: 159 122 234;    /* #9F7AEA */
+  --accent-primary-hover: 183 148 244; /* #B794F4 */
+  --accent-secondary: 107 70 193;   /* #6B46C1 */
+  --text-primary: 245 240 246;      /* #F5F0F6 */
+  --text-secondary: 199 191 212;    /* #C7BFD4 */
+  --text-muted: 122 110 143;        /* #7A6E8F */
+  /* Disabled: intentionally *not* in the purple family so it reads
+     as "off" rather than "dimmer purple". Warm-neutral gray with
+     ~5:1 contrast on bg-surface — legible, obviously not active. */
+  --text-disabled: 168 158 165;     /* #A89EA5 */
+}
