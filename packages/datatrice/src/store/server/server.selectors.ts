@@ -57,8 +57,36 @@ export const Selectors = {
       return (user.userLevel & mask) === mask;
     }
   ),
+
+  // Admin flag on the local user. Mirrors getIsUserModerator; used by
+  // the player-list context menu to gate the Promote/Demote items
+  // (Cockatrice's user_context_menu.cpp:401-402, 410-411 — those
+  // entries are only added when the local user has UserLevelFlag.IsAdmin).
+  getIsUserAdmin: createSelector(
+    [({ server }: State) => server.user],
+    (user): boolean => {
+      if (!user) {
+        return false;
+      }
+      const mask = ServerInfo_User_UserLevelFlag.IsAdmin;
+      return (user.userLevel & mask) === mask;
+    }
+  ),
   getUserInfoByName: ({ server }: State, userName: string): ServerInfo_User | undefined =>
     server.userInfo[userName],
+
+  // History / notes lookups keyed by target user name. The state slots
+  // are hydrated by the moderator response handlers (see
+  // ModeratorResponseImpl.banHistory / warnHistory / getAdminNotes).
+  // Callers dispatch the corresponding sockatrice command
+  // (getBanHistory / getWarnHistory / getAdminNotes) and read here
+  // once the response lands.
+  getBanHistoryByUser: ({ server }: State, userName: string) =>
+    server.banHistory[userName],
+  getWarnHistoryByUser: ({ server }: State, userName: string) =>
+    server.warnHistory[userName],
+  getAdminNotesByUser: ({ server }: State, userName: string) =>
+    server.adminNotes[userName],
   getLogs: ({ server }: State) => server.logs,
   getBackendDecks: ({ server }: State) => server.backendDecks,
   getDownloadedDeck: ({ server }: State) => server.downloadedDeck,

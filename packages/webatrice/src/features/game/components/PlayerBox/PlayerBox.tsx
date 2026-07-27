@@ -54,7 +54,13 @@ import { useGameDialogsContext } from "../ui/GameDialogsContext";
 import { buildArrowGeometry } from "../arrows/GameArrowOverlay/arrowPath";
 import { ArrowColor, rgbaToCss } from "@app/types";
 import { useSnapGridVisible } from "../../hooks/useSnapGridVisible";
-import { lookupCard } from "../../../decks/cardLookup";
+import {
+  lookupCard,
+  lookupCards,
+  type LookupCardFace,
+  type LookupResult,
+  type RelatedCardRef,
+} from '../../../decks/cardLookup';
 
 /**
  * A single instance of a card in the game. Deck rows have a `quantity` field
@@ -369,6 +375,176 @@ interface BuildCardContextMenuArgs {
    *  at slot `counterId` to an absolute value. Ports
    *  `actRequestSetCardCounterDialog` / `actSetCardCounter`. */
   onSetCardCounter: (counterId: number) => void;
+  /** Pre-built "Token: …" items appended to the bottom of the menu.
+   *  Cockatrice's addRelatedCardActions (card_menu.cpp:407-479)
+   *  iterates the card's related + reverse-related lists and adds
+   *  one QAction per entry; we do the same in the caller and hand
+   *  the finished items in so this builder stays wire-agnostic
+   *  (no Dexie / token lookups needed here). */
+  tokenItems?: CardMenuItem[];
+}
+
+/**
+ * Build "Token: …" menu items for a card's related list. Shared by
+ * the own-card and opponent-card menu render sites so both branches
+ * label / dispatch identically. Ports Cockatrice's
+ * addRelatedCardActions (card_menu.cpp:407-479):
+ *   - Label format:
+ *       count omitted / count="1" → "Token: <pt> <name>"
+ *       count="x"                 → "Token: X <pt> <name>"
+ *       count=N (numeric > 1)     → "Token: Nx <pt> <name>"
+ *   - `pt` is dropped from the label when the token's own Scryfall
+ *     record has no power/toughness (spell tokens, transform-back
+ *     non-creatures).
+ *   - Item still renders when the token's Scryfall lookup is
+ *     `unknown` — the parent card's `related` entry is enough to
+ *     fire Command_CreateToken with just the name; a stale-image
+ *     fallback is better than a missing item.
+ *   - `count=N` fires N Command_CreateToken calls in a row
+ *     (Cockatrice's actCreateRelatedCard loop). `count="x"` fires
+ *     once — Cockatrice prompts the user for a number; that dialog
+ *     is a follow-up. `persistent="persistent"` inverts the
+ *     default destroy-on-zone-change (rare — most tokens vanish
+ *     off the battlefield).
+ */
+function buildRelatedTokenItems(
+  related: RelatedCardRef[],
+  tokenMeta: Map<string, LookupResult>,
+  onCreateToken: BattlefieldCardCreateTokenHandler | undefined,
+): CardMenuItem[] {
+  const out: CardMenuItem[] = [];
+  for (const ref of related) {
+    const tok = tokenMeta.get(ref.name);
+    const tokPT = tok?.power != null && tok.toughness != null
+      ? `${tok.power}/${tok.toughness}`
+      : undefined;
+    const tokColor = tok?.colors && tok.colors.length > 0
+      ? tok.colors.length > 1
+        ? 'm'
+        : tok.colors[0].toLowerCase()
+      : '';
+    const tokProviderId = tok?.printings?.[0]?.scryfallId;
+    const countPrefix = ref.count === 'x'
+      ? 'X '
+      : ref.count && /^\d+$/.test(ref.count) && Number(ref.count) > 1
+        ? `${ref.count}x `
+        : '';
+    const ptPart = tokPT ? `${tokPT} ` : '';
+    const fireCount =
+      ref.count && /^\d+$/.test(ref.count) ? Number(ref.count) : 1;
+    out.push({
+      label: `Token: ${countPrefix}${ptPart}${ref.name}`,
+      onClick: () => {
+        if (!onCreateToken) {
+          return;
+        }
+        for (let i = 0; i < fireCount; i++) {
+          onCreateToken({
+            name: tok?.name ?? ref.name,
+            color: tokColor,
+            pt: tokPT ?? '',
+            annotation: '',
+            destroyOnZoneChange: ref.persistent !== 'persistent',
+            faceDown: false,
+            providerId: tokProviderId,
+          });
+        }
+      },
+    });
+  }
+  return out;
+}
+
+// Signature match for PlayerBox's `onCreateToken` prop — extracted
+// so `buildRelatedTokenItems` doesn't have to duplicate the args
+// type. Kept next to the helper to keep the coupling obvious.
+type BattlefieldCardCreateTokenHandler = (args: {
+  name: string;
+  color: string;
+  pt: string;
+  annotation: string;
+  destroyOnZoneChange: boolean;
+  faceDown: boolean;
+  providerId?: string;
+  targetCardId?: number;
+  targetMode?: 'transform_into' | 'attach_to';
+}) => void;
+
+/**
+ * Scryfall layouts we treat as transformable (present two physical
+ * faces the user can flip between via Command_CreateToken.
+ * TRANSFORM_INTO). Adventure / split / flip layouts DON'T qualify —
+ * they have two "faces" in the data model but the physical card
+ * doesn't flip in play. Reversible cards (Zendikar Rising) DO
+ * qualify: both faces are legal at once and the player can decide
+ * which one is "up."
+ */
+const TRANSFORMABLE_LAYOUTS = new Set(['transform', 'modal_dfc', 'reversible_card']);
+
+/**
+ * "Token: Transform into '<back-face>'" menu item for DFC-family
+ * cards. Ports Cockatrice's addRelatedCardActions transform branch
+ * (player_actions.cpp:1198-1206): fires Command_CreateToken with
+ * target_card_id + target_mode=TRANSFORM_INTO, which the server
+ * processes as "replace the source card with the new token."
+ *
+ * Returns [] when the card isn't a transformable layout, when the
+ * Scryfall face data hasn't landed yet, or when the source card
+ * has no numeric id (optimistic mock-id cards can't be targeted).
+ * Otherwise returns exactly ONE item — the transform target is the
+ * one non-front face.
+ */
+function buildTransformItems(
+  parentMeta: { layout?: string; faces?: LookupCardFace[] } | undefined,
+  sourceCardId: number | undefined,
+  parentName: string,
+  onCreateToken: BattlefieldCardCreateTokenHandler | undefined,
+): CardMenuItem[] {
+  if (!parentMeta || !sourceCardId || !onCreateToken) {
+    return [];
+  }
+  if (!parentMeta.layout || !TRANSFORMABLE_LAYOUTS.has(parentMeta.layout)) {
+    return [];
+  }
+  const faces = parentMeta.faces ?? [];
+  if (faces.length < 2) {
+    return [];
+  }
+  // Determine which face is currently showing. Simplest heuristic:
+  // Scryfall's `card_faces[0]` is the front. The parent card's
+  // display name here is `parentName` (whichever face the server
+  // currently reports); if it matches the front-face name, target
+  // the back. Otherwise target the front. Handles the case where
+  // an already-transformed card should flip back.
+  const front = faces[0];
+  const back = faces[1];
+  const target = parentName === front.name ? back : front;
+  const targetPT = target.power != null && target.toughness != null
+    ? `${target.power}/${target.toughness}`
+    : undefined;
+  const targetColor = target.colors && target.colors.length > 0
+    ? target.colors.length > 1
+      ? 'm'
+      : target.colors[0].toLowerCase()
+    : '';
+  return [
+    {
+      label: `Token: Transform into "${target.name}"`,
+      shortcut: 'Ctrl+Shift+T',
+      onClick: () => {
+        onCreateToken({
+          name: target.name,
+          color: targetColor,
+          pt: targetPT ?? '',
+          annotation: '',
+          destroyOnZoneChange: false,
+          faceDown: false,
+          targetCardId: sourceCardId,
+          targetMode: 'transform_into',
+        });
+      },
+    },
+  ];
 }
 
 function buildCardContextMenu(args: BuildCardContextMenuArgs): CardMenuItem[] {
@@ -491,6 +667,16 @@ function buildCardContextMenu(args: BuildCardContextMenuArgs): CardMenuItem[] {
     { label: "Select Row", shortcut: "Ctrl+Shift+X", onClick: args.onSelectRow },
     { divider: true },
     { label: "Card counters", submenu: counterItems },
+    // "Token: …" items — mirrors Cockatrice's addRelatedCardActions
+    // (card_menu.cpp:407-479). The parent caller resolves each token
+    // name into a menu item (label + onClick) and passes them in as
+    // a flat array; we tack them on after Card counters and prefix
+    // with a divider when non-empty so the shape stays 1:1 with
+    // desktop's menu. Empty when the card has no related list or
+    // none of its related names resolve in the tokens table.
+    ...(args.tokenItems && args.tokenItems.length > 0
+      ? [{ divider: true } as CardMenuItem, ...args.tokenItems]
+      : []),
   ];
 }
 
@@ -1087,6 +1273,17 @@ type Props = {
     destroyOnZoneChange: boolean;
     faceDown: boolean;
     providerId?: string;
+    /** Set together to fire a transform (Cockatrice's
+     *  Command_CreateToken with target_mode=TRANSFORM_INTO,
+     *  player_actions.cpp:1198-1206). The new token is created in
+     *  place of the target card — server-side effect is that the
+     *  target flips to the specified new face. Used by the
+     *  "Token: Transform into '<back-face>'" menu item on DFC
+     *  cards. Both fields must be provided together to trigger
+     *  transform mode; a bare providerId with no targetCardId
+     *  still creates a plain new token. */
+    targetCardId?: number;
+    targetMode?: 'transform_into' | 'attach_to';
   }) => void;
   /** Draw beacon from Redux. Increments on every `Event_DrawCards` and
    *  is paired with `lastDrawCount` to describe how many cards the last
@@ -2682,9 +2879,62 @@ function PlayerBox(
         colors?: string[];
         power?: string;
         toughness?: string;
+        /** Names of tokens (and other related cards) this card
+         *  references — powers the "Token: …" items at the bottom of
+         *  the right-click menu, matching Cockatrice's
+         *  addRelatedCardActions (card_menu.cpp:407-479). Undefined
+         *  when the source doesn't carry relations (Scryfall) or the
+         *  card genuinely has none. */
+        related?: RelatedCardRef[];
+        /** Scryfall layout ("transform", "modal_dfc", etc.) — gates
+         *  the "Token: Transform into …" menu item. Undefined for
+         *  cards.xml-only sources (Cockatrice XML doesn't carry
+         *  layout info). */
+        layout?: string;
+        /** Face data for multi-faced cards. Populated from Scryfall
+         *  `card_faces`. Powers the transform target lookup: the
+         *  non-current face becomes the new-token payload for
+         *  Command_CreateToken with target_mode=TRANSFORM_INTO. */
+        faces?: LookupCardFace[];
       }
     >
   >(() => new Map());
+  // Resolved token records (full LookupResult per token) keyed by
+  // TOKEN name. Populated as battlefield cards' related lists land —
+  // see the tokenMetaByName effect below. Tokens are just cards to
+  // Scryfall, so we reuse `lookupCard` (which hits Dexie's
+  // scryfallCache first, network second) to enrich them. The map
+  // stores `LookupResult` so downstream can read power/toughness/
+  // colors/printings directly.
+  const [tokenMetaByName, setTokenMetaByName] = useState<
+    Map<string, LookupResult>
+  >(() => new Map());
+
+  /**
+   * Resolve the per-face image URL for a card whose current wire
+   * name matches one face of a multi-faced record cached in
+   * cardMetaByName. Returns undefined for single-face cards or when
+   * the lookup effect hasn't populated the DFC yet — Card.tsx
+   * gracefully falls back to its default scryfallId-composed URL in
+   * that case.
+   *
+   * Motivation: after a DFC transform (Command_CreateToken with
+   * target_mode=TRANSFORM_INTO, Cockatrice-style), the server sets
+   * the new card's providerId to the SOURCE card's Scryfall id
+   * (Cockatrice's player_actions.cpp:1204 keeps the source's
+   * providerId). Scryfall's `/cards/<id>?format=image` for that id
+   * always returns the FRONT face, so without a per-face override
+   * the transformed card keeps rendering the front face's art.
+   * This helper feeds `imageUri` into Card.tsx so the back-face
+   * image loads.
+   */
+  const resolveFaceImageUri = (cardName: string): string | undefined => {
+    const meta = cardMetaByName.get(cardName);
+    if (!meta?.faces || meta.faces.length < 2) {
+      return undefined;
+    }
+    return meta.faces.find((f) => f.name === cardName)?.imageUri;
+  };
   useEffect(() => {
     if (!isSelf || cards.length === 0) return;
     let cancelled = false;
@@ -2715,6 +2965,9 @@ function PlayerBox(
               colors: r.colors,
               power: r.power,
               toughness: r.toughness,
+              related: r.related,
+              layout: r.layout,
+              faces: r.faces,
             },
           ] as const;
         }),
@@ -2734,6 +2987,127 @@ function PlayerBox(
     // just want a re-run when the deck changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isSelf, cards]);
+
+  // Fetch Scryfall metadata for cards currently on the battlefield
+  // — runs for BOTH self and opponent PlayerBoxes. The initial deck-
+  // driven lookup above (gated to `isSelf` because opponent decks
+  // aren't wired) only ever populates the local player's own card
+  // names, so opponent creatures had no printed-PT fallback and
+  // rendered without their P/T pill. This effect closes that gap by
+  // enriching whatever appears on the battlefield right now, so an
+  // opponent's Grizzly Bears reads "2/2" the same as one you cast
+  // yourself. Skipped when the deck-driven effect above already
+  // covered the name (has-check).
+  useEffect(() => {
+    if (!battlefieldCards || battlefieldCards.length === 0) {
+      return;
+    }
+    let cancelled = false;
+    const uniqueNames = Array.from(
+      new Set(battlefieldCards.map((c) => c.name)),
+    ).filter((name) => name && !cardMetaByName.has(name));
+    if (uniqueNames.length === 0) {
+      return;
+    }
+    void (async () => {
+      const results = await Promise.all(
+        uniqueNames.map(async (name) => {
+          const r = await lookupCard(name);
+          const pt = r.power != null && r.toughness != null
+            ? `${r.power}/${r.toughness}`
+            : undefined;
+          return [
+            name,
+            {
+              typeLine: r.typeLine ?? '',
+              pt,
+              manaCost: r.manaCost,
+              cmc: r.cmc,
+              colors: r.colors,
+              power: r.power,
+              toughness: r.toughness,
+              related: r.related,
+              layout: r.layout,
+              faces: r.faces,
+            },
+          ] as const;
+        }),
+      );
+      if (cancelled) {
+        return;
+      }
+      setCardMetaByName((prev) => {
+        const next = new Map(prev);
+        for (const [name, meta] of results) {
+          next.set(name, meta);
+        }
+        return next;
+      });
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // cardMetaByName intentionally omitted for the same reason as
+    // the deck-driven effect above.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [battlefieldCards]);
+
+  // Resolve related-card metadata for every parent card that has a
+  // related list. Powers the "Token: …" right-click menu items
+  // (Cockatrice's addRelatedCardActions, card_menu.cpp:407-479).
+  //
+  // Tokens (and transform back-faces) are just cards to Scryfall —
+  // `lookupCards` hits the persistent scryfallCache first and only
+  // reaches the network for names we've never seen. Batched to keep
+  // network traffic to at most one /cards/collection round-trip per
+  // effect firing (75 identifiers per request, chunked internally).
+  //
+  // Runs whenever cardMetaByName grows (new card seen with related
+  // list). Skips names already resolved so re-runs are cheap.
+  useEffect(() => {
+    const needed: string[] = [];
+    for (const meta of cardMetaByName.values()) {
+      if (!meta.related) {
+        continue;
+      }
+      for (const ref of meta.related) {
+        if (!tokenMetaByName.has(ref.name)) {
+          needed.push(ref.name);
+        }
+      }
+    }
+    const uniqueNeeded = Array.from(new Set(needed));
+    if (uniqueNeeded.length === 0) {
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      const results = await lookupCards(uniqueNeeded);
+      if (cancelled) {
+        return;
+      }
+      setTokenMetaByName((prev) => {
+        const next = new Map(prev);
+        // Always cache the answer (even `source: "unknown"`) so we
+        // don't re-issue the lookup for a name we already tried.
+        for (const name of uniqueNeeded) {
+          const r = results.get(name);
+          next.set(
+            name,
+            r ?? { found: false, source: 'unknown', name, printings: [] },
+          );
+        }
+        return next;
+      });
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // tokenMetaByName intentionally omitted — its own updates would
+    // otherwise re-enter the effect. Re-runs when cardMetaByName
+    // gains new entries with related lists.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cardMetaByName]);
 
   const deckCount = zoneCounts?.deck ?? 0;
 
@@ -5529,6 +5903,19 @@ function PlayerBox(
     },
   ];
 
+  // Opponent battlefield right-click menu. Ports Cockatrice's
+  // player_menu.cpp:14-58 opponent branch: all utility items (Create
+  // token, Roll die, Counters, Untap all, Hand / Library / Sideboard
+  // submenus) are OWN-ONLY, so the opponent menu narrows to just the
+  // two public zones you can peek at — graveyard and exile. Reuses
+  // the same opponent grave/exile item arrays the pile-level menus
+  // already attach so "View graveyard" opens the same LibrarySearch
+  // dialog either way.
+  const opponentBattlefieldMenuItems: ContextMenuItem[] = [
+    { label: 'Graveyard', submenu: graveMenuItemsOpponent },
+    { label: 'Exile', submenu: exileMenuItemsOpponent },
+  ];
+
   return (
     <div
       ref={boxRef}
@@ -6738,10 +7125,11 @@ function PlayerBox(
           card gap so the visual "frame" around the battlefield matches
           the spacing between cards.
           Own battlefield gets Cockatrice's PlayerMenu on right-click
-          (player_menu.cpp:60-62). Opponent boards skip the wrapper —
-          Cockatrice doesn't attach it to their table zones. */}
+          (player_menu.cpp:60-62). Opponent boards get the narrower
+          view-only menu (Graveyard / Exile submenus only) since
+          Cockatrice hides every utility item behind the isLocal gate. */}
       <ContextMenu
-        items={isSelf ? battlefieldMenuItems : []}
+        items={isSelf ? battlefieldMenuItems : opponentBattlefieldMenuItems}
         wrapperClassName="min-h-0 relative"
         wrapperStyle={{ gridColumn: 3, gridRow: handOnTop ? 2 : 1 }}
       >
@@ -6886,13 +7274,18 @@ function PlayerBox(
                     )
                   }
                   onContextMenu={
-                    isSelf
+                    c
                       ? (e) => {
                           e.preventDefault();
                           // Stop the event from bubbling up to the
                           // battlefield's ContextMenu wrapper — otherwise
                           // right-clicking a card opens both the card menu
                           // AND the player menu at the same position.
+                          // Also opens for opponent cards; the menu render
+                          // below branches on isSelf between the full owner
+                          // menu and Cockatrice's minimal opponent menu
+                          // (Draw arrow / Clone / Select / Reduce life by
+                          // power / View related cards — card_menu.cpp:183).
                           e.stopPropagation();
                           setCardContextMenu({
                             cardId: c.id,
@@ -6999,6 +7392,7 @@ function PlayerBox(
                     basePT={cardMetaByName.get(c.name)?.pt}
                     annotation={c.annotation}
                     counters={c.counters}
+                    imageUri={resolveFaceImageUri(c.name)}
                   />
                 </div>
               );
@@ -7819,6 +8213,201 @@ function PlayerBox(
             (bc) => bc.id === cardContextMenu.cardId,
           );
           const numeric = Number.isFinite(cardIdNum) && card != null;
+          const close = () => setCardContextMenu(null);
+          // Opponent card menu — ports Cockatrice's
+          // card_menu.cpp:183-194 `!canModifyCard` branch on the TABLE
+          // zone. Minimal item set: things a viewer can do to an
+          // opponent's battlefield card without modifying opponent
+          // state (arrows, clone via own-side token, life bookkeeping,
+          // selection). Excludes tap / flip / P/T / annotation /
+          // counters / move / attach — all owner-only.
+          if (!isSelf) {
+            // Selection scope on an opponent battlefield: the same
+            // rule as own-side — if the right-clicked card is part of
+            // THIS battlefield's local selection, actions treat the
+            // whole selection as targets; otherwise just this card.
+            // Local selection state is scoped per PlayerBox, so an
+            // opponent PlayerBox has its OWN selection here (used by
+            // the viewer to visually group opponent cards).
+            const targets: BattlefieldCard[] = card
+              && selection?.zone === 'battlefield'
+              && selection.ids.has(card.id)
+              ? battlefieldDisplayList.filter((bc) => selection.ids.has(bc.id))
+              : card
+                ? [card]
+                : [];
+            const opponentItems: CardMenuItem[] = [
+              {
+                // Enters pending-arrow mode from the opponent's card.
+                // Wire is symmetric: arrow is created by the LOCAL
+                // player and points at any card or player. Fires the
+                // same setDrawArrowPending flow as the own-side menu.
+                label: 'Draw arrow...',
+                shortcut: 'Alt+A',
+                onClick: () => {
+                  if (numeric && card) {
+                    setDrawArrowPending({
+                      sourceCardId: cardIdNum,
+                      sourceCardName: card.name,
+                      sourceZone: ZoneName.TABLE,
+                    });
+                  }
+                  close();
+                },
+              },
+              {
+                // Creates a token on the LOCAL player's battlefield
+                // that copies the opponent's card. Same wire as own-
+                // side clone: Command_CreateToken is sent by the
+                // local client so the server assigns local ownership.
+                label: 'Clone',
+                shortcut: 'Ctrl+J',
+                onClick: () => {
+                  if (onCloneCard && targets.length > 0) {
+                    for (const bc of targets) {
+                      if (!Number.isFinite(Number(bc.id))) {
+                        continue;
+                      }
+                      onCloneCard({
+                        name: bc.name,
+                        providerId: bc.scryfallId,
+                        color: bc.color ?? '',
+                        pt: bc.pt ?? '',
+                        annotation: bc.annotation ?? '',
+                        y: bc.slot.row,
+                      });
+                    }
+                  }
+                  close();
+                },
+              },
+              { divider: true },
+              {
+                // Ports actReduceLifeByPower (player_actions.cpp:1432-
+                // 1455). Sums power over the selection (or just this
+                // card) and fires one Command_IncCounter with a
+                // negative delta. Cockatrice sends this against the
+                // card owner's life counter id; Servatrice creates
+                // the life counter with the same numeric id for every
+                // seat, so calling `onDelta` on THIS PlayerBox's
+                // lifeControl (which carries the opponent's life
+                // counter id) routes through the local client and
+                // modifies the LOCAL player's life counter — matching
+                // desktop's "opponent creature just hit me, subtract
+                // its power from my life" outcome. Same coincidence
+                // Cockatrice itself relies on.
+                label: 'Reduce life by power',
+                shortcut: 'Ctrl+Shift+L',
+                onClick: () => {
+                  let total = 0;
+                  for (const bc of targets) {
+                    if (!bc.pt) {
+                      continue;
+                    }
+                    const tokens = parsePT(bc.pt);
+                    if (tokens.length === 0) {
+                      continue;
+                    }
+                    const first = tokens[0];
+                    const power = typeof first === 'number'
+                      ? first
+                      : parseInt(first, 10);
+                    if (Number.isFinite(power)) {
+                      total += Math.max(power, 0);
+                    }
+                  }
+                  if (total > 0) {
+                    lifeControl?.onDelta(-total);
+                  }
+                  close();
+                },
+              },
+              { divider: true },
+              {
+                // Mirror the own-side handlers. Opponent PlayerBox
+                // owns its own local marquee-selection state; setting
+                // it here highlights the opponent's cards visually so
+                // a subsequent Draw arrow / Clone can act on the group.
+                label: 'Select All',
+                shortcut: 'Ctrl+A',
+                onClick: () => {
+                  const ids = new Set(
+                    battlefieldDisplayList.map((bc) => bc.id),
+                  );
+                  if (ids.size > 0) {
+                    setSelection({ zone: 'battlefield', ids });
+                  }
+                  close();
+                },
+              },
+              {
+                label: 'Select Row',
+                shortcut: 'Ctrl+Shift+X',
+                onClick: () => {
+                  if (!card) {
+                    close();
+                    return;
+                  }
+                  const ids = new Set(
+                    battlefieldDisplayList
+                      .filter((bc) => bc.slot.row === card.slot.row)
+                      .map((bc) => bc.id),
+                  );
+                  if (ids.size > 0) {
+                    setSelection({ zone: 'battlefield', ids });
+                  }
+                  close();
+                },
+              },
+              { divider: true },
+              // Cockatrice reads the card's `related` field from the
+              // card DB and pops up a small dialog. We don't have that
+              // wire yet; leave as a disabled placeholder so the menu
+              // shape matches desktop 1:1 (card_menu.cpp:194).
+              { label: 'View related cards' },
+              // "Token: …" items — same shape as the own-card menu
+              // below. Ports Cockatrice's addRelatedCardActions
+              // (card_menu.cpp:407-479). Command_CreateToken fires as
+              // the LOCAL player so the token lands on OUR
+              // battlefield — matches desktop (right-clicking an
+              // opponent's Avenger of Zendikar creates the Plant on
+              // your side). See buildRelatedTokenItems for the label
+              // format + count/persistent semantics. The Transform
+              // item is included but it fires against the opponent's
+              // card id — server processes as "replace opponent's
+              // DFC with the new face" the same as own-side.
+              ...(() => {
+                if (!card) {
+                  return [];
+                }
+                const items = [
+                  ...buildRelatedTokenItems(
+                    cardMetaByName.get(card.name)?.related ?? [],
+                    tokenMetaByName,
+                    onCreateToken,
+                  ),
+                  ...buildTransformItems(
+                    cardMetaByName.get(card.name),
+                    Number.isFinite(cardIdNum) ? cardIdNum : undefined,
+                    card.name,
+                    onCreateToken,
+                  ),
+                ];
+                return items.length > 0
+                  ? [{ divider: true } as CardMenuItem, ...items]
+                  : [];
+              })(),
+            ];
+            return createPortal(
+              <CardContextMenuPopup
+                items={opponentItems}
+                anchorX={cardContextMenu.x}
+                anchorY={cardContextMenu.y}
+                disabled={!numeric}
+              />,
+              document.body,
+            );
+          }
           // Multi-card target set. Cockatrice's cardMenuAction pattern
           // (player_actions.cpp:1761-1808): if the right-clicked card
           // is part of the current marquee selection, actions apply to
@@ -7861,7 +8450,6 @@ function PlayerBox(
               isReversed: extra.isReversed ?? false,
             });
           };
-          const close = () => setCardContextMenu(null);
           // Effective current PT — prefer server's tagged PT, fall back
           // to the Scryfall base so Inc/Dec/Flow have a starting value
           // even before the server has committed any AttrPT change.
@@ -7887,6 +8475,25 @@ function PlayerBox(
             }
             if (entries.length > 0) onSetPT(entries);
           };
+          // "Token: …" items from the card's related list PLUS the
+          // "Token: Transform into …" item for DFC-family cards.
+          // Both appear in Cockatrice's addRelatedCardActions block,
+          // rendered as a flat list under "Card counters".
+          const tokenItems: CardMenuItem[] = card
+            ? [
+              ...buildRelatedTokenItems(
+                cardMetaByName.get(card.name)?.related ?? [],
+                tokenMetaByName,
+                onCreateToken,
+              ),
+              ...buildTransformItems(
+                cardMetaByName.get(card.name),
+                Number.isFinite(cardIdNum) ? cardIdNum : undefined,
+                card.name,
+                onCreateToken,
+              ),
+            ]
+            : [];
           const menu = buildCardContextMenu({
             faceDown: card?.faceDown ?? false,
             doesntUntap: card?.doesntUntap ?? false,
@@ -8211,6 +8818,7 @@ function PlayerBox(
               }
               close();
             },
+            tokenItems,
           });
           return createPortal(
             <CardContextMenuPopup
@@ -8368,6 +8976,7 @@ function PlayerBox(
                     name={c.name}
                     scryfallId={c.scryfallId}
                     pt={cardMetaByName.get(c.name)?.pt}
+                    imageUri={resolveFaceImageUri(c.name)}
                   />
                 )}
               </div>

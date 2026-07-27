@@ -62,9 +62,17 @@ interface Props {
    *  Cockatrice's `paintNumberEllipse` layout in card_item.cpp. Slot id
    *  picks the color from COUNTER_COLORS. */
   counters?: readonly { id: number; value: number }[];
+  /** Explicit image URL override. When set, replaces the composed
+   *  scryfallId / name-based Scryfall URL. Used by the caller to
+   *  point a card at a DFC back-face image after a transform
+   *  (Scryfall's default card record and its providerId both point
+   *  at the front face — the back face's image lives on a different
+   *  URL sourced from `card_faces[N].image_uris`). Falls back to
+   *  the default composition when undefined. */
+  imageUri?: string;
 }
 
-export default function Card({ name, scryfallId, pt, basePT, annotation, id, faceDown, counters }: Props) {
+export default function Card({ name, scryfallId, pt, basePT, annotation, id, faceDown, counters, imageUri }: Props) {
   // Cockatrice's rule (card_item.cpp): PT is orange when face-down or
   // when the current PT differs from the printed base; otherwise white.
   // A missing basePT (non-creature with no printed PT) can't be
@@ -76,6 +84,8 @@ export default function Card({ name, scryfallId, pt, basePT, annotation, id, fac
   // slight quality bump.
   const imageUrl = faceDown
     ? CARD_BACK_URL
+    : imageUri
+    ? imageUri
     : scryfallId
     ? `https://api.scryfall.com/cards/${scryfallId}?format=image&version=large`
     : `https://api.scryfall.com/cards/named?exact=${encodeURIComponent(name)}&format=image&version=large`;

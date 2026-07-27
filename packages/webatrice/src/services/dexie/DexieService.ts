@@ -39,6 +39,12 @@ class DexieService {
     return this.db.table(Stores.INFO);
   }
 
+  // Scryfall read-through cache. Persisted so a Scryfall response
+  // survives a page reload — see the note on Stores.SCRYFALL_CACHE.
+  get scryfallCache() {
+    return this.db.table(Stores.SCRYFALL_CACHE);
+  }
+
   testConnection() {
     return this.db.open();
   }

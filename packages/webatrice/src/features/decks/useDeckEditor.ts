@@ -333,7 +333,15 @@ export function useDeckEditor(deckId: number | null): UseDeckEditor {
 
   const addCard = useCallback(
     async (name: string) => {
-      const trimmed = name.trim();
+      // Strip DFC back-face suffix ("A // B" → "A") so the deck row
+      // saves and later resolves under the single front-face name.
+      // Scryfall's autocomplete returns the combined "A // B" form
+      // for MDFCs / transform cards, but users expect "Riverglide
+      // Pathway" in their deck, not the full split name — and our
+      // Dexie cards table + Scryfall exact-name lookups both hit
+      // the same front-face record either way. Idempotent for
+      // single-face names (no ` // ` present → no change).
+      const trimmed = name.trim().split(' // ')[0].trim();
       if (!trimmed) return;
       // Increment first if a mainboard row already exists — matches
       // fancy's "one row per (name, category)" invariant.

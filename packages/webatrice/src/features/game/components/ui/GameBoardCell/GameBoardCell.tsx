@@ -6,7 +6,7 @@ import { games, server } from '@cockatrice/datatrice';
 import { useWebClient } from '@cockatrice/datatrice/react';
 import { useAppDispatch, useAppSelector } from '@app/store';
 import { ZoneName } from '@cockatrice/sockatrice';
-import { CardAttribute } from '@cockatrice/sockatrice/generated';
+import { CardAttribute, Command_CreateToken_TargetMode } from '@cockatrice/sockatrice/generated';
 import type {
   MoveCardParams,
   ServerInfo_DeckStorage_Folder,
@@ -1017,6 +1017,8 @@ function GameBoardCell({ cell, totalPlayers }: GameBoardCellProps) {
       destroyOnZoneChange: boolean;
       faceDown: boolean;
       providerId?: string;
+      targetCardId?: number;
+      targetMode?: 'transform_into' | 'attach_to';
     }) => {
       let visualY = 0;
       if (args.faceDown) {
@@ -1037,6 +1039,11 @@ function GameBoardCell({ cell, totalPlayers }: GameBoardCellProps) {
               : null;
         visualY = clampedTableRow == null ? 0 : 2 - clampedTableRow;
       }
+      // Transform mode: Cockatrice sends target_zone alongside
+      // target_card_id + target_mode = TRANSFORM_INTO
+      // (player_actions.cpp:1198-1206). Server processes as
+      // "replace the source card with the new token."
+      const isTransform = args.targetCardId != null && args.targetMode === 'transform_into';
       webClient.request.game.createToken(gameId, {
         zone: ZoneName.TABLE,
         cardName: args.name,
@@ -1048,6 +1055,13 @@ function GameBoardCell({ cell, totalPlayers }: GameBoardCellProps) {
         faceDown: args.faceDown,
         x: -1,
         y: visualY,
+        ...(isTransform
+          ? {
+            targetZone: ZoneName.TABLE,
+            targetCardId: args.targetCardId,
+            targetMode: Command_CreateToken_TargetMode.TRANSFORM_INTO,
+          }
+          : {}),
       });
     };
   }, [gameId, webClient]);

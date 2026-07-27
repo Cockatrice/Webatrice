@@ -129,8 +129,10 @@ export interface DeckCard {
 
   /** Where the lookup came from. `unknown` = card name wasn't in Dexie
    *  and Scryfall couldn't find it either (typo, retired card, etc.).
-   *  Rendered as a placeholder + warning. */
-  lookupSource: 'dexie' | 'scryfall' | 'unknown';
+   *  `dexie+scryfall` = both sources merged (cards.xml base fields
+   *  plus Scryfall's `all_parts` for related tokens). Rendered as a
+   *  placeholder + warning only for `unknown`. */
+  lookupSource: 'dexie' | 'scryfall' | 'dexie+scryfall' | 'unknown';
 }
 
 /**
