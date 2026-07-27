@@ -4,7 +4,7 @@ import { games } from '@cockatrice/datatrice';
 import { useAppSelector } from '@app/store';
 import { CardAttribute } from '@cockatrice/sockatrice/generated';
 import { Phase } from '@cockatrice/datatrice';
-import { useGameAffordances } from '../../../hooks/useGameAffordances';
+import { useGameAffordances } from '../../hooks/useGameAffordances';
 
 export interface PhaseBar {
   activePhase: Phase | undefined;

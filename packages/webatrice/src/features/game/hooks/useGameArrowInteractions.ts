@@ -6,7 +6,7 @@ import { useWebClient } from '@cockatrice/datatrice/react';
 import { ServerInfo_Card } from '@cockatrice/sockatrice/generated';
 import { GameEntry } from '@cockatrice/datatrice';
 import { ArrowColor, ColorRGBA, rgbaToCss } from '@app/types';
-import { makeCardKey, makePlayerKey, type CardRegistry } from '../utils/CardRegistry/CardRegistryContext';
+import { makeCardKey, makePlayerKey, parseCardKey, type CardRegistry } from '../utils/CardRegistry/CardRegistryContext';
 import { useJudgeTarget } from './useJudgeTarget';
 import { bulkTargetsFor, type SelectedCard } from '../utils/selection';
 
@@ -39,6 +39,11 @@ export interface ArrowDragPreview {
   x2: number;
   y2: number;
   color: string;
+  /** True when the pointer is currently over a valid arrow target. Mirrors
+   *  Cockatrice's `ArrowDragItem::fullColor`, which paints α=200 (targeted)
+   *  vs α=150 (untargeted) on the exact same shape. Consumed by
+   *  GameArrowOverlay to switch the fill alpha. */
+  fullColor: boolean;
 }
 
 export interface GameArrowInteractions {
@@ -330,27 +335,71 @@ export function useGameArrowInteractions({
       ? makeCardKey(arrowDrag.sourcePlayerId, arrowDrag.sourceZone, arrowDrag.sourceCardId)
       : null;
 
-  // viewport → board-relative coords for the SVG preview line.
+  // viewport → board-relative coords for the SVG preview line. The source
+  // element lookup falls back to a DOM query when the CardRegistry isn't
+  // populated (the ported fancy PlayerBox tags cards with data attrs but
+  // doesn't register them via ref callbacks).
   const dragPreview = useMemo<ArrowDragPreview | null>(() => {
     if (!arrowDrag || !arrowDrag.moved) {
       return null;
     }
     const containerRect = containerRef.current?.getBoundingClientRect();
-    const sourceEl = cardRegistry.get(
+    const registryEl = cardRegistry.get(
       makeCardKey(arrowDrag.sourcePlayerId, arrowDrag.sourceZone, arrowDrag.sourceCardId),
     );
+    const domEl = registryEl
+      ? null
+      : (document.querySelector(
+          `[data-card-id="${CSS.escape(String(arrowDrag.sourceCardId))}"][data-card-owner="${CSS.escape(
+            String(arrowDrag.sourcePlayerId),
+          )}"][data-card-zone="${CSS.escape(arrowDrag.sourceZone)}"]`,
+        ) as HTMLElement | null);
+    const sourceEl = registryEl ?? domEl;
     if (!containerRect || !sourceEl) {
       return null;
     }
     const sourceRect = sourceEl.getBoundingClientRect();
+
+    // Endpoint snapping — matches Cockatrice's `ArrowDragItem::updatePath()`:
+    // when the pointer is over a valid target, the shaft locks to that
+    // target's center (or life-pill center for player targets) rather than
+    // tracking the raw pointer position. Falls back to the pointer when
+    // nothing is targeted.
+    let x2 = arrowDrag.currentX - containerRect.left;
+    let y2 = arrowDrag.currentY - containerRect.top;
+    if (arrowTargetKey) {
+      let targetEl: HTMLElement | null | undefined = cardRegistry.get(arrowTargetKey);
+      if (!targetEl) {
+        const parsed = parseCardKey(arrowTargetKey);
+        if (parsed) {
+          targetEl = document.querySelector(
+            `[data-card-id="${CSS.escape(String(parsed.cardId))}"][data-card-owner="${CSS.escape(
+              String(parsed.playerId),
+            )}"][data-card-zone="${CSS.escape(parsed.zone)}"]`,
+          ) as HTMLElement | null;
+        } else if (arrowTargetKey.startsWith('player:')) {
+          const pid = arrowTargetKey.slice('player:'.length);
+          targetEl = document.querySelector(
+            `[data-arrow-target-kind="player"][data-arrow-target-player-id="${CSS.escape(pid)}"]`,
+          ) as HTMLElement | null;
+        }
+      }
+      if (targetEl) {
+        const t = targetEl.getBoundingClientRect();
+        x2 = t.left + t.width / 2 - containerRect.left;
+        y2 = t.top + t.height / 2 - containerRect.top;
+      }
+    }
+
     return {
       x1: sourceRect.left + sourceRect.width / 2 - containerRect.left,
       y1: sourceRect.top + sourceRect.height / 2 - containerRect.top,
-      x2: arrowDrag.currentX - containerRect.left,
-      y2: arrowDrag.currentY - containerRect.top,
+      x2,
+      y2,
       color: rgbaToCss(ArrowColor.RED),
+      fullColor: arrowTargetKey != null,
     };
-  }, [arrowDrag, cardRegistry, containerRef]);
+  }, [arrowDrag, arrowTargetKey, cardRegistry, containerRef]);
 
   const handleCardClick = useCallback(
     (ownerPlayerId: number | undefined, zone: string | undefined, card: ServerInfo_Card) => {

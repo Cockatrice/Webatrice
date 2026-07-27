@@ -1989,7 +1989,7 @@ describe('2I: Zone operations', () => {
 
     const cards = [makeCard({ id: 0, name: 'Forest' }), makeCard({ id: 1, name: 'Island' })];
     const result = gamesReducer(state, Actions.zoneViewRevealed({
-      gameId: 1, playerId: 1, zoneName: 'deck', cards,
+      gameId: 1, playerId: 1, zoneName: 'deck', cards, isReversed: false,
     }));
 
     expect(result.games[1].players[1].zones['deck'].revealedCards).toBe(cards);
@@ -2017,7 +2017,7 @@ describe('2I: Zone operations', () => {
   it('ZONE_VIEW_REVEALED with unknown zone → state unchanged', () => {
     const state = makeState();
     expect(gamesReducer(state, Actions.zoneViewRevealed({
-      gameId: 1, playerId: 1, zoneName: 'nonexistent', cards: [],
+      gameId: 1, playerId: 1, zoneName: 'nonexistent', cards: [], isReversed: false,
     }))).toBe(state);
   });
 

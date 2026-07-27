@@ -8,6 +8,7 @@ import {
   Event_DumpZone,
   Event_FlipCard,
   Event_MoveCard,
+  Event_RevealCards,
   Event_RollDie,
   Event_SetCardAttr,
   Event_SetCardCounter,
@@ -80,6 +81,53 @@ export interface CardMovedContext {
   resolvedCardName: string;
 }
 
+/**
+ * Constructs the " from X" context clause that follows the card name in
+ * move-card messages. Mirrors Cockatrice desktop's `getFromStr()` at
+ * `message_log_widget.cpp:27-91`. Returns an empty string when the
+ * source zone doesn't warrant one (safety fallback).
+ */
+function fromContext(
+  game: Enriched.GameEntry,
+  data: Event_MoveCard,
+  actingIsSourceOwner: boolean,
+): string {
+  const sourceOwner = nameOf(game, data.startPlayerId);
+  const owner = actingIsSourceOwner ? 'their' : `${sourceOwner}'s`;
+  switch (data.startZone) {
+    case ZoneName.TABLE:
+      return ' from play';
+    case ZoneName.GRAVE:
+      return ' from their graveyard';
+    case ZoneName.EXILE:
+      return ' from exile';
+    case ZoneName.HAND:
+      return ' from their hand';
+    case ZoneName.SIDEBOARD:
+      return ' from sideboard';
+    case ZoneName.STACK:
+      return ' from the stack';
+    case ZoneName.DECK: {
+      // Reducer processes the move before the formatter runs, so
+      // `cardCount` here is the post-move deck size. That means
+      // `position === cardCount` implies the card sat at the last
+      // pre-move index — i.e. was pulled from the bottom.
+      const postCount =
+        game.players[data.startPlayerId]?.zones[data.startZone]?.cardCount ?? 0;
+      const position = data.position;
+      if (position === 0) {
+        return ` from the top of ${owner} library`;
+      }
+      if (postCount > 0 && position === postCount) {
+        return ` from the bottom of ${owner} library`;
+      }
+      return ` from ${owner} library`;
+    }
+    default:
+      return ` from custom zone '${data.startZone}'`;
+  }
+}
+
 export function formatCardMoved(
   game: Enriched.GameEntry,
   actingPlayerId: number,
@@ -93,23 +141,57 @@ export function formatCardMoved(
 
   const actor = nameOf(game, actingPlayerId);
   const card = cardDescriptor(data.cardName || ctx.resolvedCardName);
+  const actingIsSourceOwner = data.startPlayerId === actingPlayerId;
+  const from = fromContext(game, data, actingIsSourceOwner);
+  const faceDown = data.faceDown ? ' face down' : '';
 
+  // Cross-owner control-transfer stays out of the zone-specific
+  // switch below — the desktop client logs this as a distinct event
+  // even before the actual zone destination is announced.
   if (!sameOwner && data.startPlayerId === actingPlayerId) {
     return `${actor} gives ${nameOf(game, data.targetPlayerId)} control over ${card}.`;
   }
 
-  if (data.startZone === ZoneName.HAND && data.targetZone === ZoneName.TABLE) {
-    return `${actor} plays ${card}.`;
+  // Format strings mirror Cockatrice desktop's `MessageLogWidget`
+  // templates from `message_log_widget.cpp:308-352`.
+  switch (data.targetZone) {
+    case ZoneName.TABLE:
+      // "%1 puts %2 into play%3[ face down]."
+      return `${actor} puts ${card} into play${from}${faceDown}.`;
+    case ZoneName.GRAVE:
+      // "%1 puts %2%3 into their graveyard[ face down]."
+      return `${actor} puts ${card}${from} into their graveyard${faceDown}.`;
+    case ZoneName.EXILE:
+      // "%1 exiles %2%3[ face down]."
+      return `${actor} exiles ${card}${from}${faceDown}.`;
+    case ZoneName.HAND:
+      // Desktop: "%1 moves %2%3 to their hand." for the source-zone
+      // variants; special-cased into "%1 takes %2 into their hand"
+      // for library sources isn't in the widget — leave the generic
+      // form here to match one-to-one behavior.
+      return `${actor} puts ${card}${from} into ${sameOwner ? 'their hand' : `${nameOf(game, data.targetPlayerId)}'s hand`}.`;
+    case ZoneName.DECK: {
+      // Reducer already applied the move, so target `cardCount`
+      // includes the just-added card. The server has already
+      // resolved Command_MoveCard's `is_reversed` into an absolute
+      // `x` on the event, so we just compare it against the pile
+      // ends: 0 = top, cardCount - 1 = bottom, anything else is a
+      // specific position mid-deck.
+      const targetCount =
+        game.players[data.targetPlayerId]?.zones[data.targetZone]?.cardCount ?? 0;
+      const x = data.x;
+      if (x <= 0) {
+        return `${actor} puts ${card}${from} on top of their library.`;
+      }
+      if (targetCount > 0 && x >= targetCount - 1) {
+        return `${actor} puts ${card}${from} onto the bottom of their library.`;
+      }
+      // "%1 puts %2%3 into their library %4 cards from the top."
+      return `${actor} puts ${card}${from} into their library ${x + 1} cards from the top.`;
+    }
+    default:
+      return `${actor} moves ${card}${from} to custom zone '${data.targetZone}'.`;
   }
-
-  if (data.targetZone === ZoneName.HAND && data.startZone !== ZoneName.HAND) {
-    return `${actor} puts ${card} into ${sameOwner ? 'their hand' : `${nameOf(game, data.targetPlayerId)}'s hand`}.`;
-  }
-
-  const target = sameOwner
-    ? zoneLabel(data.targetZone)
-    : `${nameOf(game, data.targetPlayerId)}'s ${zoneLabel(data.targetZone).replace('their ', '')}`;
-  return `${actor} moves ${card} to ${target}.`;
 }
 
 export function formatCardFlipped(
@@ -233,6 +315,26 @@ export function formatCardCounterChanged(
   return `${actor} sets counters on ${card} to ${data.counterValue}.`;
 }
 
+/** Mirrors Cockatrice desktop's `TranslateCounterName::translated` map
+ *  in `translate_counter_name.cpp` — converts the wire counter name
+ *  (single lowercase letter for mana, or an explicit tag) to the
+ *  chat-log display name. Unknown names fall through unchanged. */
+const COUNTER_DISPLAY_NAME: Record<string, string> = {
+  life: 'Life',
+  w: 'White',
+  u: 'Blue',
+  b: 'Black',
+  r: 'Red',
+  g: 'Green',
+  x: 'Colorless',
+  storm: 'Other',
+};
+
+function displayCounterName(name: string | undefined): string {
+  if (!name) return 'counter';
+  return COUNTER_DISPLAY_NAME[name.toLowerCase()] ?? name;
+}
+
 export function formatCounterSet(
   game: Enriched.GameEntry,
   playerId: number,
@@ -240,16 +342,15 @@ export function formatCounterSet(
   counterName: string | undefined,
   previousValue: number,
 ): string {
+  // Cockatrice desktop's `MessageLogWidget::logSetCounter`:
+  // "%1 sets counter %2 to %3 (%4%5)." where %4 is "+" when delta > 0
+  // (empty otherwise so negative deltas print as "(-1)") and %5 is the
+  // signed delta. Used for both life changes and mana counter changes.
   const actor = nameOf(game, playerId);
-  const name = counterName ?? `counter ${data.counterId}`;
+  const name = displayCounterName(counterName);
   const delta = data.value - previousValue;
-  if (delta > 0) {
-    return `${actor} increases their ${name} to ${data.value}.`;
-  }
-  if (delta < 0) {
-    return `${actor} decreases their ${name} to ${data.value}.`;
-  }
-  return `${actor} sets their ${name} to ${data.value}.`;
+  const sign = delta > 0 ? '+' : '';
+  return `${actor} sets counter ${name} to ${data.value} (${sign}${delta}).`;
 }
 
 export function formatCardsDrawn(
@@ -265,18 +366,94 @@ export function formatZoneShuffled(game: Enriched.GameEntry, playerId: number): 
   return `${nameOf(game, playerId)} shuffles their library.`;
 }
 
+/**
+ * Mirrors Cockatrice's MessageLogWidget::logRevealCards
+ * (message_log_widget.cpp:487-572). Covers two branches today:
+ *
+ *   • Zone-wide reveal / lend (`card_id[]` empty):
+ *       - Reveal library to specific player → "Alice reveals library to Bob."
+ *       - Reveal library to all players     → "Alice reveals library."
+ *       - Lend library (always targeted)    → "Alice lends library to Bob."
+ *
+ *   • Top-N reveal (`card_id[0] === 0` sentinel + populated
+ *     `number_of_cards`, sent by Cockatrice's actRevealTopCards at
+ *     player_actions.cpp:1735-1748):
+ *       - Reveal top N to specific player   → "Alice reveals 3 cards from
+ *                                              their library to Bob."
+ *       - Reveal top N to all players       → "Alice reveals 3 cards
+ *                                              from their library."
+ *
+ * Returns null for the remaining `card_id[]`-populated paths (random
+ * reveal cardId=[-2], specific-card reveals from hand, peek-face-down).
+ */
+export function formatCardsRevealed(
+  game: Enriched.GameEntry,
+  actorPlayerId: number,
+  data: Event_RevealCards,
+): string | null {
+  const actor = nameOf(game, actorPlayerId);
+  const zone = zoneLabel(data.zoneName);
+  const isLend = data.grantWriteAccess;
+  // otherPlayerId defaults to -1 in proto2; the desktop client's
+  // reveal-to-all path passes null for otherPlayer, so treat < 0 as
+  // "no specific target".
+  const hasTarget = data.otherPlayerId >= 0;
+  const targetName = hasTarget ? nameOf(game, data.otherPlayerId) : null;
+
+  // Full-zone reveal / lend (empty card_id[]).
+  if (data.cardId.length === 0) {
+    if (isLend) {
+      // Lend is always targeted — Cockatrice's menu doesn't offer
+      // "Lend to all" (library_menu.cpp:280-293). If we ever see a
+      // targetless lend event it's a client bug upstream, fall back
+      // to the reveal-to-all phrasing rather than crash.
+      if (!targetName) return `${actor} reveals ${zone}.`;
+      return `${actor} lends ${zone} to ${targetName}.`;
+    }
+    if (targetName) return `${actor} reveals ${zone} to ${targetName}.`;
+    return `${actor} reveals ${zone}.`;
+  }
+
+  // Top-N reveal: card_id[0] === 0 backward-compat sentinel from
+  // desktop's actRevealTopCards. Prefer number_of_cards (populated on
+  // both eventPrivate and eventOthers) so spectators see the same
+  // count as the target / originator.
+  const isTopNReveal = data.cardId.length === 1 && data.cardId[0] === 0;
+  if (isTopNReveal) {
+    const count = data.numberOfCards || data.cards.length;
+    if (count <= 0) return null;
+    const cardsPhrase = count === 1 ? '1 card' : `${count} cards`;
+    if (targetName) {
+      return `${actor} reveals ${cardsPhrase} from ${zone} to ${targetName}.`;
+    }
+    return `${actor} reveals ${cardsPhrase} from ${zone}.`;
+  }
+
+  return null;
+}
+
 export function formatZoneDumped(
   game: Enriched.GameEntry,
   playerId: number,
   data: Event_DumpZone,
 ): string {
   const actor = nameOf(game, playerId);
-  const count = data.numberCards;
+  // Cockatrice's Command_DumpZone uses number_cards = -1 for "all
+  // cards" (the "View library" flow); render that as "the whole
+  // library" rather than the raw -1 which reads as a bug.
+  const rawCount = data.numberCards;
+  const countPhrase = rawCount < 0
+    ? `the whole ${zoneLabel(data.zoneName).replace('their ', '')}`
+    : `${rawCount} card(s) from the top of ${zoneLabel(data.zoneName).replace('their ', '')}`;
   if (data.zoneOwnerId !== playerId) {
     const owner = nameOf(game, data.zoneOwnerId);
-    return `${actor} looks at ${count} card(s) from the top of ${owner}'s ${zoneLabel(data.zoneName).replace('their ', '')}.`;
+    return rawCount < 0
+      ? `${actor} looks at the whole ${zoneLabel(data.zoneName).replace('their ', '')} of ${owner}.`
+      : `${actor} looks at ${rawCount} card(s) from the top of ${owner}'s ${zoneLabel(data.zoneName).replace('their ', '')}.`;
   }
-  return `${actor} looks at ${count} card(s) from the top of ${zoneLabel(data.zoneName)}.`;
+  return rawCount < 0
+    ? `${actor} looks at their whole ${zoneLabel(data.zoneName).replace('their ', '')}.`
+    : `${actor} looks at ${countPhrase}.`;
 }
 
 export function formatZonePropertiesChanged(

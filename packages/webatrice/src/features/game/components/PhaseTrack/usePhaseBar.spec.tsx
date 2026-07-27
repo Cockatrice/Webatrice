@@ -10,7 +10,7 @@ import {
   makeZoneEntry,
 } from '@cockatrice/datatrice/testing';
 
-import { makeReduxWebClientHookWrapper } from '../../../../../__test-utils__/makeHookWrapper';
+import { makeReduxWebClientHookWrapper } from '../../../../__test-utils__/makeHookWrapper';
 import { usePhaseBar } from './usePhaseBar';
 
 interface SetupOpts {

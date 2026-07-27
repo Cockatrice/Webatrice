@@ -59,6 +59,7 @@ const NOOP_DIALOG_ACTIONS: GameDialogActions = {
   onRequestConcede: () => undefined,
   onRequestUnconcede: () => undefined,
   onRequestGameInfo: () => undefined,
+  onRequestViewSideboard: () => undefined,
 };
 
 // Closed/no-op default for the whole dialogs slice: the closed-state fields plus
@@ -77,6 +78,7 @@ const NOOP_GAME_DIALOGS: GameDialogs = {
   lastDieCount: 0,
   createTokenOpen: false,
   sideboardOpen: false,
+  viewSideboardOpen: false,
   gameInfoOpen: false,
   concedeConfirm: null,
   revealState: null,

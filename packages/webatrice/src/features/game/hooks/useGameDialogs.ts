@@ -83,6 +83,13 @@ export interface GameDialogsState {
   lastDieCount: number;
   createTokenOpen: boolean;
   sideboardOpen: boolean;
+  /** In-game live sideboard viewer — separate from `sideboardOpen`
+   *  (which drives the older MUI sideboard-PLAN editor). Owner-only
+   *  view, mounts the fancy LibrarySearchDialog against the player's
+   *  own SIDEBOARD zone. Toggled from both the right-sidebar's
+   *  Sideboard button and the battlefield menu's Sideboard → View
+   *  sideboard item. */
+  viewSideboardOpen: boolean;
   gameInfoOpen: boolean;
   concedeConfirm: ConcedeConfirm;
   revealState: RevealState | null;
@@ -137,6 +144,9 @@ export interface GameDialogsActions {
   closeSideboard: () => void;
   handleSideboardSubmit: (moveList: SideboardPlanMove[]) => void;
   handleToggleSideboardLock: (locked: boolean) => void;
+
+  openViewSideboard: () => void;
+  closeViewSideboard: () => void;
 
   openGameInfo: () => void;
   closeGameInfo: () => void;
@@ -224,6 +234,8 @@ export const NOOP_GAME_DIALOGS_ACTIONS: GameDialogsActions = {
   closeSideboard: noopDialogAction,
   handleSideboardSubmit: noopDialogAction,
   handleToggleSideboardLock: noopDialogAction,
+  openViewSideboard: noopDialogAction,
+  closeViewSideboard: noopDialogAction,
   openGameInfo: noopDialogAction,
   closeGameInfo: noopDialogAction,
   openConcede: noopDialogAction,
@@ -325,6 +337,7 @@ export function useGameDialogs({
   const [lastDieCount, setLastDieCount] = useState(DEFAULT_DIE_COUNT);
   const [createTokenOpen, setCreateTokenOpen] = useState(false);
   const [sideboardOpen, setSideboardOpen] = useState(false);
+  const [viewSideboardOpen, setViewSideboardOpen] = useState(false);
   const [revealState, setRevealState] = useState<RevealState | null>(null);
   const [playerMenu, setPlayerMenu] = useState<AnchorPosition | null>(null);
   const [handMenu, setHandMenu] = useState<AnchorPosition | null>(null);
@@ -1253,6 +1266,8 @@ export function useGameDialogs({
   const closeCreateToken = useCallback(() => setCreateTokenOpen(false), []);
   const openSideboard = useCallback(() => setSideboardOpen(true), []);
   const closeSideboard = useCallback(() => setSideboardOpen(false), []);
+  const openViewSideboard = useCallback(() => setViewSideboardOpen(true), []);
+  const closeViewSideboard = useCallback(() => setViewSideboardOpen(false), []);
   const openGameInfo = useCallback(() => setGameInfoOpen(true), []);
   const closeGameInfo = useCallback(() => setGameInfoOpen(false), []);
   const openConcede = useCallback(() => setConcedeConfirm('concede'), []);
@@ -1288,6 +1303,8 @@ export function useGameDialogs({
       closeSideboard,
       handleSideboardSubmit,
       handleToggleSideboardLock,
+      openViewSideboard,
+      closeViewSideboard,
       openGameInfo,
       closeGameInfo,
       openConcede,
@@ -1348,6 +1365,8 @@ export function useGameDialogs({
       closeSideboard,
       handleSideboardSubmit,
       handleToggleSideboardLock,
+      openViewSideboard,
+      closeViewSideboard,
       openGameInfo,
       closeGameInfo,
       openConcede,
@@ -1401,6 +1420,7 @@ export function useGameDialogs({
       lastDieCount,
       createTokenOpen,
       sideboardOpen,
+      viewSideboardOpen,
       gameInfoOpen,
       concedeConfirm,
       revealState,
@@ -1418,6 +1438,7 @@ export function useGameDialogs({
       lastDieCount,
       createTokenOpen,
       sideboardOpen,
+      viewSideboardOpen,
       gameInfoOpen,
       concedeConfirm,
       revealState,

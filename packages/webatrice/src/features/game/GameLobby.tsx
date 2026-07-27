@@ -23,8 +23,10 @@ import type { ServerInfo_DeckStorage_Folder, ServerInfo_DeckStorage_TreeItem } f
 import { parseCod } from '../decks/cod';
 import { MTG_FORMAT_LABELS, MTG_FORMATS, normalizeFormat } from '../decks/types';
 import { useCurrentGame } from './hooks/useCurrentGame';
-import GameLog from './components/right-sidebar/GameLog/GameLog';
+import ChatLog from './components/ChatLog/ChatLog';
 import { GameIdProvider } from './components/ui/GameIdContext';
+import { parsedDeckToMockCards, setPickedMockDeck } from './mockDeckStore';
+import type { DeckCard as MockDeckCard } from './components/PlayerBox/mockTypes';
 
 /**
  * Pre-game lobby. Renders after a player joins a game that hasn't
@@ -110,6 +112,12 @@ interface DeckSummary {
 // lobby remounts so a repeated visit doesn't re-hit the server.
 const deckSummaryCache = new Map<number, DeckSummary>();
 
+// Parallel cache — parsed deck cards in the mock DeckCard shape the
+// PlayerBox reads. Populated in the same DECK_DOWNLOADED handler that
+// fills `deckSummaryCache`, so any deck we've seen the XML for is
+// ready to hand to the mock-deck store on pick.
+const deckCardsCache = new Map<number, MockDeckCard[]>();
+
 export default function GameLobby({ gameId }: { gameId: number }) {
   const webClient = useWebClient();
   const leaveGame = useLeaveGame();
@@ -178,6 +186,10 @@ export default function GameLobby({ gameId }: { gameId: number }) {
           bracketLevel: parsed.bracketAssessment?.level ?? parsed.meta.bracketLevel,
           name: parsed.name,
         };
+        // Parallel cache: ready-to-use mock DeckCard[] so a subsequent
+        // pick can immediately push the deck into the mock store the
+        // game screen reads from.
+        deckCardsCache.set(payload.deckId, parsedDeckToMockCards(parsed));
       } catch {
         // Malformed .cod → cache empty so we don't re-download.
         summary = { format: '', bracketLevel: undefined, name: '' };
@@ -267,6 +279,17 @@ export default function GameLobby({ gameId }: { gameId: number }) {
       }
       setMyPickedDeckId(null);
       webClient.request.game.deckSelect(gameId, { deck: xml });
+      // Upload path bypasses the deckDownload cache — parse locally
+      // and push straight into the mock-deck store so the game
+      // screen's PlayerBoxes can use this deck too.
+      try {
+        setPickedMockDeck(parsedDeckToMockCards(parseCod(xml)));
+      } catch {
+        // Malformed XML made it past the earlier isValidCod check;
+        // silently skip — the deckSelect above may still resolve if
+        // the server is more lenient, and the store just stays on
+        // whatever was picked previously.
+      }
       // No gameSay: Cockatrice already emits an event message
       // ("X has loaded a deck (…)") when the server processes deckSelect.
     };
@@ -294,6 +317,13 @@ export default function GameLobby({ gameId }: { gameId: number }) {
   const handleSelectDeck = (deckId: number) => {
     setMyPickedDeckId(deckId);
     webClient.request.game.deckSelect(gameId, { deckId });
+    // Push into the mock-deck store so the game screen's PlayerBoxes
+    // seed their libraries from this deck (dev tool — see
+    // `mockDeckStore.ts`). Cards should already be in the parallel
+    // cache from the earlier deckDownload round-trip, since the lobby
+    // downloads every deck up front to build the pick list.
+    const cards = deckCardsCache.get(deckId);
+    if (cards) setPickedMockDeck(cards);
     // No gameSay: Cockatrice emits its own event
     // ("X has loaded a deck (…)") on the deckHash property update.
   };
@@ -588,12 +618,13 @@ export default function GameLobby({ gameId }: { gameId: number }) {
             )}
           </div>
         </div>
-        {/* Persistent chat log — reuses the in-game GameLog component
-             so lobby chat, deck-select announcements, and ready-up
-             announcements land in the same message list players will
-             continue to see once the game starts. */}
-        <aside className="hidden md:flex w-80 shrink-0 border-l border-border-strong flex-col bg-bg-base">
-          <GameLog />
+        {/* Persistent chat log — the shared ChatLog component (same one
+             the in-game sidebar renders) so lobby chat, deck-select
+             announcements, and ready-up announcements land in the
+             same message list players will continue to see once the
+             game starts. */}
+        <aside className="hidden md:flex w-80 shrink-0 border-l border-border-strong flex-col bg-bg-base p-3">
+          <ChatLog />
         </aside>
       </div>
       </GameIdProvider>

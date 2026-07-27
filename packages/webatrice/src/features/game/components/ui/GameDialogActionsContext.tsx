@@ -9,6 +9,7 @@ export interface GameDialogActions {
   onRequestConcede: () => void;
   onRequestUnconcede: () => void;
   onRequestGameInfo: () => void;
+  onRequestViewSideboard: () => void;
 }
 
 export const [GameDialogActionsProvider, useGameDialogActions] =

@@ -13,7 +13,7 @@ import {
   makeUser,
 } from '@cockatrice/datatrice/testing';
 
-import { makeReduxWebClientHookWrapper } from '../../../../../__test-utils__/makeHookWrapper';
+import { makeReduxWebClientHookWrapper } from '../../../../__test-utils__/makeHookWrapper';
 import { formatElapsed, useGameLog } from './useGameLog';
 
 function stateWith({

@@ -13,11 +13,14 @@ import CardContextMenu from './components/context-menus/CardContextMenu/CardCont
 import HandContextMenu from './components/context-menus/HandContextMenu/HandContextMenu';
 import PlayerContextMenu from './components/context-menus/PlayerContextMenu/PlayerContextMenu';
 import ZoneContextMenu from './components/context-menus/ZoneContextMenu/ZoneContextMenu';
-import PhaseBar from './components/right-sidebar/PhaseBar/PhaseBar';
-import RightPanel from './components/right-sidebar/RightPanel/RightPanel';
+import PhaseTrack from './components/PhaseTrack/PhaseTrack';
+import BattlefieldSidebar from './components/BattlefieldSidebar/BattlefieldSidebar';
 import { CardDragOverlayHost } from './components/ui/CardDragOverlay/CardDragOverlay';
-import HandZone from './components/ui/HandZone/HandZone';
 import GameBoardCell from './components/ui/GameBoardCell/GameBoardCell';
+import { HoveredCardProvider } from './components/PlayerBox/hoveredCard';
+import { CardScaleProvider } from './components/PlayerBox/cardScale';
+import IncomingRevealDialog from './components/PlayerBox/IncomingRevealDialog';
+import { ForeignDragProvider } from './components/PlayerBox/foreignDragContext';
 import CreateTokenDialog from './dialogs/CreateTokenDialog/CreateTokenDialog';
 import DeckSelectDialog from './dialogs/DeckSelectDialog/DeckSelectDialog';
 import GameInfoDialog from './dialogs/GameInfoDialog/GameInfoDialog';
@@ -124,8 +127,15 @@ function GameBoard() {
       onRequestConcede: dialogs.openConcede,
       onRequestUnconcede: dialogs.openUnconcede,
       onRequestGameInfo: dialogs.openGameInfo,
+      onRequestViewSideboard: dialogs.openViewSideboard,
     }),
-    [dialogs.openRollDie, dialogs.openConcede, dialogs.openUnconcede, dialogs.openGameInfo],
+    [
+      dialogs.openRollDie,
+      dialogs.openConcede,
+      dialogs.openUnconcede,
+      dialogs.openGameInfo,
+      dialogs.openViewSideboard,
+    ],
   );
 
   return (
@@ -133,6 +143,9 @@ function GameBoard() {
       <AuthGuard />
       <CardRegistryContext.Provider value={cardRegistry}>
         <GameIdProvider value={gameId}>
+          <HoveredCardProvider>
+          <ForeignDragProvider>
+          <CardScaleProvider containerRef={boardRef} rows={layout.rows}>
           <DndContext
             sensors={sensors}
             collisionDetection={dnd.collisionDetection}
@@ -155,7 +168,16 @@ function GameBoard() {
                         ref={gameRef}
                         onMouseDown={handleGameMouseDown}
                       >
-                        <PhaseBar />
+                        <PhaseTrack />
+
+                        {/* Grid-column-1 placeholder. PhaseTrack is
+                             absolutely positioned so it doesn't consume
+                             a grid cell on its own — this empty div
+                             reserves the 8 px column so the play area
+                             lands in column 2 and its width stays
+                             constant whether the phase track is
+                             collapsed or expanded. */}
+                        <div aria-hidden />
 
                         <div
                           className="game__board"
@@ -180,6 +202,7 @@ function GameBoard() {
                                 <GameBoardCell
                                   key={cell.playerId}
                                   cell={cell}
+                                  totalPlayers={layout.cells.length}
                                   onPlayerContextMenu={dialogs.handlePlayerContextMenu}
                                   onPlayerClick={arrows.handlePlayerClick}
                                   onHandContextMenu={dialogs.handleHandContextMenu}
@@ -187,15 +210,13 @@ function GameBoard() {
                               ))}
                             </div>
                           )}
-                          {game && layout.bottomHand && (
-                            <HandZone
-                              playerId={layout.bottomHand.playerId}
-                              onHandContextMenu={dialogs.handleHandContextMenu}
-                            />
-                          )}
+                          {/* Bottom-bar HandZone removed: each PlayerBox now
+                              renders its own hand inline. Kept the space so
+                              downstream layout hooks that watched the empty
+                              bottom bar don't recompute their heights. */}
                         </div>
 
-                        <RightPanel />
+                        <BattlefieldSidebar />
 
                         <GameArrowOverlay containerRef={gameRef} dragPreview={arrows.dragPreview} />
 
@@ -243,6 +264,13 @@ function GameBoard() {
 
                         <RevealCardsDialog />
 
+                        {/* Receiver-side popup: opens whenever an
+                            Event_RevealCards arrives with a populated
+                            card list (someone revealed a zone to us,
+                            or "to all players" including us). Reads /
+                            dismisses via the incomingReveal slice. */}
+                        <IncomingRevealDialog />
+
                         <ConfirmDialog
                           isOpen={dialogs.concedeConfirm === 'concede'}
                           title="Concede this game?"
@@ -272,6 +300,9 @@ function GameBoard() {
 
             <CardDragOverlayHost />
           </DndContext>
+          </CardScaleProvider>
+          </ForeignDragProvider>
+          </HoveredCardProvider>
         </GameIdProvider>
       </CardRegistryContext.Provider>
     </Layout>

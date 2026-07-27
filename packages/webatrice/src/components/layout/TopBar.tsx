@@ -2,9 +2,11 @@ import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore
 import { useLocation, useNavigate, generatePath, matchPath } from 'react-router-dom';
 import {
   User, LogOut, Home as HomeIcon, Swords, Library, LibraryBig,
-  UserCircle2, Settings as SettingsIcon, FileText, X, Circle,
+  UserCircle2, Settings as SettingsIcon, FileText, X, Circle, Grid3x3,
   type LucideIcon,
 } from 'lucide-react';
+
+import { useSnapGridSetting } from '../../features/game/hooks/useSnapGridVisible';
 
 import { server, rooms, games } from '@cockatrice/datatrice';
 import type { ServerInfo_DeckStorage_TreeItem } from '@cockatrice/sockatrice/generated';
@@ -69,6 +71,7 @@ export default function TopBar() {
   const joinedRooms = useAppSelector(rooms.Selectors.getJoinedRooms);
   const activeGames = useAppSelector(games.Selectors.getActiveGames);
   const backendDecks = useAppSelector(server.Selectors.getBackendDecks);
+  const [snapGridVisible, setSnapGridVisible] = useSnapGridSetting();
 
   // Sticky tabs = the deck-related routes the user has visited and not
   // explicitly closed. Keeps My Decks pinned alongside the currently-
@@ -266,6 +269,22 @@ export default function TopBar() {
 
         {/* Right cluster */}
         <div className="flex items-center gap-2 shrink-0 pl-3 pr-4">
+          <button
+            onClick={() => setSnapGridVisible(!snapGridVisible)}
+            className={[
+              'flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors',
+              // Toggled-on state gets the accent color + a subtle bg so
+              // the state is obvious at a glance. Toggled-off looks like
+              // the neighboring Decks button.
+              snapGridVisible
+                ? 'bg-accent/20 text-accent hover:bg-accent/30'
+                : 'text-text-secondary hover:text-text-primary hover:bg-bg-elevated',
+            ].join(' ')}
+            title={snapGridVisible ? 'Hide snap grid' : 'Show snap grid'}
+            aria-pressed={snapGridVisible}
+          >
+            <Grid3x3 size={16} /> Snap grid
+          </button>
           <button
             onClick={() => navigate(generatePath(RouteEnum.DECKS))}
             className="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium text-text-secondary hover:text-text-primary hover:bg-bg-elevated transition-colors"

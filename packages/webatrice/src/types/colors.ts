@@ -6,11 +6,15 @@ export interface ColorRGBA {
   a: number;
 }
 
+// Cockatrice desktop uses raw Qt named colors for arrows — see
+// `CardItem::mouseMoveEvent` in card_item.cpp:338-345. Match those 1:1
+// (pure primaries) instead of a designer palette so the shafts read as
+// the exact same red/yellow/blue/green the desktop client draws.
 export const ArrowColor = {
-  RED: { r: 224, g: 75, b: 59, a: 255 } as ColorRGBA,
-  YELLOW: { r: 240, g: 200, b: 60, a: 255 } as ColorRGBA,
-  BLUE: { r: 137, g: 184, b: 224, a: 255 } as ColorRGBA,
-  GREEN: { r: 61, g: 162, b: 107, a: 255 } as ColorRGBA,
+  RED: { r: 255, g: 0, b: 0, a: 255 } as ColorRGBA,
+  YELLOW: { r: 255, g: 255, b: 0, a: 255 } as ColorRGBA,
+  BLUE: { r: 0, g: 0, b: 255, a: 255 } as ColorRGBA,
+  GREEN: { r: 0, g: 255, b: 0, a: 255 } as ColorRGBA,
 } as const;
 
 export const HIGHLIGHT_YELLOW_CSS = '#f7b01c';

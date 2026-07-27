@@ -26,6 +26,7 @@ export function dumpZone(gameId: number, params: DumpZoneParams): void {
           params.playerId ?? -1,
           params.zoneName ?? '',
           resp.zoneInfo?.cardList ?? [],
+          params.isReversed ?? false,
         ),
     },
   );

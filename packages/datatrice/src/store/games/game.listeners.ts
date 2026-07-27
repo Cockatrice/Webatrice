@@ -23,6 +23,7 @@ import {
   formatActivePlayerSet,
   formatArrowCreated,
   formatCardAttached,
+  formatCardsRevealed,
   formatCardAttrChanged,
   formatCardAttrChangedBulk,
   formatCardCounterChanged,
@@ -75,16 +76,42 @@ export function registerGameListeners(mw: ListenerMiddlewareInstance<unknown>): 
         // Fully hidden card (e.g. an opponent's hand card returning to library during a
         // mulligan): identity is unknown, but a cross-zone move still shifts zone totals.
         // Adjust cardCount on both ends so hidden hand/library counts stay in sync. A
-        // same-zone "move" of a hidden card is unrepresentable, so it's a no-op.
+        // same-zone "move" of a hidden card is unrepresentable, so it's a no-op EXCEPT
+        // when the client has a reveal snapshot on the source zone: Servatrice hides
+        // card_id for a bottom-view drag because `sourceBeingLookedAt` only checks
+        // positions 0..cardsBeingLookedAt-1 (server_cardzone.cpp:187-190), so a card
+        // at deck position N (where N >= cardsBeingLookedAt) comes back with card_id=-1
+        // even though we could see it in the reveal. `position` and `x` are still
+        // valid, and the reveal snapshot already knows the card's identity — fall
+        // through so zoneViewCardReordered can splice within the snapshot.
         // See datatrice-game.instructions.md#servatrice-game-event-quirks.
-        if (movedAcrossZones) {
-          api.dispatch(Actions.zoneCardCountAdjusted({
-            gameId, playerId: startPlayerId, zoneName: startZone, delta: -1,
-          }));
-          api.dispatch(Actions.zoneCardCountAdjusted({
-            gameId, playerId: targetPlayerId, zoneName: effectiveTargetZone, delta: 1,
-          }));
+        const canReorderInReveal =
+          !movedAcrossZones &&
+          !!sourceZone.revealedCards &&
+          position >= 0;
+        if (!canReorderInReveal) {
+          if (movedAcrossZones) {
+            api.dispatch(Actions.zoneCardCountAdjusted({
+              gameId, playerId: startPlayerId, zoneName: startZone, delta: -1,
+            }));
+            api.dispatch(Actions.zoneCardCountAdjusted({
+              gameId, playerId: targetPlayerId, zoneName: effectiveTargetZone, delta: 1,
+            }));
+          }
+          return;
         }
+        // Hidden-card reveal-reorder path: dispatch the snapshot splice directly.
+        // We don't have the card's Server_Card object, so we can't emit a chat-log
+        // line here — the log formatter would render "moves a card" anyway
+        // (name missing on the event). Skip the log and let the visual update
+        // stand on its own.
+        api.dispatch(Actions.zoneViewCardReordered({
+          gameId,
+          playerId: startPlayerId,
+          zoneName: startZone,
+          fromPosition: position,
+          toPosition: x,
+        }));
         return;
       }
 
@@ -113,6 +140,11 @@ export function registerGameListeners(mw: ListenerMiddlewareInstance<unknown>): 
       // Capture before the move dispatch: if an open zone-view (deck) snapshot
       // holds this zone, the moved card must be pruned from it (see below).
       const hadRevealedSnapshot = !!sourceZone.revealedCards;
+      // Capture the target-side reveal state too — a cross-zone move INTO a
+      // zone that's being viewed needs to splice the arriving card into
+      // the snapshot at position `x`, so the dialog shows the new card
+      // at the same slot the user dropped it into.
+      const hadTargetRevealedSnapshot = !!targetZoneEntry.revealedCards;
 
       const isPositionalReorderZone =
         effectiveTargetZone === ZoneName.HAND ||
@@ -160,6 +192,38 @@ export function registerGameListeners(mw: ListenerMiddlewareInstance<unknown>): 
           playerId: startPlayerId,
           zoneName: startZone,
           position,
+        }));
+      }
+
+      // Clear the pile's persistent top-card face when position 0 might have
+      // changed on the source zone. Only clears when the moved card was
+      // AT the top (position === 0) — moves from elsewhere in the deck
+      // don't affect what shows on the pile. If auto-reveal is still on,
+      // Servatrice's revealTopCardIfNeeded re-emits Event_RevealCards
+      // right after this event (server_abstract_player.cpp:329-333) and
+      // the cardsRevealed reducer re-populates topRevealedCard with the
+      // new top; if it's off, the pile stays cleared.
+      if (position === 0 && startZone === ZoneName.DECK) {
+        api.dispatch(Actions.topRevealedCardCleared({
+          gameId,
+          playerId: startPlayerId,
+          zoneName: startZone,
+        }));
+      }
+
+      // Mirror: a cross-zone move INTO a zone that's being viewed
+      // splices the arriving card into the snapshot at position `x` so
+      // the dialog immediately shows it at the slot the user dropped
+      // it into. The card payload is `movedCard`, which already has the
+      // effective new id + face-down flag applied. Same-zone reorders
+      // are handled by the zoneViewCardReordered branch above.
+      if (hadTargetRevealedSnapshot && movedAcrossZones) {
+        api.dispatch(Actions.zoneViewCardInserted({
+          gameId,
+          playerId: targetPlayerId,
+          zoneName: effectiveTargetZone,
+          position: x,
+          card: movedCard,
         }));
       }
 
@@ -408,6 +472,75 @@ export function registerGameListeners(mw: ListenerMiddlewareInstance<unknown>): 
   });
 
   mw.startListening({
+    actionCreator: Actions.cardsRevealed,
+    effect: (action, api) => {
+      const { gameId, playerId, data } = action.payload;
+      const state = api.getState() as { games: GamesState };
+      const game = state.games.games[gameId];
+      if (!game) return;
+
+      // Detect Servatrice's auto-reveal from revealTopCardIfNeeded up
+      // front — both the chat log and the receiver dialog want to
+      // suppress those. Both auto-reveals AND cmdRevealCards "top
+      // N=1" emit `cards.length === 1` with `card_id === [0]`, so
+      // the only reliable signal is the zone flag already being on
+      // in state. Order is safe: Cockatrice enqueues
+      // Event_ChangeZoneProperties BEFORE the auto-reveal event
+      // (server_player.cpp:576-583), so the flag is up-to-date by
+      // the time this listener runs.
+      const zone = game.players[playerId]?.zones[data.zoneName];
+      const isAutoTopReveal =
+        data.cards.length === 1 &&
+        (zone?.alwaysRevealTopCard || zone?.alwaysLookAtTopCard);
+
+      // Chat log fires for EVERY recipient (source, target, spectators),
+      // EXCEPT for auto-reveals — those are already announced via the
+      // zonePropertiesChanged log ("SonicBliss is now revealing the top
+      // card of their library") and re-logging every top-card change
+      // would spam the chat on every draw.
+      if (!isAutoTopReveal) {
+        const message = formatCardsRevealed(game, playerId, data);
+        if (message) {
+          api.dispatch(Actions.gameMessageAppended({ gameId, playerId, message }));
+        }
+      }
+
+      // Popup the receiver dialog only when we (the recipient) actually
+      // got the face-up card list. Spectator-side Event_RevealCards has
+      // an empty `cards[]` (server sends the summary via eventOthers)
+      // — nothing to display for those.
+      if (!data.cards || data.cards.length === 0) return;
+      // Auto-reveals render on the pile via zone.topRevealedCard (set
+      // by the cardsRevealed reducer's isAutoTopReveal branch), not
+      // via the popup — matches Cockatrice's desktop UX.
+      if (isAutoTopReveal) return;
+      // Also seed the source's zone.revealedCards on OUR client, so the
+      // existing zoneViewCardRemoved / zoneViewCardReordered auto-prune
+      // paths keep the reveal snapshot in sync when we (or anyone) move
+      // cards out of the source zone. Without this, a lend recipient
+      // could "Move to my hand" a card from the lender's deck and the
+      // dialog would still show it. isReversed=false because
+      // Event_RevealCards doesn't carry the reveal direction — reveals
+      // are always top-first (server iterates cards[] in list order at
+      // server_abstract_player.cpp:1532).
+      api.dispatch(Actions.zoneViewRevealed({
+        gameId,
+        playerId,
+        zoneName: data.zoneName,
+        cards: data.cards,
+        isReversed: false,
+      }));
+      api.dispatch(Actions.incomingRevealShown({
+        gameId,
+        sourceOwnerId: playerId,
+        zoneName: data.zoneName,
+        cards: data.cards,
+        grantWriteAccess: data.grantWriteAccess,
+      }));
+    },
+  });
+
+  mw.startListening({
     actionCreator: Actions.cardAttached,
     effect: (action, api) => {
       const { gameId, playerId, data } = action.payload;
@@ -454,6 +587,17 @@ export function registerGameListeners(mw: ListenerMiddlewareInstance<unknown>): 
         api.dispatch(Actions.zoneCardCountAdjusted({
           gameId, playerId, zoneName: ZoneName.DECK, delta: -drawCount,
         }));
+        // Draw removes the top card — the previously-revealed face on
+        // the pile is now stale. If auto-reveal is still on, Servatrice
+        // re-emits Event_RevealCards immediately after this event (via
+        // revealTopCardIfNeeded, server_abstract_player.cpp:329-333)
+        // and the cardsRevealed reducer will re-populate topRevealedCard
+        // with the new top. If auto-reveal is off, nothing follows and
+        // the pile stays cleared — matches Cockatrice's "keep face on
+        // toggle-off until top changes" behavior.
+        api.dispatch(Actions.topRevealedCardCleared({
+          gameId, playerId, zoneName: ZoneName.DECK,
+        }));
       }
 
       for (const card of cards) {
@@ -470,6 +614,10 @@ export function registerGameListeners(mw: ListenerMiddlewareInstance<unknown>): 
           delta: drawCount - cards.length,
         }));
       }
+
+      // Draw beacon: scoped to real Event_DrawCards so a draw animation only fires
+      // for Command_DrawCards / Command_Mulligan, not zone→hand drags or reveal-to-hand.
+      api.dispatch(Actions.drawBeaconBumped({ gameId, playerId, count: drawCount }));
 
       api.dispatch(Actions.gameMessageAppended({
         gameId, playerId, message: formatCardsDrawn(game, playerId, drawCount),

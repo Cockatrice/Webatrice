@@ -56,10 +56,57 @@ export async function lookupCard(name: string): Promise<LookupResult> {
 }
 
 /**
- * Batch version: one Dexie `bulkGet` for cache hits, then per-miss
- * Scryfall fetches in parallel. Returns a Map keyed by input name for
- * O(1) lookups by the caller.
+ * Batch version: one Dexie `bulkGet` for cache hits, then Scryfall
+ * `/cards/collection` (POST, 75 identifiers per request) for the
+ * misses. Returns a Map keyed by input name for O(1) lookups by the
+ * caller.
+ *
+ * The batched Scryfall path is what makes hydrating an imported .cod
+ * on a fresh Dexie DB take 1–2 network round-trips instead of one per
+ * card. `/cards/named?exact=` (used by the single-card `lookupCard`)
+ * is intentionally reserved for the one-off "add card by name" flow
+ * where the caller has exactly one name.
  */
+/**
+ * Session-scoped memo for `lookupCards`. Cleared on page reload but
+ * survives every dialog open in between. Keyed by exact input name.
+ * Only successful lookups (source !== 'unknown') are stored so a
+ * transient network failure doesn't stick.
+ *
+ * Motivation: `lookupCards` deliberately does NOT persist Scryfall
+ * results into Dexie (Dexie's schema is Cockatrice-XML-derived and
+ * squeezing a Scryfall record in is lossy — see the file header). But
+ * within a single session, the same card names come up over and over
+ * (repeated reveals, repeated View library, opponent-reveal after
+ * you've already loaded your own deck). Re-hitting Scryfall for
+ * cached names is pure waste.
+ */
+const sessionCache = new Map<string, LookupResult>();
+
+export async function lookupCardsCached(names: string[]): Promise<Map<string, LookupResult>> {
+  const out = new Map<string, LookupResult>();
+  const missing: string[] = [];
+  for (const name of names) {
+    const cached = sessionCache.get(name);
+    if (cached) {
+      out.set(name, cached);
+    } else {
+      missing.push(name);
+    }
+  }
+  if (missing.length === 0) {
+    return out;
+  }
+  const fresh = await lookupCards(missing);
+  for (const [name, result] of fresh) {
+    out.set(name, result);
+    if (result.source !== 'unknown') {
+      sessionCache.set(name, result);
+    }
+  }
+  return out;
+}
+
 export async function lookupCards(names: string[]): Promise<Map<string, LookupResult>> {
   const out = new Map<string, LookupResult>();
   const uniqueNames = Array.from(new Set(names));
@@ -78,16 +125,26 @@ export async function lookupCards(names: string[]): Promise<Map<string, LookupRe
     }
   }
 
-  // Parallel Scryfall fetches for cache misses. If a single one fails
-  // (network flake, 404, etc.) the others still resolve.
-  const scryfallResults = await Promise.all(
-    missing.map(async (name) => {
-      const hit = await fetchScryfall(name);
-      return [name, hit] as const;
-    }),
-  );
-  for (const [name, hit] of scryfallResults) {
-    out.set(name, hit ? scryfallToLookup(hit) : { found: false, source: 'unknown', name, printings: [] });
+  if (missing.length > 0) {
+    // Track the request name → the cleaned name we actually sent to
+    // Scryfall (the "(Token)" suffix stripper). Scryfall's response
+    // echoes the resolved name, not our input, so we key the output
+    // by the original request name via this indirection.
+    const cleanedByRequest = new Map<string, string>();
+    for (const name of missing) {
+      cleanedByRequest.set(name, cleanScryfallName(name));
+    }
+    const collected = await batchFetchScryfall(
+      Array.from(new Set(cleanedByRequest.values())),
+    );
+    for (const name of missing) {
+      const cleaned = cleanedByRequest.get(name)!;
+      const hit = collected.get(cleaned.toLowerCase());
+      out.set(
+        name,
+        hit ? scryfallToLookup(hit) : { found: false, source: 'unknown', name, printings: [] },
+      );
+    }
   }
 
   return out;
@@ -195,8 +252,15 @@ interface ScryfallCard {
   card_faces?: Array<{ image_uris?: { small?: string; normal?: string } }>;
 }
 
+/** Strip a trailing "(Token)" / "Token" suffix — those don't resolve
+ *  on Scryfall's exact-match endpoints. Shared by the single-card and
+ *  batch paths so the same input normalizes consistently. */
+function cleanScryfallName(name: string): string {
+  return name.replace(/\s*\(?\bToken\b\)?\s*$/i, '');
+}
+
 async function fetchScryfall(name: string): Promise<ScryfallCard | null> {
-  const cleaned = name.replace(/\s*\(?\bToken\b\)?\s*$/i, '');
+  const cleaned = cleanScryfallName(name);
   const url = `https://api.scryfall.com/cards/named?exact=${encodeURIComponent(cleaned)}`;
   try {
     const res = await fetch(url);
@@ -205,6 +269,61 @@ async function fetchScryfall(name: string): Promise<ScryfallCard | null> {
   } catch {
     return null;
   }
+}
+
+/**
+ * Batch resolve `names` through Scryfall's `/cards/collection` POST
+ * endpoint (75 identifiers per request). Returns a Map keyed by
+ * lowercased request name; missing entries mean Scryfall couldn't
+ * match that name. On a chunk failure (network flake, non-2xx), the
+ * chunk's cards silently drop out of the result — the caller renders
+ * them as `lookupSource: 'unknown'` rows.
+ */
+async function batchFetchScryfall(names: string[]): Promise<Map<string, ScryfallCard>> {
+  const out = new Map<string, ScryfallCard>();
+  if (names.length === 0) return out;
+
+  const CHUNK = 75;
+  const requested = new Set(names.map((n) => n.toLowerCase()));
+  const chunks: string[][] = [];
+  for (let i = 0; i < names.length; i += CHUNK) {
+    chunks.push(names.slice(i, i + CHUNK));
+  }
+
+  await Promise.all(
+    chunks.map(async (chunk) => {
+      try {
+        const res = await fetch('https://api.scryfall.com/cards/collection', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            identifiers: chunk.map((name) => ({ name })),
+          }),
+        });
+        if (!res.ok) return;
+        const body = (await res.json()) as {
+          data?: ScryfallCard[];
+          not_found?: Array<{ name?: string }>;
+        };
+        for (const card of body.data ?? []) {
+          const key = card.name.toLowerCase();
+          if (requested.has(key)) {
+            out.set(key, card);
+          }
+          // Split cards resolve as "A // B"; also key by the first
+          // face so callers who asked for that name alone still hit.
+          const firstFace = key.split(' // ')[0];
+          if (firstFace !== key && requested.has(firstFace)) {
+            out.set(firstFace, card);
+          }
+        }
+      } catch {
+        // Chunk failed — leave those cards missing.
+      }
+    }),
+  );
+
+  return out;
 }
 
 /**

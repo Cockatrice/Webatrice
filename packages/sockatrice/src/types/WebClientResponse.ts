@@ -149,7 +149,7 @@ export interface IGameResponse {
   counterDeleted(gameId: number, playerId: number, data: Event_DelCounter): void;
   cardsDrawn(gameId: number, playerId: number, data: Event_DrawCards): void;
   cardsRevealed(gameId: number, playerId: number, data: Event_RevealCards): void;
-  zoneViewRevealed(gameId: number, playerId: number, zoneName: string, cards: ServerInfo_Card[]): void;
+  zoneViewRevealed(gameId: number, playerId: number, zoneName: string, cards: ServerInfo_Card[], isReversed: boolean): void;
   zoneShuffled(gameId: number, playerId: number, data: Event_Shuffle): void;
   dieRolled(gameId: number, playerId: number, data: Event_RollDie): void;
   activePlayerSet(gameId: number, activePlayerId: number): void;

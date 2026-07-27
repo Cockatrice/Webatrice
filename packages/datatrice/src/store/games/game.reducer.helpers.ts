@@ -88,6 +88,8 @@ export function normalizePlayers(playerList: ServerInfo_Player[]): { [playerId: 
       zones,
       counters,
       arrows,
+      drawSeq: 0,
+      lastDrawCount: 0,
     };
   }
   return players;
@@ -126,12 +128,17 @@ export function resetCardState(card: ServerInfo_Card): ServerInfo_Card {
   });
 }
 
-// Drops a zone's known-card tracking — the revealed identities (`byId`/`order`) and any open
-// "View library" snapshot — while preserving the authoritative `cardCount`. Used when a shuffle
-// randomizes a hidden zone: any previously-known card positions are now meaningless, so the
-// client must stop rendering a stale top card or leaking cards moved in before the shuffle.
+// Drops a zone's known-card tracking — the revealed identities (`byId`/`order`), any open
+// "View library" snapshot, and the auto-revealed top-card face — while preserving the
+// authoritative `cardCount`. Used when a shuffle randomizes a hidden zone: any previously-
+// known card positions are now meaningless, so the client must stop rendering a stale top
+// card or leaking cards moved in before the shuffle. If auto-reveal is still on, Servatrice
+// re-emits Event_RevealCards immediately after the shuffle (revealTopCardIfNeeded at
+// server_abstract_player.cpp:329-333) and the cardsRevealed reducer re-populates
+// topRevealedCard with the new top — so the pile briefly flashes blank and then repopulates.
 export function clearZoneKnownCards(zone: Enriched.ZoneEntry): void {
   zone.order = [];
   zone.byId = {};
   delete zone.revealedCards;
+  delete zone.topRevealedCard;
 }
