@@ -1,6 +1,8 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 
+import { CardRelatedLinks } from '@app/components';
+
 import { CARD_CORNER_RADIUS } from './cardSize';
 import { ManaSymbols, SymbolText } from './ManaSymbols';
 
@@ -51,6 +53,13 @@ interface ScryfallDetail {
     power?: string;
     toughness?: string;
     loyalty?: string;
+  }>;
+  /** Scryfall `all_parts` — tokens, meld pieces, combo pieces. Powers
+   *  the "Related" link section rendered by CardRelatedLinks. */
+  all_parts?: Array<{
+    id?: string;
+    name?: string;
+    component?: string;
   }>;
 }
 
@@ -218,6 +227,16 @@ export function BigCardPreviewProvider({ children }: { children: ReactNode }) {
 
                 {!detail && (
                   <div className="text-text-muted italic">Loading…</div>
+                )}
+
+                {detail && (
+                  <CardRelatedLinks
+                    faces={detail.card_faces}
+                    allParts={detail.all_parts}
+                    parentName={detail.name}
+                    currentFaceName={displayName}
+                    onNavigate={(next) => setCard(next)}
+                  />
                 )}
               </div>
             </div>

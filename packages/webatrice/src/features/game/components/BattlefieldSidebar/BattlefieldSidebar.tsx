@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { FileText, Flag, Image as ImageIcon, Layers, LogOut } from 'lucide-react';
 
 import { useLeaveGame } from '@app/hooks';
+import { CardRelatedLinks } from '@app/components';
 
 import PlayerList from '../right-sidebar/PlayerList/PlayerList';
 import ChatLog from '../ChatLog/ChatLog';
@@ -59,6 +60,13 @@ interface ScryfallDetail {
     power?: string;
     toughness?: string;
     loyalty?: string;
+  }>;
+  /** Scryfall `all_parts` — tokens, meld pieces, combo pieces. Powers
+   *  the "Related" link section rendered by CardRelatedLinks. */
+  all_parts?: Array<{
+    id?: string;
+    name?: string;
+    component?: string;
   }>;
 }
 
@@ -119,35 +127,53 @@ export default function BattlefieldSidebar() {
     }
   }, [previewMode]);
 
-  // Full-fat Scryfall record for the currently hovered card. Only
-  // fetched when text mode is active AND a card is hovered — image
+  // Optional override — set when the user clicks a related-card link
+  // in the preview. Takes precedence over `hoveredCard` for the
+  // preview panel. Auto-clears when `hoveredCard` changes so hovering
+  // a different card immediately shows that card (no stale override).
+  const [override, setOverride] = useState<{ name: string; scryfallId?: string } | null>(null);
+  const hoveredKeyForReset = hoveredCard
+    ? hoveredCard.scryfallId ?? `name:${hoveredCard.name}`
+    : null;
+  useEffect(() => {
+    // Reset the override whenever the hovered card identity changes —
+    // otherwise a stale click-follow-through would keep showing an
+    // old related card even after the user has hovered something new.
+    setOverride(null);
+  }, [hoveredKeyForReset]);
+
+  // The card actually driving the preview: override if the user is
+  // exploring related cards, otherwise the hovered card.
+  const activeCard = override ?? (hoveredCard
+    ? { name: hoveredCard.name, scryfallId: hoveredCard.scryfallId }
+    : null);
+
+  // Full-fat Scryfall record for the currently displayed card. Only
+  // fetched when text mode is active AND a card is active — image
   // mode uses Scryfall's redirect endpoints directly via <img src>,
-  // no JSON round-trip needed. Cleared between hovers so a stale
+  // no JSON round-trip needed. Cleared between changes so a stale
   // record can't flash for the previous card while the new fetch
   // is in flight.
   const [detail, setDetail] = useState<ScryfallDetail | null>(null);
-  const hoverKey = hoveredCard
-    ? hoveredCard.scryfallId ?? `name:${hoveredCard.name}`
+  const activeKey = activeCard
+    ? activeCard.scryfallId ?? `name:${activeCard.name}`
     : null;
 
   useEffect(() => {
-    if (previewMode !== 'text' || !hoveredCard) {
+    if (previewMode !== 'text' || !activeCard) {
       setDetail(null);
       return;
     }
     setDetail(null);
     const controller = new AbortController();
-    fetchScryfallDetail(hoveredCard.scryfallId, hoveredCard.name, controller.signal)
+    fetchScryfallDetail(activeCard.scryfallId, activeCard.name, controller.signal)
       .then((d) => setDetail(d))
       .catch((e) => {
         if ((e as { name?: string })?.name === 'AbortError') return;
       });
     return () => controller.abort();
-    // Refetch whenever the hover identity changes or the mode flips
-    // on. `hoverKey` collapses the (scryfallId, name) tuple to one
-    // stable string so we don't fire on unrelated re-renders.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [previewMode, hoverKey]);
+  }, [previewMode, activeKey]);
 
   const handleLeave = () => {
     if (gameId != null) leaveGame(gameId);
@@ -158,16 +184,18 @@ export default function BattlefieldSidebar() {
   // but the preview panel is big enough to warrant the higher fidelity.
   // `hoveredCard.imageUri` wins over both when set — that's how DFC
   // back-face art survives to the preview (Scryfall's default image
-  // endpoint always returns the front face).
-  const hoveredImageUrl = hoveredCard
-    ? hoveredCard.imageUri
+  // endpoint always returns the front face). The `override` (from a
+  // related-link click) doesn't carry an imageUri, so it just uses
+  // the id/name endpoints.
+  const hoveredImageUrl = activeCard
+    ? (!override && hoveredCard?.imageUri)
       ? hoveredCard.imageUri
-      : hoveredCard.scryfallId
-        ? `https://api.scryfall.com/cards/${hoveredCard.scryfallId}?format=image&version=png`
-        : `https://api.scryfall.com/cards/named?exact=${encodeURIComponent(hoveredCard.name)}&format=image&version=png`
+      : activeCard.scryfallId
+        ? `https://api.scryfall.com/cards/${activeCard.scryfallId}?format=image&version=png`
+        : `https://api.scryfall.com/cards/named?exact=${encodeURIComponent(activeCard.name)}&format=image&version=png`
     : null;
 
-  // Pick the matching face for multi-faced cards. When the hovered
+  // Pick the matching face for multi-faced cards. When the active
   // card's name matches a `card_faces[N].name`, use that face — this
   // is how a transformed DFC's back face gets its correct oracle text
   // in the preview instead of always showing face-0. Falls back to
@@ -175,13 +203,13 @@ export default function BattlefieldSidebar() {
   // may not carry these fields.
   const face =
     detail?.card_faces?.find(
-      (f) => f.name?.toLowerCase() === hoveredCard?.name.toLowerCase(),
+      (f) => f.name?.toLowerCase() === activeCard?.name.toLowerCase(),
     ) ?? detail?.card_faces?.[0];
   // Prefer face-level fields when a face was picked — face.name for a
   // transformed DFC is `"Insectile Aberration"`, whereas detail.name
   // is the combined `"Delver of Secrets // Insectile Aberration"`.
   // For classic single-face cards `face` is undefined and detail.* wins.
-  const displayName = face?.name ?? detail?.name ?? hoveredCard?.name ?? '';
+  const displayName = face?.name ?? detail?.name ?? activeCard?.name ?? '';
   const displayMana = face?.mana_cost ?? detail?.mana_cost ?? '';
   const displayType = face?.type_line ?? detail?.type_line ?? '';
   const displayOracle = face?.oracle_text ?? detail?.oracle_text ?? '';
@@ -249,7 +277,7 @@ export default function BattlefieldSidebar() {
           hoveredImageUrl ? (
             <img
               src={hoveredImageUrl}
-              alt={hoveredCard?.name ?? ''}
+              alt={activeCard?.name ?? ''}
               draggable={false}
               className="w-full shadow-md"
               style={{
@@ -266,7 +294,7 @@ export default function BattlefieldSidebar() {
               Hover a card to preview it here
             </div>
           )
-        ) : hoveredCard ? (
+        ) : activeCard ? (
           <div
             className="rounded-md border border-border-subtle bg-bg-base/30 p-3 flex flex-col gap-2 text-xs text-text-primary"
             style={{ borderRadius: CARD_CORNER_RADIUS }}
@@ -303,6 +331,15 @@ export default function BattlefieldSidebar() {
             )}
             {!detail && (
               <div className="text-text-muted italic">Loading…</div>
+            )}
+            {detail && (
+              <CardRelatedLinks
+                faces={detail.card_faces}
+                allParts={detail.all_parts}
+                parentName={detail.name}
+                currentFaceName={displayName}
+                onNavigate={(next) => setOverride(next)}
+              />
             )}
           </div>
         ) : (

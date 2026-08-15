@@ -7906,7 +7906,15 @@ function PlayerBox(
                       width: CARD_WIDTH,
                       height: CARD_HEIGHT,
                       borderRadius: CARD_CORNER_RADIUS,
-                      transform: flipHandCardBacks ? "rotate(180deg)" : undefined,
+                      // Only rotate 180° when this player's hand renders
+                      // at the TOP of their PlayerBox (handOnTop). A
+                      // bottom-row opponent in a 4-player layout has
+                      // flipHandCardBacks=true (the per-count flag) but
+                      // handOnTop=false — their hand is at the bottom of
+                      // the screen where a natural orientation reads
+                      // correctly. Without the handOnTop gate, those
+                      // cards render upside-down.
+                      transform: (handOnTop && flipHandCardBacks) ? 'rotate(180deg)' : undefined,
                     }}
                   />
                 ))}

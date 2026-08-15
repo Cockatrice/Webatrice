@@ -265,6 +265,7 @@ const DeckEditor = () => {
             editor.deleteCard(i);
             setDetailSnapshot(null);
           }}
+          onAdd={(name) => editor.addCard(name)}
         />
       )}
 

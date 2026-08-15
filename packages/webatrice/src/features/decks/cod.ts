@@ -78,6 +78,26 @@ export function parseCod(xml: string): ParsedDeck {
     }
   }
 
+  // Overlay commander names from the meta JSON blob onto matching
+  // cards. The per-card `commander="1"` attribute is the primary
+  // source and normally wins, but Servatrice's `Command_DeckUpload`
+  // re-parses the deck through Cockatrice's `DeckList` — which
+  // silently strips unknown attributes — so on server round-trip the
+  // attribute is lost. The meta blob lives in `<comments>` which
+  // Servatrice preserves verbatim, making it the durable source.
+  // Match by name (case-insensitive); first card with each name wins
+  // in case of duplicates.
+  if (meta.commanders && meta.commanders.length > 0) {
+    const commanderSet = new Set(
+      meta.commanders.map((n) => n.toLowerCase()),
+    );
+    for (const card of cards) {
+      if (commanderSet.has(card.name.toLowerCase())) {
+        card.isCommander = true;
+      }
+    }
+  }
+
   return {
     name,
     meta,
@@ -108,7 +128,24 @@ export function serializeCod(deck: {
   tagsXml?: string;
   bracketAssessment?: BracketAssessment;
 }): string {
-  const bumped = touchMeta(deck.meta);
+  // Snapshot commander card names into the meta blob. Servatrice's
+  // deck upload path re-parses through Cockatrice's DeckList and
+  // strips per-card attributes it doesn't recognize (`commander="1"`
+  // is one of them), so the attribute alone doesn't survive server
+  // round-trip. `<comments>` (which holds our meta JSON) is preserved
+  // verbatim as opaque text, so the list of commander names in
+  // `meta.commanders` becomes the authoritative source that parseCod
+  // overlays back onto the cards. We still write the attribute below
+  // — it's a redundant hint that works if the file is ever read
+  // outside Servatrice's round-trip (e.g. exported and re-imported
+  // locally).
+  const commanderNames = deck.cards
+    .filter((c) => c.isCommander)
+    .map((c) => c.name);
+  const metaWithCommanders: DeckMeta = commanderNames.length > 0
+    ? { ...deck.meta, commanders: commanderNames }
+    : { ...deck.meta, commanders: undefined };
+  const bumped = touchMeta(metaWithCommanders);
 
   const doc = document.implementation.createDocument(null, 'cockatrice_deck', null);
   const root = doc.documentElement;

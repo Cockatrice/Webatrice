@@ -7,6 +7,8 @@ export { default as Message } from './Message/Message';
 export { default as VirtualList } from './VirtualList/VirtualList';
 export { default as UserDisplay } from './UserDisplay/UserDisplay';
 export { UserBadges } from './UserBadges/UserBadges';
+export { CardRelatedLinks, relatedCardKey } from './CardRelatedLinks/CardRelatedLinks';
+export type { RelatedCardKind, NavigatedCard } from './CardRelatedLinks/CardRelatedLinks';
 export { default as ThreePaneLayout } from './ThreePaneLayout/ThreePaneLayout';
 export { default as CheckboxField } from './CheckboxField/CheckboxField';
 export { default as SelectField } from './SelectField/SelectField';

@@ -92,6 +92,14 @@ function migrate(raw: unknown): DeckMeta | null {
     ) {
       out.bracketLevel = raw.bracketLevel;
     }
+    if (Array.isArray(raw.commanders)) {
+      const names = raw.commanders.filter(
+        (n): n is string => typeof n === 'string' && n.trim().length > 0,
+      );
+      if (names.length > 0) {
+        out.commanders = names;
+      }
+    }
     return out;
   }
 

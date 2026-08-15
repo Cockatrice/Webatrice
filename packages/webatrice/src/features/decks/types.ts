@@ -195,6 +195,16 @@ export interface DeckMeta {
    *  the Scryfall/Spellbook fetches. Only meaningful for Commander-
    *  format decks; absent otherwise. */
   bracketLevel?: number;
+  /** Names of cards designated as commanders. The per-card XML
+   *  attribute (`commander="1"`) is the primary source, but Servatrice's
+   *  `Command_DeckUpload` re-parses the file through Cockatrice's
+   *  `DeckList::loadFromXml`, which drops attributes it doesn't
+   *  recognize — so the attribute alone is lost on server round-trip.
+   *  This list lives in the `<comments>` JSON blob (opaque text
+   *  Servatrice preserves verbatim) and is overlaid onto cards at
+   *  parse time so the flag survives the round-trip. Empty / absent
+   *  = no commanders designated. */
+  commanders?: string[];
 }
 
 /**
