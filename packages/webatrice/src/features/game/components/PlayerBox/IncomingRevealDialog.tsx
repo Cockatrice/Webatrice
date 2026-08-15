@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X } from 'lucide-react';
+import { Loader2, X } from 'lucide-react';
 
 import { games } from '@cockatrice/datatrice';
 import { useAppDispatch, useAppSelector } from '@app/store';
@@ -8,6 +8,8 @@ import { useAppDispatch, useAppSelector } from '@app/store';
 import Card from './Card';
 import { CARD_HEIGHT, CARD_WIDTH } from './cardSize';
 import { useForeignDrag } from './foreignDragContext';
+import { useHoveredCard } from './hoveredCard';
+import { useBigCardPreview } from './bigCardPreview';
 import type { DeckCard } from './mockTypes';
 import {
   compareCards,
@@ -204,6 +206,8 @@ export default function IncomingRevealDialog() {
   const reveal = useAppSelector(games.Selectors.getIncomingReveal);
   const dispatch = useAppDispatch();
   const beginForeignDrag = useForeignDrag();
+  const { setHoveredCard } = useHoveredCard();
+  const { openBigPreview, closeBigPreview } = useBigCardPreview();
 
   const sourceName = useAppSelector((state) => {
     if (!reveal) return undefined;
@@ -601,11 +605,23 @@ export default function IncomingRevealDialog() {
             <h2 className="font-modern text-base font-semibold text-text-primary truncate">
               {title}
             </h2>
-            <p className="text-xs text-text-muted mt-0.5">
+            <p className="text-xs text-text-muted mt-0.5 flex items-center gap-1.5">
               {revealCards.length} card{revealCards.length === 1 ? '' : 's'}
               {reveal.grantWriteAccess
                 ? ' — write access granted (drag a card onto your battlefield)'
                 : ''}
+              {/* Spinner while Scryfall metadata is still resolving —
+                  without it the user sees a suspicious "1 Creature,
+                  rest in Other" state during the fetch and can't tell
+                  whether it's still loading or just wrong. Grouping/
+                  sorting are already gated on `metadataLoaded` so
+                  cards stay flat until everything's in. */}
+              {!metadataLoaded && (
+                <span className="inline-flex items-center gap-1 text-text-muted italic">
+                  <Loader2 size={12} className="animate-spin" />
+                  loading card details…
+                </span>
+              )}
             </p>
           </div>
           <label
@@ -723,21 +739,75 @@ export default function IncomingRevealDialog() {
                         )} * calc(${CARD_HEIGHT} * ${PILE_STEP_FRACTION}))`,
                       }}
                     >
-                      {g.cards.map((c, i) =>
-                        renderRevealCard(
-                          c,
-                          {
-                            position: 'absolute',
-                            left: 0,
-                            top: `calc(${CARD_HEIGHT} * ${PILE_STEP_FRACTION} * ${i})`,
-                            width: CARD_WIDTH,
-                            height: CARD_HEIGHT,
-                            borderRadius: '7.5%',
-                          },
-                          'hover:z-10',
-                          dragToBattlefield,
-                        ),
-                      )}
+                      {g.cards.map((c, i) => {
+                        const isLast = i === g.cards.length - 1;
+                        // See LibrarySearchDialog for the rationale — outer
+                        // strip is the DOM box for hover detection so
+                        // browsing a pile down never gets stuck on an
+                        // expanded card, inner Card is pointer-events:none
+                        // and visually overflows.
+                        return (
+                          <div
+                            key={c.handCard.id}
+                            className="absolute left-0 hover:z-10 group"
+                            style={{
+                              left: 0,
+                              top: `calc(${CARD_HEIGHT} * ${PILE_STEP_FRACTION} * ${i})`,
+                              width: CARD_WIDTH,
+                              height: isLast
+                                ? CARD_HEIGHT
+                                : `calc(${CARD_HEIGHT} * ${PILE_STEP_FRACTION})`,
+                              borderRadius: '7.5%',
+                              cursor: dragToBattlefield ? 'grab' : undefined,
+                              touchAction: dragToBattlefield ? 'none' : undefined,
+                            }}
+                            onPointerDown={
+                              dragToBattlefield
+                                ? (e) => {
+                                    if (e.button !== 0) return;
+                                    dragToBattlefield(e, c);
+                                  }
+                                : undefined
+                            }
+                            onMouseEnter={() => {
+                              setHoveredCard({
+                                name: c.handCard.name,
+                                scryfallId: c.handCard.scryfallId,
+                              });
+                            }}
+                            onMouseDown={(e) => {
+                              if (e.button !== 1) return;
+                              e.preventDefault();
+                              openBigPreview({
+                                name: c.handCard.name,
+                                scryfallId: c.handCard.scryfallId,
+                              });
+                              const handleUp = (ev: MouseEvent) => {
+                                if (ev.button !== 1) return;
+                                closeBigPreview();
+                                window.removeEventListener('mouseup', handleUp);
+                              };
+                              window.addEventListener('mouseup', handleUp);
+                            }}
+                            onAuxClick={(e) => {
+                              if (e.button === 1) e.preventDefault();
+                            }}
+                          >
+                            <div
+                              className="absolute left-0 top-0 pointer-events-none transition-transform duration-150 ease-out group-hover:scale-[1.06]"
+                              style={{
+                                width: CARD_WIDTH,
+                                height: CARD_HEIGHT,
+                              }}
+                            >
+                              <Card
+                                name={c.handCard.name}
+                                scryfallId={c.handCard.scryfallId}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   ) : (
                     <div className="flex flex-wrap gap-2">

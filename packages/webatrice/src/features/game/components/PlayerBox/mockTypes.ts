@@ -14,8 +14,10 @@
  * accesses on the Supabase rows. Anything unused was dropped.
  */
 
-/** Deck category (fancy's Postgres uses these strings verbatim). */
-export type DeckCategory = 'main' | 'sideboard' | 'commander';
+/** Deck category — no commander zone here (or in the deck feature).
+ *  Commander is a per-card `isCommander` flag on the row, not a
+ *  distinct zone. See features/decks/types.ts. */
+export type DeckCategory = 'main' | 'sideboard';
 
 /** Card row inside a deck. Mirrors fancy's DeckCard columns for the
  *  fields the PlayerBox reads: id, name, scryfall id, category,

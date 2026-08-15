@@ -34,9 +34,11 @@ import { defaultMeta, parseMeta, serializeMeta, touchMeta } from './meta';
  * hints. Cockatrice desktop ignores unknown attributes; other clients
  * that don't understand them will just use the default printing.
  *
- * Zone names Cockatrice supports: "main", "side", plus we treat a
- * zone named "commander" as `DeckCategory.commander`. If neither zone
- * exists, all cards get `main`.
+ * Zone names Cockatrice supports: "main", "side" — the only two
+ * server-side setupZones() reads. Any other zone name (legacy or
+ * third-party) is silently coerced to "main" on read so imported
+ * decks retain every card. Webatrice does not model a commander
+ * zone; commander cards live in main like every other card.
  */
 
 /** Parse a `.cod` XML string into a structured `ParsedDeck`. Throws
@@ -67,9 +69,11 @@ export function parseCod(xml: string): ParsedDeck {
 
   const cards: ParsedCard[] = [];
   for (const zone of directChildren(root, 'zone')) {
-    const category = zoneNameToCategory(zone.getAttribute('name'));
+    const zoneName = zone.getAttribute('name');
+    const category = zoneNameToCategory(zoneName);
+    const isCommanderZone = zoneName?.toLowerCase() === 'commander';
     for (const cardEl of directChildren(zone, 'card')) {
-      const parsed = readCardElement(cardEl, category);
+      const parsed = readCardElement(cardEl, category, isCommanderZone);
       if (parsed) cards.push(parsed);
     }
   }
@@ -144,19 +148,36 @@ export function serializeCod(deck: {
     root.appendChild(writeBracketAssessment(doc, deck.bracketAssessment));
   }
 
+  // Zone layout — matches Cockatrice desktop exactly: main + side
+  // are the only zones Servatrice's setupZones reads
+  // (libcockatrice_deck_list only defines DECK_ZONE_MAIN /
+  // _SIDE / _TOKENS). Any other zone name would be silently
+  // dropped from the game library at start.
   const byCategory: Record<DeckCategory, DeckCard[]> = {
     main: [],
     sideboard: [],
-    commander: [],
   };
-  for (const card of deck.cards) byCategory[card.category].push(card);
+  for (const card of deck.cards) {
+    byCategory[card.category].push(card);
+  }
 
   for (const category of Object.keys(byCategory) as DeckCategory[]) {
     const rows = byCategory[category];
     if (!rows.length) continue;
     const zone = doc.createElement('zone');
     zone.setAttribute('name', categoryToZoneName(category));
-    for (const row of rows) zone.appendChild(writeCardElement(doc, row));
+    for (const row of rows) {
+      const cardEl = writeCardElement(doc, row);
+      // Round-trip the commander marker. Not a zone — the card is
+      // still in main — just a UI flag for the deck editor's
+      // "this is my commander" indicator. Cockatrice desktop
+      // ignores unknown attributes, so cross-client edits preserve
+      // the card even though they forget which one was commander.
+      if (row.isCommander) {
+        cardEl.setAttribute('commander', '1');
+      }
+      zone.appendChild(cardEl);
+    }
     root.appendChild(zone);
   }
 
@@ -175,7 +196,11 @@ export function emptyCod(name = 'New Deck', format = 'commander'): string {
 
 // ---------- helpers ----------
 
-function readCardElement(el: Element, category: DeckCategory): ParsedCard | null {
+function readCardElement(
+  el: Element,
+  category: DeckCategory,
+  isCommanderZone: boolean,
+): ParsedCard | null {
   // `number` attribute is quantity. Default to 1 (Cockatrice desktop's default).
   const quantity = parseInt(el.getAttribute('number') || '1', 10);
   if (!Number.isFinite(quantity) || quantity <= 0) return null;
@@ -186,7 +211,23 @@ function readCardElement(el: Element, category: DeckCategory): ParsedCard | null
   const name = nameAttr || nameText;
   if (!name) return null;
 
+  // Commander marker sources, in priority order:
+  //   1. Our own `commander="1"` attribute — modern serializeCod
+  //      output. Card is in main; the attribute is a UI-only flag.
+  //   2. `isCommanderZone` — legacy files where the enclosing
+  //      `<zone>` was literally named "commander". We coerced the
+  //      zone to `main` at the caller (so the card still ships to
+  //      Servatrice's library), but we remember it was flagged.
+  // Neither ever changes `category`, which stays a real zone name.
+  const commanderAttr = el.getAttribute('commander')?.trim();
+  const isCommander = commanderAttr === '1'
+    || commanderAttr === 'true'
+    || isCommanderZone;
+
   const parsed: ParsedCard = { name, quantity, category };
+  if (isCommander) {
+    parsed.isCommander = true;
+  }
   // Accept both the Cockatrice-desktop names (setShortName /
   // collectorNumber) and our older short-form aliases (set / num).
   // Historic webatrice files use the short form; standard .cod files
@@ -218,9 +259,13 @@ function zoneNameToCategory(zoneName: string | null): DeckCategory {
     case 'side':
     case 'sideboard':
       return 'sideboard';
-    case 'commander':
-      return 'commander';
     default:
+      // Anything else (main, commander, tokens, unknown) coerces to
+      // main. Servatrice only reads main + side into the game
+      // library at start, so shipping a card in any other zone
+      // would silently drop it. Legacy commander-zone cards keep
+      // their commander marking via ParsedCard.isCommander at the
+      // caller.
       return 'main';
   }
 }
@@ -228,7 +273,6 @@ function zoneNameToCategory(zoneName: string | null): DeckCategory {
 function categoryToZoneName(category: DeckCategory): string {
   switch (category) {
     case 'sideboard': return 'side';
-    case 'commander': return 'commander';
     case 'main': return 'main';
   }
 }

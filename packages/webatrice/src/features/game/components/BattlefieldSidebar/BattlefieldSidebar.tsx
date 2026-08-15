@@ -1,4 +1,5 @@
-import { Flag, Layers, LogOut } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { FileText, Flag, Image as ImageIcon, Layers, LogOut } from 'lucide-react';
 
 import { useLeaveGame } from '@app/hooks';
 
@@ -10,6 +11,7 @@ import { useLocalIdentity } from '../../hooks/useLocalIdentity';
 import { useGameAffordances } from '../../hooks/useGameAffordances';
 import { useHoveredCard } from '../PlayerBox/hoveredCard';
 import { CARD_CORNER_RADIUS } from '../PlayerBox/cardSize';
+import { ManaSymbols, SymbolText } from '../PlayerBox/ManaSymbols';
 
 /**
  * Right-rail companion for the battlefield. Four stacked sections,
@@ -29,6 +31,57 @@ import { CARD_CORNER_RADIUS } from '../PlayerBox/cardSize';
  * Spectator affordance stays: when the viewer joined as a spectator,
  * a small pill above the card preview flags the mode explicitly.
  */
+
+/** localStorage key for the "show description instead of image" toggle.
+ *  Persistent and global (shared across games) so a user's preference
+ *  survives room switches / reloads. */
+const CARD_PREVIEW_MODE_STORAGE_KEY = 'webatrice.cardPreviewMode';
+
+/** Scryfall fields the description view renders. Same shape as
+ *  CardDetailModal's `ScryfallDetail`. Kept local so the sidebar can
+ *  fetch on its own without dragging the modal's whole surface in. */
+interface ScryfallDetail {
+  id: string;
+  name: string;
+  mana_cost?: string;
+  type_line?: string;
+  oracle_text?: string;
+  flavor_text?: string;
+  power?: string;
+  toughness?: string;
+  loyalty?: string;
+  card_faces?: Array<{
+    name?: string;
+    mana_cost?: string;
+    type_line?: string;
+    oracle_text?: string;
+    flavor_text?: string;
+    power?: string;
+    toughness?: string;
+    loyalty?: string;
+  }>;
+}
+
+async function fetchScryfallDetail(
+  scryfallId: string | undefined,
+  name: string,
+  signal?: AbortSignal,
+): Promise<ScryfallDetail | null> {
+  try {
+    const url = scryfallId
+      ? `https://api.scryfall.com/cards/${encodeURIComponent(scryfallId)}`
+      : `https://api.scryfall.com/cards/named?exact=${encodeURIComponent(
+          name.replace(/\s*\(?\bToken\b\)?\s*$/i, ''),
+        )}`;
+    const res = await fetch(url, { signal });
+    if (!res.ok) return null;
+    return (await res.json()) as ScryfallDetail;
+  } catch (e) {
+    if ((e as { name?: string })?.name === 'AbortError') throw e;
+    return null;
+  }
+}
+
 export default function BattlefieldSidebar() {
   const gameId = useGameId();
   const leaveGame = useLeaveGame();
@@ -41,6 +94,61 @@ export default function BattlefieldSidebar() {
   } = useGameDialogActions();
   const { canConcede, canUnconcede } = useGameAffordances(gameId ?? undefined);
 
+  // Preview mode — image (default) vs. description text. Persisted in
+  // localStorage so the toggle survives reloads and stays consistent
+  // across games. Reads lazily on first render; a missing / invalid
+  // stored value falls back to "image".
+  const [previewMode, setPreviewMode] = useState<'image' | 'text'>(() => {
+    if (typeof window === 'undefined') return 'image';
+    try {
+      return window.localStorage.getItem(CARD_PREVIEW_MODE_STORAGE_KEY) === 'text'
+        ? 'text'
+        : 'image';
+    } catch {
+      return 'image';
+    }
+  });
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      window.localStorage.setItem(CARD_PREVIEW_MODE_STORAGE_KEY, previewMode);
+    } catch {
+      // Ignore quota / disabled-storage errors — toggle still works
+      // in-session, just won't persist.
+    }
+  }, [previewMode]);
+
+  // Full-fat Scryfall record for the currently hovered card. Only
+  // fetched when text mode is active AND a card is hovered — image
+  // mode uses Scryfall's redirect endpoints directly via <img src>,
+  // no JSON round-trip needed. Cleared between hovers so a stale
+  // record can't flash for the previous card while the new fetch
+  // is in flight.
+  const [detail, setDetail] = useState<ScryfallDetail | null>(null);
+  const hoverKey = hoveredCard
+    ? hoveredCard.scryfallId ?? `name:${hoveredCard.name}`
+    : null;
+
+  useEffect(() => {
+    if (previewMode !== 'text' || !hoveredCard) {
+      setDetail(null);
+      return;
+    }
+    setDetail(null);
+    const controller = new AbortController();
+    fetchScryfallDetail(hoveredCard.scryfallId, hoveredCard.name, controller.signal)
+      .then((d) => setDetail(d))
+      .catch((e) => {
+        if ((e as { name?: string })?.name === 'AbortError') return;
+      });
+    return () => controller.abort();
+    // Refetch whenever the hover identity changes or the mode flips
+    // on. `hoverKey` collapses the (scryfallId, name) tuple to one
+    // stable string so we don't fire on unrelated re-renders.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [previewMode, hoverKey]);
+
   const handleLeave = () => {
     if (gameId != null) leaveGame(gameId);
   };
@@ -48,11 +156,42 @@ export default function BattlefieldSidebar() {
   // Fancy's exact URL pattern — prefer the exact printing by id,
   // fall back to the named endpoint. `png` is heavier than `large`
   // but the preview panel is big enough to warrant the higher fidelity.
+  // `hoveredCard.imageUri` wins over both when set — that's how DFC
+  // back-face art survives to the preview (Scryfall's default image
+  // endpoint always returns the front face).
   const hoveredImageUrl = hoveredCard
-    ? hoveredCard.scryfallId
-      ? `https://api.scryfall.com/cards/${hoveredCard.scryfallId}?format=image&version=png`
-      : `https://api.scryfall.com/cards/named?exact=${encodeURIComponent(hoveredCard.name)}&format=image&version=png`
+    ? hoveredCard.imageUri
+      ? hoveredCard.imageUri
+      : hoveredCard.scryfallId
+        ? `https://api.scryfall.com/cards/${hoveredCard.scryfallId}?format=image&version=png`
+        : `https://api.scryfall.com/cards/named?exact=${encodeURIComponent(hoveredCard.name)}&format=image&version=png`
     : null;
+
+  // Pick the matching face for multi-faced cards. When the hovered
+  // card's name matches a `card_faces[N].name`, use that face — this
+  // is how a transformed DFC's back face gets its correct oracle text
+  // in the preview instead of always showing face-0. Falls back to
+  // face-0 for classic single-face cards where the top-level record
+  // may not carry these fields.
+  const face =
+    detail?.card_faces?.find(
+      (f) => f.name?.toLowerCase() === hoveredCard?.name.toLowerCase(),
+    ) ?? detail?.card_faces?.[0];
+  // Prefer face-level fields when a face was picked — face.name for a
+  // transformed DFC is `"Insectile Aberration"`, whereas detail.name
+  // is the combined `"Delver of Secrets // Insectile Aberration"`.
+  // For classic single-face cards `face` is undefined and detail.* wins.
+  const displayName = face?.name ?? detail?.name ?? hoveredCard?.name ?? '';
+  const displayMana = face?.mana_cost ?? detail?.mana_cost ?? '';
+  const displayType = face?.type_line ?? detail?.type_line ?? '';
+  const displayOracle = face?.oracle_text ?? detail?.oracle_text ?? '';
+  const displayFlavor = face?.flavor_text ?? detail?.flavor_text ?? '';
+  const displayPT =
+    (face?.power ?? detail?.power) != null &&
+    (face?.toughness ?? detail?.toughness) != null
+      ? `${face?.power ?? detail?.power}/${face?.toughness ?? detail?.toughness}`
+      : undefined;
+  const displayLoyalty = face?.loyalty ?? detail?.loyalty;
 
   return (
     <aside
@@ -72,20 +211,100 @@ export default function BattlefieldSidebar() {
            otherwise a dashed placeholder frame. Reads the hover state
            from PlayerBox's HoveredCardProvider so any card on the
            board (hand / battlefield / library / graveyard / etc.)
-           lights up the preview when its mouse-enter fires. */}
+           lights up the preview when its mouse-enter fires. Header
+           row hosts the image/text toggle — persisted globally in
+           localStorage so it survives reloads and applies across all
+           games the user joins. */}
       <div className="shrink-0 p-3 border-b border-border-subtle">
-        {hoveredImageUrl ? (
-          <img
-            src={hoveredImageUrl}
-            alt={hoveredCard?.name ?? ''}
-            draggable={false}
-            className="w-full shadow-md"
-            style={{
-              aspectRatio: '5 / 7',
-              borderRadius: CARD_CORNER_RADIUS,
-              imageRendering: '-webkit-optimize-contrast',
-            }}
-          />
+        <div className="flex items-center justify-between pb-2">
+          <span className="text-[10px] font-semibold uppercase tracking-widest text-text-muted">
+            Preview
+          </span>
+          <button
+            type="button"
+            onClick={() =>
+              setPreviewMode((m) => (m === 'image' ? 'text' : 'image'))
+            }
+            title={
+              previewMode === 'image'
+                ? 'Show card description'
+                : 'Show card image'
+            }
+            aria-pressed={previewMode === 'text'}
+            className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] font-medium text-text-primary bg-bg-elevated hover:bg-border-subtle border border-border-subtle transition-colors"
+          >
+            {previewMode === 'image' ? (
+              <>
+                <ImageIcon size={12} /> Image
+              </>
+            ) : (
+              <>
+                <FileText size={12} /> Text
+              </>
+            )}
+          </button>
+        </div>
+
+        {previewMode === 'image' ? (
+          hoveredImageUrl ? (
+            <img
+              src={hoveredImageUrl}
+              alt={hoveredCard?.name ?? ''}
+              draggable={false}
+              className="w-full shadow-md"
+              style={{
+                aspectRatio: '5 / 7',
+                borderRadius: CARD_CORNER_RADIUS,
+                imageRendering: '-webkit-optimize-contrast',
+              }}
+            />
+          ) : (
+            <div
+              className="aspect-[5/7] rounded-md border border-dashed border-border-subtle bg-bg-base/30 flex items-center justify-center text-xs text-text-muted italic p-3 text-center"
+              style={{ borderRadius: CARD_CORNER_RADIUS }}
+            >
+              Hover a card to preview it here
+            </div>
+          )
+        ) : hoveredCard ? (
+          <div
+            className="rounded-md border border-border-subtle bg-bg-base/30 p-3 flex flex-col gap-2 text-xs text-text-primary"
+            style={{ borderRadius: CARD_CORNER_RADIUS }}
+          >
+            {/* Name row + inline mana cost. Cockatrice's card info
+                dialog puts these together at the top of the panel. */}
+            <div className="flex items-start justify-between gap-2">
+              <span className="font-semibold text-sm leading-tight">
+                {displayName}
+              </span>
+              {displayMana && (
+                <span className="shrink-0">
+                  <ManaSymbols cost={displayMana} />
+                </span>
+              )}
+            </div>
+            {displayType && (
+              <div className="italic text-text-secondary">{displayType}</div>
+            )}
+            {displayOracle && (
+              <div className="whitespace-pre-line leading-snug">
+                <SymbolText text={displayOracle} />
+              </div>
+            )}
+            {displayFlavor && (
+              <div className="whitespace-pre-line italic text-text-muted leading-snug border-t border-border-subtle pt-2">
+                {displayFlavor}
+              </div>
+            )}
+            {(displayPT || displayLoyalty) && (
+              <div className="text-right font-semibold tabular-nums">
+                {displayPT ?? displayLoyalty}
+              </div>
+            )}
+            {!detail && (
+              <div className="text-text-muted italic">Loading…</div>
+            )}
+          </div>
         ) : (
           <div
             className="aspect-[5/7] rounded-md border border-dashed border-border-subtle bg-bg-base/30 flex items-center justify-center text-xs text-text-muted italic p-3 text-center"

@@ -1,10 +1,11 @@
 import { memo, useEffect, useMemo } from 'react';
+import { useStore } from 'react-redux';
 import { generatePath, useNavigate } from 'react-router-dom';
 
 import { cx } from '@app/utils';
 import { games, server } from '@cockatrice/datatrice';
 import { useWebClient } from '@cockatrice/datatrice/react';
-import { useAppDispatch, useAppSelector } from '@app/store';
+import { useAppDispatch, useAppSelector, type RootState } from '@app/store';
 import { ZoneName } from '@cockatrice/sockatrice';
 import { CardAttribute, Command_CreateToken_TargetMode } from '@cockatrice/sockatrice/generated';
 import type {
@@ -222,7 +223,7 @@ const MOCK_DECK: DeckCard[] = [
     power: '1',
     toughness: '1',
     quantity: 1,
-    category: 'commander',
+    category: 'main',
   },
   // Main deck fillers — Scryfall resolves all these by name too, so
   // even bad/missing ids fall back gracefully.
@@ -290,6 +291,12 @@ function GameBoardCell({ cell, totalPlayers }: GameBoardCellProps) {
   const gameId = useGameId();
   const webClient = useWebClient();
   const dispatch = useAppDispatch();
+  // Store handle for reading snapshots inside async wire callbacks
+  // (rollback closures need the pre-change state; `useAppSelector`
+  // can't be called from inside an event handler). Only used by the
+  // optimistic-update flows below — never called for reactive reads,
+  // which stay on `useAppSelector`.
+  const store = useStore<RootState>();
 
   const cellInfo = useMemo(
     () => ({ playerId: cell.playerId, mirrored: cell.mirrored, isLocal: cell.isLocal }),
@@ -602,17 +609,236 @@ function GameBoardCell({ cell, totalPlayers }: GameBoardCellProps) {
 
   // Slice 3a: wire library-source drag-drops. When PlayerBox drops a
   // library card into another zone, it calls this instead of splicing
-  // local mock state. Server broadcasts back an Event_MoveCard, the
-  // reducer decrements `deck.cardCount` and increments the
-  // destination's, and the wired `zoneCounts` prop re-reads them — so
-  // the badges reflect the authoritative counts. Undefined only during
-  // the pre-hydration transient before the game id is known.
+  // local mock state. Optimistic: the client dispatches the move
+  // locally BEFORE the server's Event_MoveCard arrives, so drags feel
+  // instant. If the server rejects, `onError` rolls the card back to
+  // its snapshotted source zone. The listener middleware consumes the
+  // pending marker when the server echo arrives:
+  //   • cardMovedInSameZone (hand/stack/grave/exile reorder): idempotent,
+  //     re-dispatched safely
+  //   • cardMovedBetweenZones (cross-zone AND battlefield-same-zone):
+  //     NOT idempotent, listener skips the second dispatch entirely
   const onMoveCard = useMemo(() => {
     if (gameId == null) return undefined;
-    return (params: MoveCardParams) => {
-      webClient.request.game.moveCard(gameId, params);
+    return (baseParams: MoveCardParams) => {
+      // Resolve the stack sub-slot at the drop site using the target
+      // player's battlefield state from Redux — works for our own
+      // battlefield AND for gifts onto an opponent's board. PlayerBox
+      // only has visibility into the local seat's zones, so it can't
+      // do this cross-seat resolution itself. Without this, opponent
+      // gifts always land at sub-slot 0 and only settle into the true
+      // sub-slot when Servatrice's echo arrives.
+      let params = baseParams;
+      if (baseParams.targetZone === ZoneName.TABLE) {
+        const requestedCol = Math.floor(baseParams.x / 3);
+        const row = baseParams.y;
+        const targetBattlefield = games.Selectors.getZone(
+          store.getState(),
+          gameId,
+          baseParams.targetPlayerId,
+          ZoneName.TABLE,
+        );
+        if (targetBattlefield) {
+          const excludeIds = new Set(
+            (baseParams.cardsToMove?.card ?? []).map((c) => c.cardId),
+          );
+          const sameZoneSource =
+            baseParams.startPlayerId === baseParams.targetPlayerId &&
+            baseParams.startZone === ZoneName.TABLE;
+          // Map col → Set<occupied sub-slots> for the whole row, so
+          // overflow can walk to neighboring columns without rescanning.
+          const occupiedByCol = new Map<number, Set<number>>();
+          for (const id of targetBattlefield.order) {
+            if (sameZoneSource && excludeIds.has(id)) {
+              continue;
+            }
+            const c = targetBattlefield.byId[id];
+            if (!c || c.y !== row) {
+              continue;
+            }
+            const c_col = Math.floor(c.x / 3);
+            let slots = occupiedByCol.get(c_col);
+            if (!slots) {
+              slots = new Set();
+              occupiedByCol.set(c_col, slots);
+            }
+            slots.add(c.x % 3);
+          }
+          const freeSubSlotAt = (c: number): number | null => {
+            const slots = occupiedByCol.get(c);
+            if (!slots) {
+              return 0;
+            }
+            for (let sub = 0; sub < 3; sub++) {
+              if (!slots.has(sub)) {
+                return sub;
+              }
+            }
+            return null;
+          };
+          // Try requested column first; on overflow (3 cards already
+          // stacked there), walk outward — right first, then left —
+          // and take the first neighbor with a free sub-slot. Servatrice
+          // doesn't cleanly overflow either, so this mirrors what a
+          // human would expect: the card lands as close to the drop as
+          // possible instead of quietly stacking on top of another. If
+          // the entire row is somehow full (rare — grid is wide) fall
+          // back to `col*3` so the wire is legal and the listener's
+          // field-patch fallback picks up whatever Servatrice decided.
+          let resolvedX = requestedCol * 3;
+          const requestedFree = freeSubSlotAt(requestedCol);
+          if (requestedFree != null) {
+            resolvedX = requestedCol * 3 + requestedFree;
+          } else {
+            // Walk outward in rings: +1, -1, +2, -2, ...
+            let found = false;
+            for (let step = 1; step < 32 && !found; step++) {
+              for (const dir of [1, -1]) {
+                const c = requestedCol + step * dir;
+                if (c < 0) {
+                  continue;
+                }
+                const free = freeSubSlotAt(c);
+                if (free != null) {
+                  resolvedX = c * 3 + free;
+                  found = true;
+                  break;
+                }
+              }
+            }
+          }
+          params = { ...baseParams, x: resolvedX };
+        }
+      }
+
+      const {
+        startPlayerId, startZone, cardsToMove,
+        targetPlayerId, targetZone, x, y,
+      } = params;
+
+      // HiddenZone sources (library, sideboard) address cards
+      // positionally, not by real card id — those need the server to
+      // hand us the true identity in Event_MoveCard. Skip the
+      // optimistic path for them; they'll wait for the server as
+      // before. Same for the batch case where cardsToMove is empty.
+      const cardIdsFromParams = cardsToMove?.card ?? [];
+      const isHiddenSource =
+        startZone === ZoneName.DECK || startZone === ZoneName.SIDEBOARD;
+      const canGoOptimistic =
+        !isHiddenSource && cardIdsFromParams.length === 1;
+
+      if (!canGoOptimistic) {
+        webClient.request.game.moveCard(gameId, params);
+        return;
+      }
+
+      const cardId = cardIdsFromParams[0].cardId;
+      const sourceZoneEntry = games.Selectors.getZone(
+        store.getState(),
+        gameId,
+        startPlayerId,
+        startZone,
+      );
+      const sourceCard = sourceZoneEntry?.byId[cardId];
+      const sourceIndex = sourceZoneEntry?.order.indexOf(cardId) ?? -1;
+
+      // Missing snapshot (card not in Redux yet, or in a foreign zone
+      // we can't read) → fall back to the wait-for-server path.
+      if (!sourceCard || sourceIndex < 0) {
+        webClient.request.game.moveCard(gameId, params);
+        return;
+      }
+
+      // Tokens (destroyOnZoneChange=true) get an Event_DestroyCard
+      // from the server when they leave the battlefield, NOT an
+      // Event_MoveCard. If we optimistically dispatched
+      // cardMovedBetweenZones(TABLE→GRAVE) here, the token would
+      // land in the graveyard visually — and then the incoming
+      // destroy event would look for it in TABLE, find nothing, and
+      // no-op, leaving the token stuck in GRAVE. Skip the optimistic
+      // path for those; the server round-trip briefly delays the
+      // token's vanish but the correctness is worth it.
+      const leavingBattlefield =
+        startZone === ZoneName.TABLE && targetZone !== ZoneName.TABLE;
+      if (sourceCard.destroyOnZoneChange && leavingBattlefield) {
+        webClient.request.game.moveCard(gameId, params);
+        return;
+      }
+
+      const sameZone =
+        startPlayerId === targetPlayerId && startZone === targetZone;
+      const isPositionalReorderZone =
+        targetZone === ZoneName.HAND ||
+        targetZone === ZoneName.STACK ||
+        targetZone === ZoneName.GRAVE ||
+        targetZone === ZoneName.EXILE;
+
+      // Optimistic card object — same id, updated x/y for battlefield
+      // drops. The listener's own path builds this from the server's
+      // Event_MoveCard using cloneWith; we replicate the shape here.
+      const optimisticCard = { ...sourceCard, x, y };
+      const opKey = games.moveOpKey(startPlayerId, cardId);
+
+      if (sameZone && isPositionalReorderZone) {
+        // Same-zone reorder in a positional zone → cardMovedInSameZone.
+        // Idempotent; server echo will re-apply harmlessly.
+        dispatch(games.Actions.cardMovedInSameZone({
+          gameId,
+          playerId: startPlayerId,
+          zoneName: startZone,
+          cardId,
+          toIndex: x,
+          card: optimisticCard,
+        }));
+        games.beginOptimistic(opKey, () => {
+          // Rollback: put the card back at its original index.
+          dispatch(games.Actions.cardMovedInSameZone({
+            gameId,
+            playerId: startPlayerId,
+            zoneName: startZone,
+            cardId,
+            toIndex: sourceIndex,
+            card: sourceCard,
+          }));
+        });
+      } else {
+        // Cross-zone move OR battlefield same-zone re-slot →
+        // cardMovedBetweenZones. Listener dedup skips the echo so the
+        // reducer isn't double-applied (cardCount + duplicate order).
+        dispatch(games.Actions.cardMovedBetweenZones({
+          gameId,
+          fromPlayerId: startPlayerId,
+          fromZone: startZone,
+          fromCardId: cardId,
+          toPlayerId: targetPlayerId,
+          toZone: targetZone,
+          card: optimisticCard,
+        }));
+        games.beginOptimistic(opKey, () => {
+          // Rollback: reverse the move (target → source with the
+          // pre-move card snapshot).
+          dispatch(games.Actions.cardMovedBetweenZones({
+            gameId,
+            fromPlayerId: targetPlayerId,
+            fromZone: targetZone,
+            fromCardId: cardId,
+            toPlayerId: startPlayerId,
+            toZone: startZone,
+            card: sourceCard,
+          }));
+        });
+      }
+
+      webClient.request.game.moveCard(gameId, params, undefined, {
+        onError: (responseCode) => {
+          console.warn(
+            `Command_MoveCard rejected with code ${responseCode}; rolling back cardId ${cardId}`,
+          );
+          games.rollbackOptimistic(opKey);
+        },
+      });
     };
-  }, [gameId, webClient]);
+  }, [gameId, webClient, dispatch, store]);
 
   // Library-management wires. PlayerBox fires these when the player
   // hits Draw/Mulligan/Shuffle in the library context menu (or the
@@ -916,23 +1142,94 @@ function GameBoardCell({ cell, totalPlayers }: GameBoardCellProps) {
 
   // Tap/untap battlefield cards. Cockatrice's protocol addresses one
   // card per Command_SetCardAttr (or cardId=-1 for "all in zone"), so
-  // a group tap dispatches one command per card. The server broadcasts
-  // Event_SetCardAttr back and the reducer flips `zone.byId[id].tapped`,
-  // which flows through `battlefieldCards` to the PlayerBox render.
+  // a group tap dispatches one command per card. Optimistic: the
+  // client flips `tapped` locally BEFORE the server's Event_SetCardAttr
+  // arrives, so the rotation animation fires without waiting on the
+  // network round-trip. If the server rejects (RespFunctionNotAllowed
+  // etc.), the `onError` callback rolls back to the snapshotted
+  // previous value. The listener middleware consumes the pending
+  // marker when the server's echo arrives; cardFieldsUpdated is
+  // idempotent so the second dispatch is a no-op.
   const onSetCardTapped = useMemo(() => {
     if (gameId == null) return undefined;
     return (cardIds: number[], tapped: boolean) => {
       const attrValue = tapped ? '1' : '0';
       for (const cardId of cardIds) {
-        webClient.request.game.setCardAttr(gameId, {
-          zone: ZoneName.TABLE,
+        // Snapshot the current tapped value for potential rollback.
+        // Missing cards (not in Redux yet) skip the optimistic path
+        // entirely and just fire the wire.
+        const battlefieldZone = games.Selectors.getZone(
+          store.getState(),
+          gameId,
+          cell.playerId,
+          ZoneName.TABLE,
+        );
+        const currentCard = battlefieldZone?.byId[cardId];
+        if (currentCard == null) {
+          webClient.request.game.setCardAttr(gameId, {
+            zone: ZoneName.TABLE,
+            cardId,
+            attribute: CardAttribute.AttrTapped,
+            attrValue,
+          });
+          continue;
+        }
+        const previousTapped = currentCard.tapped;
+        // Skip the optimistic dance when the target value already
+        // matches — no visual change to make, no rollback risk.
+        if (previousTapped === tapped) {
+          webClient.request.game.setCardAttr(gameId, {
+            zone: ZoneName.TABLE,
+            cardId,
+            attribute: CardAttribute.AttrTapped,
+            attrValue,
+          });
+          continue;
+        }
+
+        // 1) Apply the optimistic change locally.
+        dispatch(games.Actions.cardFieldsUpdated({
+          gameId,
+          playerId: cell.playerId,
+          zoneName: ZoneName.TABLE,
           cardId,
-          attribute: CardAttribute.AttrTapped,
-          attrValue,
+          fields: { tapped },
+        }));
+
+        // 2) Register the rollback closure.
+        const opKey = games.attrOpKey(cell.playerId, cardId, CardAttribute.AttrTapped);
+        games.beginOptimistic(opKey, () => {
+          dispatch(games.Actions.cardFieldsUpdated({
+            gameId,
+            playerId: cell.playerId,
+            zoneName: ZoneName.TABLE,
+            cardId,
+            fields: { tapped: previousTapped },
+          }));
         });
+
+        // 3) Fire the wire with an onError callback that rolls back.
+        webClient.request.game.setCardAttr(
+          gameId,
+          {
+            zone: ZoneName.TABLE,
+            cardId,
+            attribute: CardAttribute.AttrTapped,
+            attrValue,
+          },
+          undefined,
+          {
+            onError: (responseCode) => {
+              console.warn(
+                `Command_SetCardAttr(tapped=${tapped}) rejected with code ${responseCode}; rolling back cardId ${cardId}`,
+              );
+              games.rollbackOptimistic(opKey);
+            },
+          },
+        );
       }
     };
-  }, [gameId, webClient]);
+  }, [gameId, webClient, dispatch, store, cell.playerId]);
 
   // Flip a battlefield card face-up or face-down via Command_FlipCard.
   // Server broadcasts Event_FlipCard back and the reducer flips

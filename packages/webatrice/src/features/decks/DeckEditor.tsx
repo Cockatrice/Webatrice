@@ -220,6 +220,7 @@ const DeckEditor = () => {
           onInc={(i, d) => editor.incQuantity(i, d)}
           onDelete={(i) => editor.deleteCard(i)}
           onSetCategory={(i, c) => editor.setCategory(i, c)}
+          onSetCommander={(i, v) => editor.setCommander(i, v)}
           onPreviewCard={setPreviewCard}
           onChangePrinting={(i, c) => setPrintingRequest({ index: i, card: c })}
           onCardClick={isMtg ? setDetailSnapshot : undefined}
@@ -255,6 +256,7 @@ const DeckEditor = () => {
           onInc={(i) => editor.incQuantity(i, 1)}
           onDec={(i) => editor.incQuantity(i, -1)}
           onSetCategory={(i, c) => editor.setCategory(i, c)}
+          onSetCommander={(i, v) => editor.setCommander(i, v)}
           onChangePrinting={(i, c) => {
             setDetailSnapshot(null);
             setPrintingRequest({ index: i, card: c });
@@ -693,6 +695,7 @@ interface MainPaneProps {
   onInc: (index: number, delta: number) => void;
   onDelete: (index: number) => void;
   onSetCategory: (index: number, category: DeckCategory) => void;
+  onSetCommander: (index: number, isCommander: boolean) => void;
   onPreviewCard: (card: DeckCard | null) => void;
   onChangePrinting: (index: number, card: DeckCard) => void;
   /** Optional — undefined for non-MTG decks (they don't get a detail
@@ -719,6 +722,7 @@ function MainPane({
   onInc,
   onDelete,
   onSetCategory,
+  onSetCommander,
   onPreviewCard,
   onChangePrinting,
   onCardClick,
@@ -812,6 +816,7 @@ function MainPane({
                     onInc={onInc}
                     onDelete={onDelete}
                     onSetCategory={onSetCategory}
+                    onSetCommander={onSetCommander}
                     onPreview={onPreviewCard}
                     onChangePrinting={onChangePrinting}
                     onCardClick={onCardClick}
@@ -1157,6 +1162,7 @@ interface CardGroupProps {
   onInc: (index: number, delta: number) => void;
   onDelete: (index: number) => void;
   onSetCategory: (index: number, category: DeckCategory) => void;
+  onSetCommander: (index: number, isCommander: boolean) => void;
   onPreview: (card: DeckCard | null) => void;
   onChangePrinting: (index: number, card: DeckCard) => void;
   onCardClick?: (card: DeckCard) => void;
@@ -1185,6 +1191,7 @@ function CardGroup({
   onInc,
   onDelete,
   onSetCategory,
+  onSetCommander,
   onPreview,
   onChangePrinting,
   onCardClick,
@@ -1210,6 +1217,7 @@ function CardGroup({
               onInc={(delta) => onInc(i, delta)}
               onDelete={() => onDelete(i)}
               onSetCategory={(c) => onSetCategory(i, c)}
+              onSetCommander={(v) => onSetCommander(i, v)}
               onHover={() => onPreview(deck[i])}
               onChangePrinting={() => onChangePrinting(i, deck[i])}
               onCardClick={onCardClick ? () => onCardClick(deck[i]) : undefined}
@@ -1228,6 +1236,7 @@ interface CardRowProps {
   onInc: (delta: number) => void;
   onDelete: () => void;
   onSetCategory: (category: DeckCategory) => void;
+  onSetCommander: (isCommander: boolean) => void;
   onChangePrinting: () => void;
   onHover: () => void;
   /** Optional — when set, the card name renders as a button that
@@ -1242,6 +1251,7 @@ function CardRow({
   onInc,
   onDelete,
   onSetCategory,
+  onSetCommander,
   onHover,
   onChangePrinting,
   onCardClick,
@@ -1287,6 +1297,7 @@ function CardRow({
           onDec={() => onInc(-1)}
           onDelete={onDelete}
           onSetCategory={onSetCategory}
+          onSetCommander={onSetCommander}
           onChangePrinting={onChangePrinting}
           isMtg={isMtg}
           isCommander={isCommander}
@@ -1307,6 +1318,7 @@ function RowActionsMenu({
   onDec,
   onDelete,
   onSetCategory,
+  onSetCommander,
   onChangePrinting,
   isMtg,
   isCommander,
@@ -1316,6 +1328,7 @@ function RowActionsMenu({
   onDec: () => void;
   onDelete: () => void;
   onSetCategory: (category: DeckCategory) => void;
+  onSetCommander: (isCommander: boolean) => void;
   onChangePrinting: () => void;
   /** Deck-level format flag. Non-MTG decks drop the printings-picker
    *  menu item since Scryfall has nothing to show. */
@@ -1367,8 +1380,8 @@ function RowActionsMenu({
 
   // Renamed from `isCommander` to avoid shadowing the deck-level
   // `isCommander` prop (deck format = Commander) with a card-level
-  // check (this row is the commander card).
-  const cardIsCommander = card.category === 'commander';
+  // check (this row is flagged as the commander).
+  const cardIsCommander = !!card.isCommander;
   const isSideboard = card.category === 'sideboard';
 
   const runAndClose = (fn: () => void) => () => {
@@ -1440,7 +1453,7 @@ function RowActionsMenu({
               <MenuItem
                 icon={<Crown size={13} className={cardIsCommander ? 'text-yellow-400' : ''} />}
                 label={cardIsCommander ? 'Unmark as commander' : 'Mark as commander'}
-                onClick={runAndClose(() => onSetCategory(cardIsCommander ? 'main' : 'commander'))}
+                onClick={runAndClose(() => onSetCommander(!cardIsCommander))}
               />
             )}
             {isSideboard ? (
@@ -2388,11 +2401,11 @@ function groupCards(
 function bucketOf(card: DeckCard, isCommander: boolean): string {
   // Only surface the "Commander" section when the deck's format is
   // Commander. If the deck was previously commander and got switched
-  // to (say) Modern, any commander-category cards fall back to their
+  // to (say) Modern, any commander-marked cards fall back to their
   // type bucket rather than lingering under a phantom section header.
-  // The category="commander" attribute stays in the XML so switching
-  // the format back restores the visual grouping.
-  if (isCommander && card.category === 'commander') return 'Commander';
+  // The `commander="1"` attribute stays in the XML so switching the
+  // format back restores the visual grouping.
+  if (isCommander && card.isCommander) return 'Commander';
   if (card.category === 'sideboard') return 'Sideboard';
   return primaryType(card.typeLine);
 }

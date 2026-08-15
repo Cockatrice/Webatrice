@@ -19,6 +19,12 @@ import { createContext, useContext, useState, type ReactNode } from 'react';
 export interface HoveredCard {
   name: string;
   scryfallId?: string;
+  /** Explicit image URL override — used when the card is currently
+   *  showing a non-default face (e.g. the back of a DFC after a
+   *  transform). Scryfall's default `?format=image` endpoint always
+   *  returns the front face, so without this the preview would show
+   *  the pre-transform art while the battlefield shows the new face. */
+  imageUri?: string;
 }
 
 interface HoveredCardContextValue {

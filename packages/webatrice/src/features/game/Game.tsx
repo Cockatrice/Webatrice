@@ -18,6 +18,7 @@ import BattlefieldSidebar from './components/BattlefieldSidebar/BattlefieldSideb
 import { CardDragOverlayHost } from './components/ui/CardDragOverlay/CardDragOverlay';
 import GameBoardCell from './components/ui/GameBoardCell/GameBoardCell';
 import { HoveredCardProvider } from './components/PlayerBox/hoveredCard';
+import { BigCardPreviewProvider } from './components/PlayerBox/bigCardPreview';
 import { CardScaleProvider } from './components/PlayerBox/cardScale';
 import IncomingRevealDialog from './components/PlayerBox/IncomingRevealDialog';
 import { ForeignDragProvider } from './components/PlayerBox/foreignDragContext';
@@ -144,6 +145,7 @@ function GameBoard() {
       <CardRegistryContext.Provider value={cardRegistry}>
         <GameIdProvider value={gameId}>
           <HoveredCardProvider>
+          <BigCardPreviewProvider>
           <ForeignDragProvider>
           <CardScaleProvider containerRef={boardRef} rows={layout.rows}>
           <DndContext
@@ -302,6 +304,7 @@ function GameBoard() {
           </DndContext>
           </CardScaleProvider>
           </ForeignDragProvider>
+          </BigCardPreviewProvider>
           </HoveredCardProvider>
         </GameIdProvider>
       </CardRegistryContext.Provider>

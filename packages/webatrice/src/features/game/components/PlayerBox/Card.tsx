@@ -1,5 +1,6 @@
 import { CARD_BACK_URL, CARD_CORNER_RADIUS, CARD_HEIGHT, CARD_WIDTH } from './cardSize';
 import { useHoveredCard } from './hoveredCard';
+import { useBigCardPreview } from './bigCardPreview';
 
 /** Counter slot colors — Cockatrice's six card-counter defaults from
  *  `SettingsCache::cardCounters()`. Keep in sync with COUNTER_COLORS in
@@ -82,13 +83,20 @@ export default function Card({ name, scryfallId, pt, basePT, annotation, id, fac
   // `png` (lossless 745×1040, ~200KB) and looks basically identical
   // at our display size. Faster load matters more here than the
   // slight quality bump.
+  // Scryfall names tokens without the "Token" suffix — a card the
+  // server calls "Rhino Warrior Token" resolves as "Rhino Warrior"
+  // on `/cards/named?exact=`. Strip the suffix (with or without
+  // parens) before hitting the endpoint so tokens spawned via
+  // Command_CreateToken with the Cockatrice-style " Token" naming
+  // still get art. Mirrors cleanScryfallName in cardLookup.ts.
+  const scryfallLookupName = name.replace(/\s*\(?\bToken\b\)?\s*$/i, '') || name;
   const imageUrl = faceDown
     ? CARD_BACK_URL
     : imageUri
     ? imageUri
     : scryfallId
     ? `https://api.scryfall.com/cards/${scryfallId}?format=image&version=large`
-    : `https://api.scryfall.com/cards/named?exact=${encodeURIComponent(name)}&format=image&version=large`;
+    : `https://api.scryfall.com/cards/named?exact=${encodeURIComponent(scryfallLookupName)}&format=image&version=large`;
 
   // Cockatrice paints a face-down card's label as `"# {id}"` (see
   // `AbstractCardItem::paintPicture`). We use the same "# " prefix so
@@ -96,6 +104,7 @@ export default function Card({ name, scryfallId, pt, basePT, annotation, id, fac
   const displayName = faceDown && id != null ? `# ${id}` : name;
 
   const { setHoveredCard } = useHoveredCard();
+  const { openBigPreview, closeBigPreview } = useBigCardPreview();
 
   return (
     <div
@@ -110,14 +119,49 @@ export default function Card({ name, scryfallId, pt, basePT, annotation, id, fac
         // Face-down cards don't publish to the hover preview — the true
         // face isn't shown while the card is flipped down (matches
         // Cockatrice, which paints only the back until the card is
-        // turned face-up).
+        // turned face-up). Pass `imageUri` through so DFC back-face art
+        // survives to the preview (Scryfall's default image endpoint
+        // always returns the front face).
         if (faceDown) return;
-        setHoveredCard({ name, scryfallId });
+        setHoveredCard({ name, scryfallId, imageUri });
+      }}
+      // Press-and-hold middle mouse to zoom the card (image + full
+      // description). Opens on mousedown, dismisses on release —
+      // matches Cockatrice's `card_zone.cpp` middle-button hold
+      // behavior. Face-down cards skip it (there's nothing to zoom
+      // to). preventDefault suppresses the browser's autoscroll
+      // cursor. The mouseup listener is attached to `window` because
+      // the user may drag off the card before releasing, and React's
+      // onMouseUp only fires when the release happens on the same
+      // element.
+      onMouseDown={(e) => {
+        if (e.button !== 1 || faceDown) return;
+        e.preventDefault();
+        openBigPreview({ name, scryfallId, imageUri });
+        const handleUp = (ev: MouseEvent) => {
+          if (ev.button !== 1) return;
+          closeBigPreview();
+          window.removeEventListener('mouseup', handleUp);
+        };
+        window.addEventListener('mouseup', handleUp);
+      }}
+      // Also suppress the auxclick that Chrome/Firefox fire on middle
+      // button release — without this a synthetic auxclick can bubble
+      // to ancestor listeners that treat middle-click as "open in new
+      // tab" or similar.
+      onAuxClick={(e) => {
+        if (e.button === 1) e.preventDefault();
       }}
     >
       <img
         src={imageUrl}
-        alt={displayName}
+        // Empty alt so browsers don't render fallback alt-text inside
+        // the failed <img> bounds when the CDN fetch errors — the
+        // name pill overlay below is the accessible label, and the
+        // img is decorative. Without this, a broken image renders
+        // the alt at the img's origin AND the pill in the top-left
+        // corner, producing a doubled-name effect.
+        alt=""
         draggable={false}
         className="w-full h-full"
         style={{ imageRendering: '-webkit-optimize-contrast' }}

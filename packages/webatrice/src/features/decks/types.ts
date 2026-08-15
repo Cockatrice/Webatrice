@@ -5,7 +5,12 @@
  * design decisions behind the shape.
  */
 
-export type DeckCategory = 'main' | 'sideboard' | 'commander';
+// Commander is not a distinct category — there is no separate
+// command zone in webatrice, and every card lives in either the
+// main deck or the sideboard (matching Cockatrice's own
+// libcockatrice_deck_list zone constants). If you're looking for
+// commander-marking UI, it was intentionally removed.
+export type DeckCategory = 'main' | 'sideboard';
 
 /**
  * Format string as stored in the .cod `<format>` element. Free-form
@@ -111,6 +116,15 @@ export interface DeckCard {
   name: string;
   quantity: number;
   category: DeckCategory;
+  /** UI-only marker for cards designated as the deck's commander.
+   *  Independent of `category` — commanders always live in the
+   *  `main` category (there is no separate command zone; Servatrice
+   *  only reads main + side, so any card outside those two zones
+   *  gets silently dropped from the game library). This flag drives
+   *  deck-editor decorations (crown badge, "Set as commander" menu
+   *  toggle) and lets the .cod round-trip preserve the designation
+   *  via a `commander="1"` attribute on the `<card>` element. */
+  isCommander?: boolean;
 
   // --- Metadata reconstructed from the card DB (Cockatrice XML or Scryfall)
   typeLine?: string;
@@ -144,6 +158,11 @@ export interface ParsedCard {
   name: string;
   quantity: number;
   category: DeckCategory;
+  /** Commander marker restored from the .cod `commander="1"` attr
+   *  (or, for legacy files, from a card that lived in a
+   *  `<zone name="commander">` block). See DeckCard.isCommander for
+   *  the full rationale. */
+  isCommander?: boolean;
   set?: string;
   collectorNumber?: string;
   scryfallId?: string;

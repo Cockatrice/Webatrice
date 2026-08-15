@@ -99,7 +99,7 @@ describe('serializeCod → parseCod round-trip', () => {
       },
       { name: 'Lightning Bolt', quantity: 1, category: 'main', lookupSource: 'dexie' },
       { name: 'Force of Will', quantity: 1, category: 'sideboard', lookupSource: 'dexie' },
-      { name: 'Zur the Enchanter', quantity: 1, category: 'commander', lookupSource: 'dexie' },
+      { name: 'Zur the Enchanter', quantity: 1, category: 'main', isCommander: true, lookupSource: 'dexie' },
     ];
     const meta: DeckMeta = {
       v: 1,
@@ -122,7 +122,7 @@ describe('serializeCod → parseCod round-trip', () => {
       },
       { name: 'Lightning Bolt', quantity: 1, category: 'main' },
       { name: 'Force of Will', quantity: 1, category: 'sideboard' },
-      { name: 'Zur the Enchanter', quantity: 1, category: 'commander' },
+      { name: 'Zur the Enchanter', quantity: 1, category: 'main', isCommander: true },
     ]);
     expect(parsed.meta.description).toBe('Test deck');
     expect(parsed.meta.priceUsd).toBe(12.34);

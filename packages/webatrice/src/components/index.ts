@@ -6,6 +6,7 @@ export { default as LanguageDropdown } from './LanguageDropdown/LanguageDropdown
 export { default as Message } from './Message/Message';
 export { default as VirtualList } from './VirtualList/VirtualList';
 export { default as UserDisplay } from './UserDisplay/UserDisplay';
+export { UserBadges } from './UserBadges/UserBadges';
 export { default as ThreePaneLayout } from './ThreePaneLayout/ThreePaneLayout';
 export { default as CheckboxField } from './CheckboxField/CheckboxField';
 export { default as SelectField } from './SelectField/SelectField';

@@ -4,6 +4,7 @@ import { Crown, Eye, User } from 'lucide-react';
 import { games, server } from '@cockatrice/datatrice';
 import { useWebClient } from '@cockatrice/datatrice/react';
 import { useAppSelector } from '@app/store';
+import { UserBadges } from '@app/components';
 import { ServerInfo_User_UserLevelFlag } from '@cockatrice/sockatrice/generated';
 
 import { useGameId } from '../../ui/GameIdContext';
@@ -297,6 +298,9 @@ function PlayerList() {
                       className="text-yellow-400 shrink-0"
                       aria-label="Host"
                     />
+                  )}
+                  {wireUser && (
+                    <UserBadges userLevel={wireUser.userLevel} size={11} />
                   )}
                 </div>
                 <div className="text-[10px] text-text-muted inline-flex items-center gap-1">

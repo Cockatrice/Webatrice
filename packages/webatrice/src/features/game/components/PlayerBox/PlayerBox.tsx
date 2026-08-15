@@ -8,7 +8,8 @@ import {
   forwardRef,
 } from "react";
 import { createPortal } from "react-dom";
-import { Heart, Skull, Sparkles } from "lucide-react";
+import { motion } from 'motion/react';
+import { Hand, Heart, Skull, Sparkles } from 'lucide-react';
 import type { RoomMemberWithProfile, DeckCard } from "./mockTypes";
 import type { MoveCardParams } from "@cockatrice/sockatrice/generated";
 import { ZoneName } from "@cockatrice/sockatrice";
@@ -2792,7 +2793,22 @@ function PlayerBox(
   // when isSelf. Both open triggers (right-sidebar button + battlefield
   // menu) dispatch through useGameDialogActions so this is the single
   // source of truth.
-  const { viewSideboardOpen, closeViewSideboard } = useGameDialogsContext();
+  const {
+    viewSideboardOpen,
+    closeViewSideboard,
+    // Hand-menu handlers already wired at the dialog layer — used by
+    // handMenuItems below so the button-triggered menu isn't full of
+    // disabled placeholders. `handleRequestSortHandBy` fires per-card
+    // moveCard dispatches (hand_menu.cpp parity),
+    // `handleRequestChooseMulligan` opens a numeric prompt then
+    // dispatches Command_Mulligan. "View hand" reuses the local
+    // LibrarySearchDialog via `pileView` instead of the dialog-layer
+    // handler so we get the same search / group / sort / pile-view
+    // controls as the graveyard / exile viewers, plus drag-in and
+    // drag-out support against the HAND zone.
+    handleRequestSortHandBy,
+    handleRequestChooseMulligan,
+  } = useGameDialogsContext();
   // Fire Command_DumpZone(zone=SIDEBOARD) each time the modal opens.
   // Same pattern as View library: sideboard is a HiddenZone so we
   // don't have `byId`/`order` locally without a dump. Owner-only.
@@ -2896,6 +2912,12 @@ function PlayerBox(
          *  non-current face becomes the new-token payload for
          *  Command_CreateToken with target_mode=TRANSFORM_INTO. */
         faces?: LookupCardFace[];
+        /** Scryfall id from the first known printing. Used as a
+         *  fallback when the wire's ServerInfo_Card has no
+         *  providerId (older deck uploads without per-card uuid
+         *  attributes) so Card.tsx can hit the CDN directly instead
+         *  of the rate-limited /cards/named endpoint. */
+        scryfallId?: string;
       }
     >
   >(() => new Map());
@@ -2968,6 +2990,7 @@ function PlayerBox(
               related: r.related,
               layout: r.layout,
               faces: r.faces,
+              scryfallId: r.printings[0]?.scryfallId,
             },
           ] as const;
         }),
@@ -3029,6 +3052,7 @@ function PlayerBox(
               related: r.related,
               layout: r.layout,
               faces: r.faces,
+              scryfallId: r.printings[0]?.scryfallId,
             },
           ] as const;
         }),
@@ -3299,6 +3323,11 @@ function PlayerBox(
   // that reveals full-size cards over the play area without reflowing
   // the shell (same pattern the PhaseTrack uses on the left edge).
   const [handExpanded, setHandExpanded] = useState(false);
+  // Tracks whether the hand's slide tween is mid-flight. Combined with
+  // `handExpanded` to keep the outer wrapper's `overflow-visible` on
+  // until the return-to-idle animation actually finishes — otherwise
+  // the wrapper clips its own cards mid-slide when hover ends.
+  const [handAnimating, setHandAnimating] = useState(false);
   // Cards on THIS player's battlefield that the viewer highlighted via a
   // cross-player marquee. Purely visual — these cards still aren't
   // draggable by anyone but their owner.
@@ -3896,12 +3925,20 @@ function PlayerBox(
     // battlefield). Check first so drops on the modal resolve to
     // library instead of leaking through to the covered zone.
     if (insideRect(librarySearchDialogRef.current)) return { zone: "library" };
-    // Graveyard / exile view dialog — same overlay-priority principle
-    // as the library dialogs above. Resolves to the exact pile the
-    // view was opened on, so a same-zone drop (drag out and let go
-    // on the modal) is absorbed as a no-op by applyMove's same-zone
-    // branch rather than leaking into the battlefield underneath.
+    // Graveyard / exile / hand view dialog — same overlay-priority
+    // principle as the library dialogs above. Resolves to the exact
+    // pile the view was opened on, so a same-zone drop (drag out and
+    // let go on the modal) is absorbed as a no-op by applyMove's
+    // same-zone branch rather than leaking into the battlefield
+    // underneath. Hand needs an `index` field on the DropTarget so a
+    // cross-zone drop into the hand viewer fires
+    // Command_MoveCard(target=HAND, x=index) — we append (x=handSize)
+    // since the LibrarySearchDialog groups/sorts its display and a
+    // positional insert wouldn't line up with what the user sees.
     if (pileView && insideRect(pileViewDialogRef.current)) {
+      if (pileView.zone === 'hand') {
+        return { zone: 'hand', index: handDisplayList.length };
+      }
       return { zone: pileView.zone };
     }
     // Sideboard view dialog — same overlay-priority pattern. Drops
@@ -4112,18 +4149,18 @@ function PlayerBox(
           const cardId = Number(cards[i].id);
           if (!Number.isFinite(cardId)) continue;
           const slot = intended[i] ?? target.slot;
-          // Wire x = col * 3 to match Cockatrice's stack-column
-          // convention (`gridX / 3` = stack column, `gridX % 3` =
-          // sub-slot). Sending col*3 places at sub-slot 0; the desktop
-          // client's drop resolver bumps to the next sub-slot if the
-          // spot is already taken.
+          // Wire x encodes `col*3 + subSlot` (see resolveBattlefieldXForDrop).
+          // Resolving the sub-slot locally lets the optimistic dispatch
+          // land the card at its final position immediately — otherwise
+          // the drop shows at sub-slot 0, then jumps to sub-slot 1/2 when
+          // Servatrice's echo arrives with the corrected `x`.
           onMoveCard({
             startPlayerId: playerId,
             startZone: ZoneName.TABLE,
             cardsToMove: { card: [{ cardId }] },
             targetPlayerId: playerId,
             targetZone: ZoneName.TABLE,
-            x: slot.col * 3,
+            x: resolveBattlefieldXForDrop(slot.col, slot.row, ids),
             y: slot.row,
           });
         }
@@ -4200,9 +4237,16 @@ function PlayerBox(
               Math.min(deckCount, revealBase + target.revealSlotIndex),
             )
           : undefined;
+      // For battlefield drops onto OUR battlefield, resolve the stack
+      // sub-slot locally (see resolveBattlefieldXForDrop's doc) so the
+      // optimistic dispatch and the wire agree on the final `x`. For
+      // gifts onto an opponent's battlefield, we don't have their zone
+      // state to hand — fall back to `col*3` and let Servatrice bump.
       const x =
         target.zone === "battlefield"
-          ? target.slot.col * 3
+          ? target.ownerId === player.user_id
+            ? resolveBattlefieldXForDrop(target.slot.col, target.slot.row, ids)
+            : target.slot.col * 3
           : target.zone === "hand" || target.zone === "stack"
             ? target.index
             : target.zone === "sideboard"
@@ -4299,6 +4343,41 @@ function PlayerBox(
   //     stack intact relative to the others
   // Any mix that includes cards without source slots (hand, library, …)
   // falls back to row-major spreading from the drop slot.
+  // Cockatrice packs up to three cards into one visual column via
+  // `wire_x % 3`. When the client sends `x = col*3` and that sub-slot
+  // is already taken, Servatrice bumps to sub-slot 1 or 2 and echoes
+  // the corrected `x`. Without client-side resolution the optimistic
+  // drop always lands at sub-slot 0 and only settles into its true
+  // sub-slot once the server round-trip completes — visible as a
+  // post-drop jump. Resolve locally so the wire (and the optimistic
+  // reducer that snapshots it) both carry the final position from
+  // the start. `excludeIds` skips the cards currently being dragged
+  // so a card being re-slotted to the same column doesn't count
+  // itself as occupying its old sub-slot. Returns `col*3` as the
+  // fallback when all three sub-slots are taken — matches what the
+  // pre-change wire sent, letting Servatrice handle overflow.
+  const resolveBattlefieldXForDrop = (
+    col: number,
+    row: number,
+    excludeIds: Set<string>,
+  ): number => {
+    const occupied = new Set<number>();
+    for (const bc of battlefieldDisplayList) {
+      if (excludeIds.has(bc.id)) {
+        continue;
+      }
+      if (bc.slot.col === col && bc.slot.row === row) {
+        occupied.add(bc.subSlot);
+      }
+    }
+    for (let sub = 0; sub < 3; sub++) {
+      if (!occupied.has(sub)) {
+        return col * 3 + sub;
+      }
+    }
+    return col * 3;
+  };
+
   const intendedBattlefieldSlots = (
     cards: HandCard[],
     start: BattlefieldSlot,
@@ -4519,7 +4598,7 @@ function PlayerBox(
   // Cockatrice's actViewGraveyard / actViewRfg (player_actions.cpp:222-230)
   // which just emit requestZoneViewToggle(zone, -1). `null` = closed.
   const [pileView, setPileView] = useState<
-    { zone: "graveyard" | "exile" } | null
+    { zone: "graveyard" | "exile" | "hand" } | null
   >(null);
   // "Reveal top cards to..." prompt. Reuses ViewNCardsModal — the
   // input math (deck-size-clamped positive integer) is identical to
@@ -5528,7 +5607,14 @@ function PlayerBox(
   // create-token, counters, custom-zones) render disabled so the shape
   // still reads as identical to Cockatrice. Gated to isSelf per
   // player_menu.cpp — spectators / opponents don't get this menu.
-  const handSize = handCards?.length ?? 0;
+  // Prefer the server-broadcast count from `zoneCounts.hand`, which
+  // is populated for BOTH self and opponents (HAND is a PrivateZone
+  // but its cardCount is public). Falling back to `handCards.length`
+  // as second choice would silently return 0 for opponents — their
+  // handCards array is always empty because they don't ship the card
+  // identities to us — so nullish-coalescing to it would leave the
+  // badge stuck at 0.
+  const handSize = zoneCounts?.hand ?? handCards?.length ?? 0;
   // Reveal-hand submenu — same shape as reveal-library (All players
   // + separator + one entry per opponent). Uses the same wire as
   // reveal-library (Command_RevealCards with zoneName=hand). No
@@ -5592,17 +5678,36 @@ function PlayerBox(
     });
   };
   const handMenuItems: ContextMenuItem[] = [
-    // View hand — Cockatrice opens a persistent hand view. We don't
-    // have that widget yet; a natural fit would be reusing the
-    // library-search dialog against the hand cards, but scope for
-    // this iteration.
-    { label: "View hand", disabled: true },
     {
+      // View hand — reuses the generic zone-view dialog (same
+      // widget as View library / graveyard / exile). Only offered
+      // for the local player; opponents' hands are hidden and the
+      // dialog would have nothing to show.
+      label: "View hand",
+      onClick: () => setPileView({ zone: 'hand' }),
+      disabled: !isSelf || handSize <= 0,
+    },
+    {
+      // Sort hand by ... — dispatches per-card moveCard reorders
+      // in the calculated order. Matches Cockatrice's
+      // hand_menu.cpp; async lookup for maintype / manacost keys.
       label: "Sort hand by...",
       submenu: [
-        { label: "Name", disabled: true },
-        { label: "Type", disabled: true },
-        { label: "Mana Value", disabled: true },
+        {
+          label: "Name",
+          onClick: () => handleRequestSortHandBy('name'),
+          disabled: !isSelf || handSize <= 1,
+        },
+        {
+          label: "Type",
+          onClick: () => handleRequestSortHandBy('maintype'),
+          disabled: !isSelf || handSize <= 1,
+        },
+        {
+          label: "Mana Value",
+          onClick: () => handleRequestSortHandBy('manacost'),
+          disabled: !isSelf || handSize <= 1,
+        },
       ],
     },
     {
@@ -5615,11 +5720,13 @@ function PlayerBox(
     },
     { divider: true },
     {
-      // Choose-hand-size mulligan — desktop opens a modal to prompt
-      // for the target hand size. We haven't built that modal yet;
-      // "same size" and "-1" variants below cover the common cases.
+      // Opens a numeric prompt (dialog layer), then fires
+      // Command_Mulligan with the resolved hand size. Accepts
+      // -handSize..handSize+deckSize (≤0 is relative — desktop
+      // parity, see handleRequestChooseMulligan in useGameDialogs).
       label: "Take mulligan (Choose hand size)",
-      disabled: true,
+      onClick: () => handleRequestChooseMulligan(),
+      disabled: !isSelf,
     },
     {
       label: "Take mulligan (Same hand size)",
@@ -7107,7 +7214,10 @@ function PlayerBox(
                 >
                   <Card
                     name={c.name}
-                    scryfallId={c.scryfallId}
+                    scryfallId={
+                      c.scryfallId
+                      || cardMetaByName.get(c.name)?.scryfallId
+                    }
                     pt={cardMetaByName.get(c.name)?.pt}
                   />
                 </div>
@@ -7196,10 +7306,17 @@ function PlayerBox(
           // widths + margins (Cockatrice-style): if the natural size is
           // smaller than the container, empty space appears on the right
           // (no more spread-to-fit); if larger, the container scrolls.
+          // `zIndex: 0` forces a stacking context so card z-indexes
+          // (`y*100 + x`, easily in the tens of thousands) are confined
+          // to this scope rather than leaking into the parent stacking
+          // context and outranking the hand wrapper's z-30. Without
+          // this, hovered hand cards slid up into the play area but
+          // painted BEHIND battlefield cards.
           style={{
-            width: `${naturalContentW}px`,
-            height: `${naturalContentH}px`,
-          }}
+              width: `${naturalContentW}px`,
+              height: `${naturalContentH}px`,
+              zIndex: 0,
+            }}
         >
           <BattlefieldSlotOverlay
             cellWidths={cellWidths}
@@ -7377,7 +7494,10 @@ function PlayerBox(
                 >
                   <Card
                     name={c.name}
-                    scryfallId={c.scryfallId}
+                    scryfallId={
+                        c.scryfallId
+                        || cardMetaByName.get(c.name)?.scryfallId
+                      }
                     id={c.id}
                     faceDown={c.faceDown}
                     // Prefer the server's `pt` (initial value from
@@ -7429,10 +7549,8 @@ function PlayerBox(
            the TOP half of every card (name / mana / art — the part
            you actually need to read) is what's visible in idle. */}
       <div
-        onMouseEnter={() => setHandExpanded(true)}
-        onMouseLeave={() => setHandExpanded(false)}
         className={[
-          "bg-bg-surface/40 min-h-0 flex",
+          "min-h-0 flex",
           // For flipped opponent hands, use items-end so the rotated
           // card back's BOTTOM (which is the original TOP with the
           // Magic logo) sits in the visible strip. Everything else
@@ -7441,48 +7559,151 @@ function PlayerBox(
           // card's readable half occupies the strip.
           handOnTop && flipHandCardBacks ? "items-end" : "items-start",
           handOnTop ? "border-b border-border-subtle" : "border-t border-border-subtle",
-          handExpanded ? "overflow-visible" : "overflow-hidden",
+          // Keep overflow-visible while the slide tween is mid-flight
+          // too, otherwise the wrapper clips its own cards halfway
+          // through the return-to-idle animation and it reads as a
+          // z-index pop.
+          (handExpanded || handAnimating) ? 'overflow-visible' : 'overflow-hidden',
         ].join(" ")}
         style={{
           gridColumn: "2 / 4",
           gridRow: handOnTop ? 1 : 2,
-          // Elevate above other grid children when expanded so the
-          // overflowing cards paint on top of the play area.
+          // Always elevated above the play area so overflowing cards
+          // paint on top when the hand expands. Kept static (not tied
+          // to hover) so nothing flickers at the boundary.
           position: 'relative',
-          zIndex: handExpanded ? 30 : undefined,
+          zIndex: 30,
         }}
       >
+        {/* Hand icon + count badge overlay. Top-left of the hand
+            zone for every player. Right-click on the OWN button
+            opens the hand context menu (ports Cockatrice's HandMenu
+            — see handMenuItems above). Opponent buttons are inert
+            (Cockatrice doesn't offer a menu on opponent hands
+            either — you can't act on cards you can't see). The
+            wrapper ContextMenu only mounts for isSelf, so
+            right-clicking an opponent's button produces no popup
+            (the browser default is also suppressed on the button's
+            own onContextMenu). z-40 sits above the expanded hand's
+            z-30 so the button stays clickable when cards float up
+            on hover. */}
+        {isSelf ? (
+          <ContextMenu items={handMenuItems}>
+            <button
+              type="button"
+              className={
+                'absolute top-1 left-1 z-40 flex items-center justify-center '
+                + 'h-14 w-14 rounded bg-bg-surface/80 hover:bg-bg-elevated '
+                + 'border border-border-subtle text-text-primary '
+                + 'shadow transition-colors cursor-default'
+              }
+              title={`Hand — ${handSize} card${handSize === 1 ? '' : 's'}`}
+              onContextMenu={(e) => {
+                // ContextMenu's own onContextMenu on its wrapper div
+                // handles the popup; suppress the button's default
+                // context menu so nothing else fires.
+                e.preventDefault();
+              }}
+              onClick={(e) => {
+                // Left-click also opens the menu. The ContextMenu
+                // wrapper only listens for `contextmenu` events on
+                // its own div, so we synthesize one at this button's
+                // location and dispatch it upward — the wrapper's
+                // handler catches it and sets `position` to the
+                // supplied clientX/clientY, opening the popup at
+                // the same spot a right-click would.
+                e.preventDefault();
+                const evt = new MouseEvent('contextmenu', {
+                  bubbles: true,
+                  cancelable: true,
+                  clientX: e.clientX,
+                  clientY: e.clientY,
+                });
+                e.currentTarget.dispatchEvent(evt);
+              }}
+            >
+              <Hand size={32} className="text-text-secondary" aria-hidden />
+              <span
+                className={
+                  'absolute inset-0 flex items-center justify-center '
+                  + 'text-[1.3rem] font-bold text-text-primary '
+                  + 'pointer-events-none tabular-nums'
+                }
+                style={{ textShadow: '0 0 3px rgba(0,0,0,0.9), 0 0 2px rgba(0,0,0,1)' }}
+              >
+                {handSize}
+              </span>
+            </button>
+          </ContextMenu>
+        ) : (
+          <button
+            type="button"
+            disabled
+            className={
+              'absolute top-1 left-1 z-40 flex items-center justify-center '
+              + 'h-14 w-14 rounded bg-bg-surface/80 border border-border-subtle '
+              + 'text-text-primary shadow cursor-default'
+            }
+            title={`Hand — ${handSize} card${handSize === 1 ? '' : 's'}`}
+            onContextMenu={(e) => e.preventDefault()}
+          >
+            <Hand size={32} className="text-text-secondary" aria-hidden />
+            <span
+              className={
+                'absolute inset-0 flex items-center justify-center '
+                + 'text-[1.3rem] font-bold text-text-primary '
+                + 'pointer-events-none tabular-nums'
+              }
+              style={{ textShadow: '0 0 3px rgba(0,0,0,0.9), 0 0 2px rgba(0,0,0,1)' }}
+            >
+              {handSize}
+            </span>
+          </button>
+        )}
         {/* Inner row — full card height so cards render at their true
             size; the outer wrapper clips the half we don't want to see
             in idle mode. On hover, a translateY on this container
             slides the whole card content upward for the bottom hand
             (top hand stays put — its expansion is downward and
             handled by the outer's overflow flip alone). */}
-        <div
+        <motion.div
           ref={handRef}
           // `overflow-y-hidden` set explicitly alongside overflow-x-auto
           // to short-circuit the CSS spec's promotion of the other
           // axis to `auto` — that's what was spawning a phantom
           // vertical scrollbar even though cards fit exactly.
-          className="w-full flex items-center overflow-x-auto overflow-y-hidden transition-transform duration-200 ease-out"
-          style={{
-            height: CARD_HEIGHT,
-            // Own hand slides UP on hover (top half of card floats
-            // into the play area above, bottom half comes into the
-            // strip). Flipped opponent hand mirrors that, sliding
-            // DOWN on hover so the card back's original TOP (with
-            // Magic logo) drops into the play area below and the
-            // rotated top comes into the strip. Non-flipped
-            // (3-player) opponent has no transform — its expansion
-            // is a plain overflow reveal downward.
-            transform: handExpanded
+          className='w-full flex items-center overflow-x-auto overflow-y-hidden'
+          style={{ height: CARD_HEIGHT }}
+          // Own hand slides UP on hover (top half of card floats
+          // into the play area above, bottom half comes into the
+          // strip). Flipped opponent hand mirrors that, sliding
+          // DOWN on hover so the card back's original TOP (with
+          // Magic logo) drops into the play area below and the
+          // rotated top comes into the strip. Non-flipped
+          // (3-player) opponent has no transform — its expansion
+          // is a plain overflow reveal downward. Framer Motion
+          // drives the tween via WAAPI so it interrupts cleanly on
+          // fast hover-in/out (the CSS-transition version had to
+          // finish before it could reverse) and auto-promotes to
+          // the compositor.
+          animate={{
+            y: handExpanded
               ? !handOnTop
-                ? 'translateY(-40%)'
+                ? '-40%'
                 : flipHandCardBacks
-                  ? 'translateY(40%)'
-                  : undefined
-              : undefined,
+                  ? '40%'
+                  : '0%'
+              : '0%',
           }}
+          // Spring feels snappier than a fixed-duration tween because
+          // it front-loads the motion. Tuned for a quick, damped
+          // response — no overshoot bounce, settles in ~180ms.
+          transition={{ type: 'spring', stiffness: 500, damping: 40, mass: 0.6 }}
+          // Flip the `handAnimating` flag around the tween so the outer
+          // wrapper keeps `overflow-visible` for the whole slide-back
+          // instead of clipping cards mid-flight.
+          onAnimationStart={() => setHandAnimating(true)}
+          onAnimationComplete={() => setHandAnimating(false)}
           onWheel={(e) => {
             // Translate vertical wheel input into horizontal scroll so the
             // mousewheel Just Works over an overflowing hand. Only when
@@ -7503,7 +7724,11 @@ function PlayerBox(
             reachable when the hand overflows and needs to scroll. */}
         {isSelf
           ? handDisplayList.length > 0 && (
-              <div className="flex items-center gap-1 m-auto px-1">
+              <div
+                onMouseEnter={() => setHandExpanded(true)}
+                onMouseLeave={() => setHandExpanded(false)}
+                className='flex items-center gap-1 m-auto px-1 bg-bg-surface/40'
+              >
                 {handDisplayList.map((c) => {
                   const dragging = isDragging(c.id, "hand");
                   const selected =
@@ -7596,7 +7821,21 @@ function PlayerBox(
                     >
                       <Card
                         name={c.name}
-                        scryfallId={c.scryfallId}
+                        // Prefer any scryfallId we've already resolved
+                        // via the Scryfall metadata cache — the wire's
+                        // `c.scryfallId` is empty when the deck was
+                        // uploaded without per-card `uuid` attributes,
+                        // which forces Card.tsx to hit
+                        // /cards/named?exact= for the image. That
+                        // endpoint is rate-limited; several hand
+                        // cards fetching in parallel at game start
+                        // means some silently 429 and never retry.
+                        // The batched cardMetaByName lookup gives us
+                        // a real id → CDN path with no rate limit.
+                        scryfallId={
+                          c.scryfallId
+                          || cardMetaByName.get(c.name)?.scryfallId
+                        }
                         pt={cardMetaByName.get(c.name)?.pt}
                       />
                     </div>
@@ -7605,7 +7844,11 @@ function PlayerBox(
               </div>
             )
           : handCount > 0 && (
-              <div className="flex items-center gap-1 m-auto px-1">
+              <div
+                onMouseEnter={() => setHandExpanded(true)}
+                onMouseLeave={() => setHandExpanded(false)}
+                className='flex items-center gap-1 m-auto px-1 bg-bg-surface/40'
+              >
                 {Array.from({ length: handCount }, (_, i) => (
                   <img
                     key={i}
@@ -7623,7 +7866,7 @@ function PlayerBox(
                 ))}
               </div>
             )}
-        </div>
+        </motion.div>
       </div>
 
       {/* Draw animations — a card back tweens from the library rect
@@ -7972,26 +8215,40 @@ function PlayerBox(
         />
       )}
 
-      {/* View graveyard / View exile — reuses LibrarySearchDialog so
+      {/* View graveyard / exile / hand — reuses LibrarySearchDialog so
           the pile view / group-by / sort-by controls match the
-          "View library" flow. Both graveyard and exile are public
-          zones whose full card list Redux already carries, so no
-          wire fires on open (unlike the library flow which needs
-          Command_DumpZone first) and nothing needs clearing on
-          close. `showShuffleOnClose={false}` hides the toggle —
-          shuffling a pile that isn't the library makes no sense.
+          "View library" flow. Graveyard and exile are public zones
+          whose full card list Redux already carries; hand is private
+          but only opened for the local player (`isSelf`-gated at the
+          menu), whose byId/order is populated too. No wire fires on
+          open (unlike the library flow which needs Command_DumpZone
+          first) and nothing needs clearing on close.
+          `showShuffleOnClose={false}` hides the toggle — shuffling
+          a pile that isn't the library makes no sense.
           `enrichedDeckCards` is passed so the group/sort dropdowns
           have Scryfall-backfilled type / cmc / color info to work
-          with (graveyard cards typically originated from the deck). */}
+          with (graveyard / hand cards typically originated from the
+          deck). Drag-out uses the pile's source-zone so applyMove
+          fires the correct startZone; drag-in is detected via
+          `pileViewDialogRef` in detectDropTarget above and routes to
+          Command_MoveCard(target={GRAVE|EXILE|HAND}). */}
       {pileView && (
         <LibrarySearchDialog
           isOpen
-          title={`${pileView.zone === "graveyard" ? "Graveyard" : "Exile"} — ${name}`}
+          title={`${
+            pileView.zone === 'graveyard'
+              ? 'Graveyard'
+              : pileView.zone === 'exile'
+                ? 'Exile'
+                : 'Hand'
+          } — ${name}`}
           showShuffleOnClose={false}
           library={
-            pileView.zone === "graveyard"
+            pileView.zone === 'graveyard'
               ? graveDisplayList
-              : exileDisplayList
+              : pileView.zone === 'exile'
+                ? exileDisplayList
+                : handDisplayList
           }
           deckCards={enrichedDeckCards}
           playerName={name}
@@ -8003,19 +8260,26 @@ function PlayerBox(
           // Per-card right-click menu. Anchors at the pointer so it
           // opens where the user clicked, and carries the source
           // zone (GRAVE / EXILE) so the Draw arrow flow can set the
-          // wire's `startZone` correctly.
-          onCardContextMenu={(e, c) => {
-            setPileCardMenu({
-              zone:
-                pileView.zone === "graveyard"
-                  ? ZoneName.GRAVE
-                  : ZoneName.EXILE,
-              cardId: c.id,
-              cardName: c.name,
-              x: e.clientX,
-              y: e.clientY,
-            });
-          }}
+          // wire's `startZone` correctly. The hand-pile view skips
+          // this menu — hand cards already have their own drag-based
+          // interactions, and the Draw / Clone actions offered by
+          // pileCardMenu don't make sense from hand.
+          onCardContextMenu={
+            pileView.zone === 'hand'
+              ? undefined
+              : (e, c) => {
+                setPileCardMenu({
+                  zone:
+                    pileView.zone === 'graveyard'
+                      ? ZoneName.GRAVE
+                      : ZoneName.EXILE,
+                  cardId: c.id,
+                  cardName: c.name,
+                  x: e.clientX,
+                  y: e.clientY,
+                });
+              }
+          }
           // dropRef lets detectDropTarget hit-test the modal so a
           // drag-and-release inside the dialog resolves to the source
           // pile (same-zone no-op) instead of falling through to the

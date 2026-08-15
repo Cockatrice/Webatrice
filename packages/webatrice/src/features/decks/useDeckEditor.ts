@@ -79,6 +79,9 @@ export interface UseDeckEditor {
   deleteCard: (index: number) => void;
   incQuantity: (index: number, delta: number) => void;
   setCategory: (index: number, category: DeckCard['category']) => void;
+  /** Toggle the commander marker on a card. Independent of category.
+   *  See DeckCard.isCommander for the full rationale. */
+  setCommander: (index: number, isCommander: boolean) => void;
   /**
    * Add a card by name to the mainboard. If the mainboard already
    * has a row for this card (case-insensitive), that row's quantity
@@ -140,7 +143,15 @@ export function useDeckEditor(deckId: number | null): UseDeckEditor {
           // debounces + `persistNow` early-returns when the serialized
           // XML matches savedSignatureRef, so this is a no-op for
           // decks that already had a format on file.
-          if (!parsed.format.trim()) {
+          //
+          // Also nudge for legacy decks with a `<zone
+          // name="commander">` block. parseCod coerces those cards
+          // into the main zone with `isCommander: true`, but the
+          // stored XML still has the old shape until we re-save it.
+          // Servatrice's setupZones only reads main + side, so an
+          // un-migrated file drops the commander from the library.
+          const hasLegacyCommanderZone = payload.deck.includes('<zone name="commander"');
+          if (!parsed.format.trim() || hasLegacyCommanderZone) {
             scheduleSave();
           }
         } catch (err) {
@@ -321,9 +332,30 @@ export function useDeckEditor(deckId: number | null): UseDeckEditor {
       setDeck((prev) => {
         if (!prev) return prev;
         const next = prev.cards.slice();
-        // Commander convention: only 1 copy of a commander card.
-        const nextQty = category === 'commander' ? 1 : next[index].quantity;
-        next[index] = { ...next[index], category, quantity: nextQty };
+        next[index] = { ...next[index], category };
+        return { ...prev, cards: next };
+      });
+      scheduleSave();
+    },
+    [scheduleSave],
+  );
+
+  // Toggle the commander marker on a card. Independent of category —
+  // the card stays in whatever zone it's currently in. Also clamps
+  // quantity to 1 when marking (Commander convention: only one copy
+  // of the commander in the deck).
+  const setCommander = useCallback(
+    (index: number, isCommander: boolean) => {
+      setDeck((prev) => {
+        if (!prev) return prev;
+        const next = prev.cards.slice();
+        const current = next[index];
+        if (!current) return prev;
+        next[index] = {
+          ...current,
+          isCommander,
+          quantity: isCommander ? 1 : current.quantity,
+        };
         return { ...prev, cards: next };
       });
       scheduleSave();
@@ -394,6 +426,7 @@ export function useDeckEditor(deckId: number | null): UseDeckEditor {
     deleteCard,
     incQuantity,
     setCategory,
+    setCommander,
     addCard,
     flushSave,
   };

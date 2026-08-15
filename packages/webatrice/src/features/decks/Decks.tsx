@@ -172,7 +172,7 @@ function Decks() {
   //   • bracketLevel         — <bracketAssessment level> or meta.bracketLevel
   //   • format               — <format> element (for the row chip)
   //   • bannerCard           — <bannerCard> name (first pick for art)
-  //   • commanderName/Uuid   — first `category="commander"` card (art fallback)
+  //   • commanderName/Uuid   — first card with `commander="1"` attr (art fallback)
   const [summaryMap, setSummaryMap] = useState<Map<number, DeckSummary>>(new Map());
   const priceFetchedRef = useRef<Set<number>>(new Set());
 
@@ -189,7 +189,7 @@ function Decks() {
     ({ payload }) => {
       try {
         const parsed = parseCod(payload.deck);
-        const commander = parsed.cards.find((c) => c.category === 'commander');
+        const commander = parsed.cards.find((c) => c.isCommander);
         const next: DeckSummary = {
           usd: parsed.meta.priceUsd,
           missing: parsed.meta.priceMissingCount,
@@ -436,10 +436,10 @@ interface DeckSummary {
    *  card name (no scryfallId), so we resolve art via Scryfall's
    *  `/cards/named` endpoint. */
   bannerCard?: string;
-  /** First `category="commander"` card's name — Scryfall art fallback
+  /** First card marked with `commander="1"`'s name — Scryfall art fallback
    *  when there's no scryfallId hint on the card. */
   commanderName?: string;
-  /** First `category="commander"` card's scryfallId — preferred
+  /** First card marked with `commander="1"`'s scryfallId — preferred
    *  because it resolves to the exact chosen printing's art. */
   commanderScryfallId?: string;
 }
@@ -962,8 +962,29 @@ function ImportDeckModal({
     }
     setPhase('resolving');
     try {
-      const uniqueNames = Array.from(new Set(entries.map((e) => e.name)));
-      const lookupMap = await lookupCards(uniqueNames);
+      // Pass set + collector alongside name so Scryfall's collection
+      // batch can identify freshly-printed / Universe-Beyond cards
+      // by exact printing rather than fuzzy-matching on name (which
+      // silently misses when the export's name doesn't byte-match
+      // Scryfall's canonical form). Dedup by name — the first hint
+      // wins if the same card appears at different printings across
+      // deck lines (rare, and printing selection happens later in
+      // `pickPrinting`).
+      const uniqueHints = new Map<string, {
+        name: string;
+        set?: string;
+        collectorNumber?: string;
+      }>();
+      for (const e of entries) {
+        if (!uniqueHints.has(e.name)) {
+          uniqueHints.set(e.name, {
+            name: e.name,
+            set: e.set,
+            collectorNumber: e.collectorNumber,
+          });
+        }
+      }
+      const lookupMap = await lookupCards(Array.from(uniqueHints.values()));
       const rows: ResolvedRow[] = entries.map((entry) => ({
         entry,
         lookup: lookupMap.get(entry.name) ?? {

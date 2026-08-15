@@ -94,6 +94,10 @@ export interface CardDetailModalProps {
   onInc: (index: number) => void;
   onDec: (index: number) => void;
   onSetCategory: (index: number, category: DeckCategory) => void;
+  /** Toggle the commander marker on a card. Independent of category
+   *  — the card stays in whatever zone it was in (main / sideboard).
+   *  Passing an index outside the deck bounds is a no-op. */
+  onSetCommander: (index: number, isCommander: boolean) => void;
   onChangePrinting: (index: number, card: DeckCard) => void;
   onDelete: (index: number) => void;
 }
@@ -107,6 +111,7 @@ export default function CardDetailModal({
   onInc,
   onDec,
   onSetCategory,
+  onSetCommander,
   onChangePrinting,
   onDelete,
 }: CardDetailModalProps) {
@@ -179,7 +184,7 @@ export default function CardDetailModal({
     typeof detail?.cmc === 'number' ? detail.cmc : liveCard?.cmc ?? snapshot.cmc;
   const setCode = detail?.set ?? liveCard?.set ?? snapshot.set;
   const collector = detail?.collector_number ?? liveCard?.collectorNumber ?? snapshot.collectorNumber;
-  const cardIsCommander = (liveCard ?? snapshot).category === 'commander';
+  const cardIsCommander = !!(liveCard ?? snapshot).isCommander;
   const cardIsSideboard = (liveCard ?? snapshot).category === 'sideboard';
   const quantity = liveCard?.quantity ?? 0;
 
@@ -325,7 +330,7 @@ export default function CardDetailModal({
                   disabled={removed}
                   onClick={closeAfter(() => {
                     if (liveIndex < 0) return;
-                    onSetCategory(liveIndex, cardIsCommander ? 'main' : 'commander');
+                    onSetCommander(liveIndex, !cardIsCommander);
                   })}
                 />
               )}

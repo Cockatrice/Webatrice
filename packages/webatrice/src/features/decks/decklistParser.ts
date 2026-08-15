@@ -27,6 +27,10 @@ export type ParsedEntry = {
   quantity: number;
   name: string;
   category: DeckCategory;
+  /** True for cards under a "Commander" section header. Card still
+   *  goes into the main zone at import time — commander is a UI
+   *  marker, not a distinct zone. See DeckCard.isCommander. */
+  isCommander?: boolean;
   set?: string;
   collectorNumber?: string;
 };
@@ -52,19 +56,26 @@ const CARD_RE =
 // MTGO-style sideboard prefix: "SB: 1 Card Name"
 const SB_PREFIX_RE = /^\s*SB:\s*/i;
 
-function mapSection(header: string): DeckCategory {
+// Returns the zone (category) + whether cards in this section
+// should be flagged as commanders. Commander sections put cards
+// in main with `isCommander=true` — there's no distinct command
+// zone, only a UI marker.
+function mapSection(header: string): { category: DeckCategory; isCommander: boolean } {
   const h = header.toLowerCase();
-  if (h.startsWith('commander')) return 'commander';
+  if (h.startsWith('commander')) return { category: 'main', isCommander: true };
   if (h.startsWith('sideboard') || h.startsWith('companion') || h.startsWith('maybeboard')) {
-    return 'sideboard';
+    return { category: 'sideboard', isCommander: false };
   }
-  return 'main';
+  return { category: 'main', isCommander: false };
 }
 
 export function parseDecklist(text: string): ParseResult {
   const entries: ParsedEntry[] = [];
   const ignored: string[] = [];
-  let currentSection: DeckCategory = 'main';
+  let currentSection: { category: DeckCategory; isCommander: boolean } = {
+    category: 'main',
+    isCommander: false,
+  };
 
   for (const raw of text.split(/\r?\n/)) {
     const line = raw.trimEnd();
@@ -83,7 +94,7 @@ export function parseDecklist(text: string): ParseResult {
     let sectionForThisLine = currentSection;
     if (SB_PREFIX_RE.test(workingLine)) {
       workingLine = workingLine.replace(SB_PREFIX_RE, '');
-      sectionForThisLine = 'sideboard';
+      sectionForThisLine = { category: 'sideboard', isCommander: false };
     }
 
     const m = workingLine.match(CARD_RE);
@@ -100,7 +111,8 @@ export function parseDecklist(text: string): ParseResult {
     entries.push({
       quantity,
       name: name.trim(),
-      category: sectionForThisLine,
+      category: sectionForThisLine.category,
+      ...(sectionForThisLine.isCommander ? { isCommander: true } : {}),
       set: set || undefined,
       collectorNumber: collector || undefined,
     });

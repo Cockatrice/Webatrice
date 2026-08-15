@@ -59,8 +59,12 @@ const FORMATS: FormatDef[] = [
 // ---------- Format writers ----------
 
 function toPlain(cards: DeckCard[]): string {
-  const commanders = cards.filter((c) => c.category === 'commander');
-  const main = cards.filter((c) => c.category === 'main');
+  // Commander is a per-card flag, not a category — cards live in
+  // main + isCommander=true. Filter main to exclude them so we
+  // don't list a commander under both the Commander and Deck
+  // sections in the exported list.
+  const commanders = cards.filter((c) => c.isCommander);
+  const main = cards.filter((c) => c.category === 'main' && !c.isCommander);
   const side = cards.filter((c) => c.category === 'sideboard');
   const parts: string[] = [];
   if (commanders.length > 0) {
@@ -87,8 +91,12 @@ function toArena(cards: DeckCard[]): string {
     if (set && num) return `${c.quantity} ${c.name} (${set}) ${num}`;
     return `${c.quantity} ${c.name}`;
   };
-  const commanders = cards.filter((c) => c.category === 'commander');
-  const main = cards.filter((c) => c.category === 'main');
+  // Commander is a per-card flag, not a category — cards live in
+  // main + isCommander=true. Filter main to exclude them so we
+  // don't list a commander under both the Commander and Deck
+  // sections in the exported list.
+  const commanders = cards.filter((c) => c.isCommander);
+  const main = cards.filter((c) => c.category === 'main' && !c.isCommander);
   const side = cards.filter((c) => c.category === 'sideboard');
   const parts: string[] = [];
   if (commanders.length > 0) {

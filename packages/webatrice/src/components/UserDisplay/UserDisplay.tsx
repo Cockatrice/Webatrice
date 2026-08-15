@@ -6,6 +6,7 @@ import { MessageSquare, UserRoundPlus, UserRoundMinus, VolumeX, Volume2 } from '
 import { Images } from '@app/images';
 import { ServerInfo_User } from '@cockatrice/sockatrice/generated';
 import { RouteEnum } from '@app/types';
+import { UserBadges } from '../UserBadges/UserBadges';
 import { useUserDisplay } from './useUserDisplay';
 
 import './UserDisplay.css';
@@ -15,7 +16,7 @@ interface UserDisplayProps {
 }
 
 const UserDisplay = ({ user }: UserDisplayProps) => {
-  const { name, country } = user;
+  const { name, country, userLevel } = user;
   const {
     position,
     isABuddy,
@@ -34,6 +35,7 @@ const UserDisplay = ({ user }: UserDisplayProps) => {
         <div className="user-display__details" onContextMenu={handleClick}>
           <img className="user-display__country" src={Images.Countries[country]} alt={country} />
           <div className="user-display__name single-line-ellipsis">{name}</div>
+          <UserBadges userLevel={userLevel} size={12} className="ml-1" />
         </div>
       </NavLink>
       {position && (

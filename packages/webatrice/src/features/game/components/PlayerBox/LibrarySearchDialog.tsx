@@ -10,6 +10,8 @@ import { Search, X } from "lucide-react";
 import type { DeckCard } from "./mockTypes";
 import Card from "./Card";
 import { CARD_HEIGHT, CARD_WIDTH } from "./cardSize";
+import { useHoveredCard } from "./hoveredCard";
+import { useBigCardPreview } from "./bigCardPreview";
 import {
   compareCards,
   groupCards,
@@ -185,6 +187,8 @@ export default function LibrarySearchDialog({
   draggingCardIds,
   dropRef,
 }: Props) {
+  const { setHoveredCard } = useHoveredCard();
+  const { openBigPreview, closeBigPreview } = useBigCardPreview();
   const [query, setQuery] = useState("");
   // Grouping/sorting defaults match Cockatrice's SettingsCache
   // (cache_settings.cpp:383-384): `zoneview/groupby` defaults to index 1
@@ -804,12 +808,23 @@ export default function LibrarySearchDialog({
                       {g.cards.map((c, i) => {
                         const selected = selectedIds.has(c.handCard.id);
                         const dragging = draggingCardIds?.has(c.handCard.id);
+                        const isLast = i === g.cards.length - 1;
+                        // Outer wrapper's DOM box = the visible strip only
+                        // (last card gets full height since it shows fully).
+                        // The Card inside is absolutely positioned at full
+                        // size with pointer-events:none, so it visually
+                        // overflows the strip but the browser's hover
+                        // detection stays confined to the strip's bounds —
+                        // moving off the strip cleanly hands off to the
+                        // next card's strip below. `group` + `group-hover`
+                        // apply the scale to the inner visual container
+                        // when the outer strip is hovered.
                         return (
                           <div
                             key={c.handCard.id}
                             data-card
                             data-card-id={c.handCard.id}
-                            className="absolute left-0 hover:z-10"
+                            className="absolute left-0 hover:z-10 group"
                             onPointerDown={(e) => {
                               if (e.button !== 0) return;
                               onCardPointerDown?.(e, c.handCard);
@@ -822,8 +837,43 @@ export default function LibrarySearchDialog({
                                   }
                                 : undefined
                             }
+                            onMouseEnter={() => {
+                              // Right-rail preview picks up the hovered card
+                              // (same as normal Card hover). Handled here
+                              // because the inner Card is pointer-events:
+                              // none and never receives its own mouseenter.
+                              setHoveredCard({
+                                name: c.handCard.name,
+                                scryfallId: c.handCard.scryfallId,
+                              });
+                            }}
+                            onMouseDown={(e) => {
+                              // Middle-click zoom parity with Card.tsx —
+                              // held down = show big preview, release =
+                              // dismiss. Same reason as the mouseEnter
+                              // above: Card can't receive this itself.
+                              if (e.button !== 1) return;
+                              e.preventDefault();
+                              openBigPreview({
+                                name: c.handCard.name,
+                                scryfallId: c.handCard.scryfallId,
+                              });
+                              const handleUp = (ev: MouseEvent) => {
+                                if (ev.button !== 1) return;
+                                closeBigPreview();
+                                window.removeEventListener('mouseup', handleUp);
+                              };
+                              window.addEventListener('mouseup', handleUp);
+                            }}
+                            onAuxClick={(e) => {
+                              if (e.button === 1) e.preventDefault();
+                            }}
                             style={{
                               top: `calc(${CARD_HEIGHT} * ${PILE_STEP_FRACTION} * ${i})`,
+                              width: CARD_WIDTH,
+                              height: isLast
+                                ? CARD_HEIGHT
+                                : `calc(${CARD_HEIGHT} * ${PILE_STEP_FRACTION})`,
                               borderRadius: "7.5%",
                               boxShadow: selected
                                 ? "0 0 0 2px rgb(59 130 246), 0 0 12px 2px rgb(59 130 246 / 0.6)"
@@ -833,10 +883,18 @@ export default function LibrarySearchDialog({
                               cursor: onCardPointerDown ? "grab" : undefined,
                             }}
                           >
-                            <Card
-                              name={c.handCard.name}
-                              scryfallId={c.handCard.scryfallId}
-                            />
+                            <div
+                              className="absolute left-0 top-0 pointer-events-none transition-transform duration-150 ease-out group-hover:scale-[1.06]"
+                              style={{
+                                width: CARD_WIDTH,
+                                height: CARD_HEIGHT,
+                              }}
+                            >
+                              <Card
+                                name={c.handCard.name}
+                                scryfallId={c.handCard.scryfallId}
+                              />
+                            </div>
                           </div>
                         );
                       })}

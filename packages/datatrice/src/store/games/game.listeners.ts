@@ -14,6 +14,11 @@ import {
 } from '@cockatrice/sockatrice/generated';
 import { GamesState } from './game.interfaces';
 import { Actions } from './game.actions';
+import {
+  attrOpKey,
+  consumeOptimistic,
+  moveOpKey,
+} from './optimistic';
 import { cloneWith } from '../../common';
 import { buildEmptyCard, formatLeaveMessage, normalizePlayers, resetCardState } from './game.reducer.helpers';
 import {
@@ -161,6 +166,11 @@ export function registerGameListeners(mw: ListenerMiddlewareInstance<unknown>): 
           toPosition: x,
         }));
       } else if (!movedAcrossZones && isPositionalReorderZone && resolvedCardId >= 0) {
+        // Same-zone reorder is idempotent — re-splicing the card at
+        // the same index no-ops — so an optimistic pre-dispatch is
+        // safe to re-apply here. We still consume any pending marker
+        // so the rollback bookkeeping stays tidy.
+        consumeOptimistic(moveOpKey(startPlayerId, resolvedCardId));
         api.dispatch(Actions.cardMovedInSameZone({
           gameId,
           playerId: startPlayerId,
@@ -170,15 +180,47 @@ export function registerGameListeners(mw: ListenerMiddlewareInstance<unknown>): 
           card: movedCard,
         }));
       } else {
-        api.dispatch(Actions.cardMovedBetweenZones({
-          gameId,
-          fromPlayerId: startPlayerId,
-          fromZone: startZone,
-          fromCardId: resolvedCardId,
-          toPlayerId: targetPlayerId,
-          toZone: effectiveTargetZone,
-          card: movedCard,
-        }));
+        // Cross-zone moves are NOT idempotent (cardCount drift +
+        // duplicate order entries if re-applied). Skip the dispatch
+        // when a matching optimistic op is pending — the client
+        // already moved the card locally, and this event is just the
+        // server confirming that move. `consumeOptimistic` returns
+        // true when it removed a matching entry, which is our signal.
+        const optimisticKey = moveOpKey(startPlayerId, resolvedCardId);
+        const skipDispatch =
+          resolvedCardId >= 0 && consumeOptimistic(optimisticKey);
+        if (!skipDispatch) {
+          api.dispatch(Actions.cardMovedBetweenZones({
+            gameId,
+            fromPlayerId: startPlayerId,
+            fromZone: startZone,
+            fromCardId: resolvedCardId,
+            toPlayerId: targetPlayerId,
+            toZone: effectiveTargetZone,
+            card: movedCard,
+          }));
+        } else {
+          // The card is already in the target zone (client did it
+          // optimistically), but the server may have corrected the
+          // position — most importantly, Servatrice bumps `x` to the
+          // next free stack sub-slot (`col*3 + 1`, `+2`) when a
+          // column already has a card at sub-slot 0. Without this
+          // sync, every stacked card would paint at the same sub-slot.
+          // We do a field-level patch (not the full move reducer) so
+          // cardCount + order aren't touched a second time.
+          const effectiveId = movedCard.id;
+          const targetZoneState =
+            state.games.games[gameId]?.players[targetPlayerId]?.zones[effectiveTargetZone];
+          if (targetZoneState?.byId[effectiveId]) {
+            api.dispatch(Actions.cardFieldsUpdated({
+              gameId,
+              playerId: targetPlayerId,
+              zoneName: effectiveTargetZone,
+              cardId: effectiveId,
+              fields: { x: movedCard.x, y: movedCard.y, faceDown: movedCard.faceDown },
+            }));
+          }
+        }
       }
 
       // Keep an open "View library" snapshot in sync: when a card leaves a zone
@@ -420,6 +462,11 @@ export function registerGameListeners(mw: ListenerMiddlewareInstance<unknown>): 
       const cardName = card.name;
 
       if (fields) {
+        // cardFieldsUpdated is idempotent (fresh clone-with, same
+        // input = same output) so the optimistic pre-dispatch can be
+        // re-applied here safely. Consume any pending marker so the
+        // rollback map doesn't leak entries.
+        consumeOptimistic(attrOpKey(playerId, cardId, attribute));
         api.dispatch(Actions.cardFieldsUpdated({ gameId, playerId, zoneName, cardId, fields }));
       }
 
