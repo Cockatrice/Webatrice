@@ -7,7 +7,12 @@ import { games, server } from '@cockatrice/datatrice';
 import { useWebClient } from '@cockatrice/datatrice/react';
 import { useAppDispatch, useAppSelector, type RootState } from '@app/store';
 import { ZoneName } from '@cockatrice/sockatrice';
-import { CardAttribute, Command_CreateToken_TargetMode } from '@cockatrice/sockatrice/generated';
+import {
+  CardAttribute,
+  Command_CreateToken_TargetMode,
+  Event_SetCounterSchema,
+} from '@cockatrice/sockatrice/generated';
+import { create } from '@bufbuild/protobuf';
 import type {
   MoveCardParams,
   ServerInfo_DeckStorage_Folder,
@@ -378,13 +383,35 @@ function GameBoardCell({ cell, totalPlayers }: GameBoardCellProps) {
 
   // Fire `Command_IncCounter` with a signed delta. Left-click on a
   // mana pip → +1, right-click → -1. Only wire for the local player;
-  // opponents' pips are display-only.
+  // opponents' pips are display-only. Optimistic: snapshot the
+  // current value, dispatch counterSet with the delta applied
+  // locally, and rollback via `onError` if the server rejects.
+  // `counterSet` is an idempotent field-assignment reducer so the
+  // server's echo just re-applies the same value on success.
   const onModifyCounter = useMemo(() => {
     if (gameId == null) return undefined;
     return (counterId: number, delta: number) => {
-      webClient.request.game.incCounter(gameId, { counterId, delta });
+      const currentCounter = store.getState().games.games[gameId]
+        ?.players[cell.playerId]?.counters[counterId];
+      const previousValue = currentCounter?.count ?? 0;
+      const nextValue = previousValue + delta;
+      dispatch(games.Actions.counterSet({
+        gameId,
+        playerId: cell.playerId,
+        data: create(Event_SetCounterSchema, { counterId, value: nextValue }),
+      }));
+      webClient.request.game.incCounter(gameId, { counterId, delta }, {
+        onError: (code) => {
+          console.warn(`incCounter rejected (${code}); rolling back counter ${counterId} to ${previousValue}`);
+          dispatch(games.Actions.counterSet({
+            gameId,
+            playerId: cell.playerId,
+            data: create(Event_SetCounterSchema, { counterId, value: previousValue }),
+          }));
+        },
+      });
     };
-  }, [gameId, webClient]);
+  }, [gameId, webClient, dispatch, store, cell.playerId]);
   // "Untap all permanents" — same wire the phase-tracker's untap-step
   // double-click fires (usePhaseBar.ts:41-51). One Command_SetCardAttr
   // with cardId=-1 tells Servatrice to untap every card in TABLE
@@ -411,13 +438,32 @@ function GameBoardCell({ cell, totalPlayers }: GameBoardCellProps) {
   }, [gameId, webClient]);
   // Absolute-value variant — fires `Command_SetCounter` for the
   // mana pool's "Set counter..." rows. Server clamps to
-  // [0, MAX_COUNTER_VALUE] so callers can pass raw sums.
+  // [0, MAX_COUNTER_VALUE] so callers can pass raw sums. Optimistic
+  // with rollback via `onError`. See `onModifyCounter` for the same
+  // pattern.
   const onSetPlayerCounter = useMemo(() => {
     if (gameId == null) return undefined;
     return (counterId: number, value: number) => {
-      webClient.request.game.setCounter(gameId, { counterId, value });
+      const currentCounter = store.getState().games.games[gameId]
+        ?.players[cell.playerId]?.counters[counterId];
+      const previousValue = currentCounter?.count ?? 0;
+      dispatch(games.Actions.counterSet({
+        gameId,
+        playerId: cell.playerId,
+        data: create(Event_SetCounterSchema, { counterId, value }),
+      }));
+      webClient.request.game.setCounter(gameId, { counterId, value }, {
+        onError: (code) => {
+          console.warn(`setCounter rejected (${code}); rolling back counter ${counterId} to ${previousValue}`);
+          dispatch(games.Actions.counterSet({
+            gameId,
+            playerId: cell.playerId,
+            data: create(Event_SetCounterSchema, { counterId, value: previousValue }),
+          }));
+        },
+      });
     };
-  }, [gameId, webClient]);
+  }, [gameId, webClient, dispatch, store, cell.playerId]);
   // Batched set-card-counter — packs every entry into one
   // CommandContainer via bulkSetCardCounterEntries. Powers the
   // "Increment all card counters" flow; the whole increment ships
@@ -471,29 +517,48 @@ function GameBoardCell({ cell, totalPlayers }: GameBoardCellProps) {
   );
 
   // Controlled life — only for real players. `incCounter` sends a
-  // delta; `setCounter` sends an absolute value. Both round-trip
-  // through the server, so the displayed life updates when the
-  // server broadcasts the new counter value.
+  // delta; `setCounter` sends an absolute value. Optimistic with
+  // rollback: life flips immediately on click so life-total taps
+  // feel instant, and the wire's `onError` reverts if the server
+  // rejects (rare — life is unrestricted for the local player).
   const lifeControl = useMemo(() => {
     if (gameId == null || !lifeCounter) return undefined;
+    const counterId = lifeCounter.id;
+    const applyLocally = (value: number) => {
+      dispatch(games.Actions.counterSet({
+        gameId,
+        playerId: cell.playerId,
+        data: create(Event_SetCounterSchema, { counterId, value }),
+      }));
+    };
     return {
       // ServerInfo_Counter stores the current amount in `count`
       // (the reducer copies `Event_SetCounter.value` → `counter.count`).
       value: lifeCounter.count,
       onDelta: (delta: number) => {
-        webClient.request.game.incCounter(gameId, {
-          counterId: lifeCounter.id,
-          delta,
+        const previousValue = store.getState().games.games[gameId]
+          ?.players[cell.playerId]?.counters[counterId]?.count ?? lifeCounter.count;
+        applyLocally(previousValue + delta);
+        webClient.request.game.incCounter(gameId, { counterId, delta }, {
+          onError: (code) => {
+            console.warn(`incCounter(life) rejected (${code}); rolling back to ${previousValue}`);
+            applyLocally(previousValue);
+          },
         });
       },
       onSet: (value: number) => {
-        webClient.request.game.setCounter(gameId, {
-          counterId: lifeCounter.id,
-          value,
+        const previousValue = store.getState().games.games[gameId]
+          ?.players[cell.playerId]?.counters[counterId]?.count ?? lifeCounter.count;
+        applyLocally(value);
+        webClient.request.game.setCounter(gameId, { counterId, value }, {
+          onError: (code) => {
+            console.warn(`setCounter(life) rejected (${code}); rolling back to ${previousValue}`);
+            applyLocally(previousValue);
+          },
         });
       },
     };
-  }, [gameId, lifeCounter, webClient]);
+  }, [gameId, lifeCounter, webClient, dispatch, store, cell.playerId]);
 
   // Slice 2a: read the server-authoritative card counts for the three
   // pile-visualized zones. `cardCount` is the wire-authoritative total
@@ -1383,20 +1448,50 @@ function GameBoardCell({ cell, totalPlayers }: GameBoardCellProps) {
   // decrease, flow, set..., reset) using its local card metadata and
   // passes the pre-computed batch through here. Mirrors Cockatrice's
   // `PlayerActions::actIncPT` which packages one command per card into a
-  // single game command list.
+  // single game command list. Optimistic: patch pt locally via
+  // cardFieldsUpdated (idempotent) so the PT pill updates instantly;
+  // rollback per-card via `onError` if the server rejects.
   const onSetPT = useMemo(() => {
     if (gameId == null) return undefined;
     return (items: { cardId: number; pt: string }[]) => {
       for (const { cardId, pt } of items) {
-        webClient.request.game.setCardAttr(gameId, {
-          zone: ZoneName.TABLE,
-          cardId,
-          attribute: CardAttribute.AttrPT,
-          attrValue: pt,
-        });
+        const currentCard = store.getState().games.games[gameId]
+          ?.players[cell.playerId]?.zones[ZoneName.TABLE]?.byId[cardId];
+        const previousPt = currentCard?.pt ?? '';
+        if (previousPt !== pt) {
+          dispatch(games.Actions.cardFieldsUpdated({
+            gameId,
+            playerId: cell.playerId,
+            zoneName: ZoneName.TABLE,
+            cardId,
+            fields: { pt },
+          }));
+        }
+        webClient.request.game.setCardAttr(
+          gameId,
+          {
+            zone: ZoneName.TABLE,
+            cardId,
+            attribute: CardAttribute.AttrPT,
+            attrValue: pt,
+          },
+          undefined,
+          {
+            onError: (code) => {
+              console.warn(`setCardAttr(pt) rejected (${code}); rolling back cardId ${cardId} to "${previousPt}"`);
+              dispatch(games.Actions.cardFieldsUpdated({
+                gameId,
+                playerId: cell.playerId,
+                zoneName: ZoneName.TABLE,
+                cardId,
+                fields: { pt: previousPt },
+              }));
+            },
+          },
+        );
       }
     };
-  }, [gameId, webClient]);
+  }, [gameId, webClient, dispatch, store, cell.playerId]);
 
   // Clear every arrow the LOCAL player created — mirrors Cockatrice's
   // `GameScene::clearArrowsForPlayer` triggered by `TabGame::actRemoveLocalArrows`
@@ -1470,17 +1565,68 @@ function GameBoardCell({ cell, totalPlayers }: GameBoardCellProps) {
   // actRemoveCardCounter both funnel through this too (they read the
   // current value client-side, add ±1, and send the resulting absolute
   // value). We do the same in PlayerBox's onAddCardCounter handler.
+  // Optimistic: patch counterList locally so the counter badge updates
+  // immediately; rollback via `onError` if the server rejects. Mirrors
+  // the listener's `cardCounterChanged` effect (dispatches
+  // cardFieldsUpdated with a rewritten counterList).
   const onSetCardCounter = useMemo(() => {
     if (gameId == null) return undefined;
     return (cardId: number, counterId: number, value: number) => {
-      webClient.request.game.setCardCounter(gameId, {
-        zone: ZoneName.TABLE,
+      const clamped = Math.max(0, value);
+      const currentCard = store.getState().games.games[gameId]
+        ?.players[cell.playerId]?.zones[ZoneName.TABLE]?.byId[cardId];
+      const previousList = currentCard?.counterList ?? [];
+      // Same rewrite the listener does: drop the entry when value
+      // hits 0, otherwise replace-or-insert.
+      let nextList: typeof previousList;
+      if (clamped <= 0) {
+        nextList = previousList.filter((c) => c.id !== counterId);
+      } else {
+        const idx = previousList.findIndex((c) => c.id === counterId);
+        if (idx >= 0) {
+          nextList = previousList.map((c, i) =>
+            i === idx ? { ...c, value: clamped } : c,
+          );
+        } else {
+          // Constructing the ServerInfo_CardCounter here would need
+          // its schema; the reducer accepts any object with { id,
+          // value } via structural typing since cloneWith operates
+          // on the parent card. Passing a plain object works —
+          // matches how the listener builds new entries too.
+          nextList = [...previousList, { $typeName: 'ServerInfo_CardCounter', id: counterId, value: clamped }] as typeof previousList;
+        }
+      }
+      dispatch(games.Actions.cardFieldsUpdated({
+        gameId,
+        playerId: cell.playerId,
+        zoneName: ZoneName.TABLE,
         cardId,
-        counterId,
-        counterValue: Math.max(0, value),
-      });
+        fields: { counterList: nextList },
+      }));
+      webClient.request.game.setCardCounter(
+        gameId,
+        {
+          zone: ZoneName.TABLE,
+          cardId,
+          counterId,
+          counterValue: clamped,
+        },
+        undefined,
+        {
+          onError: (code) => {
+            console.warn(`setCardCounter rejected (${code}); rolling back cardId ${cardId} counter ${counterId}`);
+            dispatch(games.Actions.cardFieldsUpdated({
+              gameId,
+              playerId: cell.playerId,
+              zoneName: ZoneName.TABLE,
+              cardId,
+              fields: { counterList: previousList },
+            }));
+          },
+        },
+      );
     };
-  }, [gameId, webClient]);
+  }, [gameId, webClient, dispatch, store, cell.playerId]);
 
   // Fires the wire arrow-create command for the "Draw arrow..." card
   // menu flow. Card targets set targetZone + targetCardId; player

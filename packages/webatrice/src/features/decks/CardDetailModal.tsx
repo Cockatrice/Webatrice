@@ -238,15 +238,53 @@ export default function CardDetailModal({
   const browsedNotInDeck = !!browseOverride && !liveCard;
 
   // Pick the matching face when the active card name resolves to a
-  // specific `card_faces[N].name` (case-insensitive) — this is how
-  // clicking "Other face" on a DFC actually flips the modal to the
-  // back face's data. Falls back to face[0] for classic single-face
-  // cards and when the browsed name doesn't match any face.
+  // specific `card_faces[N].name` — this is how clicking "Other face"
+  // on a DFC actually flips the modal to the back face's data.
+  //
+  // Match priority (each falls through to the next on miss):
+  //   1. Exact case-insensitive match
+  //   2. Exact match after stripping " Token" (Scryfall's all_parts
+  //      names sometimes include the suffix while card_faces don't,
+  //      or vice-versa)
+  //   3. Face name is a substring of chip name (chip is more
+  //      specific, e.g. chip "Human Soldier" against face "Soldier")
+  //   4. Chip name is a substring of face name (chip is more general,
+  //      e.g. chip "Soldier" against face "Human Soldier")
+  //   5. Fall back to face[0]
+  //
+  // The substring fallbacks catch double-faced tokens whose
+  // `all_parts` entry names don't line up 1:1 with the fetched
+  // record's `card_faces` names — which was reproducing the "Soldier
+  // token shows Goblin" bug when the face-0 fallback picked the
+  // wrong side of a combined-name token record.
   const activeCardName = browseOverride?.name ?? snapshot.name;
-  const face =
-    detail?.card_faces?.find(
-      (f) => f.name?.toLowerCase() === activeCardName.toLowerCase(),
-    ) ?? detail?.card_faces?.[0];
+  const face = (() => {
+    const facesArr = detail?.card_faces;
+    if (!facesArr || facesArr.length === 0) return undefined;
+    const stripToken = (s: string) => s.replace(/\s*\(?\bToken\b\)?\s*$/i, '').trim();
+    const active = activeCardName.toLowerCase();
+    const activeStripped = stripToken(activeCardName).toLowerCase();
+    // 1: exact
+    const exact = facesArr.find((f) => f.name?.toLowerCase() === active);
+    if (exact) return exact;
+    // 2: exact after strip
+    const exactStripped = facesArr.find(
+      (f) => f.name && stripToken(f.name).toLowerCase() === activeStripped,
+    );
+    if (exactStripped) return exactStripped;
+    // 3: face name ⊂ chip name
+    const faceInChip = facesArr.find(
+      (f) => f.name && active.includes(f.name.toLowerCase()),
+    );
+    if (faceInChip) return faceInChip;
+    // 4: chip name ⊂ face name
+    const chipInFace = facesArr.find(
+      (f) => f.name?.toLowerCase().includes(active),
+    );
+    if (chipInFace) return chipInFace;
+    // 5: default
+    return facesArr[0];
+  })();
   // Prefer the face's own image when a specific face was picked —
   // Scryfall's top-level `image_uris` on a DFC always returns the
   // front face, so relying on it alone would leave the back-face

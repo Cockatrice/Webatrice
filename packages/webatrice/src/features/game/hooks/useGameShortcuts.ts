@@ -1,6 +1,8 @@
 import { ZoneName } from '@cockatrice/sockatrice';
 import { ShortcutScope, useShortcut } from '@app/feature-widgets/shortcuts';
 import { useWebClient } from '@cockatrice/datatrice/react';
+import { games } from '@cockatrice/datatrice';
+import { useAppDispatch } from '@app/store';
 import { CardAttribute } from '@cockatrice/sockatrice/generated';
 import { useCurrentGame } from './useCurrentGame';
 import { useGameAffordances } from './useGameAffordances';
@@ -14,6 +16,7 @@ interface UseGameShortcutsArgs {
 
 export function useGameShortcuts({ gameId, onRequestConcede }: UseGameShortcutsArgs): void {
   const webClient = useWebClient();
+  const dispatch = useAppDispatch();
   const { game } = useCurrentGame(gameId);
   const {
     hasLiveGame,
@@ -94,7 +97,16 @@ export function useGameShortcuts({ gameId, onRequestConcede }: UseGameShortcutsA
       }
       const current = game.activePhase;
       const next = current >= 0 ? (current + 1) % PHASE_COUNT : 0;
-      webClient.request.game.setActivePhase(gameId, { phase: next });
+      // Optimistic: flip the phase locally so the phase tracker
+      // highlights the new phase immediately, then fire the wire
+      // with `onError` to revert if the server rejects.
+      dispatch(games.Actions.activePhaseSet({ gameId, phase: next }));
+      webClient.request.game.setActivePhase(gameId, { phase: next }, {
+        onError: (code) => {
+          console.warn(`setActivePhase(next) rejected (${code}); rolling back to phase ${current}`);
+          dispatch(games.Actions.activePhaseSet({ gameId, phase: current }));
+        },
+      });
     },
     { scope: ShortcutScope.GAME, enabled: inGame },
   );
@@ -107,7 +119,13 @@ export function useGameShortcuts({ gameId, onRequestConcede }: UseGameShortcutsA
       }
       const current = game.activePhase;
       const prev = current > 0 ? current - 1 : PHASE_COUNT - 1;
-      webClient.request.game.setActivePhase(gameId, { phase: prev });
+      dispatch(games.Actions.activePhaseSet({ gameId, phase: prev }));
+      webClient.request.game.setActivePhase(gameId, { phase: prev }, {
+        onError: (code) => {
+          console.warn(`setActivePhase(prev) rejected (${code}); rolling back to phase ${current}`);
+          dispatch(games.Actions.activePhaseSet({ gameId, phase: current }));
+        },
+      });
     },
     { scope: ShortcutScope.GAME, enabled: inGame },
   );

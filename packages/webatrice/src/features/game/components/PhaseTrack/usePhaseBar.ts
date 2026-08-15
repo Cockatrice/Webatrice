@@ -1,7 +1,8 @@
+import { useStore } from 'react-redux';
 import { ZoneName } from '@cockatrice/sockatrice';
 import { useWebClient } from '@cockatrice/datatrice/react';
 import { games } from '@cockatrice/datatrice';
-import { useAppSelector } from '@app/store';
+import { useAppDispatch, useAppSelector, type RootState } from '@app/store';
 import { CardAttribute } from '@cockatrice/sockatrice/generated';
 import { Phase } from '@cockatrice/datatrice';
 import { useGameAffordances } from '../../hooks/useGameAffordances';
@@ -18,6 +19,8 @@ export interface PhaseBar {
 
 export function usePhaseBar(gameId: number | undefined): PhaseBar {
   const webClient = useWebClient();
+  const dispatch = useAppDispatch();
+  const store = useStore<RootState>();
   const { canPassTurn, canAdvancePhase } = useGameAffordances(gameId);
   const activePhase = useAppSelector((state) =>
     gameId != null ? games.Selectors.getActivePhase(state, gameId) : undefined,
@@ -27,7 +30,22 @@ export function usePhaseBar(gameId: number | undefined): PhaseBar {
     if (!canAdvancePhase || gameId == null) {
       return;
     }
-    webClient.request.game.setActivePhase(gameId, { phase });
+    // Optimistic: snapshot the current phase for rollback, dispatch
+    // the new phase locally so the tracker highlights immediately,
+    // then fire the wire with `onError` to revert if the server
+    // rejects. activePhaseSet is a plain field assignment reducer
+    // (idempotent), so the server's echo just re-applies the same
+    // value on success.
+    const previousPhase = games.Selectors.getActivePhase(store.getState(), gameId);
+    dispatch(games.Actions.activePhaseSet({ gameId, phase }));
+    webClient.request.game.setActivePhase(gameId, { phase }, {
+      onError: (code) => {
+        console.warn(`setActivePhase rejected (${code}); rolling back to phase ${previousPhase}`);
+        if (previousPhase != null) {
+          dispatch(games.Actions.activePhaseSet({ gameId, phase: previousPhase }));
+        }
+      },
+    });
   };
 
   const handlePass = () => {

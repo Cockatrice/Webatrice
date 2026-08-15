@@ -8775,8 +8775,13 @@ function PlayerBox(
             card?.pt || (card ? cardMetaByName.get(card.name)?.pt ?? '' : '');
           // Per-card PT delta batch: each card computes its own new PT
           // from its own current server PT (not the clicked card's PT).
-          // Skips cards with an empty base so we don't stamp "1/1" onto
-          // non-creatures. Single onSetPT batch keeps the wire atomic.
+          // Cards with no starting PT (non-creatures with no printed
+          // stats) are treated as `0/0` so a `+1/+1` gives them `1/1`,
+          // `+1/+0` gives `1/0`, `+0/+1` gives `0/1`, and the negative
+          // variants mirror. This matches how MTG's +1/+1 counters,
+          // Giant Growth, etc. would apply to a card that acquires
+          // creature status mid-game (see e.g. Song of the Dryads).
+          // Single onSetPT batch keeps the wire atomic.
           const dispatchPTDelta = (dp: number, dt: number) => {
             if (targetCards.length === 0 || !onSetPT) return;
             const entries: { cardId: number; pt: string }[] = [];
@@ -8785,10 +8790,14 @@ function PlayerBox(
               if (!Number.isFinite(bcId)) continue;
               const bcCurrent =
                 bc.pt || (cardMetaByName.get(bc.name)?.pt ?? '');
-              if (!bcCurrent) continue;
+              // Empty base → use "0/0" so the resulting P/T carries
+              // both components (applyPTDelta's empty-input branch
+              // would otherwise return e.g. "1" for +1/+0 by dropping
+              // the toughness suffix).
+              const base = bcCurrent || '0/0';
               entries.push({
                 cardId: bcId,
-                pt: applyPTDelta(bcCurrent, dp, dt),
+                pt: applyPTDelta(base, dp, dt),
               });
             }
             if (entries.length > 0) onSetPT(entries);

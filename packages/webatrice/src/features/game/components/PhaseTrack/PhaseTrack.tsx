@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   RotateCcw,
   Settings,
@@ -113,9 +113,40 @@ export default function PhaseTrack() {
     handleDrawOne,
   } = usePhaseBar(gameId);
 
+  // End-step attention flash. Whenever the active phase TRANSITIONS
+  // into EndCleanup (from any other phase), we flip on
+  // `endStepFlashing` for ~1.6 s to drive the CSS animation on the
+  // End bar. Motivation: an opponent's turn scrolls by quickly and
+  // players miss the end-step window for instant-speed responses.
+  // A brief amber pulse on the collapsed End bar makes it obvious
+  // that the window is open even when the phase track is collapsed
+  // and hidden at the screen's left edge.
+  //
+  // Tracks the previous phase in a ref so we only fire on the
+  // TRANSITION — sitting on end step through re-renders shouldn't
+  // re-trigger the animation. `key` on the animated element (bumped
+  // via `endStepFlashSeq`) restarts the CSS animation cleanly for
+  // back-to-back triggers (multiplayer: player A → end → player B →
+  // end within the same React lifecycle).
+  const [endStepFlashSeq, setEndStepFlashSeq] = useState(0);
+  const previousPhaseRef = useRef<Phase | undefined>(undefined);
+  useEffect(() => {
+    const previous = previousPhaseRef.current;
+    previousPhaseRef.current = activePhase;
+    if (previous !== undefined
+      && previous !== Phase.EndCleanup
+      && activePhase === Phase.EndCleanup) {
+      setEndStepFlashSeq((n) => n + 1);
+    }
+  }, [activePhase]);
+
   const onDoubleClickFor = (kind: PhaseEntry['builtInOnDoubleClick']) => {
     if (kind === 'untapAll') return handleUntapAll;
-    if (kind === 'drawCard') return handleDrawOne;
+    // Draw is now handled by single-click on the already-active
+    // draw phase (see button onClick below). We drop the double-
+    // click binding to avoid firing draw twice on a double-click
+    // (which would otherwise: click 1 advances → click 2 sees
+    // already-active and draws → onDoubleClick draws again).
     return undefined;
   };
 
@@ -139,24 +170,45 @@ export default function PhaseTrack() {
     >
       {PHASE_ENTRIES.map(({ phase, label, title, icon: Icon, tint, builtInOnDoubleClick }) => {
         const isActive = phase === activePhase;
+        const isEndStep = phase === Phase.EndCleanup;
         return (
           <div key={phase} className="relative flex-1 min-h-0 flex">
             <button
+              // Bump the button's React key on every end-step flash
+              // so the CSS animation restarts cleanly. Without this,
+              // back-to-back triggers (player A ends → player B ends
+              // before the animation finishes) would not re-fire the
+              // keyframes since the same DOM node stays attached.
+              // Non-end-step buttons use their phase as the key
+              // (stable across re-renders).
+              key={isEndStep ? `endstep-${endStepFlashSeq}` : `phase-${phase}`}
               type="button"
               data-phase={phase}
               disabled={!canAdvancePhase}
               onClick={() => {
+                // Snapshot BEFORE advancing so we can distinguish
+                // "user is re-clicking the already-active phase" from
+                // "user is advancing into this phase for the first
+                // time". `handlePhaseClick` is gated on canAdvancePhase
+                // (which checks active-player status), so the draw
+                // path below stays behind the same gate.
+                const wasAlreadyActive = phase === activePhase;
                 handlePhaseClick(phase);
                 // Match Cockatrice: entering the untap step untaps
                 // every card on your battlefield except those tagged
                 // with `AttrDoesntUntap`. The server filters that set
                 // when it receives `cardId: -1` + `AttrTapped: "0"`.
                 if (builtInOnDoubleClick === 'untapAll') handleUntapAll();
-                // The draw-card double-click remains double-click-
-                // only — single click just advances into the draw
-                // step, mirroring Cockatrice's convention that draws
-                // happen at the phase transition and shouldn't fire on
-                // accidental clicks.
+                // Draw a card when the user clicks the already-active
+                // Draw phase — matches the mental model "click Draw to
+                // draw." Double-click also draws (naturally: click 1
+                // advances into Draw, click 2 sees already-active →
+                // draws) since our phase changes are optimistic. Gated
+                // on canAdvancePhase inside handleDrawOne so
+                // non-active-player clicks stay no-op.
+                if (builtInOnDoubleClick === 'drawCard' && wasAlreadyActive) {
+                  handleDrawOne();
+                }
               }}
               onDoubleClick={onDoubleClickFor(builtInOnDoubleClick)}
               title={canAdvancePhase ? title : 'Only the active player can change phases'}
@@ -167,6 +219,10 @@ export default function PhaseTrack() {
                   : 'rounded-sm',
                 isActive ? 'opacity-100' : 'opacity-45',
                 canAdvancePhase ? 'cursor-pointer' : 'cursor-not-allowed',
+                // Flash class runs the 1.5 s CSS animation defined in
+                // Game.css. The key bump above forces the button to
+                // remount, restarting the animation for every trigger.
+                isEndStep && endStepFlashSeq > 0 ? 'phase-endstep-flash' : '',
               ].join(' ')}
               style={{ backgroundColor: tint }}
             >
