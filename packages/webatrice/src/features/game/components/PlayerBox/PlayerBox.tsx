@@ -1375,6 +1375,7 @@ function BattlefieldSlotOverlay({
   colsByRow,
   layout,
   mirrored,
+  highlightedSlot,
 }: {
   cellWidths: ReturnType<typeof computeCellWidths>;
   /** Per-row column count (inclusive) to render outlines for. Rows with
@@ -1383,6 +1384,12 @@ function BattlefieldSlotOverlay({
   colsByRow: readonly number[];
   layout: BattlefieldLayoutOpts;
   mirrored: boolean;
+  /** Slot the current drag would snap to on this battlefield (display
+   *  coord — post-mirror). When set, that specific cell paints an
+   *  accent-tinted background as a drop-preview cue. `null` = no drop
+   *  landing here right now (either no active drag, or the drag is
+   *  aimed at a different zone / player's board). */
+  highlightedSlot?: { row: number; col: number } | null;
 }) {
   // Global toggle from the header — off by default (matches the "no
   // noisy grid" default) but the user can flip it on to see snap slots
@@ -1412,17 +1419,26 @@ function BattlefieldSlotOverlay({
           cellWidths,
           layout,
         );
+        // Highlight comparison happens in DISPLAY coord (both slot.row
+        // pre-mirror and highlightedSlot.row post-mirror sit in display
+        // space here, since we render at displayRow above).
+        const isHighlighted =
+          highlightedSlot != null &&
+          highlightedSlot.row === displayRow &&
+          highlightedSlot.col === slot.col;
         return (
           <div
             key={`${slot.row}-${slot.col}`}
             // Dashed border toggled by the header "Snap grid" button
             // (useSnapGridVisible). Off by default; on = dashed outline
             // at every snap position so the user can eyeball layout.
-            className={
-              showBorders
-                ? "absolute border border-dashed border-border-strong/40"
-                : "absolute"
-            }
+            // Highlighted slot always shows — accent background so the
+            // user sees where their dragged card will land.
+            className={[
+              'absolute',
+              showBorders && !isHighlighted && 'border border-dashed border-border-strong/40',
+              isHighlighted && 'bg-accent/25 ring-2 ring-accent/60 ring-inset',
+            ].filter(Boolean).join(' ')}
             style={{
               width: `${layout.cardWidthPx}px`,
               height: `${layout.cardHeightPx}px`,
@@ -7323,6 +7339,36 @@ function PlayerBox(
             colsByRow={colsByRow}
             layout={battlefieldLayout}
             mirrored={handOnTop}
+            highlightedSlot={(() => {
+              // While a drag is in flight, ask the drop-target detector
+              // where it would land right now — same code path applyMove
+              // uses on release, so the highlight is always in sync with
+              // the actual snap. Only paint the highlight when the target
+              // is a battlefield AND it's THIS PlayerBox's board (drag can
+              // cross into an opponent's battlefield, in which case their
+              // PlayerBox lights up instead of ours). The returned slot's
+              // row is in wire coord (post-mirror), so undo the mirror
+              // for display comparison inside the overlay.
+              if (!drag) {
+                return null;
+              }
+              const target = detectDropTarget(
+                drag.pointerX,
+                drag.pointerY,
+                drag,
+              );
+              if (
+                !target
+                || target.zone !== 'battlefield'
+                || target.ownerId !== player.user_id
+              ) {
+                return null;
+              }
+              const displayRow = handOnTop
+                ? BATTLEFIELD_ROWS - 1 - target.slot.row
+                : target.slot.row;
+              return { row: displayRow, col: target.slot.col };
+            })()}
           />
           {(() => {
             // Group cards by slot for insertion-order stacking. For
