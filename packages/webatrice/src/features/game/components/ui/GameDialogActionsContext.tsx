@@ -10,6 +10,10 @@ export interface GameDialogActions {
   onRequestUnconcede: () => void;
   onRequestGameInfo: () => void;
   onRequestViewSideboard: () => void;
+  /** Opens the "Leave this game?" confirmation. Fires
+   *  Command_LeaveGame on confirm; no-op on cancel. Mirrors
+   *  `onRequestConcede` — a guard against accidentally dropping out. */
+  onRequestLeave: () => void;
 }
 
 export const [GameDialogActionsProvider, useGameDialogActions] =

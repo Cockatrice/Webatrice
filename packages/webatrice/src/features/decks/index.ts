@@ -1,5 +1,6 @@
-export { default as Decks } from './Decks';
+export { default as Decks, clearDecksListCache } from './Decks';
 export { default as DeckEditor } from './DeckEditor';
+export { clearDeckEditorCache } from './useDeckEditor';
 
 // --- Data layer (Piece 1: foundation for MyDecks feature) ---
 export type {

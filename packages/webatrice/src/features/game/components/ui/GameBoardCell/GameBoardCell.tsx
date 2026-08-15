@@ -34,6 +34,7 @@ import type {
 } from '../../PlayerBox/mockTypes';
 import { getPickedMockDeck } from '../../../mockDeckStore';
 import { parseCod } from '@app/features/decks';
+import { avatarSrc } from '../../../utils/avatarSrc';
 
 import './GameBoardCell.css';
 
@@ -498,6 +499,15 @@ function GameBoardCell({ cell, totalPlayers }: GameBoardCellProps) {
   const realName = realPlayer?.properties.userInfo?.name;
   const isActive = realPlayer != null && cell.playerId === activePlayerId;
 
+  // Cockatrice's `avatar_bmp` is raw PNG bytes on ServerInfo_User;
+  // convert to a data URL so PlayerBox can render it as the life-total
+  // background. Missing / empty → null, PlayerBox falls back to the
+  // purple gradient placeholder.
+  const avatarUrl = useMemo(
+    () => avatarSrc(realPlayer?.properties.userInfo?.avatarBmp),
+    [realPlayer?.properties.userInfo?.avatarBmp],
+  );
+
   // Room-member shape the ported PlayerBox expects. Uses the real
   // display name when available; the "You" / "Player N" fallback
   // covers the transient window before the player's userInfo has
@@ -510,10 +520,10 @@ function GameBoardCell({ cell, totalPlayers }: GameBoardCellProps) {
         display_name:
           realName ?? (cell.isLocal ? 'You' : `Player ${cell.playerId}`),
         username: realName ?? (cell.isLocal ? 'you' : `player-${cell.playerId}`),
-        avatar_url: null,
+        avatar_url: avatarUrl,
       },
     }),
-    [cell.playerId, cell.isLocal, realName],
+    [cell.playerId, cell.isLocal, realName, avatarUrl],
   );
 
   // Controlled life — only for real players. `incCounter` sends a
@@ -879,9 +889,36 @@ function GameBoardCell({ cell, totalPlayers }: GameBoardCellProps) {
           toZone: targetZone,
           card: optimisticCard,
         }));
+
+        // Cross-player TABLE→TABLE also reparents any attached
+        // children so they visually follow the parent onto the new
+        // owner's board during the optimistic window instead of
+        // briefly disappearing until the server echo arrives + the
+        // listener's own reparent runs. The optimistic move uses the
+        // pre-move cardId (server assigns a fresh id under the new
+        // owner); the listener re-runs reparent with the server id
+        // after id migration, so children end up with the correct
+        // final (targetPlayerId, newCardId) either way. Servatrice
+        // retains attachments on same-name cross-player moves; see
+        // .github/instructions/datatrice-game.instructions.md#servatrice-game-event-quirks.
+        const isCrossPlayerTableMove =
+          !sameZone &&
+          startZone === ZoneName.TABLE &&
+          targetZone === ZoneName.TABLE &&
+          startPlayerId !== targetPlayerId;
+        if (isCrossPlayerTableMove) {
+          dispatch(games.Actions.cardAttachmentReparented({
+            gameId,
+            fromPlayerId: startPlayerId,
+            fromCardId: cardId,
+            toPlayerId: targetPlayerId,
+            toCardId: cardId,
+          }));
+        }
+
         games.beginOptimistic(opKey, () => {
           // Rollback: reverse the move (target → source with the
-          // pre-move card snapshot).
+          // pre-move card snapshot) AND the reparent if we did one.
           dispatch(games.Actions.cardMovedBetweenZones({
             gameId,
             fromPlayerId: targetPlayerId,
@@ -891,6 +928,15 @@ function GameBoardCell({ cell, totalPlayers }: GameBoardCellProps) {
             toZone: startZone,
             card: sourceCard,
           }));
+          if (isCrossPlayerTableMove) {
+            dispatch(games.Actions.cardAttachmentReparented({
+              gameId,
+              fromPlayerId: targetPlayerId,
+              fromCardId: cardId,
+              toPlayerId: startPlayerId,
+              toCardId: cardId,
+            }));
+          }
         });
       }
 

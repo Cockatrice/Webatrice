@@ -201,24 +201,60 @@ export function registerGameListeners(mw: ListenerMiddlewareInstance<unknown>): 
           }));
         } else {
           // The card is already in the target zone (client did it
-          // optimistically), but the server may have corrected the
-          // position — most importantly, Servatrice bumps `x` to the
-          // next free stack sub-slot (`col*3 + 1`, `+2`) when a
-          // column already has a card at sub-slot 0. Without this
-          // sync, every stacked card would paint at the same sub-slot.
-          // We do a field-level patch (not the full move reducer) so
-          // cardCount + order aren't touched a second time.
+          // optimistically under the SOURCE card id), but the server
+          // may have:
+          //   (a) corrected the position — Servatrice bumps `x` to
+          //       the next free stack sub-slot (`col*3 + 1`, `+2`)
+          //       when a column already has a card at sub-slot 0;
+          //   (b) reassigned the id — cross-player TABLE→TABLE moves
+          //       give the card a fresh id under the new owner.
+          //
+          // (a) → patch `{ x, y, faceDown }` in place. cardCount +
+          // order don't need touching.
+          //
+          // (b) → migrate the entry from the optimistic (old) id to
+          // the server's (new) id via remove-then-insert. Without
+          // this, the stale entry keeps the OLD id in `data-card-id`,
+          // and later `Command_CreateArrow` calls that target the
+          // card send the stale id → server responds
+          // `RespNameNotFound` and the arrow silently fails.
           const effectiveId = movedCard.id;
+          // Re-read state fresh; the outer `state` snapshot was
+          // captured at the top of the effect and predates the
+          // optimistic pre-dispatch on the target zone.
+          const postDispatchState = api.getState() as { games: GamesState };
           const targetZoneState =
-            state.games.games[gameId]?.players[targetPlayerId]?.zones[effectiveTargetZone];
-          if (targetZoneState?.byId[effectiveId]) {
-            api.dispatch(Actions.cardFieldsUpdated({
-              gameId,
-              playerId: targetPlayerId,
-              zoneName: effectiveTargetZone,
-              cardId: effectiveId,
-              fields: { x: movedCard.x, y: movedCard.y, faceDown: movedCard.faceDown },
-            }));
+            postDispatchState.games.games[gameId]?.players[targetPlayerId]?.zones[effectiveTargetZone];
+          if (targetZoneState) {
+            const optimisticStillAtOldId =
+              effectiveId !== resolvedCardId
+              && targetZoneState.byId[resolvedCardId] !== undefined
+              && targetZoneState.byId[effectiveId] === undefined;
+            if (optimisticStillAtOldId) {
+              // remove-then-insert net-zeroes cardCount (each side
+              // -1/+1) and leaves the target zone with only the
+              // server-authoritative entry keyed by the new id.
+              api.dispatch(Actions.cardRemovedFromZone({
+                gameId,
+                playerId: targetPlayerId,
+                zoneName: effectiveTargetZone,
+                cardId: resolvedCardId,
+              }));
+              api.dispatch(Actions.cardInsertedIntoZone({
+                gameId,
+                playerId: targetPlayerId,
+                zoneName: effectiveTargetZone,
+                card: movedCard,
+              }));
+            } else if (targetZoneState.byId[effectiveId]) {
+              api.dispatch(Actions.cardFieldsUpdated({
+                gameId,
+                playerId: targetPlayerId,
+                zoneName: effectiveTargetZone,
+                cardId: effectiveId,
+                fields: { x: movedCard.x, y: movedCard.y, faceDown: movedCard.faceDown },
+              }));
+            }
           }
         }
       }
@@ -274,9 +310,18 @@ export function registerGameListeners(mw: ListenerMiddlewareInstance<unknown>): 
       // retain orphans that re-render if the card returns. Mirror the server
       // semantics by sweeping every player's arrows (arrows can cross players)
       // for any endpoint matching the pre-move (startPlayerId, startZone,
-      // resolvedCardId). Intra-zone repositions (e.g. moving a card around the
-      // battlefield) keep their arrows server-side, so skip the sweep there.
-      if (resolvedCardId >= 0 && startZone !== effectiveTargetZone) {
+      // resolvedCardId). Intra-zone SAME-PLAYER repositions (e.g. sliding a
+      // card around your own battlefield) keep their arrows server-side, so
+      // skip the sweep there. Cross-PLAYER TABLE→TABLE moves also count as
+      // "changed zones" server-side because the card gets a fresh id under
+      // the new owner — without extending the guard to include that case,
+      // the orphaned arrow blocks a later attempt to draw a new arrow to or
+      // from the moved card (Servatrice's duplicate-arrow check fails
+      // against the stale client state).
+      if (
+        resolvedCardId >= 0
+        && (startZone !== effectiveTargetZone || startPlayerId !== targetPlayerId)
+      ) {
         const postState = api.getState() as { games: GamesState };
         const postGame = postState.games.games[gameId];
         if (postGame) {
@@ -315,6 +360,21 @@ export function registerGameListeners(mw: ListenerMiddlewareInstance<unknown>): 
           toPlayerId: targetPlayerId,
           toCardId: effectiveNewId,
         }));
+        // Second pass: if the webatrice UI already reparented children
+        // optimistically to (targetPlayerId, resolvedCardId) before the
+        // server assigned effectiveNewId, the first reparent above
+        // (which matches on fromPlayerId=startPlayerId) misses them.
+        // Carry them over the id migration too. Idempotent when no
+        // optimistic reparent happened — no child matches.
+        if (effectiveNewId !== resolvedCardId) {
+          api.dispatch(Actions.cardAttachmentReparented({
+            gameId,
+            fromPlayerId: targetPlayerId,
+            fromCardId: resolvedCardId,
+            toPlayerId: targetPlayerId,
+            toCardId: effectiveNewId,
+          }));
+        }
       }
 
       const message = formatCardMoved(

@@ -23,3 +23,10 @@ export type {
   ServerStateLogs,
   TestConnectionStatus,
 } from './server/server.interfaces';
+
+// Flat re-exports for utilities consumers reach for without going
+// through a slice namespace. `classifyLogTone` + `LogTone` are used
+// by the chat-log renderer to color-code event messages by kind;
+// the segment types describe the per-token log message shape.
+export { classifyLogTone } from './games/messageLog';
+export type { LogTone, LogSegment, LogSegmentKind, LogEntry } from './games/messageLog';

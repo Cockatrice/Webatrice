@@ -31,6 +31,15 @@ interface ArrowDragState {
   currentX: number;
   currentY: number;
   moved: boolean;
+  // Live modifier snapshot updated on every mousemove — powers the
+  // preview line's color so the user sees which color the arrow will
+  // be (yellow with Ctrl, blue with Alt, green with Shift, red bare)
+  // BEFORE they release over a target. The wire dispatch on mouseup
+  // reads the modifiers off the mouseup event directly, so this
+  // snapshot only serves the preview.
+  ctrlKey: boolean;
+  altKey: boolean;
+  shiftKey: boolean;
 }
 
 export interface ArrowDragPreview {
@@ -178,7 +187,17 @@ export function useGameArrowInteractions({
             }
           }
         }
-        return { ...prev, currentX: e.clientX, currentY: e.clientY, moved };
+        return {
+          ...prev,
+          currentX: e.clientX,
+          currentY: e.clientY,
+          moved,
+          // Refresh modifiers each mousemove so pressing / releasing
+          // a modifier mid-drag flips the preview color live.
+          ctrlKey: e.ctrlKey,
+          altKey: e.altKey,
+          shiftKey: e.shiftKey,
+        };
       });
     };
 
@@ -326,6 +345,9 @@ export function useGameArrowInteractions({
       currentX: e.clientX,
       currentY: e.clientY,
       moved: false,
+      ctrlKey: e.ctrlKey,
+      altKey: e.altKey,
+      shiftKey: e.shiftKey,
     });
   }, []);
 
@@ -391,12 +413,22 @@ export function useGameArrowInteractions({
       }
     }
 
+    // Preview color = the color the arrow WILL be if released right
+    // now. Reads the live modifier snapshot maintained on
+    // mousemove, so Ctrl/Alt/Shift immediately turn the preview
+    // yellow/blue/green (instead of staying red until the pointer
+    // lands on a target).
+    const previewColor = arrowColorForModifiers({
+      ctrlKey: arrowDrag.ctrlKey,
+      altKey: arrowDrag.altKey,
+      shiftKey: arrowDrag.shiftKey,
+    });
     return {
       x1: sourceRect.left + sourceRect.width / 2 - containerRect.left,
       y1: sourceRect.top + sourceRect.height / 2 - containerRect.top,
       x2,
       y2,
-      color: rgbaToCss(ArrowColor.RED),
+      color: rgbaToCss(previewColor),
       fullColor: arrowTargetKey != null,
     };
   }, [arrowDrag, arrowTargetKey, cardRegistry, containerRef]);

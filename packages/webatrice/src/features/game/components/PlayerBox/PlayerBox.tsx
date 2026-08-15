@@ -3194,14 +3194,6 @@ function PlayerBox(
   // when the beacon actually ticks — not on unrelated re-renders.
   const prevDrawSeqForFlightRef = useRef<number | null>(null);
 
-  const MULLIGAN_TARGET = 7;
-  const mulligan = () => {
-    // Command_Mulligan handles it end-to-end: server puts hand back,
-    // shuffles, and draws MULLIGAN_TARGET new cards. Redux picks up
-    // the resulting Event_MoveCard / Event_DrawCards / Event_Shuffle.
-    onMulligan?.(MULLIGAN_TARGET);
-  };
-
   const draw = (n: number) => {
     // Server pops N off the top of the deck and broadcasts
     // Event_DrawCards; Redux updates hand + deck.cardCount from the
@@ -3211,7 +3203,8 @@ function PlayerBox(
   };
 
   // Ctrl (Windows/Linux) / Cmd (Mac) shortcuts for the viewer's own actions:
-  //   +M → mulligan (fires Command_Mulligan; server + Redux handle the rest)
+  //   +M → open the mulligan prompt (matches Cockatrice desktop's
+  //        actMulligan — prompts for hand size instead of assuming 7)
   //   +L → open the set-life modal (overrides the browser's "focus URL bar")
   //   +R → clear this player's own arrows
   // Ctrl+D and Ctrl+S are handled by og's useGameShortcuts (they dispatch
@@ -3226,7 +3219,7 @@ function PlayerBox(
       const key = e.key.toLowerCase();
       if (key === "m") {
         e.preventDefault();
-        mulligan();
+        handleRequestChooseMulligan();
       } else if (key === "l") {
         e.preventDefault();
         setSetLifeModalOpen(true);
@@ -3382,6 +3375,47 @@ function PlayerBox(
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
+
+  // Translate vertical wheel input into horizontal scroll for the
+  // battlefield + hand scroll containers. Must attach via
+  // addEventListener with `{ passive: false }` — React's synthetic
+  // onWheel is passive-by-default (browsers made this a spec-level
+  // scrolling perf optimization in 2016+), so calling preventDefault
+  // inside a React onWheel throws the "Unable to preventDefault
+  // inside passive event listener" warning on every scroll and the
+  // scroll still bubbles to the outer page.
+  useEffect(() => {
+    const targets: (HTMLElement | null)[] = [
+      scrollContainerRef.current,
+      handRef.current,
+    ];
+    const handleWheel = (e: WheelEvent) => {
+      const el = e.currentTarget as HTMLElement | null;
+      if (!el) {
+        return;
+      }
+      if (el.scrollWidth <= el.clientWidth) {
+        return;
+      }
+      if (e.deltaY === 0) {
+        return;
+      }
+      el.scrollLeft += e.deltaY;
+      e.preventDefault();
+    };
+    for (const el of targets) {
+      if (el) {
+        el.addEventListener('wheel', handleWheel, { passive: false });
+      }
+    }
+    return () => {
+      for (const el of targets) {
+        if (el) {
+          el.removeEventListener('wheel', handleWheel);
+        }
+      }
+    };
+  }, []);
   // Battlefield source-of-truth for layout — Redux is the only source.
   // See the top-of-file note about local-mock removal.
   const battlefieldDisplayList = battlefieldCards ?? [];
@@ -3421,7 +3455,17 @@ function PlayerBox(
         c.attachTargetCardId == null || c.attachTargetPlayerId !== playerId,
     )
     .map((c) => ({
-      row: c.slot.row,
+      // Layout math (computeCellWidths / columnLeftX / slotOriginPx /
+      // computeContentWidth / snapPxToSlot) is entirely in DISPLAY
+      // coord — that's the space the rendered cards, slot outlines,
+      // and drop hit-tests all live in. For a mirrored opponent
+      // battlefield, wire row 0 (creatures) shows at display row
+      // ROWS-1. Passing the wire row in here would key cellWidths by
+      // the wrong row and the stack-widening would push cards over
+      // in the WRONG visual row (looked like only the bottom row
+      // widening when the user stacked cards in the top). Flip up
+      // front so every downstream lookup speaks the same language.
+      row: handOnTop ? BATTLEFIELD_ROWS - 1 - c.slot.row : c.slot.row,
       col: c.slot.col,
       subSlot: c.subSlot,
       attachedChildCount:
@@ -3673,10 +3717,36 @@ function PlayerBox(
           zone === "battlefield" ||
           zone === "stack"
         ) {
-          setSelection({
-            zone,
-            ids: new Set([clickedCardId]),
-          });
+          // Ctrl (Windows/Linux) / ⌘ (Mac) adds to or toggles the
+          // multi-selection instead of replacing it — matches
+          // Cockatrice desktop's `Qt::ControlModifier` branch in
+          // `AbstractCardItem::mousePressEvent` (line 294-295).
+          //
+          // Cockatrice technically allows the selection to span
+          // multiple zones (drag filters back down to same-zone), but
+          // our Selection shape is single-zoned (used to gate drag +
+          // context-menu bulk actions), so Ctrl+Click in a DIFFERENT
+          // zone replaces the selection with a new single-card set
+          // rooted in the clicked zone. Same-zone Ctrl+Click toggles.
+          const isCtrl = e.ctrlKey || e.metaKey;
+          if (isCtrl && selection && selection.zone === zone) {
+            const nextIds = new Set(selection.ids);
+            if (nextIds.has(clickedCardId)) {
+              nextIds.delete(clickedCardId);
+            } else {
+              nextIds.add(clickedCardId);
+            }
+            if (nextIds.size === 0) {
+              setSelection(null);
+            } else {
+              setSelection({ zone, ids: nextIds });
+            }
+          } else {
+            setSelection({
+              zone,
+              ids: new Set([clickedCardId]),
+            });
+          }
           broadcastBattlefieldSelection?.(new Map());
         }
       }
@@ -6083,16 +6153,13 @@ function PlayerBox(
         className="row-span-full border-r border-border-subtle bg-bg-surface/70 flex flex-col p-[0.75em] gap-[0.5em] min-h-0"
         style={{ gridColumn: 1 }}
       >
-        {/* Player header — spans full info column width */}
-        <div className="flex items-center gap-[0.5em] pb-[0.5em] border-b border-border-subtle">
-          <span className="text-[0.875em] font-semibold text-text-primary truncate">
-            {name}
-          </span>
-        </div>
-
-        {/* Life total — spans full info column width; avatar as background
-             with a 50% black wash on top.
-             Owner interactions:
+        {/* Combined name + life-total pill. Avatar (or purple gradient
+             fallback) fills the whole block; a 50% black wash keeps
+             the name / number readable. The player name sits pinned
+             to the top-left, the life total is centered — merging the
+             two into a single visual block instead of a name row plus
+             a separate life pill.
+             Owner interactions on the whole block:
                • left click  → +1 life (delta)
                • right click → -1 life (delta) — browser context menu
                  is suppressed via preventDefault
@@ -6104,7 +6171,7 @@ function PlayerBox(
         <div
           role={isSelf ? "button" : undefined}
           tabIndex={isSelf ? 0 : undefined}
-          aria-label={isSelf ? "Life total — left click +1, right click -1, Ctrl/Cmd+L to set" : undefined}
+          aria-label={isSelf ? `${name} — life total. Left click +1, right click -1, Ctrl/Cmd+L to set` : `${name} — life total`}
           // Arrow target for right-click-drag arrows aimed at a player's
           // life total. The interactions hook hit-tests by looking for
           // `[data-arrow-target-kind="player"]` under the pointer; the
@@ -6123,9 +6190,9 @@ function PlayerBox(
               : undefined
           }
           className={[
-            "relative flex items-center justify-center gap-[0.75em] rounded-md overflow-hidden py-0",
-            isSelf ? "cursor-pointer select-none" : "",
-          ].join(" ")}
+            'relative flex flex-col rounded-md overflow-hidden',
+            isSelf ? 'cursor-pointer select-none' : '',
+          ].join(' ')}
           style={{
             backgroundImage: player.profile?.avatar_url
               ? `url(${player.profile.avatar_url})`
@@ -6135,19 +6202,48 @@ function PlayerBox(
           }}
         >
           {!player.profile?.avatar_url && (
-            <div
-              className="absolute inset-0 bg-gradient-to-br from-accent-secondary to-accent pointer-events-none"
-              aria-hidden
-            />
+            <>
+              <div
+                className="absolute inset-0 bg-gradient-to-br from-accent-secondary to-accent pointer-events-none"
+                aria-hidden
+              />
+              {/* Wash only over the purple fallback — keeps no-avatar
+                  pills at a consistent darker tone. Avatars stay
+                  unfiltered so the user's picture reads clearly. */}
+              <div
+                className="absolute inset-0 bg-black/50 pointer-events-none"
+                aria-hidden
+              />
+            </>
           )}
-          <div className="absolute inset-0 bg-black/50 pointer-events-none" aria-hidden />
-          <Heart size="2.5em" className="text-red-400 relative z-10 pointer-events-none" />
-          <span
-            className="text-[3em] font-modern font-bold tabular-nums text-white relative z-10 pointer-events-none"
-            style={{ textShadow: "0 2px 8px rgba(0,0,0,0.9), 0 0 2px rgba(0,0,0,1)" }}
-          >
-            {life}
-          </span>
+          {/* Name row — pinned to the top. Stacked text-shadows (soft
+              halo + tight outline) give the name a dark drop shadow
+              that stays readable against any avatar color without
+              needing a wash over the image. */}
+          <div className="relative z-10 px-[0.5em] pt-[0.35em] pointer-events-none">
+            <span
+              className="block text-[0.875em] font-semibold text-white truncate"
+              style={{ textShadow: '0 2px 6px rgba(0,0,0,0.95), 0 0 3px rgba(0,0,0,1), 0 0 1px rgba(0,0,0,1)' }}
+            >
+              {name}
+            </span>
+          </div>
+          {/* Life row — centered in the remaining space. The Heart is
+              an SVG so we use `filter: drop-shadow(...)` for its
+              shadow (text-shadow only affects glyphs). */}
+          <div className="relative z-10 flex-1 flex items-center justify-start gap-[0.75em] px-[0.5em] pb-[0.25em] pointer-events-none">
+            <Heart
+              size="2.5em"
+              className="text-red-400"
+              style={{ filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.95)) drop-shadow(0 0 2px rgba(0,0,0,1))' }}
+            />
+            <span
+              className="text-[3em] font-modern font-bold tabular-nums text-white leading-none"
+              style={{ textShadow: '0 3px 10px rgba(0,0,0,0.95), 0 0 4px rgba(0,0,0,1), 0 0 2px rgba(0,0,0,1)' }}
+            >
+              {life}
+            </span>
+          </div>
         </div>
 
         {/* Below the life total: mana pool sits as the first item of
@@ -7211,6 +7307,12 @@ function PlayerBox(
                   data-card
                   data-zone="stack"
                   data-card-id={c.id}
+                  // Same arrow-interaction attrs as battlefield cards
+                  // so useGameArrowInteractions can hit-test stack
+                  // cards as arrow sources AND arrow targets
+                  // (counterspells, on-stack triggers, etc.).
+                  data-card-owner={playerId}
+                  data-card-zone={ZoneName.STACK}
                   onPointerDown={(e) =>
                     startCardDrag(e, c, "stack", stackDisplayList)
                   }
@@ -7296,16 +7398,6 @@ function PlayerBox(
           // would double up the inset and shrink the visible column
           // count for no visual gain.
           className="absolute inset-0 overflow-x-auto overflow-y-hidden box-border"
-          onWheel={(e) => {
-            // Mouse-wheel scrolls the battlefield horizontally. Only
-            // when there's actually more content than fits — otherwise
-            // let the wheel event bubble to the outer play area.
-            const el = e.currentTarget;
-            if (el.scrollWidth <= el.clientWidth) return;
-            if (e.deltaY === 0) return;
-            el.scrollLeft += e.deltaY;
-            e.preventDefault();
-          }}
         >
         <div
           ref={battlefieldRef}
@@ -7750,17 +7842,6 @@ function PlayerBox(
           // instead of clipping cards mid-flight.
           onAnimationStart={() => setHandAnimating(true)}
           onAnimationComplete={() => setHandAnimating(false)}
-          onWheel={(e) => {
-            // Translate vertical wheel input into horizontal scroll so the
-            // mousewheel Just Works over an overflowing hand. Only when
-            // there's actual horizontal overflow — otherwise let the event
-            // bubble so the outer play-area scrolls normally.
-            const el = e.currentTarget;
-            if (el.scrollWidth <= el.clientWidth) return;
-            if (e.deltaY === 0) return;
-            el.scrollLeft += e.deltaY;
-            e.preventDefault();
-          }}
         >
         {/* Static hand — the owner sees the real card faces; everyone else
             sees face-down card backs (one per card the server says

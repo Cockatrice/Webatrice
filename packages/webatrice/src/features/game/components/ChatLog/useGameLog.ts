@@ -21,6 +21,14 @@ export interface GameLog {
   setDraft: (v: string) => void;
   handleMessagesScroll: () => void;
   handleSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
+  /** Whether the local user is allowed to send chat in this game.
+   *  False for spectators of games where `spectators_can_chat` is off
+   *  — the input is disabled with `chatDisabledReason` as its title. */
+  canChat: boolean;
+  /** Human-readable reason chat is disabled, or null when it isn't.
+   *  Rendered as the input's `title` (native browser tooltip on hover)
+   *  and as its `placeholder` so it's visible without hover too. */
+  chatDisabledReason: string | null;
 }
 
 export interface UseGameLogArgs {
@@ -40,6 +48,21 @@ export function useGameLog({ gameId, listRef }: UseGameLogArgs): GameLog {
   const secondsElapsed = useAppSelector((state) =>
     gameId != null ? games.Selectors.getSecondsElapsed(state, gameId) : 0,
   );
+  const isSpectator = useAppSelector((state) =>
+    gameId != null ? games.Selectors.isSpectator(state, gameId) : false,
+  );
+  // Cockatrice's `spectators_can_chat` game setting. Spectators can
+  // only cmdGameSay when this flag is set — servatrice rejects the
+  // command otherwise, so we disable the input up front rather than
+  // let the user type a message that will silently fail.
+  const spectatorsCanChat = useAppSelector((state) => {
+    if (gameId == null) return true;
+    return games.Selectors.getGame(state, gameId)?.info.spectatorsCanChat ?? true;
+  });
+  const canChat = !(isSpectator && !spectatorsCanChat);
+  const chatDisabledReason = canChat
+    ? null
+    : 'Spectators are not allowed to chat in this game.';
 
   // 1Hz ticker; resync to redux on each server `secondsElapsed`.
   const [displaySeconds, setDisplaySeconds] = useState(secondsElapsed);
@@ -82,7 +105,7 @@ export function useGameLog({ gameId, listRef }: UseGameLogArgs): GameLog {
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (gameId == null) {
+    if (gameId == null || !canChat) {
       return;
     }
     const trimmed = draft.trim();
@@ -101,5 +124,7 @@ export function useGameLog({ gameId, listRef }: UseGameLogArgs): GameLog {
     setDraft,
     handleMessagesScroll,
     handleSubmit,
+    canChat,
+    chatDisabledReason,
   };
 }

@@ -11,5 +11,7 @@ export {
   moveOpKey,
   attrOpKey,
 } from './optimistic';
+export { classifyLogTone } from './messageLog';
+export type { LogTone, LogSegment, LogSegmentKind, LogEntry } from './messageLog';
 export type { AttachedChild } from './game.selectors';
 export * from './game.interfaces';

@@ -11,6 +11,7 @@ import {
 import { cloneWith, mergeSetFields } from '../../common';
 import { GamesState } from './game.interfaces';
 import { pushEventMessage } from './game.reducer.helpers';
+import type { LogEntry } from './messageLog';
 
 export const primitiveReducers = {
   gamePlayersReplaced: ((state, action) => {
@@ -296,6 +297,6 @@ export const primitiveReducers = {
   }) as CaseReducer<GamesState, PayloadAction<{
     gameId: number;
     playerId: number;
-    message: string;
+    message: string | LogEntry;
   }>>,
 };

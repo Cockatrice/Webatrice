@@ -21,6 +21,100 @@ import {
 // See .github/instructions/datatrice-game.instructions.md#servatrice-game-event-quirks.
 export const EVENT_PLAYER_ID_SYSTEM = -1;
 
+/**
+ * Coarse tone classification for log messages. Consumed by the chat
+ * log renderer to pick a color per line — the goal is to make
+ * high-signal events (turn/phase changes, joins/leaves, concedes)
+ * pop against the routine action log. Cockatrice desktop styles by
+ * fixed color per event kind (green turn banner, per-phase color,
+ * red server messages, blue-highlighted numbers); we approximate
+ * with a small palette rather than exact colors.
+ */
+export type LogTone = 'phase' | 'turn' | 'system' | 'action';
+
+/**
+ * A styled slice of a log message. The chat log renderer emits each
+ * segment as its own <span> with a per-kind Tailwind class — card
+ * segments additionally wire onMouseEnter to the shared preview.
+ *   • `plain`  — filler text (verbs, prepositions, punctuation)
+ *   • `player` — a player display name (semibold)
+ *   • `card`   — a real MTG card name (italic accent, hoverable →
+ *                right-rail preview)
+ *   • `number` — a numeric value (counter delta, dice roll, PT, hash)
+ */
+export type LogSegmentKind = 'plain' | 'player' | 'card' | 'number';
+
+export interface LogSegment {
+  text: string;
+  kind: LogSegmentKind;
+}
+
+/**
+ * A formatted log message ready to append to the game log.
+ *   • `text`     — plain-text form (used by tone classifier, accessibility
+ *                  labels, copy-to-clipboard).
+ *   • `segments` — the same message split into style-tagged spans so
+ *                  the renderer can color card / player / number tokens
+ *                  independently.
+ */
+export interface LogEntry {
+  text: string;
+  segments: LogSegment[];
+}
+
+// Segment builders. Kept short — they appear many times per format
+// function and terse names make the templates readable.
+const t = (text: string): LogSegment => ({ text, kind: 'plain' });
+const p = (name: string): LogSegment => ({ text: name, kind: 'player' });
+const n = (value: number | string): LogSegment => ({ text: String(value), kind: 'number' });
+
+/** Card-name segment. Unknown card names ("a card") fall back to a
+ *  plain segment — the preview hover expects a real name. */
+function c(name: string | undefined | null): LogSegment {
+  if (!name) return { text: 'a card', kind: 'plain' };
+  return { text: name, kind: 'card' };
+}
+
+/**
+ * Template-tag helper that builds a `LogEntry` from a mixed string /
+ * segment template. String pieces (both from the template literal
+ * itself and from interpolated string values) collapse into `plain`
+ * segments; interpolated `LogSegment` values pass through. Adjacent
+ * plain segments merge, keeping the segment list compact.
+ *
+ * Usage:
+ *   L`${p(actor)} puts ${c(card)} into play${from}${faceDown}.`
+ * where `from` / `faceDown` are plain strings.
+ */
+type LogPart = LogSegment | string;
+function L(strings: TemplateStringsArray, ...values: LogPart[]): LogEntry {
+  const raw: LogSegment[] = [];
+  strings.forEach((str, i) => {
+    if (str) raw.push(t(str));
+    if (i < values.length) {
+      const v = values[i];
+      if (typeof v === 'string') {
+        if (v) raw.push(t(v));
+      } else {
+        raw.push(v);
+      }
+    }
+  });
+  const merged: LogSegment[] = [];
+  for (const s of raw) {
+    const last = merged[merged.length - 1];
+    if (last && last.kind === 'plain' && s.kind === 'plain') {
+      last.text += s.text;
+    } else {
+      merged.push({ ...s });
+    }
+  }
+  return {
+    text: merged.map((s) => s.text).join(''),
+    segments: merged,
+  };
+}
+
 function nameOf(game: Enriched.GameEntry, playerId: number): string {
   if (playerId < 0) {
     return 'The server';
@@ -28,15 +122,17 @@ function nameOf(game: Enriched.GameEntry, playerId: number): string {
   return game.players[playerId]?.properties.userInfo?.name ?? `Player ${playerId}`;
 }
 
-function zoneLabel(zoneName: string): string {
+/** Cockatrice's per-zone translated label — used by reveal / dump /
+ *  zone-properties logs. Matches `TranslatedName` case variants. */
+function zoneLabelReveal(zoneName: string, isOwner: boolean): string {
   switch (zoneName) {
-    case ZoneName.TABLE: return 'the battlefield';
-    case ZoneName.HAND: return 'their hand';
-    case ZoneName.GRAVE: return 'their graveyard';
-    case ZoneName.EXILE: return 'exile';
-    case ZoneName.DECK: return 'their library';
-    case ZoneName.SIDEBOARD: return 'their sideboard';
-    case ZoneName.STACK: return 'the stack';
+    case ZoneName.TABLE: return isOwner ? 'their battlefield' : 'the battlefield';
+    case ZoneName.HAND: return isOwner ? 'their hand' : 'the hand';
+    case ZoneName.GRAVE: return isOwner ? 'their graveyard' : 'the graveyard';
+    case ZoneName.EXILE: return isOwner ? 'their exile' : 'the exile';
+    case ZoneName.DECK: return isOwner ? 'their library' : 'the library';
+    case ZoneName.SIDEBOARD: return isOwner ? 'their sideboard' : 'the sideboard';
+    case ZoneName.STACK: return isOwner ? 'their stack' : 'the stack';
     default: return `custom zone '${zoneName}'`;
   }
 }
@@ -59,13 +155,6 @@ function phaseName(phase: number): string {
   return PHASE_NAMES[phase] ?? `phase ${phase}`;
 }
 
-function cardDescriptor(cardName: string | undefined): string {
-  if (!cardName) {
-    return 'a card';
-  }
-  return cardName;
-}
-
 function isSameZoneReorder(startZone: string, targetZone: string, sameOwner: boolean): boolean {
   if (!sameOwner && (startZone === ZoneName.TABLE && targetZone === ZoneName.TABLE)) {
     return false;
@@ -82,49 +171,65 @@ export interface CardMovedContext {
 }
 
 /**
- * Constructs the " from X" context clause that follows the card name in
- * move-card messages. Mirrors Cockatrice desktop's `getFromStr()` at
- * `message_log_widget.cpp:27-91`. Returns an empty string when the
- * source zone doesn't warrant one (safety fallback).
+ * Constructs the " from X" context clause that follows the card name
+ * in move-card messages. Mirrors Cockatrice desktop's `getFromStr()`
+ * at `message_log_widget.cpp:27-91`. Returns `{ nameOverride?, from }`
+ * — when the library source has no card name, the pre-move top / bottom
+ * card gets a descriptive replacement ("the top card of their
+ * library") that consumes both the card slot AND the source clause,
+ * matching desktop's `cardNameContainsStartZone` branch.
  */
 function fromContext(
   game: Enriched.GameEntry,
   data: Event_MoveCard,
   actingIsSourceOwner: boolean,
-): string {
+  hasCardName: boolean,
+): { nameOverride?: string; from: string } {
   const sourceOwner = nameOf(game, data.startPlayerId);
-  const owner = actingIsSourceOwner ? 'their' : `${sourceOwner}'s`;
+  const possessive = actingIsSourceOwner ? 'their' : `${sourceOwner}'s`;
   switch (data.startZone) {
     case ZoneName.TABLE:
-      return ' from play';
+      return { from: ' from play' };
     case ZoneName.GRAVE:
-      return ' from their graveyard';
+      return { from: ' from their graveyard' };
     case ZoneName.EXILE:
-      return ' from exile';
+      return { from: ' from exile' };
     case ZoneName.HAND:
-      return ' from their hand';
+      return { from: ' from their hand' };
     case ZoneName.SIDEBOARD:
-      return ' from sideboard';
+      return { from: ' from sideboard' };
     case ZoneName.STACK:
-      return ' from the stack';
+      return { from: ' from the stack' };
     case ZoneName.DECK: {
-      // Reducer processes the move before the formatter runs, so
-      // `cardCount` here is the post-move deck size. That means
-      // `position === cardCount` implies the card sat at the last
-      // pre-move index — i.e. was pulled from the bottom.
       const postCount =
         game.players[data.startPlayerId]?.zones[data.startZone]?.cardCount ?? 0;
       const position = data.position;
       if (position === 0) {
-        return ` from the top of ${owner} library`;
+        if (!hasCardName) {
+          return {
+            nameOverride: actingIsSourceOwner
+              ? 'the top card of their library'
+              : `the top card of ${possessive} library`,
+            from: '',
+          };
+        }
+        return { from: ` from the top of ${possessive} library` };
       }
       if (postCount > 0 && position === postCount) {
-        return ` from the bottom of ${owner} library`;
+        if (!hasCardName) {
+          return {
+            nameOverride: actingIsSourceOwner
+              ? 'the bottom card of their library'
+              : `the bottom card of ${possessive} library`,
+            from: '',
+          };
+        }
+        return { from: ` from the bottom of ${possessive} library` };
       }
-      return ` from ${owner} library`;
+      return { from: ` from ${possessive} library` };
     }
     default:
-      return ` from custom zone '${data.startZone}'`;
+      return { from: ` from custom zone '${data.startZone}'` };
   }
 }
 
@@ -133,64 +238,66 @@ export function formatCardMoved(
   actingPlayerId: number,
   data: Event_MoveCard,
   ctx: CardMovedContext,
-): string | null {
+): LogEntry | null {
   const sameOwner = data.startPlayerId === data.targetPlayerId;
   if (isSameZoneReorder(data.startZone, data.targetZone, sameOwner)) {
     return null;
   }
 
   const actor = nameOf(game, actingPlayerId);
-  const card = cardDescriptor(data.cardName || ctx.resolvedCardName);
+  const rawCardName = data.cardName || ctx.resolvedCardName;
   const actingIsSourceOwner = data.startPlayerId === actingPlayerId;
-  const from = fromContext(game, data, actingIsSourceOwner);
+  const { nameOverride, from } = fromContext(
+    game,
+    data,
+    actingIsSourceOwner,
+    !!rawCardName,
+  );
+  // `card` becomes either a card-name segment (linkable/hoverable) or
+  // a plain descriptor phrase ("the top card of their library" / "a
+  // card") — the descriptor case is not a real card name so the hover
+  // preview shouldn't fire on it.
+  const cardSeg: LogSegment = nameOverride ? t(nameOverride) : c(rawCardName);
   const faceDown = data.faceDown ? ' face down' : '';
 
   // Cross-owner control-transfer stays out of the zone-specific
-  // switch below — the desktop client logs this as a distinct event
-  // even before the actual zone destination is announced.
+  // switch below — desktop logs this as a distinct event.
   if (!sameOwner && data.startPlayerId === actingPlayerId) {
-    return `${actor} gives ${nameOf(game, data.targetPlayerId)} control over ${card}.`;
+    return L`${p(actor)} gives ${p(nameOf(game, data.targetPlayerId))} control over ${cardSeg}.`;
   }
 
-  // Format strings mirror Cockatrice desktop's `MessageLogWidget`
-  // templates from `message_log_widget.cpp:308-352`.
   switch (data.targetZone) {
     case ZoneName.TABLE:
-      // "%1 puts %2 into play%3[ face down]."
-      return `${actor} puts ${card} into play${from}${faceDown}.`;
+      return L`${p(actor)} puts ${cardSeg} into play${from}${faceDown}.`;
     case ZoneName.GRAVE:
-      // "%1 puts %2%3 into their graveyard[ face down]."
-      return `${actor} puts ${card}${from} into their graveyard${faceDown}.`;
+      return L`${p(actor)} puts ${cardSeg}${from} into their graveyard${faceDown}.`;
     case ZoneName.EXILE:
-      // "%1 exiles %2%3[ face down]."
-      return `${actor} exiles ${card}${from}${faceDown}.`;
+      return L`${p(actor)} exiles ${cardSeg}${from}${faceDown}.`;
     case ZoneName.HAND:
-      // Desktop: "%1 moves %2%3 to their hand." for the source-zone
-      // variants; special-cased into "%1 takes %2 into their hand"
-      // for library sources isn't in the widget — leave the generic
-      // form here to match one-to-one behavior.
-      return `${actor} puts ${card}${from} into ${sameOwner ? 'their hand' : `${nameOf(game, data.targetPlayerId)}'s hand`}.`;
+      return L`${p(actor)} moves ${cardSeg}${from} to their hand.`;
+    case ZoneName.SIDEBOARD:
+      return L`${p(actor)} moves ${cardSeg}${from} to sideboard.`;
+    case ZoneName.STACK:
+      return L`${p(actor)} plays ${cardSeg}${from}${faceDown}.`;
     case ZoneName.DECK: {
-      // Reducer already applied the move, so target `cardCount`
-      // includes the just-added card. The server has already
-      // resolved Command_MoveCard's `is_reversed` into an absolute
-      // `x` on the event, so we just compare it against the pile
-      // ends: 0 = top, cardCount - 1 = bottom, anything else is a
-      // specific position mid-deck.
       const targetCount =
         game.players[data.targetPlayerId]?.zones[data.targetZone]?.cardCount ?? 0;
       const x = data.x;
-      if (x <= 0) {
-        return `${actor} puts ${card}${from} on top of their library.`;
+      if (x === -1) {
+        return L`${p(actor)} puts ${cardSeg}${from} into their library.`;
       }
       if (targetCount > 0 && x >= targetCount - 1) {
-        return `${actor} puts ${card}${from} onto the bottom of their library.`;
+        return L`${p(actor)} puts ${cardSeg}${from} onto the bottom of their library.`;
       }
-      // "%1 puts %2%3 into their library %4 cards from the top."
-      return `${actor} puts ${card}${from} into their library ${x + 1} cards from the top.`;
+      if (x === 0) {
+        return L`${p(actor)} puts ${cardSeg}${from} on top of their library.`;
+      }
+      return L`${p(actor)} puts ${cardSeg}${from} into their library ${n(x + 1)} cards from the top.`;
     }
     default:
-      return `${actor} moves ${card}${from} to custom zone '${data.targetZone}'.`;
+      return faceDown
+        ? L`${p(actor)} moves ${cardSeg}${from} to custom zone '${data.targetZone}' face down.`
+        : L`${p(actor)} moves ${cardSeg}${from} to custom zone '${data.targetZone}'.`;
   }
 }
 
@@ -199,20 +306,20 @@ export function formatCardFlipped(
   playerId: number,
   data: Event_FlipCard,
   previousName: string | undefined,
-): string {
+): LogEntry {
   const actor = nameOf(game, playerId);
-  const name = cardDescriptor(data.cardName || previousName);
+  const nameSeg = c(data.cardName || previousName);
   return data.faceDown
-    ? `${actor} flips ${name} face-down.`
-    : `${actor} flips ${name} face-up.`;
+    ? L`${p(actor)} turns ${nameSeg} face-down.`
+    : L`${p(actor)} turns ${nameSeg} face-up.`;
 }
 
 export function formatCardDestroyed(
   game: Enriched.GameEntry,
   playerId: number,
   cardName: string | undefined,
-): string {
-  return `${nameOf(game, playerId)} destroys ${cardDescriptor(cardName)}.`;
+): LogEntry {
+  return L`${p(nameOf(game, playerId))} destroys ${c(cardName)}.`;
 }
 
 export function formatCardAttached(
@@ -220,30 +327,32 @@ export function formatCardAttached(
   playerId: number,
   data: Event_AttachCard,
   sourceCardName: string | undefined,
-): string {
+): LogEntry {
   const actor = nameOf(game, playerId);
-  const source = cardDescriptor(sourceCardName);
+  const sourceSeg = c(sourceCardName);
   if (data.targetCardId < 0 || !data.targetZone) {
-    return `${actor} unattaches ${source}.`;
+    return L`${p(actor)} unattaches ${sourceSeg}.`;
   }
   const targetPlayer = nameOf(game, data.targetPlayerId);
-  const targetCard = cardDescriptor(
+  const targetCardSeg = c(
     game.players[data.targetPlayerId]?.zones[data.targetZone]?.byId[data.targetCardId]?.name,
   );
-  return `${actor} attaches ${source} to ${targetPlayer}'s ${targetCard}.`;
+  return L`${p(actor)} attaches ${sourceSeg} to ${p(targetPlayer)}'s ${targetCardSeg}.`;
 }
 
 export function formatTokenCreated(
   game: Enriched.GameEntry,
   playerId: number,
   data: Event_CreateToken,
-): string {
+): LogEntry {
   const actor = nameOf(game, playerId);
   if (data.faceDown) {
-    return `${actor} creates a face-down token.`;
+    return L`${p(actor)} creates a face down token.`;
   }
-  const pt = data.pt ? ` (${data.pt})` : '';
-  return `${actor} creates token: ${data.cardName}${pt}.`;
+  const nameSeg = c(data.cardName);
+  return data.pt
+    ? L`${p(actor)} creates token: ${nameSeg} (${data.pt}).`
+    : L`${p(actor)} creates token: ${nameSeg}.`;
 }
 
 export function formatCardAttrChanged(
@@ -251,30 +360,41 @@ export function formatCardAttrChanged(
   playerId: number,
   data: Event_SetCardAttr,
   cardName: string | undefined,
-): string | null {
+  previousPT?: string,
+): LogEntry | null {
   const actor = nameOf(game, playerId);
-  const card = cardDescriptor(cardName);
+  const cardSeg = c(cardName);
   switch (data.attribute as CardAttribute) {
     case CardAttribute.AttrTapped:
-      return data.attrValue === '1' ? `${actor} taps ${card}.` : `${actor} untaps ${card}.`;
+      return data.attrValue === '1'
+        ? L`${p(actor)} taps ${cardSeg}.`
+        : L`${p(actor)} untaps ${cardSeg}.`;
     case CardAttribute.AttrAttacking:
-      return data.attrValue === '1' ? `${actor} declares ${card} as an attacker.` : null;
+      return data.attrValue === '1'
+        ? L`${p(actor)} declares ${cardSeg} as an attacker.`
+        : null;
     case CardAttribute.AttrFaceDown:
       return null;
     case CardAttribute.AttrColor:
       return null;
-    case CardAttribute.AttrPT:
-      return data.attrValue
-        ? `${actor} sets PT of ${card} to ${data.attrValue}.`
-        : `${actor} clears the PT of ${card}.`;
+    case CardAttribute.AttrPT: {
+      if (!data.attrValue) {
+        return L`${p(actor)} removes the PT of ${cardSeg}.`;
+      }
+      const oldPT = previousPT ?? '';
+      if (!oldPT) {
+        return L`${p(actor)} changes the PT of ${cardSeg} from nothing to ${n(data.attrValue)}.`;
+      }
+      return L`${p(actor)} changes the PT of ${cardSeg} from ${n(oldPT)} to ${n(data.attrValue)}.`;
+    }
     case CardAttribute.AttrAnnotation:
       return data.attrValue
-        ? `${actor} sets annotation of ${card} to "${data.attrValue}".`
-        : `${actor} clears the annotation on ${card}.`;
+        ? L`${p(actor)} sets annotation of ${cardSeg} to "${data.attrValue}".`
+        : L`${p(actor)} sets annotation of ${cardSeg} to "".`;
     case CardAttribute.AttrDoesntUntap:
       return data.attrValue === '1'
-        ? `${actor} sets ${card} to not untap normally.`
-        : `${actor} sets ${card} to untap normally.`;
+        ? L`${p(actor)} sets ${cardSeg} to not untap normally.`
+        : L`${p(actor)} sets ${cardSeg} to untap normally.`;
     default:
       return null;
   }
@@ -284,13 +404,13 @@ export function formatCardAttrChangedBulk(
   game: Enriched.GameEntry,
   playerId: number,
   data: Event_SetCardAttr,
-): string | null {
+): LogEntry | null {
   const actor = nameOf(game, playerId);
   switch (data.attribute as CardAttribute) {
     case CardAttribute.AttrTapped:
       return data.attrValue === '1'
-        ? `${actor} taps their permanents.`
-        : `${actor} untaps their permanents.`;
+        ? L`${p(actor)} taps their permanents.`
+        : L`${p(actor)} untaps their permanents.`;
     default:
       return null;
   }
@@ -302,17 +422,17 @@ export function formatCardCounterChanged(
   data: Event_SetCardCounter,
   cardName: string | undefined,
   previousValue: number,
-): string {
+): LogEntry {
   const actor = nameOf(game, playerId);
-  const card = cardDescriptor(cardName);
+  const cardSeg = c(cardName);
   const delta = data.counterValue - previousValue;
   if (delta > 0) {
-    return `${actor} puts ${delta} counter(s) on ${card} (total ${data.counterValue}).`;
+    return L`${p(actor)} places ${n(delta)} counter(s) on ${cardSeg} (now ${n(data.counterValue)}).`;
   }
   if (delta < 0) {
-    return `${actor} removes ${-delta} counter(s) from ${card} (total ${data.counterValue}).`;
+    return L`${p(actor)} removes ${n(-delta)} counter(s) from ${cardSeg} (now ${n(data.counterValue)}).`;
   }
-  return `${actor} sets counters on ${card} to ${data.counterValue}.`;
+  return L`${p(actor)} sets counters on ${cardSeg} to ${n(data.counterValue)}.`;
 }
 
 /** Mirrors Cockatrice desktop's `TranslateCounterName::translated` map
@@ -341,92 +461,66 @@ export function formatCounterSet(
   data: Event_SetCounter,
   counterName: string | undefined,
   previousValue: number,
-): string {
-  // Cockatrice desktop's `MessageLogWidget::logSetCounter`:
-  // "%1 sets counter %2 to %3 (%4%5)." where %4 is "+" when delta > 0
-  // (empty otherwise so negative deltas print as "(-1)") and %5 is the
-  // signed delta. Used for both life changes and mana counter changes.
+): LogEntry {
   const actor = nameOf(game, playerId);
-  const name = displayCounterName(counterName);
+  const displayName = displayCounterName(counterName);
   const delta = data.value - previousValue;
   const sign = delta > 0 ? '+' : '';
-  return `${actor} sets counter ${name} to ${data.value} (${sign}${delta}).`;
+  return L`${p(actor)} sets counter ${displayName} to ${n(data.value)} (${n(`${sign}${delta}`)}).`;
 }
 
 export function formatCardsDrawn(
   game: Enriched.GameEntry,
   playerId: number,
   number: number,
-): string {
+): LogEntry {
   const actor = nameOf(game, playerId);
-  return number === 1 ? `${actor} draws a card.` : `${actor} draws ${number} cards.`;
+  return number === 1
+    ? L`${p(actor)} draws ${n(1)} card.`
+    : L`${p(actor)} draws ${n(number)} cards.`;
 }
 
-export function formatZoneShuffled(game: Enriched.GameEntry, playerId: number): string {
-  return `${nameOf(game, playerId)} shuffles their library.`;
+export function formatZoneShuffled(game: Enriched.GameEntry, playerId: number): LogEntry {
+  return L`${p(nameOf(game, playerId))} shuffles their library.`;
 }
 
 /**
- * Mirrors Cockatrice's MessageLogWidget::logRevealCards
- * (message_log_widget.cpp:487-572). Covers two branches today:
- *
- *   • Zone-wide reveal / lend (`card_id[]` empty):
- *       - Reveal library to specific player → "Alice reveals library to Bob."
- *       - Reveal library to all players     → "Alice reveals library."
- *       - Lend library (always targeted)    → "Alice lends library to Bob."
- *
- *   • Top-N reveal (`card_id[0] === 0` sentinel + populated
- *     `number_of_cards`, sent by Cockatrice's actRevealTopCards at
- *     player_actions.cpp:1735-1748):
- *       - Reveal top N to specific player   → "Alice reveals 3 cards from
- *                                              their library to Bob."
- *       - Reveal top N to all players       → "Alice reveals 3 cards
- *                                              from their library."
- *
- * Returns null for the remaining `card_id[]`-populated paths (random
- * reveal cardId=[-2], specific-card reveals from hand, peek-face-down).
+ * Mirrors Cockatrice's MessageLogWidget::logRevealCards. Returns null
+ * for card-id-populated branches we don't handle (random reveals,
+ * specific-card reveals from hand, peek-face-down).
  */
 export function formatCardsRevealed(
   game: Enriched.GameEntry,
   actorPlayerId: number,
   data: Event_RevealCards,
-): string | null {
+): LogEntry | null {
   const actor = nameOf(game, actorPlayerId);
-  const zone = zoneLabel(data.zoneName);
+  const zone = zoneLabelReveal(data.zoneName, true);
   const isLend = data.grantWriteAccess;
-  // otherPlayerId defaults to -1 in proto2; the desktop client's
-  // reveal-to-all path passes null for otherPlayer, so treat < 0 as
-  // "no specific target".
   const hasTarget = data.otherPlayerId >= 0;
   const targetName = hasTarget ? nameOf(game, data.otherPlayerId) : null;
 
-  // Full-zone reveal / lend (empty card_id[]).
   if (data.cardId.length === 0) {
     if (isLend) {
-      // Lend is always targeted — Cockatrice's menu doesn't offer
-      // "Lend to all" (library_menu.cpp:280-293). If we ever see a
-      // targetless lend event it's a client bug upstream, fall back
-      // to the reveal-to-all phrasing rather than crash.
-      if (!targetName) return `${actor} reveals ${zone}.`;
-      return `${actor} lends ${zone} to ${targetName}.`;
+      if (!targetName) return L`${p(actor)} reveals ${zone}.`;
+      return L`${p(actor)} lends ${zone} to ${p(targetName)}.`;
     }
-    if (targetName) return `${actor} reveals ${zone} to ${targetName}.`;
-    return `${actor} reveals ${zone}.`;
+    if (targetName) return L`${p(actor)} reveals ${zone} to ${p(targetName)}.`;
+    return L`${p(actor)} reveals ${zone}.`;
   }
 
-  // Top-N reveal: card_id[0] === 0 backward-compat sentinel from
-  // desktop's actRevealTopCards. Prefer number_of_cards (populated on
-  // both eventPrivate and eventOthers) so spectators see the same
-  // count as the target / originator.
   const isTopNReveal = data.cardId.length === 1 && data.cardId[0] === 0;
   if (isTopNReveal) {
     const count = data.numberOfCards || data.cards.length;
     if (count <= 0) return null;
-    const cardsPhrase = count === 1 ? '1 card' : `${count} cards`;
     if (targetName) {
-      return `${actor} reveals ${cardsPhrase} from ${zone} to ${targetName}.`;
+      return count === 1
+        ? L`${p(actor)} reveals ${n(1)} card from ${zone} to ${p(targetName)}.`
+        : L`${p(actor)} reveals ${n(count)} cards from ${zone} to ${p(targetName)}.`;
     }
-    return `${actor} reveals ${cardsPhrase} from ${zone}.`;
+    return count === 1
+      ? L`${p(actor)} reveals ${n(1)} card from ${zone}.`
+      : L`${p(actor)} reveals ${n(count)} cards from ${zone}.`;
   }
 
   return null;
@@ -436,98 +530,137 @@ export function formatZoneDumped(
   game: Enriched.GameEntry,
   playerId: number,
   data: Event_DumpZone,
-): string {
+): LogEntry {
   const actor = nameOf(game, playerId);
-  // Cockatrice's Command_DumpZone uses number_cards = -1 for "all
-  // cards" (the "View library" flow); render that as "the whole
-  // library" rather than the raw -1 which reads as a bug.
-  const rawCount = data.numberCards;
-  const countPhrase = rawCount < 0
-    ? `the whole ${zoneLabel(data.zoneName).replace('their ', '')}`
-    : `${rawCount} card(s) from the top of ${zoneLabel(data.zoneName).replace('their ', '')}`;
-  if (data.zoneOwnerId !== playerId) {
-    const owner = nameOf(game, data.zoneOwnerId);
-    return rawCount < 0
-      ? `${actor} looks at the whole ${zoneLabel(data.zoneName).replace('their ', '')} of ${owner}.`
-      : `${actor} looks at ${rawCount} card(s) from the top of ${owner}'s ${zoneLabel(data.zoneName).replace('their ', '')}.`;
+  const isOwner = data.zoneOwnerId === playerId;
+  const zoneLabel = zoneLabelReveal(data.zoneName, isOwner);
+  if (data.numberCards < 0) {
+    if (isOwner) return L`${p(actor)} is looking at ${zoneLabel}.`;
+    const ownerName = nameOf(game, data.zoneOwnerId);
+    return L`${p(actor)} is looking at ${p(ownerName)}'s ${zoneLabel.replace(/^the /, '')}.`;
   }
-  return rawCount < 0
-    ? `${actor} looks at their whole ${zoneLabel(data.zoneName).replace('their ', '')}.`
-    : `${actor} looks at ${countPhrase}.`;
+  const countSeg = n(data.numberCards);
+  const noun = data.numberCards === 1 ? 'card' : 'cards';
+  if (isOwner) {
+    return L`${p(actor)} is looking at the top ${countSeg} ${noun} of ${zoneLabel}.`;
+  }
+  const ownerName = nameOf(game, data.zoneOwnerId);
+  return L`${p(actor)} is looking at the top ${countSeg} ${noun} of ${p(ownerName)}'s ${zoneLabel.replace(/^the /, '')}.`;
 }
 
 export function formatZonePropertiesChanged(
   game: Enriched.GameEntry,
   playerId: number,
   data: Event_ChangeZoneProperties,
-): string | null {
+): LogEntry | null {
   const actor = nameOf(game, playerId);
-  const zone = zoneLabel(data.zoneName);
+  const zone = zoneLabelReveal(data.zoneName, true);
   if (data.alwaysRevealTopCard) {
-    return `${actor} is now revealing the top card of ${zone}.`;
+    return L`${p(actor)} is now keeping the top card of ${zone} revealed.`;
   }
   if (data.alwaysLookAtTopCard) {
-    return `${actor} can now look at the top card of ${zone}.`;
+    return L`${p(actor)} can now look at top card of ${zone} at any time.`;
   }
-  return `${actor} stops revealing/looking at the top card of ${zone}.`;
+  return L`${p(actor)} is not revealing the top card of ${zone} any longer.`;
 }
 
-export function formatActivePhaseSet(phase: number): string {
-  return `It is now the ${phaseName(phase)}.`;
+export function formatActivePhaseSet(phase: number): LogEntry {
+  return L`It is now the ${phaseName(phase)}.`;
 }
 
-export function formatActivePlayerSet(game: Enriched.GameEntry, activePlayerId: number): string {
-  return `It is now ${nameOf(game, activePlayerId)}'s turn.`;
+export function formatActivePlayerSet(game: Enriched.GameEntry, activePlayerId: number): LogEntry {
+  return L`${p(nameOf(game, activePlayerId))}'s turn.`;
 }
 
-export function formatTurnReversed(game: Enriched.GameEntry, playerId: number, reversed: boolean): string {
+export function formatTurnReversed(game: Enriched.GameEntry, playerId: number, reversed: boolean): LogEntry {
   const actor = nameOf(game, playerId);
   return reversed
-    ? `${actor} reverses the turn order.`
-    : `${actor} restores the turn order.`;
+    ? L`${p(actor)} reversed turn order, now it's reversed.`
+    : L`${p(actor)} reversed turn order, now it's normal.`;
 }
 
 export function formatDieRolled(
   game: Enriched.GameEntry,
   playerId: number,
   data: Event_RollDie,
-): string {
+): LogEntry {
   const actor = nameOf(game, playerId);
   const rolls = (data.values && data.values.length > 0) ? data.values : (data.value ? [data.value] : []);
   if (rolls.length === 0) {
-    return `${actor} rolls a ${data.sides}-sided die.`;
+    return L`${p(actor)} rolls a ${n(data.sides)}-sided die.`;
   }
   if (rolls.length === 1) {
-    return `${actor} rolls a ${rolls[0]} on a ${data.sides}-sided die.`;
+    const roll = rolls[0];
+    if (data.sides === 2) {
+      const face = roll === 1 ? 'Heads (1)' : 'Tails (2)';
+      return L`${p(actor)} flipped a coin. It landed as ${n(face)}.`;
+    }
+    return L`${p(actor)} rolls a ${n(roll)} with a ${n(data.sides)}-sided die.`;
   }
-  return `${actor} rolls ${rolls.join(', ')} on ${rolls.length} ${data.sides}-sided dice.`;
+  if (data.sides === 2) {
+    const heads = rolls.filter((r) => r === 1).length;
+    const tails = rolls.filter((r) => r === 2).length;
+    return L`${p(actor)} flips ${n(rolls.length)} coins. There are ${n(heads)} heads and ${n(tails)} tails.`;
+  }
+  return L`${p(actor)} rolls a ${n(data.sides)}-sided dice ${n(rolls.length)} times: ${n(rolls.join(', '))}.`;
 }
 
-export function formatPlayerJoined(game: Enriched.GameEntry, playerId: number): string {
-  return `${nameOf(game, playerId)} has joined the game.`;
+export function formatPlayerJoined(game: Enriched.GameEntry, playerId: number): LogEntry {
+  return L`${p(nameOf(game, playerId))} has joined the game.`;
 }
 
-export function formatGameStart(): string {
-  return 'The game has started.';
+export function formatLeaveMessage(game: Enriched.GameEntry, playerId: number, reason?: string): LogEntry {
+  const actor = nameOf(game, playerId);
+  return reason
+    ? L`${p(actor)} has left the game (${reason}).`
+    : L`${p(actor)} has left the game.`;
+}
+
+export function formatGameStart(): LogEntry {
+  return L`The game has started.`;
 }
 
 export function formatArrowCreated(
   game: Enriched.GameEntry,
   playerId: number,
   arrow: ServerInfo_Arrow,
-): string {
+): LogEntry {
   const actor = nameOf(game, playerId);
-  const sourceCard = cardDescriptor(
+  const sourcePlayerName = nameOf(game, arrow.startPlayerId);
+  const targetPlayerName = nameOf(game, arrow.targetPlayerId);
+  const sourceCardSeg = c(
     game.players[arrow.startPlayerId]?.zones[arrow.startZone]?.byId[arrow.startCardId]?.name,
   );
-  const playerTarget = arrow.targetCardId < 0 || !arrow.targetZone;
-  if (playerTarget) {
-    return `${actor} points from ${sourceCard} to ${nameOf(game, arrow.targetPlayerId)}.`;
+  const isPlayerTarget = arrow.targetCardId < 0 || !arrow.targetZone;
+  const actorIsSource = playerId === arrow.startPlayerId;
+  const actorIsTarget = playerId === arrow.targetPlayerId;
+
+  if (isPlayerTarget) {
+    if (actorIsSource && actorIsTarget) {
+      return L`${p(actor)} points from their ${sourceCardSeg} to themselves.`;
+    }
+    if (actorIsSource) {
+      return L`${p(actor)} points from their ${sourceCardSeg} to ${p(targetPlayerName)}.`;
+    }
+    if (actorIsTarget) {
+      return L`${p(actor)} points from ${p(sourcePlayerName)}'s ${sourceCardSeg} to themselves.`;
+    }
+    return L`${p(actor)} points from ${p(sourcePlayerName)}'s ${sourceCardSeg} to ${p(targetPlayerName)}.`;
   }
-  const targetCard = cardDescriptor(
+
+  const targetCardSeg = c(
     game.players[arrow.targetPlayerId]?.zones[arrow.targetZone]?.byId[arrow.targetCardId]?.name,
   );
-  return `${actor} points from ${sourceCard} to ${targetCard}.`;
+  if (actorIsSource && actorIsTarget) {
+    return L`${p(actor)} points from their ${sourceCardSeg} to their ${targetCardSeg}.`;
+  }
+  if (actorIsSource) {
+    return L`${p(actor)} points from their ${sourceCardSeg} to ${p(targetPlayerName)}'s ${targetCardSeg}.`;
+  }
+  if (actorIsTarget) {
+    return L`${p(actor)} points from ${p(sourcePlayerName)}'s ${sourceCardSeg} to their own ${targetCardSeg}.`;
+  }
+  return L`${p(actor)} points from ${p(sourcePlayerName)}'s ${sourceCardSeg} to ${p(targetPlayerName)}'s ${targetCardSeg}.`;
 }
 
 interface PropertyDiff {
@@ -573,29 +706,56 @@ export function formatPropertyDiff(
   game: Enriched.GameEntry,
   playerId: number,
   diff: PropertyDiff,
-): string[] {
+): LogEntry[] {
   const actor = nameOf(game, playerId);
-  const messages: string[] = [];
+  const messages: LogEntry[] = [];
   if (diff.conceded) {
-    messages.push(`${actor} has conceded the game.`);
+    messages.push(L`${p(actor)} has conceded the game.`);
   }
   if (diff.unconceded) {
-    messages.push(`${actor} has unconceded the game.`);
+    messages.push(L`${p(actor)} has unconceded the game.`);
   }
   if (diff.ready) {
-    messages.push(`${actor} is ready to start the game.`);
+    messages.push(L`${p(actor)} is ready to start the game.`);
   }
   if (diff.unready) {
-    messages.push(`${actor} is no longer ready to start the game.`);
+    messages.push(L`${p(actor)} is not ready to start the game any more.`);
   }
   if (diff.sideboardLocked) {
-    messages.push(`${actor} has locked their sideboard.`);
+    messages.push(L`${p(actor)} has locked their sideboard.`);
   }
   if (diff.sideboardUnlocked) {
-    messages.push(`${actor} has unlocked their sideboard.`);
+    messages.push(L`${p(actor)} has unlocked their sideboard.`);
   }
   if (diff.deckLoaded) {
-    messages.push(`${actor} has loaded a deck (${diff.deckLoaded.hash}).`);
+    messages.push(L`${p(actor)} has loaded a deck (${diff.deckLoaded.hash}).`);
   }
   return messages;
+}
+
+/**
+ * Classify a formatted log-message text into a coarse tone bucket so
+ * the chat log can color-code it. Cheap string-inclusion checks —
+ * the classifier only sees English text, but the format functions
+ * above produce English strings anyway.
+ *
+ * Accepts either a raw string (for external callers) or a `LogEntry`
+ * (renderer path, which already has `.text`).
+ */
+export function classifyLogTone(input: string | LogEntry): LogTone {
+  const text = typeof input === 'string' ? input : input.text;
+  if (/^It is now the /.test(text)) return 'phase';
+  if (/'s turn\.$/.test(text)) return 'turn';
+  if (
+    /^The game has (started|been closed)\.$/.test(text)
+    || / has joined the game\.$/.test(text)
+    || / has left the game/.test(text)
+    || / has (?:un)?conceded the game\.$/.test(text)
+    || / is (?:not )?ready to start the game/.test(text)
+    || / has (?:un)?locked their sideboard\.$/.test(text)
+    || / has loaded a deck /.test(text)
+  ) {
+    return 'system';
+  }
+  return 'action';
 }

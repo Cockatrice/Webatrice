@@ -98,12 +98,34 @@ export interface UseDeckEditor {
 //  MyDecks is no longer relevant since our custom `uploadDeckUpdate`
 //  does not dispatch that action.)
 
+/**
+ * Module-level cache of hydrated decks by deckId. Survives unmounts
+ * so switching tabs (MyDecks ↔ open deck) doesn't re-download and
+ * re-hydrate every time — otherwise every tab return flashes the
+ * "Loading…" placeholder while the cod XML round-trips to servatrice
+ * and hydrateDeck's async Dexie / Scryfall lookups run again.
+ *
+ * Entries mirror the in-editor deck state (updated whenever the local
+ * state changes), plus the last-known-saved XML signature so the
+ * autosave dirty check keeps working after a rehydrate. Invalidated
+ * by MyDecks' Refresh button via `clearDeckEditorCache()`, and by
+ * `deleteCachedDeck(id)` when a deck is removed.
+ */
+interface CachedDeck { deck: HydratedDeck; savedXml: string }
+const deckCache: Map<number, CachedDeck> = new Map();
+export function clearDeckEditorCache(): void { deckCache.clear(); }
+export function deleteCachedDeck(deckId: number): void { deckCache.delete(deckId); }
+
 export function useDeckEditor(deckId: number | null): UseDeckEditor {
   const webClient = useWebClient();
   const isConnected = useAppSelector(server.Selectors.getIsConnected);
 
-  const [deck, setDeck] = useState<HydratedDeck | null>(null);
-  const [loading, setLoading] = useState(true);
+  // Hydrate initial state from the module cache if we've already
+  // loaded this deck this session — avoids the "Loading…" flash and
+  // the deckDownload round-trip when returning to an open deck tab.
+  const initialCached = deckId != null ? deckCache.get(deckId) : undefined;
+  const [deck, setDeck] = useState<HydratedDeck | null>(initialCached?.deck ?? null);
+  const [loading, setLoading] = useState(!initialCached);
   const [notFound, setNotFound] = useState(false);
   const [saveState, setSaveState] = useState<SaveState>('idle');
 
@@ -112,12 +134,20 @@ export function useDeckEditor(deckId: number | null): UseDeckEditor {
   // the effect's deps.
   const deckRef = useRef<HydratedDeck | null>(null);
   const saveTimerRef = useRef<number | null>(null);
-  const savedSignatureRef = useRef<string | null>(null); // last-known-saved XML
+  const savedSignatureRef = useRef<string | null>(initialCached?.savedXml ?? null);
   deckRef.current = deck;
 
   // --- Load ---
   useEffect(() => {
-    if (!isConnected || deckId == null) return;
+    if (deckId == null) return;
+    // Cached: state already seeded from the cache above; skip the
+    // network round-trip entirely so tab switches feel instant.
+    if (deckCache.has(deckId)) {
+      setLoading(false);
+      setNotFound(false);
+      return;
+    }
+    if (!isConnected) return;
     setLoading(true);
     setNotFound(false);
     setDeck(null);
@@ -134,6 +164,10 @@ export function useDeckEditor(deckId: number | null): UseDeckEditor {
           const hydrated = await hydrateDeck(parsed);
           setDeck(hydrated);
           savedSignatureRef.current = payload.deck;
+          // Seed the cache so subsequent mounts of this deck skip the
+          // download + parse + hydrate round-trip. `deck`-change
+          // effect below keeps the entry up to date after edits.
+          deckCache.set(payload.deckId, { deck: hydrated, savedXml: payload.deck });
           setLoading(false);
           setSaveState('idle');
           // Legacy decks with no <format> element get defaulted to
@@ -191,6 +225,11 @@ export function useDeckEditor(deckId: number | null): UseDeckEditor {
     });
     if (xml === savedSignatureRef.current) return; // nothing changed
     savedSignatureRef.current = xml;
+    // Refresh the cached saved-signature so a remount after autosave
+    // still sees the deck as "clean" (matches the last-known-saved
+    // XML) and doesn't queue a spurious re-save.
+    const cached = deckCache.get(deckId);
+    if (cached) deckCache.set(deckId, { deck: cached.deck, savedXml: xml });
     setSaveState('saving');
     // uploadDeckUpdate handles both the server "saved" ack (flips our
     // saveState) and a follow-up deckList refetch that keeps MyDecks
@@ -208,6 +247,19 @@ export function useDeckEditor(deckId: number | null): UseDeckEditor {
     }
   }, [persistNow]);
   useEffect(() => flushSave, [flushSave]);
+
+  // Mirror local edits into the module cache so returning to this
+  // deck's tab after switching away shows the latest in-editor state
+  // (including unsaved edits), not the last-downloaded XML. Runs after
+  // every setDeck — cheap, just a Map.set.
+  useEffect(() => {
+    if (deckId == null || !deck) return;
+    const existing = deckCache.get(deckId);
+    deckCache.set(deckId, {
+      deck,
+      savedXml: existing?.savedXml ?? savedSignatureRef.current ?? '',
+    });
+  }, [deckId, deck]);
 
   // --- Mutations ---
   const setName = useCallback(

@@ -30,6 +30,7 @@ import { parseDecklist, type ParsedEntry } from './decklistParser';
 import { assembleDeckCard } from './hydrate';
 import { defaultMeta } from './meta';
 import { MTG_FORMAT_LABELS, MTG_FORMATS, normalizeFormat, type DeckCard, type ParsedDeck } from './types';
+import { clearDeckEditorCache, deleteCachedDeck } from './useDeckEditor';
 
 /**
  * My Decks page. Flat list of decks from Servatrice — folders are
@@ -87,6 +88,25 @@ function categoryOfDeck(summary: DeckSummary | undefined): string {
   return CATEGORY_OTHER;
 }
 
+// Module-level cache so navigating away from the Decks page and back
+// doesn't re-download every deck's XML + re-run the price / format /
+// commander-art extraction — those would otherwise flash "Loading…"
+// on every tab return because component state resets on unmount.
+// Cleared only by the manual Refresh button (fetchList) so the user
+// can still force a re-fetch after saving from the editor. Lives for
+// the browser session; a reload wipes both alongside Redux.
+const summaryCache: Map<number, DeckSummary> = new Map();
+const priceFetchedCache: Set<number> = new Set();
+
+/** Wipe every module-level MyDecks cache. Called by TopBar when the
+ *  current server / user identity changes — deck ids are per-user on
+ *  servatrice, so a cache from a different login would surface stale
+ *  or wrong summaries against the new server's tree. */
+export function clearDecksListCache(): void {
+  summaryCache.clear();
+  priceFetchedCache.clear();
+}
+
 function Decks() {
   const navigate = useNavigate();
   const webClient = useWebClient();
@@ -99,8 +119,16 @@ function Decks() {
     if (!isConnected) return;
     // Clear the fetched guard so a manual refresh re-downloads every
     // deck's XML and picks up any changes made in the editor (or
-    // elsewhere) since we last visited this page.
+    // elsewhere) since we last visited this page. Wipe both the
+    // component-scoped ref/state AND the module-level cache — the
+    // cache is what survives tab switches, so it needs the reset too.
     priceFetchedRef.current = new Set();
+    priceFetchedCache.clear();
+    summaryCache.clear();
+    // A manual refresh should also drop the per-deck editor cache so
+    // reopening a deck after Refresh re-downloads its XML (matches
+    // what the user probably means by "refresh").
+    clearDeckEditorCache();
     setSummaryMap(new Map());
     webClient.request.session.deckList();
   };
@@ -173,14 +201,21 @@ function Decks() {
   //   • format               — <format> element (for the row chip)
   //   • bannerCard           — <bannerCard> name (first pick for art)
   //   • commanderName/Uuid   — first card with `commander="1"` attr (art fallback)
-  const [summaryMap, setSummaryMap] = useState<Map<number, DeckSummary>>(new Map());
-  const priceFetchedRef = useRef<Set<number>>(new Set());
+  // Hydrate from the module cache on mount so returning to the tab
+  // shows previously-fetched summaries immediately instead of flashing
+  // "Loading…" while every deck re-downloads. Cache is a snapshot at
+  // mount time — new summaries flow into both state and cache below.
+  const [summaryMap, setSummaryMap] = useState<Map<number, DeckSummary>>(
+    () => new Map(summaryCache),
+  );
+  const priceFetchedRef = useRef<Set<number>>(new Set(priceFetchedCache));
 
   useEffect(() => {
     if (!isConnected || decks.length === 0) return;
     for (const deck of decks) {
       if (priceFetchedRef.current.has(deck.id)) continue;
       priceFetchedRef.current.add(deck.id);
+      priceFetchedCache.add(deck.id);
       webClient.request.session.deckDownload(deck.id);
     }
   }, [isConnected, decks, webClient]);
@@ -202,6 +237,11 @@ function Decks() {
           commanderName: commander?.name,
           commanderScryfallId: commander?.scryfallId,
         };
+        // Mirror into the module cache so a tab switch away and back
+        // keeps this summary without re-downloading. The state update
+        // and the cache write need to stay in sync — this branch owns
+        // both writes.
+        summaryCache.set(payload.deckId, next);
         setSummaryMap((prev) => {
           const existing = prev.get(payload.deckId);
           if (existing && summariesEqual(existing, next)) return prev;
@@ -268,6 +308,12 @@ function Decks() {
   const confirmDelete = () => {
     if (!pendingDelete) return;
     webClient.request.session.deckDel(pendingDelete.id);
+    // Evict the editor's cached copy so a stale entry can't be shown
+    // if the user reopens a deck slot the server later reuses for a
+    // brand new deck with the same id.
+    deleteCachedDeck(pendingDelete.id);
+    summaryCache.delete(pendingDelete.id);
+    priceFetchedCache.delete(pendingDelete.id);
     setPendingDelete(null);
   };
 

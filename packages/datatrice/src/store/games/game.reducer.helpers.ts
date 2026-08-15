@@ -9,6 +9,7 @@ import {
   ServerInfo_Player,
 } from '@cockatrice/sockatrice/generated';
 import { cloneWith } from '../../common';
+import type { LogEntry } from './messageLog';
 
 export const MAX_GAME_MESSAGES = 1000;
 
@@ -19,29 +20,45 @@ const LEAVE_REASON_MESSAGES: Record<number, string> = {
   4: 'player disconnected from server',
 };
 
-export function formatLeaveMessage(playerName: string, reason: number): string {
+export function formatLeaveMessage(playerName: string, reason: number): LogEntry {
   const reasonText = LEAVE_REASON_MESSAGES[reason] ?? LEAVE_REASON_MESSAGES[1];
-  return `${playerName} has left the game (${reasonText}).`;
+  return {
+    text: `${playerName} has left the game (${reasonText}).`,
+    segments: [
+      { text: playerName, kind: 'player' },
+      { text: ` has left the game (${reasonText}).`, kind: 'plain' },
+    ],
+  };
 }
 
 export function eventTimestamp(): number {
   return Date.now();
 }
 
+/**
+ * Push a formatted game event onto the log. Accepts a plain string for
+ * legacy paths (chat, ad-hoc system messages) or a `LogEntry` from the
+ * `formatX(...)` helpers — the latter carries per-token segments so
+ * the chat renderer can highlight card names / player names / numbers.
+ */
 export function pushEventMessage(
   game: Enriched.GameEntry,
   playerId: number,
-  message: string | null | undefined,
+  message: string | LogEntry | null | undefined,
 ): void {
   if (!message) {
     return;
   }
+  const text = typeof message === 'string' ? message : message.text;
+  const segments = typeof message === 'string' ? undefined : message.segments;
+  if (!text) return;
   if (game.messages.length >= MAX_GAME_MESSAGES) {
     game.messages = game.messages.slice(game.messages.length - MAX_GAME_MESSAGES + 1);
   }
   game.messages.push({
     playerId,
-    message,
+    message: text,
+    segments,
     timeReceived: eventTimestamp(),
     kind: 'event',
   });

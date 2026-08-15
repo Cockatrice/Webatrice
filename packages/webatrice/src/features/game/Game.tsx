@@ -43,6 +43,9 @@ import './Game.css';
 const CONCEDE_CONFIRM_MESSAGE =
   'You\'ll stay seated as a spectator until you click Unconcede or Leave Game. Others will see you as conceded.';
 
+const LEAVE_CONFIRM_MESSAGE =
+  'You\'ll be removed from the game entirely. To rejoin, you\'ll need a re-invite or to join as a spectator (if allowed).';
+
 /**
  * Top-level game route. Splits the render into two paths:
  *   • Pre-start (game exists but `started === false`): the full-page
@@ -129,6 +132,7 @@ function GameBoard() {
       onRequestUnconcede: dialogs.openUnconcede,
       onRequestGameInfo: dialogs.openGameInfo,
       onRequestViewSideboard: dialogs.openViewSideboard,
+      onRequestLeave: dialogs.openLeaveConfirm,
     }),
     [
       dialogs.openRollDie,
@@ -136,6 +140,7 @@ function GameBoard() {
       dialogs.openUnconcede,
       dialogs.openGameInfo,
       dialogs.openViewSideboard,
+      dialogs.openLeaveConfirm,
     ],
   );
 
@@ -290,6 +295,16 @@ function GameBoard() {
                           confirmLabel="Unconcede"
                           onConfirm={dialogs.confirmUnconcede}
                           onCancel={dialogs.closeConcedeConfirm}
+                        />
+
+                        <ConfirmDialog
+                          isOpen={dialogs.leaveConfirm}
+                          title="Leave this game?"
+                          message={LEAVE_CONFIRM_MESSAGE}
+                          confirmLabel="Leave"
+                          destructive
+                          onConfirm={dialogs.confirmLeave}
+                          onCancel={dialogs.closeLeaveConfirm}
                         />
 
                         <GameInfoDialog />

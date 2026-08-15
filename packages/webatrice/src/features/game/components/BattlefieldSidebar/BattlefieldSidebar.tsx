@@ -92,13 +92,13 @@ async function fetchScryfallDetail(
 
 export default function BattlefieldSidebar() {
   const gameId = useGameId();
-  const leaveGame = useLeaveGame();
   const { isSpectator } = useLocalIdentity();
   const { hoveredCard } = useHoveredCard();
   const {
     onRequestConcede,
     onRequestUnconcede,
     onRequestViewSideboard,
+    onRequestLeave,
   } = useGameDialogActions();
   const { canConcede, canUnconcede } = useGameAffordances(gameId ?? undefined);
 
@@ -175,8 +175,13 @@ export default function BattlefieldSidebar() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [previewMode, activeKey]);
 
+  // Route through `onRequestLeave` (opens the "Leave this game?"
+  // confirmation) rather than firing Command_LeaveGame directly —
+  // matches the concede guard-rail, so an accidental sidebar click
+  // doesn't drop the user out of a game they meant to stay in. The
+  // confirm's `onConfirm` fires the wire command + local dispatch.
   const handleLeave = () => {
-    if (gameId != null) leaveGame(gameId);
+    if (gameId != null) onRequestLeave();
   };
 
   // Fancy's exact URL pattern — prefer the exact printing by id,

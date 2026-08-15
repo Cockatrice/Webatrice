@@ -92,6 +92,11 @@ export interface GameDialogsState {
   viewSideboardOpen: boolean;
   gameInfoOpen: boolean;
   concedeConfirm: ConcedeConfirm;
+  /** True while the leave-game confirmation dialog is open. Mirrors
+   *  `concedeConfirm` — same guard-rail pattern for a destructive
+   *  action, so accidental clicks on the sidebar Leave button don't
+   *  drop the user out of a game they meant to stay in. */
+  leaveConfirm: boolean;
   revealState: RevealState | null;
 }
 
@@ -156,6 +161,10 @@ export interface GameDialogsActions {
   closeConcedeConfirm: () => void;
   confirmConcede: () => void;
   confirmUnconcede: () => void;
+
+  openLeaveConfirm: () => void;
+  closeLeaveConfirm: () => void;
+  confirmLeave: () => void;
 
   // Reveal-cards dialog
   closeReveal: () => void;
@@ -243,6 +252,9 @@ export const NOOP_GAME_DIALOGS_ACTIONS: GameDialogsActions = {
   closeConcedeConfirm: noopDialogAction,
   confirmConcede: noopDialogAction,
   confirmUnconcede: noopDialogAction,
+  openLeaveConfirm: noopDialogAction,
+  closeLeaveConfirm: noopDialogAction,
+  confirmLeave: noopDialogAction,
   closeReveal: noopDialogAction,
   handleRequestSetPT: noopDialogAction,
   handleRequestSetAnnotation: noopDialogAction,
@@ -342,6 +354,7 @@ export function useGameDialogs({
   const [playerMenu, setPlayerMenu] = useState<AnchorPosition | null>(null);
   const [handMenu, setHandMenu] = useState<AnchorPosition | null>(null);
   const [concedeConfirm, setConcedeConfirm] = useState<ConcedeConfirm>(null);
+  const [leaveConfirm, setLeaveConfirm] = useState(false);
   const [gameInfoOpen, setGameInfoOpen] = useState(false);
 
   const handleZoneClick = useCallback((playerId: number, zoneName: string) => {
@@ -1251,6 +1264,19 @@ export function useGameDialogs({
     setConcedeConfirm(null);
   }, [gameId, webClient]);
 
+  // Fire Command_LeaveGame and mirror useLeaveGame's local dispatch —
+  // servatrice strips the leaver from Event_Leave before broadcast so
+  // the client would never see itself leave without this. Same pattern
+  // as `useLeaveGame`; kept here so the confirm flow owns the whole
+  // side effect.
+  const confirmLeave = useCallback(() => {
+    if (gameId != null) {
+      webClient.request.game.leaveGame(gameId);
+      dispatch(games.Actions.gameLeft({ gameId }));
+    }
+    setLeaveConfirm(false);
+  }, [gameId, webClient, dispatch]);
+
   // Simple open/close setters, hoisted out of the return literal so the whole
   // object can be memoized (a fresh return object each render would churn
   // GameDialogsContext's value and force every dialog/menu consumer to re-render
@@ -1273,6 +1299,8 @@ export function useGameDialogs({
   const openConcede = useCallback(() => setConcedeConfirm('concede'), []);
   const openUnconcede = useCallback(() => setConcedeConfirm('unconcede'), []);
   const closeConcedeConfirm = useCallback(() => setConcedeConfirm(null), []);
+  const openLeaveConfirm = useCallback(() => setLeaveConfirm(true), []);
+  const closeLeaveConfirm = useCallback(() => setLeaveConfirm(false), []);
   const closeReveal = useCallback(() => setRevealState(null), []);
 
   // The action surface is decoupled from game state (handlers read the latest
@@ -1312,6 +1340,9 @@ export function useGameDialogs({
       closeConcedeConfirm,
       confirmConcede,
       confirmUnconcede,
+      openLeaveConfirm,
+      closeLeaveConfirm,
+      confirmLeave,
       closeReveal,
       handleRequestSetPT,
       handleRequestSetAnnotation,
@@ -1374,6 +1405,9 @@ export function useGameDialogs({
       closeConcedeConfirm,
       confirmConcede,
       confirmUnconcede,
+      openLeaveConfirm,
+      closeLeaveConfirm,
+      confirmLeave,
       closeReveal,
       handleRequestSetPT,
       handleRequestSetAnnotation,
@@ -1423,6 +1457,7 @@ export function useGameDialogs({
       viewSideboardOpen,
       gameInfoOpen,
       concedeConfirm,
+      leaveConfirm,
       revealState,
       ...actions,
     }),
@@ -1441,6 +1476,7 @@ export function useGameDialogs({
       viewSideboardOpen,
       gameInfoOpen,
       concedeConfirm,
+      leaveConfirm,
       revealState,
       actions,
     ],

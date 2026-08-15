@@ -112,8 +112,22 @@ export interface ZoneEntry {
 export interface GameMessage {
   playerId: number;
   message: string;
+  /** Optional per-token segments — populated by the `formatX(...)`
+   *  helpers for event lines so the chat renderer can color card /
+   *  player / number tokens independently. Chat lines and pre-segment
+   *  legacy events leave this undefined. */
+  segments?: LogMessageSegment[];
+  /** Wall-clock ms when the reducer processed this message. Rendered
+   *  as `[HH:MM:SS]` local time before the message body, matching
+   *  Cockatrice desktop's `QDateTime::currentDateTime()` stamp. */
   timeReceived: number;
   kind?: 'chat' | 'event';
+}
+
+export type LogMessageSegmentKind = 'plain' | 'player' | 'card' | 'number';
+export interface LogMessageSegment {
+  text: string;
+  kind: LogMessageSegmentKind;
 }
 
 export interface LogGroups {

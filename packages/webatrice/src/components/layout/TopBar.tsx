@@ -15,6 +15,7 @@ import { useWebClient } from '@cockatrice/datatrice/react';
 import { useLeaveGame } from '@app/hooks';
 import { Images } from '@app/images';
 import { RouteEnum } from '@app/types';
+import { clearDeckEditorCache, clearDecksListCache } from '../../features/decks';
 
 type TabType =
   | 'server'
@@ -67,6 +68,7 @@ export default function TopBar() {
   const leaveGameRequest = useLeaveGame();
 
   const user = useAppSelector(server.Selectors.getUser);
+  const serverName = useAppSelector(server.Selectors.getName);
   const isConnected = useAppSelector(server.Selectors.getIsConnected);
   const joinedRooms = useAppSelector(rooms.Selectors.getJoinedRooms);
   const activeGames = useAppSelector(games.Selectors.getActiveGames);
@@ -120,6 +122,41 @@ export default function TopBar() {
     if (backendDecks) return;
     webClient.request.session.deckList();
   }, [isConnected, backendDecks, webClient]);
+
+  // Server/user identity change — deck ids are per-user on servatrice,
+  // so any deck tab / cache from a previous login is stale after
+  // signing into a different server or as a different user. Watch
+  // `(serverName, userName)`; when it transitions to a new non-null
+  // value that doesn't match the last known owner, purge deck sticky
+  // tabs and both deck caches. If the user is currently sitting on a
+  // now-stale deck route, bounce them to the lobby so the editor
+  // doesn't try to load an id that doesn't exist here.
+  const identity = useMemo(() => {
+    if (!serverName || !user?.name) return null;
+    return `${serverName}::${user.name}`;
+  }, [serverName, user?.name]);
+  useEffect(() => {
+    if (identity == null) return;
+    const previous = window.localStorage.getItem(STICKY_OWNER_KEY);
+    if (previous && previous !== identity) {
+      setStickyTabs((prev) => prev.filter((t) => t.type !== 'deck' && t.type !== 'decks'));
+      clearDeckEditorCache();
+      clearDecksListCache();
+      if (
+        location.pathname.startsWith('/deck/')
+        || location.pathname === RouteEnum.DECKS
+      ) {
+        navigate(generatePath(RouteEnum.SERVER));
+      }
+    }
+    window.localStorage.setItem(STICKY_OWNER_KEY, identity);
+    // location.pathname / navigate intentionally excluded — the
+    // owner-key mismatch check gates the wipe, and localStorage
+    // updates after the wipe so subsequent path changes with the
+    // same identity are no-ops. Depending on pathname would rerun
+    // this effect on every route hop.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [identity, setStickyTabs]);
 
   // Enrich a deck-editor sticky tab with the actual deck name once
   // backendDecks has loaded it. Falls back to `Deck #N` before that.
@@ -491,6 +528,11 @@ function flattenDeckNames(
 // an onClose; the tab-list useMemo attaches close behaviour at derive
 // time based on current state.
 const STICKY_STORAGE_KEY = 'webatrice.stickyTabs';
+/** Owner (`${serverName}::${userName}`) of the currently-persisted
+ *  sticky tabs. Written after every non-null identity settles; a
+ *  mismatch on next login means we jumped servers or logged in as
+ *  someone else and need to wipe stale deck tabs + caches. */
+const STICKY_OWNER_KEY = 'webatrice.stickyTabs.owner';
 const VALID_TAB_TYPES: TabType[] = [
   'server', 'room', 'game', 'decks', 'deck',
   'my-decks', 'settings', 'account', 'logs', 'player', 'unknown',
