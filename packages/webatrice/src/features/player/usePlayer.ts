@@ -4,7 +4,7 @@ import { useParams } from 'react-router-dom';
 import { useWebClient } from '@cockatrice/datatrice/react';
 import { server } from '@cockatrice/datatrice';
 import { useAppSelector } from '@app/store';
-import { ServerInfo_User } from '@cockatrice/sockatrice/generated';
+import { Event_UserMessage, ServerInfo_User } from '@cockatrice/sockatrice/generated';
 export interface PlayerViewModel {
   name: string | null;
   userInfo: ServerInfo_User | undefined;
@@ -13,6 +13,11 @@ export interface PlayerViewModel {
   isABuddy: boolean;
   isIgnored: boolean;
   isModerator: boolean;
+  // Full private-chat history with this user (both sides). Empty until
+  // the first message goes either way. Cockatrice's shared reducer
+  // keys both sent + received under the OTHER user's name, so a
+  // single lookup returns the conversation.
+  privateMessages: Event_UserMessage[];
 
   onAddBuddy: () => void;
   onRemoveBuddy: () => void;
@@ -35,6 +40,9 @@ export function usePlayer(): PlayerViewModel {
   const buddyList = useAppSelector(server.Selectors.getBuddyList);
   const ignoreList = useAppSelector(server.Selectors.getIgnoreList);
   const isModerator = useAppSelector(server.Selectors.getIsUserModerator);
+  const privateMessages = useAppSelector((state) =>
+    name ? server.Selectors.getPrivateMessagesForUser(state, name) : [],
+  );
 
   useEffect(() => {
     if (name) {
@@ -65,6 +73,7 @@ export function usePlayer(): PlayerViewModel {
     isABuddy,
     isIgnored,
     isModerator,
+    privateMessages,
     onAddBuddy,
     onRemoveBuddy,
     onAddIgnore,

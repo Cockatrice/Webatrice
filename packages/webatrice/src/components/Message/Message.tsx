@@ -2,6 +2,8 @@ import { NavLink, generatePath } from 'react-router-dom';
 import type { ReactNode } from 'react';
 
 import { CALLOUT_BOUNDARY_REGEX, CARD_CALLOUT_REGEX, MENTION_REGEX, RouteEnum, URL_REGEX } from '@app/types';
+import UserActionsMenu from '../UserDisplay/UserActionsMenu';
+import { useUserDisplay } from '../UserDisplay/useUserDisplay';
 import CardCallout from './CardCallout';
 import { useParsedMessage } from './useMessage';
 import './Message.css';
@@ -42,11 +44,52 @@ interface PlayerLinkProps {
   label?: string;
 }
 
-const PlayerLink = ({ name, label = name }: PlayerLinkProps) => (
-  <NavLink className="link" to={generatePath(RouteEnum.PLAYER, { name })}>
-    {label}
-  </NavLink>
-);
+/**
+ * Author name / @mention link inside a chat message. Left-click still
+ * navigates to the Player page (which hosts the private-chat panel);
+ * right-click opens the same UserActionsMenu the Buddies / Players
+ * Online rows use, so the "Private chat" entry point is consistent
+ * across the app. Cockatrice-parity: right-click on a name anywhere
+ * in the desktop client also brings up this menu.
+ */
+const PlayerLink = ({ name, label = name }: PlayerLinkProps) => {
+  const {
+    position,
+    isABuddy,
+    isIgnored,
+    handleClick,
+    handleClose,
+    onAddBuddy,
+    onRemoveBuddy,
+    onAddIgnore,
+    onRemoveIgnore,
+  } = useUserDisplay(name);
+  return (
+    <>
+      <NavLink
+        className="link"
+        to={generatePath(RouteEnum.PLAYER, { name })}
+        onContextMenu={handleClick}
+      >
+        {label}
+      </NavLink>
+      {position && (
+        <UserActionsMenu
+          x={position.x}
+          y={position.y}
+          onClose={handleClose}
+          name={name}
+          isABuddy={isABuddy}
+          isIgnored={isIgnored}
+          onAddBuddy={onAddBuddy}
+          onRemoveBuddy={onRemoveBuddy}
+          onAddIgnore={onAddIgnore}
+          onRemoveIgnore={onRemoveIgnore}
+        />
+      )}
+    </>
+  );
+};
 
 function parseChunks(chunk: string, index: number): ReactNode {
   if (chunk.match(CARD_CALLOUT_REGEX)) {

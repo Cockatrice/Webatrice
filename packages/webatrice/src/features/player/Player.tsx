@@ -8,6 +8,7 @@ import { AuthGuard } from '@app/components';
 import { Images } from '@app/images';
 import { Layout } from '@app/feature-wrappers/layout';
 import { ServerInfo_User_UserLevelFlag } from '@cockatrice/sockatrice/generated';
+import PrivateChat from './PrivateChat';
 import { usePlayer } from './usePlayer';
 
 import './Player.css';
@@ -73,10 +74,12 @@ const Player = () => {
   const {
     name,
     userInfo,
+    currentUser,
     isSelf,
     isABuddy,
     isIgnored,
     isModerator,
+    privateMessages,
     onAddBuddy,
     onRemoveBuddy,
     onAddIgnore,
@@ -92,7 +95,16 @@ const Player = () => {
   return (
     <Layout>
       <AuthGuard />
-      <div className="player-view">
+      {/*
+       * Two-column layout: profile card on the left (unchanged MUI
+       * card), private-chat panel on the right. The chat panel is
+       * hidden when viewing your own profile (Cockatrice-parity;
+       * user_context_menu.cpp:376 disables Private chat on self).
+       * `h-[calc(100vh-<topbar>)]` gives the chat a bounded height so
+       * its internal scroll region works — Layout mounts TopBar (~56px)
+       * above this row.
+       */}
+      <div className="player-view flex flex-row gap-4 items-stretch h-[calc(100vh-56px)]">
         <Paper className="player-view__card" elevation={2}>
           <Typography variant="h5" className="player-view__name">
             {t('Player.title')}
@@ -147,9 +159,6 @@ const Player = () => {
                   <Button variant="outlined" onClick={isIgnored ? onRemoveIgnore : onAddIgnore}>
                     {isIgnored ? t('Player.action.removeIgnore') : t('Player.action.addIgnore')}
                   </Button>
-                  <Button variant="outlined" onClick={() => onSendMessage('')}>
-                    {t('Player.action.message')}
-                  </Button>
                   {isModerator && (
                     <>
                       <Button variant="outlined" color="warning" onClick={() => onWarnUser('')}>
@@ -165,6 +174,17 @@ const Player = () => {
             </>
           )}
         </Paper>
+
+        {!isSelf && name && (
+          <div className="flex-1 min-w-0 min-h-0">
+            <PrivateChat
+              peerName={name}
+              selfName={currentUser?.name ?? null}
+              messages={privateMessages}
+              onSend={onSendMessage}
+            />
+          </div>
+        )}
       </div>
     </Layout>
   );

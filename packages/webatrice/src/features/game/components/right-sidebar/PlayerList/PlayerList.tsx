@@ -1,10 +1,12 @@
 import { memo, useCallback, useState } from 'react';
+import { generatePath, useNavigate } from 'react-router-dom';
 import { Crown, Eye, User } from 'lucide-react';
 
 import { games, server } from '@cockatrice/datatrice';
 import { useWebClient } from '@cockatrice/datatrice/react';
 import { useAppSelector } from '@app/store';
 import { UserBadges } from '@app/components';
+import { RouteEnum } from '@app/types';
 import { ServerInfo_User_UserLevelFlag } from '@cockatrice/sockatrice/generated';
 
 import { useGameId } from '../../ui/GameIdContext';
@@ -38,6 +40,7 @@ import {
 function PlayerList() {
   const gameId = useGameId();
   const webClient = useWebClient();
+  const navigate = useNavigate();
   const players = useAppSelector((state) =>
     gameId != null ? games.Selectors.getPlayers(state, gameId) : undefined,
   );
@@ -102,10 +105,13 @@ function PlayerList() {
       }
     },
     onOpenUserDetails: (userName) => setUserDetailsTarget(userName),
-    onOpenPrivateChat: (_userName) => {
-      // Private chat UI doesn't exist in the fancy sidebar yet — log
-      // a hint so the click doesn't feel dead until we build it.
-      console.info('[player-list] Private chat is not wired yet.');
+    // Cockatrice-parity: opens a per-user chat surface. In webatrice
+    // the Player page (`/player/:name`) hosts a Tailwind PrivateChat
+    // panel that reads/writes `state.server.messages[userName]` via
+    // the same Command_Message / Event_UserMessage pair the desktop
+    // client uses. Navigating opens (or focuses) that page's tab.
+    onOpenPrivateChat: (userName) => {
+      navigate(generatePath(RouteEnum.PLAYER, { name: userName }));
     },
     onAddBuddy: (userName) => webClient.request.session.addToBuddyList(userName),
     onRemoveBuddy: (userName) => webClient.request.session.removeFromBuddyList(userName),
