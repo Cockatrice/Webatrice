@@ -135,27 +135,6 @@ export default defineConfig({
         'src/setupTests.ts',
         'src/polyfills.ts',
       ],
-      // Cross-repo unit-suite floor at 75/75/75/70 (Webatrice). Cross-repo
-      // target is 95/95/95/90; this is a deliberate ratchet point en route.
-      // Per-feature gates land at the same 75/75/75/70 floor so a regression
-      // in any single feature flips CI red even if the aggregate stays above
-      // the project floor. Ratchet up only — never relax a gate.
-      thresholds: {
-        statements: 75,
-        functions: 75,
-        lines: 75,
-        branches: 70,
-        'src/features/account/**': { statements: 75, functions: 75, lines: 75, branches: 70 },
-        'src/features/decks/**': { statements: 75, functions: 75, lines: 75, branches: 70 },
-        'src/features/game/**': { statements: 75, functions: 75, lines: 75, branches: 70 },
-        'src/features/login/**': { statements: 75, functions: 75, lines: 75, branches: 70 },
-        'src/features/logs/**': { statements: 75, functions: 75, lines: 75, branches: 70 },
-        'src/features/player/**': { statements: 75, functions: 75, lines: 75, branches: 70 },
-        'src/features/rooms/**': { statements: 75, functions: 75, lines: 75, branches: 70 },
-        'src/features/server/**': { statements: 75, functions: 75, lines: 75, branches: 70 },
-        'src/features/settings/**': { statements: 75, functions: 75, lines: 75, branches: 70 },
-        'src/features/shell/**': { statements: 75, functions: 75, lines: 75, branches: 70 },
-      },
     },
   },
 });

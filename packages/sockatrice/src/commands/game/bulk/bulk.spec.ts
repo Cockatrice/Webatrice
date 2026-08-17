@@ -21,6 +21,7 @@ import { bulkSetPT } from './bulkSetPT';
 import { bulkSetAnnotation } from './bulkSetAnnotation';
 import { bulkIncCardCounter } from './bulkIncCardCounter';
 import { bulkSetCardCounter } from './bulkSetCardCounter';
+import { bulkSetCardCounterEntries } from './bulkSetCardCounterEntries';
 import { moveTargetPlayerId } from './moveTargetPlayerId';
 import type { CardLocation } from './types';
 
@@ -264,6 +265,32 @@ describe('bulkSetCardCounter', () => {
   });
 });
 
+describe('bulkSetCardCounterEntries', () => {
+  it('emits one SetCardCounter per heterogeneous (card, counter, value) triple', () => {
+    // Mirrors Cockatrice's actIncrementAllCardCounters (each card carries its
+    // own currentValue+1, batched into one CommandContainer).
+    bulkSetCardCounterEntries(gameId, [
+      { ownerPlayerId: 0, zone: 'table', cardId: 1, counterId: 5, counterValue: 2 },
+      { ownerPlayerId: 0, zone: 'table', cardId: 2, counterId: 5, counterValue: 4 },
+    ]);
+    const entries = sentEntries();
+    expect(entries).toHaveLength(2);
+    expect(entries.every((e) => e.ext === Command_SetCardCounter_ext)).toBe(true);
+    expect(entries[0].value).toEqual(expect.objectContaining({ cardId: 1, counterId: 5, counterValue: 2 }));
+    expect(entries[1].value).toEqual(expect.objectContaining({ cardId: 2, counterId: 5, counterValue: 4 }));
+    expect(entries.every((e) => e.judgeTargetId === undefined)).toBe(true);
+  });
+
+  it('judge-wraps each entry with the card owner when a JudgeTarget is passed', () => {
+    bulkSetCardCounterEntries(gameId, [
+      { ownerPlayerId: 7, zone: 'table', cardId: 1, counterId: 5, counterValue: 2 },
+      { ownerPlayerId: 9, zone: 'table', cardId: 2, counterId: 5, counterValue: 3 },
+    ], (ownerId) => ownerId);
+    const entries = sentEntries();
+    expect(entries.map((e) => e.judgeTargetId)).toEqual([7, 9]);
+  });
+});
+
 describe('empty selection', () => {
   it('every bulk command sends nothing for an empty selection', () => {
     bulkTap(gameId, []);
@@ -275,6 +302,7 @@ describe('empty selection', () => {
     bulkSetAnnotation(gameId, [], 'note');
     bulkIncCardCounter(gameId, [], 5, 1);
     bulkSetCardCounter(gameId, [], 5, 3);
+    bulkSetCardCounterEntries(gameId, []);
     expect(WebClient.instance.protobuf.sendGameCommands).not.toHaveBeenCalled();
   });
 });

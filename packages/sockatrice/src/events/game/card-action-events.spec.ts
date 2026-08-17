@@ -1,6 +1,8 @@
 vi.mock('../../WebClient');
-import { create } from '@bufbuild/protobuf';
+import { create, setExtension } from '@bufbuild/protobuf';
 import {
+  Context_UndoDraw_ext,
+  Context_UndoDrawSchema,
   Event_AttachCardSchema,
   Event_CreateTokenSchema,
   Event_DestroyCardSchema,
@@ -9,6 +11,7 @@ import {
   Event_MoveCardSchema,
   Event_RevealCardsSchema,
   Event_SetCardAttrSchema,
+  GameEventContextSchema,
 } from '../../generated';
 import { WebClient } from '../../WebClient';
 import { attachCard } from './attachCard';
@@ -51,6 +54,18 @@ describe('moveCard event', () => {
     const data = create(Event_MoveCardSchema, {});
     moveCard(data, meta);
     expect(WebClient.instance.response.game.cardMoved).toHaveBeenCalledWith(5, 2, data, false);
+  });
+
+  it('flags isUndoDraw=true when the GameEventContext carries Context_UndoDraw', () => {
+    // Cockatrice tags an Event_MoveCard triggered by Command_UndoDraw with
+    // Context_UndoDraw on the surrounding GameEventContext (extension #1003).
+    // moveCard reads that flag off meta.context and forwards it so the client
+    // logs "X undoes their last draw" instead of the generic move line.
+    const context = create(GameEventContextSchema);
+    setExtension(context, Context_UndoDraw_ext, create(Context_UndoDrawSchema));
+    const data = create(Event_MoveCardSchema, { cardId: 3 });
+    moveCard(data, { ...meta, context });
+    expect(WebClient.instance.response.game.cardMoved).toHaveBeenCalledWith(5, 2, data, true);
   });
 });
 

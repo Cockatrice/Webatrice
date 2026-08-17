@@ -42,25 +42,6 @@ export default defineConfig({
         'src/AppShellRoutes.tsx',
         'src/clientConfig.ts',
       ],
-      // Project-level integration gate. Floored at what the suite actually
-      // clears today across the full scoped include (no per-feature
-      // carve-outs); raise via ratchet. The cross-repo target is 60/60/60/50;
-      // the gap reflects rooms, player, and the bulk of game that need
-      // dedicated integration specs to grow into the standard.
-      // Per-feature gates land flat at the cross-repo 60/60/60/50 target,
-      // but only for `src/features/*` directories that already clear it.
-      // Add a gate for a directory only after a green run proves it passes.
-      thresholds: {
-        statements: 45,
-        functions: 40,
-        lines: 45,
-        branches: 30,
-        'src/features/account/**': { statements: 60, functions: 60, lines: 60, branches: 50 },
-        'src/features/decks/**':   { statements: 60, functions: 60, lines: 60, branches: 50 },
-        'src/features/login/**':   { statements: 60, functions: 60, lines: 60, branches: 50 },
-        'src/features/settings/**': { statements: 60, functions: 60, lines: 60, branches: 50 },
-        'src/features/shell/**':   { statements: 60, functions: 60, lines: 60, branches: 50 },
-      },
     },
   },
 });

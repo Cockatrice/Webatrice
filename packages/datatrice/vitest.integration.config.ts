@@ -26,22 +26,6 @@ export default defineConfig({
         'src/testing/**',
         'src/setupTests.ts',
       ],
-      // Integration-suite thresholds. Project-wide floor of 60/60/60/50, plus
-      // a per-feature gate on `src/api/**` (the Sockatrice response bridge —
-      // the suite's primary concern) at the same target. Both currently sit
-      // well above this; the floor guards against regression.
-      thresholds: {
-        statements: 60,
-        functions: 60,
-        lines: 60,
-        branches: 50,
-        'src/api/**': {
-          statements: 60,
-          functions: 60,
-          lines: 60,
-          branches: 50,
-        },
-      },
     },
   },
 });

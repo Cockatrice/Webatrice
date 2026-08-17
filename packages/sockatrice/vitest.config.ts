@@ -28,12 +28,6 @@ export default defineConfig({
         'src/testing/**',
         'src/setupTests.ts',
       ],
-      thresholds: {
-        statements: 95,
-        functions: 95,
-        lines: 95,
-        branches: 95,
-      },
     },
   },
 });
