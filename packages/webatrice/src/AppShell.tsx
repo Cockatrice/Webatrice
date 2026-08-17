@@ -6,6 +6,7 @@ import './AppShell.css';
 
 import { ToastProvider } from '@app/components';
 import { ShortcutProvider } from '@app/feature-widgets/shortcuts';
+import { PrivateMessageNotifier } from '@app/features/player';
 import { FeatureDetection } from '@app/features/shell';
 import { loadPersistedLastRoute } from './components/layout/TopBar';
 
@@ -37,6 +38,13 @@ function AppShell() {
           <Router initialEntries={initialEntries}>
             <ShortcutProvider>
               <FeatureDetection />
+              {/* Global listener for incoming private-chat messages —
+               *  renders nothing, dispatches Toast pills whose
+               *  onClick navigates to the sender's /player/:name
+               *  tab. Mounted inside the Router so useNavigate /
+               *  useLocation work; inside ToastProvider so pushToast
+               *  is available. */}
+              <PrivateMessageNotifier />
               <Routes />
             </ShortcutProvider>
           </Router>

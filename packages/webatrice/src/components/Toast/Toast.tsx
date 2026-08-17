@@ -12,6 +12,11 @@ export interface ToastProps {
   severity?: ToastSeverity;
   autoHideDuration?: number;
   children?: ReactNode;
+  // Optional icon override for cases where none of the four severity
+  // buckets fit semantically (e.g. incoming private-chat toasts show
+  // a MessageSquare, not a success checkmark). Pass a lucide-react
+  // icon component; the pill's iconColor still comes from severity.
+  icon?: LucideIcon;
 }
 
 // Severity → icon + accent color. Uses tailwind palette values that
@@ -52,6 +57,7 @@ function Toast({
   severity = 'success',
   autoHideDuration = 10000,
   children,
+  icon,
 }: ToastProps) {
   // Delay the slide-in one frame so the initial `translate-x-full`
   // paints first and the transition actually animates. Without this,
@@ -76,7 +82,7 @@ function Toast({
 
   if (!open) return null;
 
-  const Icon = SEVERITY_ICON[severity];
+  const Icon = icon ?? SEVERITY_ICON[severity];
   const iconColor = SEVERITY_COLOR[severity];
 
   return (

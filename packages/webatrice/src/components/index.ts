@@ -19,4 +19,4 @@ export { default as ScrollToBottomOnChanges } from './ScrollToBottomOnChanges/Sc
 export { default as AuthGuard } from './Guard/AuthGuard';
 export { default as ModGuard } from './Guard/ModGuard';
 
-export { default as Toast, useToast, ToastProvider } from './Toast';
+export { default as Toast, useToast, usePushToast, ToastProvider } from './Toast';

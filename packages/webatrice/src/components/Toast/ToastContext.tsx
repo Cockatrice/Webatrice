@@ -1,8 +1,16 @@
-import { createContext, FC, PropsWithChildren, ReactNode, useContext, useEffect, useReducer } from 'react';
+import { createContext, FC, PropsWithChildren, ReactNode, useCallback, useContext, useEffect, useReducer, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import type { LucideIcon } from 'lucide-react';
 
 import { ACTIONS, initialState, reducer, ToastEntry } from './reducer';
 import Toast from './Toast';
+
+export interface PushToastOptions {
+  // Icon override for the toast pill. Defaults to the severity icon
+  // (CheckCircle for the default 'success' severity), which reads as
+  // an odd choice for e.g. incoming chat pings — pass MessageSquare.
+  icon?: LucideIcon;
+}
 
 interface ToastContextValue {
   toasts: Record<string, ToastEntry>;
@@ -10,6 +18,13 @@ interface ToastContextValue {
   openToast: (key: string) => void;
   closeToast: (key: string) => void;
   removeToast: (key: string) => void;
+  // Imperative "fire-and-forget" toast for one-off notifications (e.g.
+  // incoming private-chat messages). Generates a unique key so the
+  // caller doesn't have to coordinate, adds + opens in one step, and
+  // returns a `close()` for early dismissal. The pill self-removes
+  // when the toast component's autoHideDuration elapses via the
+  // handler below.
+  pushToast: (children: ReactNode, options?: PushToastOptions) => { key: string; close: () => void };
 }
 
 const ToastContext = createContext<ToastContextValue>({
@@ -18,16 +33,38 @@ const ToastContext = createContext<ToastContextValue>({
   openToast: () => {},
   closeToast: () => {},
   removeToast: () => {},
+  pushToast: () => ({ key: '', close: () => {} }),
 });
 
 export const ToastProvider: FC<PropsWithChildren> = ({ children }) => {
   const [state, dispatch] = useReducer(reducer, initialState);
+  // Monotonic counter so successive `pushToast` calls within the same
+  // millisecond don't collide on the timestamp part of the key.
+  const pushCounter = useRef(0);
+  const pushToast = useCallback((toastChildren: ReactNode, options?: PushToastOptions) => {
+    pushCounter.current += 1;
+    const key = `push:${Date.now()}:${pushCounter.current}`;
+    dispatch({ type: ACTIONS.ADD_TOAST, payload: { key, children: toastChildren, icon: options?.icon } });
+    dispatch({ type: ACTIONS.OPEN_TOAST, payload: { key } });
+    // Remove the entry entirely after the auto-hide window (Toast
+    // defaults to 10s) plus a small buffer for the slide-out
+    // transition. Without this, imperative toasts accumulate in
+    // reducer state indefinitely.
+    window.setTimeout(() => {
+      dispatch({ type: ACTIONS.REMOVE_TOAST, payload: { key } });
+    }, 11_000);
+    return {
+      key,
+      close: () => dispatch({ type: ACTIONS.CLOSE_TOAST, payload: { key } }),
+    };
+  }, []);
   const providerState: ToastContextValue = {
     toasts: state.toasts,
     addToast: (key, toastChildren) => dispatch({ type: ACTIONS.ADD_TOAST, payload: { key, children: toastChildren } }),
     openToast: (key) => dispatch({ type: ACTIONS.OPEN_TOAST, payload: { key } }),
     closeToast: (key) => dispatch({ type: ACTIONS.CLOSE_TOAST, payload: { key } }),
     removeToast: (key) => dispatch({ type: ACTIONS.REMOVE_TOAST, payload: { key } }),
+    pushToast,
   };
   // Toasts render into a single fixed portal at bottom-right of the
   // viewport, stacked with a small gap. Pre-redo, each MUI Snackbar
@@ -47,6 +84,7 @@ export const ToastProvider: FC<PropsWithChildren> = ({ children }) => {
                 key={key}
                 open={entry.isOpen}
                 onClose={() => dispatch({ type: ACTIONS.CLOSE_TOAST, payload: { key } })}
+                icon={entry.icon}
               >
                 {entry.children}
               </Toast>
@@ -86,4 +124,15 @@ export function useToast({ key, children }: ToastHookOptions): ToastHandle {
     closeToast: () => closeToast(key),
     removeToast: () => removeToast(key),
   };
+}
+
+// Fire-and-forget toast dispatcher. Returns a stable function that
+// creates a fresh toast per call (unique key generated internally) and
+// opens it immediately. Use for one-off notifications the caller
+// doesn't need to control after the fact (e.g. incoming private-chat
+// message pings). Prefer `useToast` when the toast is bound to a
+// specific piece of UI state that opens/closes it.
+export function usePushToast(): (children: ReactNode, options?: PushToastOptions) => { key: string; close: () => void } {
+  const { pushToast } = useContext(ToastContext);
+  return pushToast;
 }

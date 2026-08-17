@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import type { LucideIcon } from 'lucide-react';
 
 export const ACTIONS = {
   ADD_TOAST: 'ADD_TOAST',
@@ -11,6 +12,9 @@ export interface ToastEntry {
   isOpen: boolean;
   children: ReactNode;
   refs: number;
+  // Optional icon override — passed straight through to Toast. Null
+  // means "use severity default" (which today is a green checkmark).
+  icon?: LucideIcon;
 }
 
 export interface ToastState {
@@ -22,7 +26,7 @@ export const initialState: ToastState = {
 };
 
 export type ToastAction =
-  | { type: typeof ACTIONS.ADD_TOAST; payload: { key: string; children: ReactNode } }
+  | { type: typeof ACTIONS.ADD_TOAST; payload: { key: string; children: ReactNode; icon?: LucideIcon } }
   | { type: typeof ACTIONS.OPEN_TOAST; payload: { key: string } }
   | { type: typeof ACTIONS.CLOSE_TOAST; payload: { key: string } }
   | { type: typeof ACTIONS.REMOVE_TOAST; payload: { key: string } };
@@ -30,7 +34,7 @@ export type ToastAction =
 export function reducer(state: ToastState, action: ToastAction): ToastState {
   switch (action.type) {
     case ACTIONS.ADD_TOAST: {
-      const { key, children } = action.payload;
+      const { key, children, icon } = action.payload;
       const existing = state.toasts[key];
       return {
         ...state,
@@ -38,7 +42,7 @@ export function reducer(state: ToastState, action: ToastAction): ToastState {
           ...state.toasts,
           [key]: existing
             ? { ...existing, refs: existing.refs + 1 }
-            : { isOpen: false, children, refs: 1 },
+            : { isOpen: false, children, refs: 1, icon },
         },
       };
     }

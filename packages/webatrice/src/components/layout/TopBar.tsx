@@ -98,7 +98,13 @@ export default function TopBar() {
     const shouldStick =
       transient.type === 'decks' ||
       transient.type === 'deck' ||
-      transient.type === 'shortcuts';
+      transient.type === 'shortcuts' ||
+      // Player tabs (private-chat surface) stick so a right-click →
+      // Private chat → wander-off → come-back-later flow doesn't lose
+      // the tab, and so incoming-message toasts have somewhere to
+      // navigate to that already exists. Each `player:<name>` key is
+      // unique so multiple concurrent conversations coexist.
+      transient.type === 'player';
     if (!shouldStick) return;
     setStickyTabs((prev) => {
       // Deck editor: single-slot — replace the previous 'deck' tab if any.
@@ -106,7 +112,7 @@ export default function TopBar() {
         const others = prev.filter((t) => t.type !== 'deck');
         return [...others, transient];
       }
-      // Decks list / Shortcuts: additive, no-op if already present.
+      // Decks list / Shortcuts / Player: additive, no-op if already present.
       return prev.some((t) => t.key === transient.key) ? prev : [...prev, transient];
     });
   }, [location.pathname]);
@@ -264,10 +270,15 @@ export default function TopBar() {
 
   const handleClose = (tab: Tab) => {
     tab.onClose?.();
-    // Sticky (decks / deck editor / shortcuts) tabs need to be removed
-    // from the sticky list too — otherwise the effect above would leave
-    // them pinned even after the user navigates away.
-    if (tab.type === 'decks' || tab.type === 'deck' || tab.type === 'shortcuts') {
+    // Sticky (decks / deck editor / shortcuts / player) tabs need to be
+    // removed from the sticky list too — otherwise the effect above
+    // would leave them pinned even after the user navigates away.
+    if (
+      tab.type === 'decks'
+      || tab.type === 'deck'
+      || tab.type === 'shortcuts'
+      || tab.type === 'player'
+    ) {
       setStickyTabs((prev) => prev.filter((t) => t.key !== tab.key));
     }
     if (activeKey === tab.key) {
