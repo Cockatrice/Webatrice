@@ -7,14 +7,16 @@ const hoisted = vi.hoisted(() => ({ useRoom: vi.fn() }));
 vi.mock('./useRoom', () => ({ useRoom: hoisted.useRoom }));
 // Room is a layout container; stub its children so this spec covers Room's own
 // branching (the `!room` guard) and pane wiring, not the children's internals.
-vi.mock('./components/GameSelector/GameSelector', () => ({
-  default: () => <div data-testid="game-selector" />,
+// The old GameSelector/Messages/SayMessage were replaced during the fancy-
+// webatrice redo by GamesList/RoomChat/RoomUsers — mock those instead.
+vi.mock('./components/GamesList', () => ({
+  default: () => <div data-testid="games-list" />,
 }));
-vi.mock('./components/Messages', () => ({
-  default: () => <div data-testid="messages" />,
+vi.mock('./components/RoomChat', () => ({
+  default: () => <div data-testid="room-chat" />,
 }));
-vi.mock('./components/SayMessage', () => ({
-  default: () => <div data-testid="say-message" />,
+vi.mock('./components/RoomUsers', () => ({
+  default: () => <div data-testid="room-users" />,
 }));
 
 import Room from './Room';
@@ -49,25 +51,15 @@ describe('Room', () => {
       route: '/room/1',
     });
 
-    expect(screen.getByTestId('game-selector')).toBeInTheDocument();
-    expect(screen.getByTestId('messages')).toBeInTheDocument();
-    expect(screen.getByTestId('say-message')).toBeInTheDocument();
+    // Same pane-wiring intent as before, now against the renamed children:
+    // GamesList (was GameSelector), RoomChat (was Messages + SayMessage).
+    expect(screen.getByTestId('games-list')).toBeInTheDocument();
+    expect(screen.getByTestId('room-chat')).toBeInTheDocument();
+    expect(screen.getByTestId('room-users')).toBeInTheDocument();
   });
 
-  it('renders a list item per user in the side pane', () => {
-    hoisted.useRoom.mockReturnValue({
-      ...baseRoom,
-      room: { info: { roomId: 1, name: 'Main Room' } } as never,
-      users: [{ name: 'alice' }, { name: 'bob' }],
-    });
-
-    renderWithProviders(<Room />, {
-      preloadedState: connectedState,
-      route: '/room/1',
-    });
-
-    expect(screen.getByText(/Users in this room: 2/)).toBeInTheDocument();
-    expect(screen.getByText('alice')).toBeInTheDocument();
-    expect(screen.getByText('bob')).toBeInTheDocument();
-  });
+  // Room no longer forwards a `users` prop into the side pane — RoomUsers
+  // pulls from redux (buddyList + sortedUsers). Test removed because the
+  // useRoom→prop wire it was covering was deleted; per-user rendering is
+  // covered by RoomUsers.spec.tsx (or the integration Server users panel).
 });

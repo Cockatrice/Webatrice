@@ -15,6 +15,7 @@ import {
 import { create } from '@bufbuild/protobuf';
 import type {
   MoveCardParams,
+  ServerInfo_Card,
   ServerInfo_DeckStorage_Folder,
   ServerInfo_DeckStorage_TreeItem,
 } from '@cockatrice/sockatrice/generated';
@@ -75,7 +76,7 @@ const EMPTY_HAND_CARDS: HandCard[] = [];
 // which matches PlayerBox's convention that the last entry is the
 // top of the pile.
 function zoneToHandCards(
-  zone: { order: number[]; byId: Record<number, { name: string; providerId: string }> } | undefined,
+  zone: { order: number[]; byId: Record<number, { name: string; providerId: string; annotation?: string }> } | undefined,
 ): HandCard[] {
   if (!zone) return EMPTY_HAND_CARDS;
   return zone.order.map((id) => {
@@ -84,6 +85,10 @@ function zoneToHandCards(
       id: String(id),
       name: card?.name ?? '',
       scryfallId: card?.providerId ?? '',
+      // Only the STACK renderer uses this today (matches Cockatrice's
+      // `keepAnnotations = (target == STACK)` carve-out); the field
+      // is a no-op for hand / graveyard / exile projections.
+      annotation: card?.annotation || undefined,
     };
   });
 }
@@ -109,69 +114,81 @@ const EMPTY_BATTLEFIELD_CARDS: BattlefieldCard[] = [];
 // Project a Cockatrice TABLE zone into the PlayerBox BattlefieldCard
 // shape. ServerInfo_Card.x maps to slot.col, .y to slot.row — that's
 // Cockatrice's coord convention (x horizontal, y vertical).
+interface ZoneForBattlefield {
+  order: number[];
+  byId: Record<
+    number,
+    {
+      name: string;
+      providerId: string;
+      x: number;
+      y: number;
+      tapped: boolean;
+      faceDown: boolean;
+      pt: string;
+      doesntUntap: boolean;
+      color: string;
+      annotation: string;
+      attachPlayerId: number;
+      attachZone: string;
+      attachCardId: number;
+      counterList: readonly { id: number; value: number }[];
+    }
+  >;
+}
+
+function projectCard(
+  id: number,
+  card: ZoneForBattlefield['byId'][number] | undefined,
+  ownerPlayerId: number,
+): BattlefieldCard {
+  // Cockatrice packs multiple cards per visual column via
+  // `wire_x / 3` = stack column and `wire_x % 3` = sub-slot inside
+  // that column. Decode both so we can render a stack at the correct
+  // diagonal offset even when the server sends a mid-stack ordering.
+  const wireX = Math.max(0, card?.x ?? 0);
+  // Attach target: `attachCardId === -1` is the unattached sentinel
+  // (matches datatrice's `cardAttached` unattach path). Only surface
+  // valid ids so downstream render code can treat presence as truth.
+  const attachCardId = card?.attachCardId ?? -1;
+  const attachPlayerId = card?.attachPlayerId ?? -1;
+  return {
+    id: String(id),
+    // ownerPlayerId defaults to the projected zone's owner, so the
+    // caller only overrides it when cross-injecting a foreign
+    // attached child into another player's battlefield display list.
+    ownerPlayerId,
+    name: card?.name ?? '',
+    scryfallId: card?.providerId ?? '',
+    slot: {
+      row: Math.max(0, card?.y ?? 0),
+      col: Math.floor(wireX / 3),
+    },
+    subSlot: wireX % 3,
+    tapped: card?.tapped ?? false,
+    faceDown: card?.faceDown ?? false,
+    pt: card?.pt || undefined,
+    doesntUntap: card?.doesntUntap ?? false,
+    color: card?.color || undefined,
+    annotation: card?.annotation || undefined,
+    attachTargetCardId: attachCardId >= 0 ? attachCardId : undefined,
+    attachTargetPlayerId: attachCardId >= 0 ? attachPlayerId : undefined,
+    // Wire `counterList` is a repeated ServerInfo_CardCounter — passes
+    // through verbatim. Servatrice strips zero-valued counters so the
+    // list only contains active ones (matches Cockatrice's iteration).
+    counters: card?.counterList,
+  };
+}
+
+// Project a Cockatrice TABLE zone into the PlayerBox BattlefieldCard
+// shape. ServerInfo_Card.x maps to slot.col, .y to slot.row — that's
+// Cockatrice's coord convention (x horizontal, y vertical).
 function zoneToBattlefieldCards(
-  zone:
-    | {
-        order: number[];
-        byId: Record<
-          number,
-          {
-            name: string;
-            providerId: string;
-            x: number;
-            y: number;
-            tapped: boolean;
-            faceDown: boolean;
-            pt: string;
-            doesntUntap: boolean;
-            color: string;
-            annotation: string;
-            attachPlayerId: number;
-            attachZone: string;
-            attachCardId: number;
-            counterList: readonly { id: number; value: number }[];
-          }
-        >;
-      }
-    | undefined,
+  zone: ZoneForBattlefield | undefined,
+  ownerPlayerId: number,
 ): BattlefieldCard[] {
   if (!zone) return EMPTY_BATTLEFIELD_CARDS;
-  return zone.order.map((id) => {
-    const card = zone.byId[id];
-    // Cockatrice packs multiple cards per visual column via
-    // `wire_x / 3` = stack column and `wire_x % 3` = sub-slot inside
-    // that column. Decode both so we can render a stack at the
-    // correct diagonal offset even when the server sends a mid-stack
-    // card ordering.
-    const wireX = Math.max(0, card?.x ?? 0);
-    // Attach target: `attachCardId === -1` is the unattached sentinel
-    // (matches datatrice's `cardAttached` unattach path). Only surface
-    // valid ids so downstream render code can treat presence as truth.
-    const attachCardId = card?.attachCardId ?? -1;
-    const attachPlayerId = card?.attachPlayerId ?? -1;
-    return {
-      id: String(id),
-      name: card?.name ?? '',
-      scryfallId: card?.providerId ?? '',
-      slot: {
-        row: Math.max(0, card?.y ?? 0),
-        col: Math.floor(wireX / 3),
-      },
-      subSlot: wireX % 3,
-      tapped: card?.tapped ?? false,
-      faceDown: card?.faceDown ?? false,
-      pt: card?.pt || undefined,
-      doesntUntap: card?.doesntUntap ?? false,
-      color: card?.color || undefined,
-      annotation: card?.annotation || undefined,
-      attachTargetCardId: attachCardId >= 0 ? attachCardId : undefined,
-      attachTargetPlayerId: attachCardId >= 0 ? attachPlayerId : undefined,
-      // Wire `counterList` is a repeated ServerInfo_CardCounter — passes
-      // through verbatim. Servatrice strips zero-valued counters so the
-      // list only contains active ones (matches Cockatrice's iteration).
-      counters: card?.counterList,
-    };
-  });
+  return zone.order.map((id) => projectCard(id, zone.byId[id], ownerPlayerId));
 }
 
 export interface GameBoardCellProps {
@@ -658,12 +675,70 @@ function GameBoardCell({ cell, totalPlayers }: GameBoardCellProps) {
 
   // Slice 2d: read the battlefield (TABLE) zone from Redux. PublicZone
   // so all players see every card's face, position, and tapped state.
-  // Each cell renders its own player's board — no cross-player merging.
+  //
+  // Cross-player attachments (Cockatrice's "aura on opponent's
+  // creature") need a merge step: a card attached to this player's
+  // creature but owned by another player still LIVES in the source
+  // owner's zone (Servatrice never moves it — see
+  // .github/instructions/datatrice-game.instructions.md#servatrice-game-event-quirks).
+  // For the visual to match desktop's Qt scene-graph re-parenting, we
+  // must (a) exclude own cards that are attached to another player
+  // (they render on the parent's board) and (b) inject foreign cards
+  // attached to this player's cards (rendered under the parent here).
+  // `ownerPlayerId` on `BattlefieldCard` preserves the true owner so
+  // wire commands can still route to the correct zone.
   const tableZone = realPlayer?.zones[ZoneName.TABLE];
-  const battlefieldCards = useMemo<BattlefieldCard[]>(
-    () => zoneToBattlefieldCards(tableZone),
-    [tableZone],
+  const allPlayers = useAppSelector((state) =>
+    gameId != null ? games.Selectors.getPlayers(state, gameId) : undefined,
   );
+  const battlefieldCards = useMemo<BattlefieldCard[]>(() => {
+    // Own cards that either aren't attached at all OR are attached
+    // to something on THIS player's board. Cards attached to other
+    // players get filtered out — they render on the parent's board.
+    const own = tableZone
+      ? tableZone.order.reduce<BattlefieldCard[]>((acc, id) => {
+        const c = tableZone.byId[id];
+        const attachCardId = c?.attachCardId ?? -1;
+        const attachPlayerId = c?.attachPlayerId ?? -1;
+        const attachZone = c?.attachZone ?? '';
+        const attachedElsewhere =
+          attachCardId >= 0
+          && attachZone === ZoneName.TABLE
+          && attachPlayerId !== cell.playerId;
+        if (attachedElsewhere) return acc;
+        acc.push(projectCard(id, c, cell.playerId));
+        return acc;
+      }, [])
+      : EMPTY_BATTLEFIELD_CARDS;
+
+    // Foreign attached children: iterate every OTHER player's TABLE
+    // and pick up cards whose (attachPlayerId, attachZone) point at
+    // this player's board. Each gets `ownerPlayerId` set to its true
+    // source-zone owner so interactions can still route correctly.
+    const foreignChildren: BattlefieldCard[] = [];
+    if (allPlayers) {
+      for (const [ownerIdStr, otherPlayer] of Object.entries(allPlayers)) {
+        const otherOwnerId = Number(ownerIdStr);
+        if (otherOwnerId === cell.playerId) continue;
+        const otherTable = otherPlayer?.zones[ZoneName.TABLE];
+        if (!otherTable) continue;
+        for (const cid of otherTable.order) {
+          const c = otherTable.byId[cid];
+          if (!c) continue;
+          if (
+            c.attachCardId >= 0
+            && c.attachZone === ZoneName.TABLE
+            && c.attachPlayerId === cell.playerId
+          ) {
+            foreignChildren.push(projectCard(cid, c, otherOwnerId));
+          }
+        }
+      }
+    }
+
+    if (foreignChildren.length === 0) return own;
+    return own.concat(foreignChildren);
+  }, [tableZone, allPlayers, cell.playerId]);
 
   // Slice 2e: read stack cards from Redux. PublicZone — visible to
   // all players. Order runs bottom → top matching the reducer's
@@ -851,7 +926,34 @@ function GameBoardCell({ cell, totalPlayers }: GameBoardCellProps) {
       // Optimistic card object — same id, updated x/y for battlefield
       // drops. The listener's own path builds this from the server's
       // Event_MoveCard using cloneWith; we replicate the shape here.
-      const optimisticCard = { ...sourceCard, x, y };
+      //
+      // Leaving the battlefield strips transient state (tapped,
+      // counters, PT, annotation, color, doesntUntap) to mirror
+      // desktop Cockatrice's CardItem::resetState (server also drops
+      // these when a card leaves TABLE — server_card.cpp:51). Without
+      // this reset the optimistic dispatch would preserve the source
+      // state, and since the server confirmation for a same-id
+      // TABLE→graveyard/exile/hand move doesn't broadcast the wipe
+      // either, the stale counters/annotation stick to the card in
+      // its new zone.
+      //
+      // STACK is the one target that KEEPS annotations — matches
+      // Cockatrice's `keepAnnotations = (targetzone == STACK)` carve-out
+      // in server_abstract_player.cpp:429.
+      const keepAnnotationOnLeave = targetZone === ZoneName.STACK;
+      const optimisticCard = leavingBattlefield
+        ? {
+          ...sourceCard,
+          x, y,
+          tapped: false,
+          attacking: false,
+          doesntUntap: false,
+          pt: '',
+          color: '',
+          annotation: keepAnnotationOnLeave ? sourceCard.annotation : '',
+          counterList: [],
+        }
+        : { ...sourceCard, x, y };
       const opKey = games.moveOpKey(startPlayerId, cardId);
 
       if (sameZone && isPositionalReorderZone) {
@@ -889,36 +991,9 @@ function GameBoardCell({ cell, totalPlayers }: GameBoardCellProps) {
           toZone: targetZone,
           card: optimisticCard,
         }));
-
-        // Cross-player TABLE→TABLE also reparents any attached
-        // children so they visually follow the parent onto the new
-        // owner's board during the optimistic window instead of
-        // briefly disappearing until the server echo arrives + the
-        // listener's own reparent runs. The optimistic move uses the
-        // pre-move cardId (server assigns a fresh id under the new
-        // owner); the listener re-runs reparent with the server id
-        // after id migration, so children end up with the correct
-        // final (targetPlayerId, newCardId) either way. Servatrice
-        // retains attachments on same-name cross-player moves; see
-        // .github/instructions/datatrice-game.instructions.md#servatrice-game-event-quirks.
-        const isCrossPlayerTableMove =
-          !sameZone &&
-          startZone === ZoneName.TABLE &&
-          targetZone === ZoneName.TABLE &&
-          startPlayerId !== targetPlayerId;
-        if (isCrossPlayerTableMove) {
-          dispatch(games.Actions.cardAttachmentReparented({
-            gameId,
-            fromPlayerId: startPlayerId,
-            fromCardId: cardId,
-            toPlayerId: targetPlayerId,
-            toCardId: cardId,
-          }));
-        }
-
         games.beginOptimistic(opKey, () => {
           // Rollback: reverse the move (target → source with the
-          // pre-move card snapshot) AND the reparent if we did one.
+          // pre-move card snapshot).
           dispatch(games.Actions.cardMovedBetweenZones({
             gameId,
             fromPlayerId: targetPlayerId,
@@ -928,15 +1003,6 @@ function GameBoardCell({ cell, totalPlayers }: GameBoardCellProps) {
             toZone: startZone,
             card: sourceCard,
           }));
-          if (isCrossPlayerTableMove) {
-            dispatch(games.Actions.cardAttachmentReparented({
-              gameId,
-              fromPlayerId: targetPlayerId,
-              fromCardId: cardId,
-              toPlayerId: startPlayerId,
-              toCardId: cardId,
-            }));
-          }
         });
       }
 
@@ -1357,6 +1423,25 @@ function GameBoardCell({ cell, totalPlayers }: GameBoardCellProps) {
     };
   }, [gameId, webClient]);
 
+  // Peek face-down cards — reveals each targeted card to the local
+  // player only via bulkPeek (one Command_RevealCards per card).
+  // Owner-only: fires with cell.playerId as both the target zone owner
+  // and the reveal recipient, since this is only wired for the isLocal
+  // PlayerBox. bulkPeek's CardLocation only reads `.id`, so a minimal
+  // { id } cast is safe (see bulkPeek.ts).
+  const onPeekCards = useMemo(() => {
+    if (gameId == null || !cellInfo.isLocal) return undefined;
+    return (cardIds: readonly number[]) => {
+      if (cardIds.length === 0) return;
+      const targets = cardIds.map((id) => ({
+        ownerPlayerId: cellInfo.playerId,
+        zone: ZoneName.TABLE,
+        card: { id } as ServerInfo_Card,
+      }));
+      webClient.request.game.bulkPeek(gameId, targets, cellInfo.playerId);
+    };
+  }, [gameId, webClient, cellInfo]);
+
   // Toggle `AttrDoesntUntap` on a battlefield card via
   // `Command_SetCardAttr`. Server broadcasts `Event_SetCardAttr` and
   // the reducer flips `zone.byId[id].doesntUntap`, which flows through
@@ -1758,6 +1843,7 @@ function GameBoardCell({ cell, totalPlayers }: GameBoardCellProps) {
           deckTopCard={deckTopCard}
           onSetCardTapped={onSetCardTapped}
           onFlipCard={onFlipCard}
+          onPeekCards={onPeekCards}
           onSetCardDoesntUntap={onSetCardDoesntUntap}
           onCloneCard={onCloneCard}
           onSetAnnotation={onSetAnnotation}

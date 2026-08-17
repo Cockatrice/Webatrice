@@ -1,4 +1,5 @@
 import {
+  useCallback,
   useEffect,
   useImperativeHandle,
   useLayoutEffect,
@@ -46,12 +47,16 @@ import {
 import ContextMenu, { type ContextMenuItem } from "./ContextMenu";
 import LibrarySearchDialog from "./LibrarySearchDialog";
 import { useRegisterForeignDrag } from "./foreignDragContext";
+import { useSelectionOwner } from './selectionOwner';
 import Card from "./Card";
 import { useHoveredCard } from "./hoveredCard";
 import { useViewportClampedPopup } from "./useViewportClampedPopup";
 import ZoneRevealDialog from "./ZoneRevealDialog";
 import { useGameDialogActions } from "../ui/GameDialogActionsContext";
 import { useGameDialogsContext } from "../ui/GameDialogsContext";
+import { ShortcutScope, useShortcut, useShortcutHints } from '@app/feature-widgets/shortcuts';
+import type { ActionId } from '@app/feature-widgets/shortcuts';
+import { isFilterEmpty, matchCard, parseCardFilter, type CardFilter, type FilterableCard } from '../../utils/cardFilter';
 import { buildArrowGeometry } from "../arrows/GameArrowOverlay/arrowPath";
 import { ArrowColor, rgbaToCss } from "@app/types";
 import { useSnapGridVisible } from "../../hooks/useSnapGridVisible";
@@ -72,10 +77,24 @@ export type HandCard = {
   id: string;
   name: string;
   scryfallId: string;
+  /** Optional server-set annotation. Only meaningful for the STACK
+   *  render — Cockatrice's `Server_Card::resetState(keepAnnotations)`
+   *  clears this on any TABLE→non-TABLE move EXCEPT to the stack (see
+   *  server_abstract_player.cpp:429), so hand / graveyard / exile
+   *  cards never carry one anyway. Rendering it on the stack keeps
+   *  the "Owner: <name>" tag visible while the spell resolves. */
+  annotation?: string;
 };
 
 /** A card that has been placed on a battlefield, occupying a specific slot. */
 export type BattlefieldCard = HandCard & {
+  /** True owner of this card's underlying zone entry. Usually equals
+   *  the PlayerBox's own `playerId`, but for cross-player attached
+   *  children (Cockatrice's "Aura on opponent's creature" case) the
+   *  child is rendered under the parent's PlayerBox while its data
+   *  still lives in the source owner's zone. Wire commands that
+   *  address a specific zone (moveCard) must route via this owner. */
+  ownerPlayerId?: number;
   slot: BattlefieldSlot;
   /** Sub-slot inside the slot's stack column (0..2). Cockatrice packs
    *  up to 3 cards into one visual column via `wire_x % 3`; the render
@@ -200,13 +219,6 @@ type Selection = {
   ids: Set<string>;
 };
 
-/** True when the browser is running on macOS — used to pick between
- *  ⌘ (Mac) and Ctrl (Windows/Linux) modifier labels in shortcut hints. */
-function isMac(): boolean {
-  if (typeof navigator === "undefined") return false;
-  return /Mac|iPod|iPhone|iPad/.test(navigator.platform);
-}
-
 function clamp01(n: number): number {
   return Math.max(0, Math.min(1, n));
 }
@@ -306,10 +318,17 @@ const COUNTER_COLORS: [string, string, string, string, string, string] = [
 ];
 
 interface BuildCardContextMenuArgs {
+  /** Reactive shortcut-hint map; drives every menu item's `shortcut:`
+   *  chip so hints update when the user rebinds in the Shortcuts tab. */
+  shortcutHints: Record<ActionId, string>;
   faceDown: boolean;
   doesntUntap: boolean;
   onTapUntap: () => void;
   onFlip: () => void;
+  /** "Peek card" — Cockatrice's `aPeek`. Menu item only appears when
+   *  `faceDown` is true. Fires one `Command_RevealCards` per selected
+   *  card, revealed to the local player only. */
+  onPeek: () => void;
   onSkipUntapping: () => void;
   onClone: () => void;
   onSetAnnotation: () => void;
@@ -558,20 +577,17 @@ function buildCardContextMenu(args: BuildCardContextMenuArgs): CardMenuItem[] {
     "E",
     "F",
   ];
-  const counterShortcuts: [
-    [string, string],
-    [string, string],
-    [string, string],
-    [string, string],
-    [string, string],
-    [string, string],
-  ] = [
-    ["Alt+.", "Alt+/"],
-    ["Ctrl+.", "Ctrl+/"],
-    ["`", "Ctrl+?"],
-    ["", ""],
-    ["", ""],
-    ["", ""],
+  // [Add, Set] shortcut hints per counter slot — pulled from the
+  // reactive hints map so rebinds update the menu chip immediately.
+  // A/B/C ship Cockatrice defaults (Alt+. / Ctrl+. / Ctrl+>);
+  // D/E/F have no default binding.
+  const counterShortcuts: [string, string][] = [
+    [args.shortcutHints['game.addCounterA'], args.shortcutHints['game.setCounterA']],
+    [args.shortcutHints['game.addCounterB'], args.shortcutHints['game.setCounterB']],
+    [args.shortcutHints['game.addCounterC'], args.shortcutHints['game.setCounterC']],
+    ['', ''],
+    ['', ''],
+    ['', ''],
   ];
   letters.forEach((letter, i) => {
     if (i > 0) counterItems.push({ divider: true });
@@ -593,17 +609,22 @@ function buildCardContextMenu(args: BuildCardContextMenuArgs): CardMenuItem[] {
     { label: "Tap / Untap", onClick: args.onTapUntap },
     {
       label: "Skip untapping",
-      shortcut: "Alt+U",
+      shortcut: args.shortcutHints['game.doesntUntap'],
       checked: args.doesntUntap,
       onClick: args.onSkipUntapping,
     },
     {
       label: args.faceDown ? "Turn Over (face up)" : "Turn Over",
-      shortcut: "Alt+F",
+      shortcut: args.shortcutHints['game.flipCard'],
       onClick: args.onFlip,
     },
+    // Peek — only shown on face-down cards. Reveals the card to the
+    // local player without flipping it (mirrors Cockatrice's aPeek).
+    ...(args.faceDown
+      ? [{ label: 'Peek card', shortcut: args.shortcutHints['game.peekCard'], onClick: args.onPeek } as CardMenuItem]
+      : []),
     { divider: true },
-    { label: "Clone", shortcut: "Ctrl+J", onClick: args.onClone },
+    { label: "Clone", shortcut: args.shortcutHints['game.cloneCard'], onClick: args.onClone },
     {
       label: "Move to",
       submenu: [
@@ -614,7 +635,7 @@ function buildCardContextMenu(args: BuildCardContextMenuArgs): CardMenuItem[] {
         { label: "X cards from the top of library...", onClick: args.onMoveToXCardsFromTop },
         {
           label: "Bottom of library in random order",
-          shortcut: "Ctrl+B",
+          shortcut: args.shortcutHints['game.moveSelectedToLibraryBottom'],
           onClick: args.onMoveToBottom,
         },
         { divider: true },
@@ -623,49 +644,61 @@ function buildCardContextMenu(args: BuildCardContextMenuArgs): CardMenuItem[] {
         { divider: true },
         {
           label: "Graveyard",
-          shortcut: "Ctrl+Del",
+          shortcut: args.shortcutHints['game.moveSelectedToGrave'],
           onClick: args.onMoveToGrave,
         },
         { label: "Exile", onClick: args.onMoveToExile },
       ],
     },
     { divider: true },
-    { label: "Attach to card...", shortcut: "Ctrl+Alt+A", onClick: args.onAttachToCard },
+    {
+      label: "Attach to card...",
+      shortcut: args.shortcutHints['game.attachCard'],
+      onClick: args.onAttachToCard,
+    },
     // Cockatrice hides "Unattach" for cards that aren't attached — only
     // include the item when there's actually something to detach.
     ...(args.isAttached
-      ? [{ label: "Unattach", shortcut: "Ctrl+Alt+U", onClick: args.onUnattach } as CardMenuItem]
+      ? [{ label: 'Unattach', shortcut: args.shortcutHints['game.unattachCard'], onClick: args.onUnattach } as CardMenuItem]
       : []),
-    { label: "Draw arrow...", shortcut: "Alt+A", onClick: args.onDrawArrow },
+    {
+      label: "Draw arrow...",
+      shortcut: args.shortcutHints['game.drawArrow'],
+      onClick: args.onDrawArrow,
+    },
     { divider: true },
     {
       label: "Power / toughness",
       submenu: [
-        { label: "Increase power", shortcut: "Ctrl++", onClick: args.onIncP },
-        { label: "Decrease power", shortcut: "Ctrl+-", onClick: args.onDecP },
+        { label: "Increase power", shortcut: args.shortcutHints['game.incP'], onClick: args.onIncP },
+        { label: "Decrease power", shortcut: args.shortcutHints['game.decP'], onClick: args.onDecP },
         { label: "Increase power and decrease toughness", onClick: args.onFlowP },
         { divider: true },
-        { label: "Increase toughness", shortcut: "Alt++", onClick: args.onIncT },
-        { label: "Decrease toughness", shortcut: "Alt+-", onClick: args.onDecT },
+        { label: "Increase toughness", shortcut: args.shortcutHints['game.incT'], onClick: args.onIncT },
+        { label: "Decrease toughness", shortcut: args.shortcutHints['game.decT'], onClick: args.onDecT },
         { label: "Decrease power and increase toughness", onClick: args.onFlowT },
         { divider: true },
-        { label: "Increase power and toughness", shortcut: "1", onClick: args.onIncPT },
-        { label: "Decrease power and toughness", shortcut: "Ctrl+Alt+-", onClick: args.onDecPT },
+        { label: "Increase power and toughness", shortcut: args.shortcutHints['game.incPT'], onClick: args.onIncPT },
+        { label: "Decrease power and toughness", shortcut: args.shortcutHints['game.decPT'], onClick: args.onDecPT },
         { divider: true },
-        { label: "Set power and toughness...", shortcut: "Ctrl+P", onClick: args.onSetPT },
-        { label: "Reset power and toughness", shortcut: "Ctrl+Alt+0", onClick: args.onResetPT },
+        { label: "Set power and toughness...", shortcut: args.shortcutHints['game.setCardPT'], onClick: args.onSetPT },
+        { label: "Reset power and toughness", shortcut: args.shortcutHints['game.resetPT'], onClick: args.onResetPT },
       ],
     },
     {
       label: "Set annotation...",
-      shortcut: "Alt+N",
+      shortcut: args.shortcutHints['game.setAnnotation'],
       onClick: args.onSetAnnotation,
     },
     { divider: true },
-    { label: "Reduce life by power", shortcut: "Ctrl+Shift+L", onClick: args.onReduceLifeByPower },
+    {
+      label: "Reduce life by power",
+      shortcut: args.shortcutHints['game.reduceLifeByPower'],
+      onClick: args.onReduceLifeByPower,
+    },
     { divider: true },
-    { label: "Select All", shortcut: "Ctrl+A", onClick: args.onSelectAll },
-    { label: "Select Row", shortcut: "Ctrl+Shift+X", onClick: args.onSelectRow },
+    { label: "Select All", shortcut: args.shortcutHints['game.selectAllBattlefield'], onClick: args.onSelectAll },
+    { label: "Select Row", shortcut: args.shortcutHints['game.selectRowBattlefield'], onClick: args.onSelectRow },
     { divider: true },
     { label: "Card counters", submenu: counterItems },
     // "Token: …" items — mirrors Cockatrice's addRelatedCardActions
@@ -1149,6 +1182,12 @@ type Props = {
   onSetCardTapped?: (cardIds: number[], tapped: boolean) => void;
   /** Flip a battlefield card face-up or face-down. */
   onFlipCard?: (cardId: number, faceDown: boolean) => void;
+  /** Peek at face-down battlefield cards — reveals each card to the
+   *  local player only (owner-only in Cockatrice desktop; here we
+   *  gate the menu item on `faceDown && isSelf`). Wire: one
+   *  `Command_RevealCards` per card, `playerId` = local player.
+   *  Bulk signature so a marquee'd selection peeks in one round-trip. */
+  onPeekCards?: (cardIds: readonly number[]) => void;
   /** Toggle the "doesn't untap during untap step" attribute
    *  (`AttrDoesntUntap`). Fired by the "Skip untapping" context
    *  menu item. */
@@ -1297,10 +1336,6 @@ type Props = {
    *  set to each PlayerBox by owner id. Pass an empty map to clear all
    *  foreign highlights. Only invoked from the viewer's PlayerBox. */
   broadcastBattlefieldSelection?: (byOwner: Map<string, Set<string>>) => void;
-  /** Called by non-self PlayerBoxes on background pointerdown to forward
-   *  a marquee-start to the viewer's PlayerBox. Battlefield.tsx wires
-   *  this to the viewer's `startMarquee` imperative handle. */
-  onMarqueeStart?: (x: number, y: number) => void;
 };
 
 /** Where a marquee started — one of the three selectable zones. A single
@@ -2062,6 +2097,132 @@ function ViewNCardsModal({
   );
 }
 
+/** Cockatrice's `DlgMoveTopCardsUntil`. Reveals library cards from
+ *  the top one at a time, moving each to the stack, until N cards
+ *  matching the name are found (or the library runs out). Optional
+ *  auto-play plays each matched card. Simplified from Cockatrice:
+ *  match is a case-insensitive substring of the card name (Cockatrice
+ *  supports a filter DSL — MVP just does name match). */
+function MoveTopUntilModal({
+  deckSize,
+  onCancel,
+  onConfirm,
+}: {
+  deckSize: number;
+  onCancel: () => void;
+  onConfirm: (args: { filter: string; hits: number; autoPlay: boolean }) => void;
+}) {
+  const [filter, setFilter] = useState('');
+  const [hitsDraft, setHitsDraft] = useState('1');
+  const [autoPlay, setAutoPlay] = useState(false);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onCancel();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onCancel]);
+  const parsedHits = parseInt(hitsDraft, 10);
+  const validHits = Number.isFinite(parsedHits) && parsedHits >= 1 && parsedHits <= 99;
+  const validFilter = filter.trim().length > 0;
+  const canSubmit = validHits && validFilter && deckSize > 0;
+  return (
+    <div
+      className="fixed inset-0 z-[400] flex items-center justify-center p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Put top cards on stack until"
+    >
+      <div
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        onClick={onCancel}
+        aria-hidden
+      />
+      <div className="relative w-full max-w-sm rounded-lg bg-bg-surface border border-border-subtle shadow-glow overflow-hidden">
+        <div className="px-4 py-3 border-b border-border-subtle">
+          <h2 className="font-modern text-base font-semibold text-text-primary">
+            Put top cards on stack until…
+          </h2>
+          <p className="text-xs text-text-muted mt-0.5">
+            Library size: {Math.max(0, deckSize)}
+          </p>
+        </div>
+        <form
+          className="px-4 py-3 flex flex-col gap-3"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!canSubmit) {
+              return;
+            }
+            onConfirm({ filter: filter.trim(), hits: parsedHits, autoPlay });
+          }}
+        >
+          <div className="flex flex-col gap-1">
+            <label className="text-xs text-text-secondary">
+              Card name (or search expressions)
+            </label>
+            <input
+              autoFocus
+              type="text"
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+              className={[
+                'w-full bg-bg-base border border-border-subtle rounded-md',
+                'px-3 py-2 text-sm text-text-primary',
+                'focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent',
+              ].join(' ')}
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-xs text-text-secondary">Number of hits</label>
+            <input
+              type="number"
+              min={1}
+              max={99}
+              step={1}
+              value={hitsDraft}
+              onChange={(e) => setHitsDraft(e.target.value)}
+              onFocus={(e) => e.currentTarget.select()}
+              className={[
+                'w-full bg-bg-base border border-border-subtle rounded-md',
+                'px-3 py-2 text-sm text-text-primary',
+                'focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent',
+              ].join(' ')}
+            />
+          </div>
+          <label className="flex items-center gap-2 text-sm text-text-secondary">
+            <input
+              type="checkbox"
+              checked={autoPlay}
+              onChange={(e) => setAutoPlay(e.target.checked)}
+            />
+            Auto play hits
+          </label>
+          <div className="flex items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={onCancel}
+              className="px-3 py-1.5 rounded-md text-sm font-medium text-text-secondary hover:bg-bg-base transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={!canSubmit}
+              className="px-3 py-1.5 rounded-md text-sm font-semibold bg-accent text-white hover:bg-accent-hover shadow-glow transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Start
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 /** Mirrors Cockatrice desktop's `actRequestDrawCardsDialog`
  *  (player_actions.cpp:356-361): prompts for how many cards to draw
  *  from the top of the library. Submit sends Command_DrawCards with
@@ -2773,6 +2934,7 @@ function PlayerBox(
     deckTopCard,
     onSetCardTapped,
     onFlipCard,
+    onPeekCards,
     onSetCardDoesntUntap,
     onCloneCard,
     onSetAnnotation,
@@ -2792,7 +2954,6 @@ function PlayerBox(
     drawSeq,
     lastDrawCount,
     broadcastBattlefieldSelection,
-    onMarqueeStart,
   }: Props,
   ref: React.Ref<PlayerBoxHandle>,
 ) {
@@ -2812,6 +2973,14 @@ function PlayerBox(
   const {
     viewSideboardOpen,
     closeViewSideboard,
+    // Trigger flags flipped by the F3/F4 shortcuts (and the sidebar,
+    // eventually). PlayerBox is where the actual LibrarySearchDialog /
+    // pileView state lives, so external triggers just set a boolean
+    // here and we open the local dialog + clear the trigger.
+    viewLibraryOpen,
+    closeViewLibrary,
+    viewGraveyardOpen,
+    closeViewGraveyard,
     // Hand-menu handlers already wired at the dialog layer — used by
     // handMenuItems below so the button-triggered menu isn't full of
     // disabled placeholders. `handleRequestSortHandBy` fires per-card
@@ -3264,6 +3433,28 @@ function PlayerBox(
   // Marquee selection. Selection is single-zone — the marquee groups whatever
   // it touches by zone and picks the zone contributing the most cards.
   const [selection, setSelection] = useState<Selection | null>(null);
+  // Cross-PlayerBox ownership. Only one PlayerBox can hold a non-null
+  // selection at a time — when someone else claims (own selection on
+  // their box, or empty-space click that releases), we clear ours.
+  // Ownership is claimed SYNCHRONOUSLY at each `setSelection(non-null)`
+  // site (see `claimSelectionOwnership` below) so this effect doesn't
+  // race against a not-yet-committed claim. The old auto-claim effect
+  // would fire alongside this clear-on-other effect and, on the first
+  // render after a click, see stale ownership → this effect would
+  // clear the just-set selection before the auto-claim landed. Now
+  // ownership is up-to-date the moment `setSelection` returns.
+  const [selectionOwner, setSelectionOwner] = useSelectionOwner();
+  const claimSelectionOwnership = useCallback(() => {
+    setSelectionOwner(playerId);
+  }, [playerId, setSelectionOwner]);
+  // Someone else took ownership (or ownership was explicitly released
+  // via an empty-space click) — drop our selection to enforce the
+  // single-owner invariant.
+  useEffect(() => {
+    if (selection !== null && selectionOwner !== playerId) {
+      setSelection(null);
+    }
+  }, [selectionOwner, playerId, selection]);
   // "View library" dialog (full-deck reveal). Opened via the library
   // context menu; fires Command_DumpZone(numberCards=-1) on open so
   // the dialog reads the server-authoritative revealed cards.
@@ -3284,6 +3475,16 @@ function PlayerBox(
   // flow can set `sourceZone` on the pending-arrow state correctly.
   const [pileCardMenu, setPileCardMenu] = useState<
     { zone: string; cardId: string; cardName: string; x: number; y: number } | null
+  >(null);
+  // Per-card context menu for cards on the stack. Ports Cockatrice's
+  // `CardMenu::createStackMenu` (card_menu.cpp:201-227): own-stack
+  // cards get Play / Play Face Down / Clone / Move to / Attach /
+  // Draw arrow / Select All; opponent-stack cards get the trimmed
+  // view-only branch (Draw arrow, Clone, Select All). Isolated from
+  // `cardContextMenu` because the item set is stack-specific and the
+  // card lives in `stackDisplayList`, not the battlefield.
+  const [stackCardMenu, setStackCardMenu] = useState<
+    { cardId: string; x: number; y: number } | null
   >(null);
   useEffect(() => {
     if (!cardContextMenu) return;
@@ -3328,6 +3529,33 @@ function PlayerBox(
       document.removeEventListener("keydown", onKey);
     };
   }, [pileCardMenu]);
+  // Same close-on-outside-click / Escape handling for the stack menu.
+  useEffect(() => {
+    if (!stackCardMenu) {
+      return;
+    }
+    const onDown = (e: MouseEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (target?.closest("[data-card-context-menu]")) {
+        return;
+      }
+      setStackCardMenu(null);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setStackCardMenu(null);
+      }
+    };
+    const t = window.setTimeout(() => {
+      document.addEventListener("mousedown", onDown);
+      document.addEventListener("keydown", onKey);
+    }, 0);
+    return () => {
+      clearTimeout(t);
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [stackCardMenu]);
   // Whether the hand row is being hovered — controls the auto-expand
   // that reveals full-size cards over the play area without reflowing
   // the shell (same pattern the PhaseTrack uses on the left edge).
@@ -3419,6 +3647,726 @@ function PlayerBox(
   // Battlefield source-of-truth for layout — Redux is the only source.
   // See the top-of-file note about local-mock removal.
   const battlefieldDisplayList = battlefieldCards ?? [];
+
+  // Reactive shortcut-hint map — updates whenever the user rebinds a
+  // shortcut in the Shortcuts tab. Consumed by every menu item that
+  // shows a `shortcut:` chip so the hint always reflects the current
+  // binding (Cockatrice desktop hardcodes; we can't since bindings
+  // are user-customizable).
+  const shortcutHints = useShortcutHints();
+
+  // Cockatrice-parity Toggle Skip Untapping (Alt+U). Acts on the
+  // local marquee `selection` (same state the right-click menu reads
+  // via `targetIds`). Owner-only — registered only on the isSelf box
+  // so a two-player game doesn't register two handlers competing over
+  // one keystroke. Uses the first selected card as the "clicked card"
+  // to drive the target value, matching the menu's behavior for a
+  // mixed selection (all cards land in the same doesntUntap state).
+  useShortcut(
+    'game.doesntUntap',
+    () => {
+      if (!isSelf || !onSetCardDoesntUntap || !selection || selection.zone !== 'battlefield') {
+        return;
+      }
+      const selectedCards = battlefieldDisplayList.filter((bc) =>
+        selection.ids.has(bc.id),
+      );
+      if (selectedCards.length === 0) {
+        return;
+      }
+      const target = !selectedCards[0].doesntUntap;
+      for (const bc of selectedCards) {
+        const id = Number(bc.id);
+        if (!Number.isFinite(id)) {
+          continue;
+        }
+        onSetCardDoesntUntap(id, target);
+      }
+    },
+    { scope: ShortcutScope.GAME, enabled: isSelf },
+  );
+
+  // Put top cards on stack until… (Ctrl+Shift+Y). Opens the dialog.
+  useShortcut(
+    'game.moveTopUntil',
+    () => {
+      if (!isSelf || deckCount <= 0) {
+        return;
+      }
+      setMoveTopUntilModalOpen(true);
+    },
+    { scope: ShortcutScope.GAME, enabled: isSelf },
+  );
+
+  // Deck-flip toggles (Ctrl+Alt+N / Ctrl+Alt+Shift+N). Cockatrice
+  // defaults collide with Chromium's new-window / new-incognito, so
+  // we rebind. Toggles the corresponding zone property.
+  useShortcut(
+    'game.alwaysRevealTopCard',
+    () => {
+      if (!isSelf || !onSetAlwaysRevealTopCard) {
+        return;
+      }
+      onSetAlwaysRevealTopCard(!alwaysRevealTopCard);
+    },
+    { scope: ShortcutScope.GAME, enabled: isSelf },
+  );
+  useShortcut(
+    'game.alwaysLookAtTopCard',
+    () => {
+      if (!isSelf || !onSetAlwaysLookAtTopCard) {
+        return;
+      }
+      onSetAlwaysLookAtTopCard(!alwaysLookAtTopCard);
+    },
+    { scope: ShortcutScope.GAME, enabled: isSelf },
+  );
+
+  // View top/bottom cards of library (Ctrl+Alt+W / Ctrl+Alt+Shift+W).
+  // Rebound from Ctrl+W / Ctrl+Shift+W (browser close-tab / close-window).
+  useShortcut(
+    'game.viewTopCards',
+    () => {
+      if (!isSelf || deckCount <= 0) {
+        return;
+      }
+      setViewNCardsModal({ isReversed: false, deckSize: deckCount });
+    },
+    { scope: ShortcutScope.GAME, enabled: isSelf },
+  );
+  useShortcut(
+    'game.viewBottomCards',
+    () => {
+      if (!isSelf || deckCount <= 0) {
+        return;
+      }
+      setViewNCardsModal({ isReversed: true, deckSize: deckCount });
+    },
+    { scope: ShortcutScope.GAME, enabled: isSelf },
+  );
+
+  // Create token (Ctrl+K, rebound from Cockatrice's Ctrl+T).
+  useShortcut(
+    'game.createToken',
+    () => {
+      if (!isSelf || !onCreateToken) {
+        return;
+      }
+      setCreateTokenModalOpen(true);
+    },
+    { scope: ShortcutScope.GAME, enabled: isSelf },
+  );
+
+  // Create another token (Ctrl+G) — re-fires the last submitted token.
+  useShortcut(
+    'game.createAnotherToken',
+    () => {
+      if (!isSelf || !onCreateToken || !lastToken) {
+        return;
+      }
+      onCreateToken(lastToken);
+    },
+    { scope: ShortcutScope.GAME, enabled: isSelf },
+  );
+
+  // Draw Arrow (Alt+A). Same shape as Attach: first selected card
+  // becomes the source, next battlefield click resolves.
+  useShortcut(
+    'game.drawArrow',
+    () => {
+      if (!isSelf || !selection || selection.zone !== 'battlefield') {
+        return;
+      }
+      const source = battlefieldDisplayList.find((bc) => selection.ids.has(bc.id));
+      if (!source) {
+        return;
+      }
+      const sourceCardId = Number(source.id);
+      if (!Number.isFinite(sourceCardId)) {
+        return;
+      }
+      setDrawArrowPending({
+        sourceCardId,
+        sourceCardName: source.name,
+        sourceZone: ZoneName.TABLE,
+      });
+    },
+    { scope: ShortcutScope.GAME, enabled: isSelf },
+  );
+
+  // Reset Power/Toughness (Ctrl+Alt+0). Same per-card logic as the
+  // menu path at line ~10036: face-down → empty PT, face-up →
+  // Scryfall printed base. Skips cards already at their reset value.
+  useShortcut(
+    'game.resetPT',
+    () => {
+      if (!isSelf || !onSetPT || !selection || selection.zone !== 'battlefield') {
+        return;
+      }
+      const targets = battlefieldDisplayList.filter((bc) => selection.ids.has(bc.id));
+      if (targets.length === 0) {
+        return;
+      }
+      const entries: { cardId: number; pt: string }[] = [];
+      for (const bc of targets) {
+        const bcId = Number(bc.id);
+        if (!Number.isFinite(bcId)) {
+          continue;
+        }
+        const base = bc.faceDown ? '' : cardMetaByName.get(bc.name)?.pt ?? '';
+        if (base !== (bc.pt ?? '')) {
+          entries.push({ cardId: bcId, pt: base });
+        }
+      }
+      if (entries.length > 0) {
+        onSetPT(entries);
+      }
+    },
+    { scope: ShortcutScope.GAME, enabled: isSelf },
+  );
+
+  // Reduce Life by Power (Ctrl+Shift+L). Sums the server-set power
+  // of every selected battlefield card and subtracts from local
+  // player's life. Mirrors the menu path at line ~10093.
+  useShortcut(
+    'game.reduceLifeByPower',
+    () => {
+      if (!isSelf || !lifeControl || !selection || selection.zone !== 'battlefield') {
+        return;
+      }
+      const targets = battlefieldDisplayList.filter((bc) => selection.ids.has(bc.id));
+      if (targets.length === 0) {
+        return;
+      }
+      let total = 0;
+      for (const bc of targets) {
+        if (!bc.pt) {
+          continue;
+        }
+        const tokens = parsePT(bc.pt);
+        if (tokens.length === 0) {
+          continue;
+        }
+        const first = tokens[0];
+        const power = typeof first === 'number' ? first : parseInt(first, 10);
+        if (Number.isFinite(power)) {
+          total += Math.max(power, 0);
+        }
+      }
+      if (total > 0) {
+        lifeControl.onDelta(-total);
+      }
+    },
+    { scope: ShortcutScope.GAME, enabled: isSelf },
+  );
+
+  // Storm ("Other") player counter shortcuts (Ctrl+] / Ctrl+[ / Ctrl+\).
+  // Player-scoped, unlike the per-card counter shortcuts above.
+  // Storm's server-assigned counterId lives on manaCounters.O — no-op
+  // until Redux has hydrated the mana pool.
+  useShortcut(
+    'game.addStormCounter',
+    () => {
+      if (!isSelf || !onModifyCounter || !manaCounters?.O) {
+        return;
+      }
+      onModifyCounter(manaCounters.O.id, 1);
+    },
+    { scope: ShortcutScope.GAME, enabled: isSelf },
+  );
+  useShortcut(
+    'game.removeStormCounter',
+    () => {
+      if (!isSelf || !onModifyCounter || !manaCounters?.O) {
+        return;
+      }
+      onModifyCounter(manaCounters.O.id, -1);
+    },
+    { scope: ShortcutScope.GAME, enabled: isSelf },
+  );
+  useShortcut(
+    'game.setStormCounter',
+    () => {
+      if (!isSelf || !manaCounters?.O) {
+        return;
+      }
+      setSetManaCounterModal({
+        counterId: manaCounters.O.id,
+        symbol: 'O',
+        label: 'Other',
+        currentValue: manaCounters.O.count,
+      });
+    },
+    { scope: ShortcutScope.GAME, enabled: isSelf },
+  );
+
+  // Attach Card (Ctrl+Alt+A). Starts the pending attach-arrow flow.
+  // Cockatrice attaches every selected card to the target on
+  // completion — the first selected card drives the visual anchor
+  // (arrow origin + green ring), the rest ride along via
+  // `attachExtraSourceIds`. Escape or clicking any source cancels.
+  useShortcut(
+    'game.attachCard',
+    () => {
+      if (!isSelf || !selection || selection.zone !== 'battlefield') {
+        return;
+      }
+      const sources = battlefieldDisplayList
+        .filter((bc) => selection.ids.has(bc.id))
+        .map((bc) => ({ id: Number(bc.id), name: bc.name }))
+        .filter((s) => Number.isFinite(s.id));
+      if (sources.length === 0) {
+        return;
+      }
+      const [primary, ...extras] = sources;
+      setAttachPending({ sourceCardId: primary.id, sourceCardName: primary.name });
+      setAttachExtraSourceIds(extras.map((s) => s.id));
+    },
+    { scope: ShortcutScope.GAME, enabled: isSelf },
+  );
+
+  // Peek Card (Alt+L). Reveals face-down battlefield cards in the
+  // selection to the local player only. Mirrors the "Peek card" menu
+  // item — filters to face-down cards so face-up ones in a mixed
+  // selection aren't wire-noise. No-op with an empty selection or
+  // when no selected card is face-down.
+  useShortcut(
+    'game.peekCard',
+    () => {
+      if (!isSelf || !onPeekCards || !selection || selection.zone !== 'battlefield') {
+        return;
+      }
+      const ids = battlefieldDisplayList
+        .filter((bc) => selection.ids.has(bc.id) && bc.faceDown)
+        .map((bc) => Number(bc.id))
+        .filter((n) => Number.isFinite(n));
+      if (ids.length === 0) {
+        return;
+      }
+      onPeekCards(ids);
+    },
+    { scope: ShortcutScope.GAME, enabled: isSelf },
+  );
+
+  // Turn Card Over (Alt+F). Same shape as doesntUntap above: read the
+  // local marquee selection, use the first card's current faceDown to
+  // drive the target, then fire onFlipCard per card. Matches the
+  // right-click "Flip card" menu item at line ~9011.
+  useShortcut(
+    'game.flipCard',
+    () => {
+      if (!isSelf || !onFlipCard || !selection || selection.zone !== 'battlefield') {
+        return;
+      }
+      const selectedCards = battlefieldDisplayList.filter((bc) =>
+        selection.ids.has(bc.id),
+      );
+      if (selectedCards.length === 0) {
+        return;
+      }
+      const target = !selectedCards[0].faceDown;
+      for (const bc of selectedCards) {
+        const id = Number(bc.id);
+        if (!Number.isFinite(id)) {
+          continue;
+        }
+        onFlipCard(id, target);
+      }
+    },
+    { scope: ShortcutScope.GAME, enabled: isSelf },
+  );
+
+  // Unattach (Ctrl+Alt+U). Fires per-card unattach on the selection;
+  // matches the "Unattach" menu item at line ~9295. Server no-ops on
+  // non-attached cards so we don't pre-filter.
+  useShortcut(
+    'game.unattachCard',
+    () => {
+      if (!isSelf || !onUnattachCard || !selection || selection.zone !== 'battlefield') {
+        return;
+      }
+      const selectedCards = battlefieldDisplayList.filter((bc) =>
+        selection.ids.has(bc.id),
+      );
+      if (selectedCards.length === 0) {
+        return;
+      }
+      for (const bc of selectedCards) {
+        const id = Number(bc.id);
+        if (!Number.isFinite(id)) {
+          continue;
+        }
+        onUnattachCard(id);
+      }
+    },
+    { scope: ShortcutScope.GAME, enabled: isSelf },
+  );
+
+  // Move selection → Graveyard (Ctrl+Del). Single batched
+  // Command_MoveCard with cards_to_move for every selected card,
+  // matching the "Send to Graveyard" menu path via dispatchMove.
+  useShortcut(
+    'game.moveSelectedToGrave',
+    () => {
+      if (!isSelf || !onMoveCard || playerId == null || !selection || selection.zone !== 'battlefield') {
+        return;
+      }
+      const targetIds = battlefieldDisplayList
+        .filter((bc) => selection.ids.has(bc.id))
+        .map((bc) => Number(bc.id))
+        .filter((n) => Number.isFinite(n));
+      if (targetIds.length === 0) {
+        return;
+      }
+      onMoveCard({
+        startPlayerId: playerId,
+        startZone: ZoneName.TABLE,
+        cardsToMove: {
+          card: targetIds.map((cardId) => ({ cardId })),
+        },
+        targetPlayerId: playerId,
+        targetZone: ZoneName.GRAVE,
+        x: 0,
+        y: 0,
+        isReversed: false,
+      });
+    },
+    { scope: ShortcutScope.GAME, enabled: isSelf },
+  );
+
+  // Set Power/Toughness (Ctrl+P). Opens the PT modal against the
+  // selection. First-selected card drives cardName / current-PT for
+  // the modal label + prefill, matching the menu path at line ~9287
+  // (which uses the right-clicked card for the same purpose).
+  useShortcut(
+    'game.setCardPT',
+    () => {
+      if (!isSelf || !selection || selection.zone !== 'battlefield') {
+        return;
+      }
+      const selectedCards = battlefieldDisplayList.filter((bc) =>
+        selection.ids.has(bc.id),
+      );
+      if (selectedCards.length === 0) {
+        return;
+      }
+      const targetIds = selectedCards
+        .map((bc) => Number(bc.id))
+        .filter((n) => Number.isFinite(n));
+      if (targetIds.length === 0) {
+        return;
+      }
+      const first = selectedCards[0];
+      const current = first.pt || (cardMetaByName.get(first.name)?.pt ?? '');
+      setPTModal({ targetIds, cardName: first.name, current });
+    },
+    { scope: ShortcutScope.GAME, enabled: isSelf },
+  );
+
+  // Shared helper for the P/T delta shortcuts (Ctrl/Alt/Ctrl+Alt with
+  // `+`/`-`). Same per-card logic as the menu's dispatchPTDelta at
+  // line ~9110: each card computes its OWN new PT from its OWN current
+  // server PT (falling back to Scryfall base, then '0/0' for empties),
+  // so a mixed selection doesn't get truncated to one card's stats.
+  const dispatchPTDeltaForSelection = (dp: number, dt: number) => {
+    if (!isSelf || !onSetPT || !selection || selection.zone !== 'battlefield') {
+      return;
+    }
+    const selectedCards = battlefieldDisplayList.filter((bc) =>
+      selection.ids.has(bc.id),
+    );
+    if (selectedCards.length === 0) {
+      return;
+    }
+    const entries: { cardId: number; pt: string }[] = [];
+    for (const bc of selectedCards) {
+      const bcId = Number(bc.id);
+      if (!Number.isFinite(bcId)) {
+        continue;
+      }
+      const bcCurrent = bc.pt || (cardMetaByName.get(bc.name)?.pt ?? '');
+      const base = bcCurrent || '0/0';
+      entries.push({ cardId: bcId, pt: applyPTDelta(base, dp, dt) });
+    }
+    if (entries.length > 0) {
+      onSetPT(entries);
+    }
+  };
+
+  useShortcut('game.incP', () => dispatchPTDeltaForSelection(1, 0), { scope: ShortcutScope.GAME, enabled: isSelf });
+  useShortcut('game.decP', () => dispatchPTDeltaForSelection(-1, 0), { scope: ShortcutScope.GAME, enabled: isSelf });
+  useShortcut('game.incT', () => dispatchPTDeltaForSelection(0, 1), { scope: ShortcutScope.GAME, enabled: isSelf });
+  useShortcut('game.decT', () => dispatchPTDeltaForSelection(0, -1), { scope: ShortcutScope.GAME, enabled: isSelf });
+  useShortcut('game.incPT', () => dispatchPTDeltaForSelection(1, 1), { scope: ShortcutScope.GAME, enabled: isSelf });
+  useShortcut('game.decPT', () => dispatchPTDeltaForSelection(-1, -1), { scope: ShortcutScope.GAME, enabled: isSelf });
+
+  // Select All (Ctrl+A) — mirrors the "Select All" battlefield-menu
+  // item at line ~8910: sets the local marquee selection to every
+  // battlefield card. First-pass simplification of Cockatrice's
+  // mouse-under-zone semantics (own battlefield only).
+  useShortcut(
+    'game.selectAllBattlefield',
+    () => {
+      if (!isSelf) {
+        return;
+      }
+      const ids = new Set(battlefieldDisplayList.map((bc) => bc.id));
+      if (ids.size === 0) {
+        return;
+      }
+      setSelection({ zone: 'battlefield', ids });
+      claimSelectionOwnership();
+    },
+    { scope: ShortcutScope.GAME, enabled: isSelf },
+  );
+
+  // Select Row / Column (Ctrl+Shift+X / Ctrl+Shift+C). First card in
+  // the current selection is the anchor; expand to every battlefield
+  // card matching its slot.row or slot.col. Mirrors onSelectRow at
+  // line ~9507 (the menu path uses the right-clicked card as anchor).
+  const selectBattlefieldBySlotField = (field: 'row' | 'col') => {
+    if (!isSelf || !selection || selection.zone !== 'battlefield') {
+      return;
+    }
+    const anchor = battlefieldDisplayList.find((bc) => selection.ids.has(bc.id));
+    if (!anchor) {
+      return;
+    }
+    const anchorValue = anchor.slot[field];
+    const ids = new Set(
+      battlefieldDisplayList
+        .filter((bc) => bc.slot[field] === anchorValue)
+        .map((bc) => bc.id),
+    );
+    if (ids.size === 0) {
+      return;
+    }
+    setSelection({ zone: 'battlefield', ids });
+    claimSelectionOwnership();
+  };
+
+  useShortcut('game.selectRowBattlefield', () => selectBattlefieldBySlotField('row'), { scope: ShortcutScope.GAME, enabled: isSelf });
+  useShortcut('game.selectColumnBattlefield', () => selectBattlefieldBySlotField('col'), { scope: ShortcutScope.GAME, enabled: isSelf });
+
+  // Card-counter shortcuts. Cockatrice ships Add / Remove / Set for
+  // three default counter types (A red = 0, B yellow = 1, C green = 2).
+  // All three helpers operate on the current battlefield selection
+  // (no-op when empty). Add / Remove drive `onBulkSetCardCounters`
+  // with per-card cur ± 1 (clamped to [0, MAX_COUNTER_VALUE]); Set
+  // opens the same modal the card-menu Set item uses (line ~9630),
+  // anchored on the first selected card for name / counterLetter /
+  // currentValue prefill.
+  const addCardCounterOnSelection = (counterId: number) => {
+    if (!isSelf || !onBulkSetCardCounters || !selection || selection.zone !== 'battlefield') {
+      return;
+    }
+    const targets = battlefieldDisplayList.filter((bc) => selection.ids.has(bc.id));
+    if (targets.length === 0) {
+      return;
+    }
+    const entries: { cardId: number; counterId: number; value: number }[] = [];
+    for (const bc of targets) {
+      const bcId = Number(bc.id);
+      if (!Number.isFinite(bcId)) {
+        continue;
+      }
+      const cur = bc.counters?.find((cc) => cc.id === counterId)?.value ?? 0;
+      if (cur >= MAX_COUNTER_VALUE) {
+        continue;
+      }
+      entries.push({ cardId: bcId, counterId, value: cur + 1 });
+    }
+    if (entries.length > 0) {
+      onBulkSetCardCounters(entries);
+    }
+  };
+
+  const removeCardCounterOnSelection = (counterId: number) => {
+    if (!isSelf || !onBulkSetCardCounters || !selection || selection.zone !== 'battlefield') {
+      return;
+    }
+    const targets = battlefieldDisplayList.filter((bc) => selection.ids.has(bc.id));
+    if (targets.length === 0) {
+      return;
+    }
+    const entries: { cardId: number; counterId: number; value: number }[] = [];
+    for (const bc of targets) {
+      const bcId = Number(bc.id);
+      if (!Number.isFinite(bcId)) {
+        continue;
+      }
+      const cur = bc.counters?.find((cc) => cc.id === counterId)?.value ?? 0;
+      if (cur <= 0) {
+        continue;
+      }
+      entries.push({ cardId: bcId, counterId, value: cur - 1 });
+    }
+    if (entries.length > 0) {
+      onBulkSetCardCounters(entries);
+    }
+  };
+
+  const openSetCardCounterModalForSelection = (counterId: number) => {
+    if (!isSelf || !selection || selection.zone !== 'battlefield') {
+      return;
+    }
+    const targets = battlefieldDisplayList.filter((bc) => selection.ids.has(bc.id));
+    if (targets.length === 0) {
+      return;
+    }
+    const targetIds = targets.map((bc) => Number(bc.id)).filter((n) => Number.isFinite(n));
+    if (targetIds.length === 0) {
+      return;
+    }
+    const first = targets[0];
+    const currentValue = first.counters?.find((cc) => cc.id === counterId)?.value ?? 0;
+    const letters = ['A', 'B', 'C', 'D', 'E', 'F'] as const;
+    setSetCounterModal({
+      targetIds,
+      cardName: first.name,
+      counterId,
+      counterLetter: letters[counterId] ?? String(counterId),
+      currentValue,
+    });
+  };
+
+  useShortcut('game.addCounterA', () => addCardCounterOnSelection(0), { scope: ShortcutScope.GAME, enabled: isSelf });
+  useShortcut('game.removeCounterA', () => removeCardCounterOnSelection(0), { scope: ShortcutScope.GAME, enabled: isSelf });
+  useShortcut('game.setCounterA', () => openSetCardCounterModalForSelection(0), { scope: ShortcutScope.GAME, enabled: isSelf });
+  useShortcut('game.addCounterB', () => addCardCounterOnSelection(1), { scope: ShortcutScope.GAME, enabled: isSelf });
+  useShortcut('game.removeCounterB', () => removeCardCounterOnSelection(1), { scope: ShortcutScope.GAME, enabled: isSelf });
+  useShortcut('game.setCounterB', () => openSetCardCounterModalForSelection(1), { scope: ShortcutScope.GAME, enabled: isSelf });
+  useShortcut('game.addCounterC', () => addCardCounterOnSelection(2), { scope: ShortcutScope.GAME, enabled: isSelf });
+  useShortcut('game.removeCounterC', () => removeCardCounterOnSelection(2), { scope: ShortcutScope.GAME, enabled: isSelf });
+  useShortcut('game.setCounterC', () => openSetCardCounterModalForSelection(2), { scope: ShortcutScope.GAME, enabled: isSelf });
+
+  // Increment all card counters (Ctrl+Shift+A). Ports the utility-menu
+  // handler at line ~6377: selection ∩ battlefield if any, else full
+  // battlefield; for each targeted card, bump every EXISTING counter
+  // by +1 (skips counters already at MAX_COUNTER_VALUE). Silently
+  // no-ops cards without counters — matches Cockatrice desktop, which
+  // only touches counters that already exist.
+  useShortcut(
+    'game.incrementAllCardCounters',
+    () => {
+      if (!isSelf || !onBulkSetCardCounters) {
+        return;
+      }
+      const targets =
+        selection?.zone === 'battlefield' && selection.ids.size > 0
+          ? battlefieldDisplayList.filter((c) => selection.ids.has(c.id))
+          : battlefieldDisplayList;
+      const entries: { cardId: number; counterId: number; value: number }[] = [];
+      for (const card of targets) {
+        const cardIdNum = Number(card.id);
+        if (!Number.isFinite(cardIdNum)) {
+          continue;
+        }
+        for (const counter of card.counters ?? []) {
+          if (counter.value >= MAX_COUNTER_VALUE) {
+            continue;
+          }
+          entries.push({ cardId: cardIdNum, counterId: counter.id, value: counter.value + 1 });
+        }
+      }
+      if (entries.length > 0) {
+        onBulkSetCardCounters(entries);
+      }
+    },
+    { scope: ShortcutScope.GAME, enabled: isSelf },
+  );
+
+  // Set Annotation (Alt+N). Same shape as Set Power/Toughness above:
+  // open the annotation modal against the selection with the first
+  // card's name + current annotation for the label / prefill.
+  useShortcut(
+    'game.setAnnotation',
+    () => {
+      if (!isSelf || !selection || selection.zone !== 'battlefield') {
+        return;
+      }
+      const selectedCards = battlefieldDisplayList.filter((bc) =>
+        selection.ids.has(bc.id),
+      );
+      if (selectedCards.length === 0) {
+        return;
+      }
+      const targetIds = selectedCards
+        .map((bc) => Number(bc.id))
+        .filter((n) => Number.isFinite(n));
+      if (targetIds.length === 0) {
+        return;
+      }
+      const first = selectedCards[0];
+      setAnnotationModal({ targetIds, cardName: first.name, current: first.annotation ?? '' });
+    },
+    { scope: ShortcutScope.GAME, enabled: isSelf },
+  );
+
+  // Move selection → Bottom of Library (Ctrl+B). Same shape as
+  // moveSelectedToGrave; targetZone=DECK with isReversed=true is the
+  // "bottom" idiom (matches PlayerBox onMoveToBottom at line ~9157).
+  useShortcut(
+    'game.moveSelectedToLibraryBottom',
+    () => {
+      if (!isSelf || !onMoveCard || playerId == null || !selection || selection.zone !== 'battlefield') {
+        return;
+      }
+      const targetIds = battlefieldDisplayList
+        .filter((bc) => selection.ids.has(bc.id))
+        .map((bc) => Number(bc.id))
+        .filter((n) => Number.isFinite(n));
+      if (targetIds.length === 0) {
+        return;
+      }
+      onMoveCard({
+        startPlayerId: playerId,
+        startZone: ZoneName.TABLE,
+        cardsToMove: {
+          card: targetIds.map((cardId) => ({ cardId })),
+        },
+        targetPlayerId: playerId,
+        targetZone: ZoneName.DECK,
+        x: 0,
+        y: 0,
+        isReversed: true,
+      });
+    },
+    { scope: ShortcutScope.GAME, enabled: isSelf },
+  );
+
+  // Clone Card (Ctrl+J). Fires one Command_CreateToken per selected
+  // card via onCloneCard, preserving each card's own name / provider /
+  // color / pt / annotation / row. Matches the "Clone" menu item at
+  // line ~9085 exactly (including the optimistic-mock skip).
+  useShortcut(
+    'game.cloneCard',
+    () => {
+      if (!isSelf || !onCloneCard || !selection || selection.zone !== 'battlefield') {
+        return;
+      }
+      const selectedCards = battlefieldDisplayList.filter((bc) =>
+        selection.ids.has(bc.id),
+      );
+      if (selectedCards.length === 0) {
+        return;
+      }
+      for (const bc of selectedCards) {
+        if (!Number.isFinite(Number(bc.id))) {
+          continue;
+        }
+        onCloneCard({
+          name: bc.name,
+          providerId: bc.scryfallId,
+          color: bc.color ?? '',
+          pt: bc.pt ?? '',
+          annotation: bc.annotation ?? '',
+          y: bc.slot.row,
+        });
+      }
+    },
+    { scope: ShortcutScope.GAME, enabled: isSelf },
+  );
   // Parent → children map for attached cards on THIS player's board.
   // Hoisted early because `computeCellWidths` needs each parent's
   // attach count to widen the parent's cell (cells hosting a heavily-
@@ -3561,7 +4509,13 @@ function PlayerBox(
     sourceZone: DragSourceZone,
     sourcePlayerId?: number,
   ) => {
-    if (!isSelf || e.button !== 0 || cards.length === 0) return;
+    // Fires on both self and opponent boxes so click-to-select works
+    // uniformly (Cockatrice parity — each battlefield has its own
+    // selection). Actual drag-and-drop moves are still gated on isSelf
+    // in applyMove; server rejects any leak.
+    if (e.button !== 0 || cards.length === 0) {
+      return;
+    }
     // preventDefault suppresses the browser's default text-selection AND
     // its native HTML5 drag on any focusable/selectable child (e.g., the
     // card art). Without it the browser sometimes takes over mid-drag and
@@ -3601,10 +4555,11 @@ function PlayerBox(
     zone: Selection["zone"],
     zoneCards: HandCard[],
   ) => {
-    // Opponent card: don't touch selection state — the viewer might have
-    // this card highlighted (from a cross-battlefield marquee) and a
-    // failed drag attempt shouldn't clear that.
-    if (!isSelf) return;
+    // Both self and opponent boxes participate — Cockatrice lets you
+    // click / marquee-select on any battlefield. The pointerup handler
+    // interprets a no-move release as a selection change; actual drag
+    // moves are gated on isSelf in applyMove so opponent-card drags
+    // don't attempt wire commands the server would reject.
     if (
       selection &&
       selection.zone === zone &&
@@ -3701,16 +4656,23 @@ function PlayerBox(
           Number.isFinite(clickedCardIdNum) &&
           playerId != null
         ) {
-          if (clickedCardIdNum === pending.sourceCardId) {
-            // Same card = cancel. Cockatrice's ArrowAttachItem does the
-            // same via `targetItem == startItem` short-circuit.
+          const extras = attachExtraSourceIdsRef.current;
+          const allSources = [pending.sourceCardId, ...extras];
+          if (allSources.includes(clickedCardIdNum)) {
+            // Clicked a source card = cancel. Cockatrice's
+            // ArrowAttachItem does the same via `targetItem == startItem`
+            // short-circuit; we extend to any source in a multi-attach.
             setAttachPending(null);
+            setAttachExtraSourceIds([]);
           } else {
-            onAttachCard?.(pending.sourceCardId, {
-              playerId,
-              cardId: clickedCardIdNum,
-            });
+            // Attach every source card to the clicked target. Server
+            // treats each attach independently (no batch wire), so we
+            // loop.
+            for (const sourceCardId of allSources) {
+              onAttachCard?.(sourceCardId, { playerId, cardId: clickedCardIdNum });
+            }
             setAttachPending(null);
+            setAttachExtraSourceIds([]);
           }
         } else if (
           zone === "hand" ||
@@ -3740,12 +4702,14 @@ function PlayerBox(
               setSelection(null);
             } else {
               setSelection({ zone, ids: nextIds });
+              claimSelectionOwnership();
             }
           } else {
             setSelection({
               zone,
               ids: new Set([clickedCardId]),
             });
+            claimSelectionOwnership();
           }
           broadcastBattlefieldSelection?.(new Map());
         }
@@ -3781,6 +4745,9 @@ function PlayerBox(
           marquee.startZone,
         );
         setSelection(own);
+        if (own !== null) {
+          claimSelectionOwnership();
+        }
         broadcastBattlefieldSelection?.(foreign);
       }
       setMarquee((m) =>
@@ -3974,22 +4941,22 @@ function PlayerBox(
         localX > target.clientWidth;
       if (onHScrollbar || onVScrollbar) return;
     }
-    if (isSelf) {
-      setSelection(null);
-      broadcastBattlefieldSelection?.(new Map());
-      setMarquee({
-        x1: e.clientX,
-        y1: e.clientY,
-        x2: e.clientX,
-        y2: e.clientY,
-        startZone: zoneAtPoint(e.clientX, e.clientY),
-      });
-    } else {
-      // Route the marquee-start to the viewer's PlayerBox so it takes
-      // over the interaction. `onMarqueeStart` is provided by
-      // Battlefield.tsx and looks up the viewer's imperative handle.
-      onMarqueeStart?.(e.clientX, e.clientY);
-    }
+    // Both self and opponent boxes start their own local marquee —
+    // each battlefield owns its own selection (Cockatrice parity).
+    // Release cross-box ownership first so any other PlayerBox holding
+    // a selection drops it (see the effect above); own state is cleared
+    // right after. The marquee end handler reclaims ownership when it
+    // commits a non-empty selection.
+    setSelectionOwner(null);
+    setSelection(null);
+    broadcastBattlefieldSelection?.(new Map());
+    setMarquee({
+      x1: e.clientX,
+      y1: e.clientY,
+      x2: e.clientX,
+      y2: e.clientY,
+      startZone: zoneAtPoint(e.clientX, e.clientY),
+    });
   };
 
   // Hit-test the pointer against each zone's ref, returning the first
@@ -4637,6 +5604,14 @@ function PlayerBox(
   const [setManaCounterModal, setSetManaCounterModal] = useState<
     { counterId: number; symbol: string; label: string; currentValue: number } | null
   >(null);
+  // "Put top cards on stack until…" dialog + iterative loop. `Modal`
+  // holds dialog-open state; `moveTopUntil` is the active loop config
+  // (null = idle). See the useEffect further down that watches
+  // stackCards for the reveal-and-decide step.
+  const [moveTopUntilModalOpen, setMoveTopUntilModalOpen] = useState(false);
+  const [moveTopUntil, setMoveTopUntil] = useState<
+    { filter: CardFilter; remainingHits: number; autoPlay: boolean } | null
+  >(null);
   // Annotation modal state — carries the target card ids + current
   // annotation so submit knows what to send. `targetIds` is snapshotted
   // at open time so the confirmed text applies to every card that was
@@ -4686,6 +5661,41 @@ function PlayerBox(
   const [pileView, setPileView] = useState<
     { zone: "graveyard" | "exile" | "hand" } | null
   >(null);
+
+  // External "View library" trigger (F3 shortcut, sidebar, etc.).
+  // Battlefield right-click "View library" does two things: fires
+  // Command_DumpZone(numberCards=-1) then opens LibrarySearchDialog.
+  // The context flag lets the same flow fire from anywhere. We flip
+  // the trigger off immediately (closeViewLibrary) so a subsequent
+  // shortcut press after manually closing the dialog re-fires.
+  // Owner-only — closeViewLibrary still runs for opponents so a stray
+  // trigger doesn't get stuck on.
+  useEffect(() => {
+    if (!viewLibraryOpen) {
+      return;
+    }
+    if (isSelf) {
+      onDumpTopCards?.(-1, false);
+      setLibrarySearchOpen(true);
+    }
+    closeViewLibrary();
+  }, [viewLibraryOpen, isSelf, onDumpTopCards, closeViewLibrary]);
+
+  // External "View graveyard" trigger (F4 shortcut, sidebar, etc.).
+  // Mirrors the battlefield right-click "View graveyard" menu item:
+  // sets pileView so the LibrarySearchDialog opens against the
+  // graveyard's Redux-carried card list (no wire needed — grave is
+  // a PublicZone).
+  useEffect(() => {
+    if (!viewGraveyardOpen) {
+      return;
+    }
+    if (isSelf) {
+      setPileView({ zone: 'graveyard' });
+    }
+    closeViewGraveyard();
+  }, [viewGraveyardOpen, isSelf, closeViewGraveyard]);
+
   // "Reveal top cards to..." prompt. Reuses ViewNCardsModal — the
   // input math (deck-size-clamped positive integer) is identical to
   // the "View top cards" flow. `targetPlayerId === -1` means "All
@@ -4754,10 +5764,20 @@ function PlayerBox(
   const [attachPending, setAttachPending] = useState<
     { sourceCardId: number; sourceCardName: string } | null
   >(null);
+  // Companion snapshot for multi-attach — Cockatrice attaches every
+  // selected card to the target on completion. `attachPending` still
+  // carries the visual anchor (single source id + arrow ring); this
+  // holds the additional sources that also attach when the target is
+  // clicked. Cleared alongside `attachPending`.
+  const [attachExtraSourceIds, setAttachExtraSourceIds] = useState<readonly number[]>([]);
   const attachPendingRef = useRef(attachPending);
+  const attachExtraSourceIdsRef = useRef(attachExtraSourceIds);
   useEffect(() => {
     attachPendingRef.current = attachPending;
   }, [attachPending]);
+  useEffect(() => {
+    attachExtraSourceIdsRef.current = attachExtraSourceIds;
+  }, [attachExtraSourceIds]);
   // Pending draw-arrow — same shape as attachPending. Menu → set →
   // next battlefield card OR player-target click resolves. Rendered
   // as a live RED arrow following the cursor (Cockatrice's `Qt::red`
@@ -5081,6 +6101,139 @@ function PlayerBox(
   // Same "trust Redux in real games" rule as grave/exile above — see
   // that comment for the mock-id mismatch bug this avoids.
   const stackDisplayList = stackCards ?? [];
+
+  // Move-top-until iterative loop. When the dialog confirms, we fire
+  // the first Command_MoveCard (DECK top → STACK) and enter active
+  // state. Each server-broadcast Event_MoveCard updates `stackCards`,
+  // this effect detects the new stack entry, checks its name against
+  // the filter, decrements the hit counter on match (optionally
+  // auto-plays), and fires the next move — or stops when the counter
+  // hits zero or the library empties. Mirrors Cockatrice's
+  // PlayerActions::moveOneCardUntil (player_actions.cpp:504-528).
+  //
+  // `seenStackIdsRef` is a snapshot of stack ids the loop has already
+  // processed (initialized when the loop starts). Cards added by
+  // *other* moves (e.g. someone else casts a spell) are recorded but
+  // don't affect the match logic — only same-owner DECK-sourced moves
+  // count. The Event_MoveCard listener already gates the reducer so
+  // the same card doesn't land in stackCards twice.
+  const seenStackIdsRef = useRef<Set<number | string>>(new Set());
+  useEffect(() => {
+    if (!isSelf || !moveTopUntil) {
+      return;
+    }
+    // Detect newly-added stack ids.
+    const newIds: (number | string)[] = [];
+    for (const c of stackDisplayList) {
+      if (!seenStackIdsRef.current.has(c.id)) {
+        newIds.push(c.id);
+      }
+    }
+    // Update the seen set regardless of whether we act on the new
+    // cards — a mid-loop stack entry from an unrelated move should
+    // still be recorded so the NEXT reveal we fire is the only "new"
+    // card when it arrives.
+    for (const id of newIds) {
+      seenStackIdsRef.current.add(id);
+    }
+    if (newIds.length === 0) {
+      return;
+    }
+    // MVP: only care about the last new card (Cockatrice fires one
+    // move at a time, so realistically newIds.length === 1). If
+    // multiple appeared, take the top-most (last in stack order).
+    const revealedId = newIds[newIds.length - 1];
+    const revealed = stackDisplayList.find((c) => c.id === revealedId);
+    if (!revealed) {
+      return;
+    }
+    const revealedMeta = cardMetaByName.get(revealed.name);
+    const filterableCard: FilterableCard = {
+      name: revealed.name ?? '',
+      typeLine: revealedMeta?.typeLine,
+      cmc: revealedMeta?.cmc,
+      colors: revealedMeta?.colors,
+      power: revealedMeta?.power,
+      toughness: revealedMeta?.toughness,
+    };
+    const isMatch = revealed.name != null && matchCard(moveTopUntil.filter, filterableCard);
+    let remaining = moveTopUntil.remainingHits;
+    if (isMatch) {
+      remaining -= 1;
+      if (moveTopUntil.autoPlay) {
+        // Play the matched card: move from STACK to TABLE.
+        const revealedIdNum = Number(revealed.id);
+        if (onMoveCard && playerId != null && Number.isFinite(revealedIdNum)) {
+          onMoveCard({
+            startPlayerId: playerId,
+            startZone: ZoneName.STACK,
+            cardsToMove: { card: [{ cardId: revealedIdNum }] },
+            targetPlayerId: playerId,
+            targetZone: ZoneName.TABLE,
+            x: -1,
+            y: 0,
+          });
+        }
+      }
+    }
+    // Stop if we've hit the target count OR the library ran out.
+    if (remaining <= 0 || deckCount <= 0) {
+      setMoveTopUntil(null);
+      return;
+    }
+    // Fire the next reveal. If we found a match this iteration but
+    // still have remaining hits, keep going.
+    if (!onMoveCard || playerId == null) {
+      setMoveTopUntil(null);
+      return;
+    }
+    onMoveCard({
+      startPlayerId: playerId,
+      startZone: ZoneName.DECK,
+      cardsToMove: { card: [{ cardId: 0 }] },
+      targetPlayerId: playerId,
+      targetZone: ZoneName.STACK,
+      x: -1,
+      y: 0,
+    });
+    if (isMatch) {
+      setMoveTopUntil({ ...moveTopUntil, remainingHits: remaining });
+    }
+  }, [stackDisplayList, moveTopUntil, isSelf, deckCount, onMoveCard, playerId]);
+
+  // Kicks off the loop: snapshot current stack ids so the *next*
+  // stack addition is treated as the first reveal, then fire the
+  // first move. Called by the dialog's onConfirm.
+  const startMoveTopUntil = (args: {
+    filter: string;
+    hits: number;
+    autoPlay: boolean;
+  }): void => {
+    if (!isSelf || !onMoveCard || playerId == null || deckCount <= 0) {
+      return;
+    }
+    const parsed = parseCardFilter(args.filter);
+    if (isFilterEmpty(parsed)) {
+      // Refuse to run an empty filter — it would match every reveal
+      // and dump the whole library into the stack.
+      return;
+    }
+    seenStackIdsRef.current = new Set(stackDisplayList.map((c) => c.id));
+    setMoveTopUntil({
+      filter: parsed,
+      remainingHits: args.hits,
+      autoPlay: args.autoPlay,
+    });
+    onMoveCard({
+      startPlayerId: playerId,
+      startZone: ZoneName.DECK,
+      cardsToMove: { card: [{ cardId: 0 }] },
+      targetPlayerId: playerId,
+      targetZone: ZoneName.STACK,
+      x: -1,
+      y: 0,
+    });
+  };
   const graveyardTopIdx =
     graveDisplayList.length - 1 - (drag?.sourceZone === "graveyard" ? 1 : 0);
   const exileTopIdx =
@@ -5156,7 +6309,7 @@ function PlayerBox(
     {
       label: "View graveyard",
       onClick: () => setPileView({ zone: "graveyard" }),
-      shortcut: "F4",
+      shortcut: shortcutHints['game.viewGraveyard'],
     },
     {
       label: "Reveal random card to...",
@@ -5412,27 +6565,27 @@ function PlayerBox(
       label: "Draw card",
       onClick: () => draw(1),
       disabled: deckCount <= 0,
-      shortcut: isMac() ? "⌘D" : "Ctrl+D",
+      shortcut: shortcutHints['game.drawCard'],
     },
     {
       label: "Draw cards...",
       onClick: () => setDrawCardsModal({ deckSize: deckCount }),
       disabled: deckCount <= 0,
-      shortcut: isMac() ? "⌘E" : "Ctrl+E",
+      shortcut: shortcutHints['game.drawMultipleCards'],
     },
     {
       label: "Undo last draw",
       onClick: () => onUndoDraw?.(),
       // Cockatrice always shows this enabled; server rejects when
       // nothing to undo.
-      shortcut: isMac() ? "⌘⇧D" : "Ctrl+Shift+D",
+      shortcut: shortcutHints['game.undoDraw'],
     },
     { divider: true },
     {
       label: "Shuffle",
       onClick: () => onShuffle?.(),
       disabled: deckCount <= 1,
-      shortcut: isMac() ? "⌘S" : "Ctrl+S",
+      shortcut: shortcutHints['game.shuffleLibrary'],
     },
     { divider: true },
     {
@@ -5442,21 +6595,21 @@ function PlayerBox(
         setLibrarySearchOpen(true);
       },
       disabled: deckCount <= 0,
-      shortcut: "F3",
+      shortcut: shortcutHints['game.viewLibrary'],
     },
     {
       label: "View top cards of library...",
       onClick: () =>
         setViewNCardsModal({ isReversed: false, deckSize: deckCount }),
       disabled: deckCount <= 0,
-      shortcut: isMac() ? "⌘W" : "Ctrl+W",
+      shortcut: shortcutHints['game.viewTopCards'],
     },
     {
       label: "View bottom cards of library...",
       onClick: () =>
         setViewNCardsModal({ isReversed: true, deckSize: deckCount }),
       disabled: deckCount <= 0,
-      shortcut: isMac() ? "⌘⇧W" : "Ctrl+Shift+W",
+      shortcut: shortcutHints['game.viewBottomCards'],
     },
     { divider: true },
     { label: "Reveal library to...", submenu: revealLibraryItems },
@@ -5466,13 +6619,13 @@ function PlayerBox(
       label: "Always reveal top card",
       checked: alwaysRevealTopCard ?? false,
       onClick: () => onSetAlwaysRevealTopCard?.(!alwaysRevealTopCard),
-      shortcut: isMac() ? "⌘N" : "Ctrl+N",
+      shortcut: shortcutHints['game.alwaysRevealTopCard'],
     },
     {
       label: "Always look at top card",
       checked: alwaysLookAtTopCard ?? false,
       onClick: () => onSetAlwaysLookAtTopCard?.(!alwaysLookAtTopCard),
-      shortcut: isMac() ? "⌘⇧N" : "Ctrl+Shift+N",
+      shortcut: shortcutHints['game.alwaysLookAtTopCard'],
     },
     { divider: true },
     {
@@ -5483,6 +6636,7 @@ function PlayerBox(
           label: "Play top card",
           onClick: buildMoveTopCardTo(ZoneName.STACK, -1),
           disabled: deckCount <= 0,
+          shortcut: shortcutHints['game.playTop'],
         },
         {
           label: "Play top card face down",
@@ -5499,11 +6653,13 @@ function PlayerBox(
           label: "Move top card to graveyard",
           onClick: buildMoveTopCardTo(ZoneName.GRAVE, 0),
           disabled: deckCount <= 0,
+          shortcut: shortcutHints['game.moveTopToGrave'],
         },
         {
           label: "Move top cards to graveyard...",
           onClick: promptMoveTopNTo("Move top cards to graveyard", ZoneName.GRAVE),
           disabled: deckCount <= 0,
+          shortcut: shortcutHints['game.moveTopNToGrave'],
         },
         {
           label: "Move top cards to graveyard face down...",
@@ -5534,11 +6690,10 @@ function PlayerBox(
           disabled: deckCount <= 0,
         },
         {
-          // Filter-expression dialog with autoPlay; needs its own
-          // dialog before we can wire it. Left disabled so menu shape
-          // still reads 1:1 with desktop.
-          label: "Put top cards on stack until...",
-          disabled: true,
+          label: 'Put top cards on stack until…',
+          onClick: () => setMoveTopUntilModalOpen(true),
+          disabled: deckCount <= 0,
+          shortcut: shortcutHints['game.moveTopUntil'],
         },
         { divider: true },
         {
@@ -5788,6 +6943,7 @@ function PlayerBox(
           label: "Type",
           onClick: () => handleRequestSortHandBy('maintype'),
           disabled: !isSelf || handSize <= 1,
+          shortcut: shortcutHints['game.sortHandByType'],
         },
         {
           label: "Mana Value",
@@ -5818,11 +6974,13 @@ function PlayerBox(
       label: "Take mulligan (Same hand size)",
       onClick: () => onMulligan?.(handSize),
       disabled: handSize <= 0,
+      shortcut: shortcutHints['game.mulliganSameSize'],
     },
     {
       label: "Take mulligan (Hand size - 1)",
       onClick: () => onMulligan?.(Math.max(1, handSize - 1)),
       disabled: handSize <= 1,
+      shortcut: shortcutHints['game.mulliganMinusOne'],
     },
     { divider: true },
     {
@@ -5971,6 +7129,7 @@ function PlayerBox(
           // sideboard zone (mounted below in the modal render block).
           label: "View sideboard",
           onClick: onRequestViewSideboard,
+          shortcut: shortcutHints['game.viewSideboard'],
         },
       ],
     },
@@ -5996,6 +7155,7 @@ function PlayerBox(
       // Disabled when no callback is wired (pre-hydration transient)
       // or when there's simply nothing on the board with counters.
       label: "Increment all card counters",
+      shortcut: shortcutHints['game.incrementAllCardCounters'],
       onClick: () => {
         if (!onBulkSetCardCounters) return;
         const targets =
@@ -6044,11 +7204,13 @@ function PlayerBox(
       label: "Untap all permanents",
       onClick: () => onUntapAll?.(),
       disabled: !onUntapAll,
+      shortcut: shortcutHints['game.untapAll'],
     },
     { divider: true },
     {
       label: "Roll die...",
       onClick: () => onRequestRollDie?.(),
+      shortcut: shortcutHints['game.rollDice'],
     },
     {
       // "Flip coin" — port of actFlipCoin (player_actions.cpp:866-872).
@@ -6058,6 +7220,7 @@ function PlayerBox(
       label: "Flip coin",
       onClick: () => onFlipCoin?.(),
       disabled: !onFlipCoin,
+      shortcut: shortcutHints['game.flipCoin'],
     },
     { divider: true },
     {
@@ -6069,6 +7232,7 @@ function PlayerBox(
       label: "Create token...",
       onClick: () => setCreateTokenModalOpen(true),
       disabled: !onCreateToken,
+      shortcut: shortcutHints['game.createToken'],
     },
     {
       // "Create another token" — direct re-fire with the last submitted
@@ -6083,6 +7247,7 @@ function PlayerBox(
         }
       },
       disabled: !onCreateToken || !lastToken,
+      shortcut: shortcutHints['game.createAnotherToken'],
     },
     {
       label: "Create predefined token",
@@ -6307,14 +7472,14 @@ function PlayerBox(
                     label: "Draw card",
                     onClick: () => draw(1),
                     disabled: deckCount <= 0,
-                    shortcut: isMac() ? "⌘D" : "Ctrl+D",
+                    shortcut: shortcutHints['game.drawCard'],
                   },
                   {
                     label: "Draw cards...",
                     onClick: () =>
                       setDrawCardsModal({ deckSize: deckCount }),
                     disabled: deckCount <= 0,
-                    shortcut: isMac() ? "⌘E" : "Ctrl+E",
+                    shortcut: shortcutHints['game.drawMultipleCards'],
                   },
                   {
                     label: "Undo last draw",
@@ -6322,7 +7487,7 @@ function PlayerBox(
                     // No client-side gate — the server rejects when
                     // there's nothing to undo (matches Cockatrice, which
                     // also always shows the item enabled).
-                    shortcut: isMac() ? "⌘⇧D" : "Ctrl+Shift+D",
+                    shortcut: shortcutHints['game.undoDraw'],
                   },
                   { divider: true },
                   {
@@ -6331,7 +7496,7 @@ function PlayerBox(
                       onShuffle?.();
                     },
                     disabled: deckCount <= 1,
-                    shortcut: isMac() ? "⌘S" : "Ctrl+S",
+                    shortcut: shortcutHints['game.shuffleLibrary'],
                   },
                   { divider: true },
                   {
@@ -6345,7 +7510,7 @@ function PlayerBox(
                       setLibrarySearchOpen(true);
                     },
                     disabled: deckCount <= 0,
-                    shortcut: "F3",
+                    shortcut: shortcutHints['game.viewLibrary'],
                   },
                   {
                     label: "View top cards of library...",
@@ -6355,7 +7520,7 @@ function PlayerBox(
                         deckSize: deckCount,
                       }),
                     disabled: deckCount <= 0,
-                    shortcut: isMac() ? "⌘W" : "Ctrl+W",
+                    shortcut: shortcutHints['game.viewTopCards'],
                   },
                   {
                     label: "View bottom cards of library...",
@@ -6370,7 +7535,7 @@ function PlayerBox(
                         deckSize: deckCount,
                       }),
                     disabled: deckCount <= 0,
-                    shortcut: isMac() ? "⌘⇧W" : "Ctrl+Shift+W",
+                    shortcut: shortcutHints['game.viewBottomCards'],
                   },
                   { divider: true },
                   {
@@ -6461,7 +7626,7 @@ function PlayerBox(
                     checked: alwaysRevealTopCard ?? false,
                     onClick: () =>
                       onSetAlwaysRevealTopCard?.(!alwaysRevealTopCard),
-                    shortcut: isMac() ? "⌘N" : "Ctrl+N",
+                    shortcut: shortcutHints['game.alwaysRevealTopCard'],
                   },
                   {
                     // "Always look at top card" — same shape but only
@@ -6474,7 +7639,7 @@ function PlayerBox(
                     checked: alwaysLookAtTopCard ?? false,
                     onClick: () =>
                       onSetAlwaysLookAtTopCard?.(!alwaysLookAtTopCard),
-                    shortcut: isMac() ? "⌘⇧N" : "Ctrl+Shift+N",
+                    shortcut: shortcutHints['game.alwaysLookAtTopCard'],
                   },
                   { divider: true },
                   {
@@ -6739,16 +7904,10 @@ function PlayerBox(
                       },
                       {
                         // "Put top cards on stack until..." — Cockatrice
-                        // opens a filter-expression dialog + options
-                        // (movingCardsUntil* state, autoPlay flag). The
-                        // desktop flow chains actMoveTopCardToPlay in a
-                        // timer loop until the filter matches N times.
-                        // Deferred: needs its own dialog with filter
-                        // syntax parsing + auto-play toggle. Left as a
-                        // disabled placeholder so the menu shape still
-                        // reads 1:1 with desktop.
-                        label: "Put top cards on stack until...",
-                        disabled: true,
+                        label: 'Put top cards on stack until…',
+                        onClick: () => setMoveTopUntilModalOpen(true),
+                        disabled: deckCount <= 0,
+                        shortcut: shortcutHints['game.moveTopUntil'],
                       },
                       { divider: true },
                       {
@@ -7316,6 +8475,15 @@ function PlayerBox(
                   onPointerDown={(e) =>
                     startCardDrag(e, c, "stack", stackDisplayList)
                   }
+                  onContextMenu={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setStackCardMenu({
+                      cardId: c.id,
+                      x: e.clientX,
+                      y: e.clientY,
+                    });
+                  }}
                   className="absolute hover:z-10"
                   style={{
                     left: pos.x,
@@ -7337,6 +8505,12 @@ function PlayerBox(
                       || cardMetaByName.get(c.name)?.scryfallId
                     }
                     pt={cardMetaByName.get(c.name)?.pt}
+                    // Stack keeps annotations while other non-battlefield
+                    // zones don't (Cockatrice's `keepAnnotations =
+                    // (targetzone == STACK)` carve-out). Show the tag
+                    // — usually "Owner: <name>" — so the caster stays
+                    // visible while the spell sits on the stack.
+                    annotation={c.annotation}
                   />
                 </div>
               );
@@ -7490,13 +8664,14 @@ function PlayerBox(
                 (selection?.zone === "battlefield" && selection.ids.has(c.id)) ||
                 receivedBattlefieldSelection.has(c.id);
               // Attach source ring — green while pending so the user
-              // can see which card they're about to attach. Only one
-              // source card per player at a time (`attachPending` is
-              // single-slot). Matches Cockatrice's `ArrowAttachItem`
-              // color choice (Qt::green).
+              // can see which cards they're about to attach. Primary
+              // source drives the pending arrow anchor; extras (from a
+              // multi-selection attach) get the ring too.
+              const cardIdNum = Number(c.id);
               const isAttachSource =
                 attachPending != null &&
-                Number(c.id) === attachPending.sourceCardId;
+                (cardIdNum === attachPending.sourceCardId ||
+                  attachExtraSourceIds.includes(cardIdNum));
               return (
                 <div
                   key={c.id}
@@ -7517,16 +8692,14 @@ function PlayerBox(
                   // to the top regardless of Y stacking.
                   className="absolute hover:z-[10000]"
                   onPointerDown={(e) =>
-                    startCardDrag(
-                      e,
-                      { id: c.id, name: c.name, scryfallId: c.scryfallId },
-                      "battlefield",
-                      battlefieldDisplayList.map((bc) => ({
-                        id: bc.id,
-                        name: bc.name,
-                        scryfallId: bc.scryfallId,
-                      })),
-                    )
+                    // Pass the FULL BattlefieldCard object (not a
+                    // stripped `{id, name, scryfallId}` projection):
+                    // the drag ghost casts `drag.cards` back to
+                    // BattlefieldCard to render annotation / PT /
+                    // counters / faceDown / tapped rotation. Since
+                    // BattlefieldCard extends HandCard structurally,
+                    // this widens cleanly at the call site.
+                    startCardDrag(e, c, 'battlefield', battlefieldDisplayList)
                   }
                   onContextMenu={
                     c
@@ -8182,26 +9355,45 @@ function PlayerBox(
           uses so the shape is 1:1. */}
       {(attachPending || drawArrowPending) && pendingArrowPointer &&
         (() => {
-          const pending = attachPending ?? drawArrowPending!;
           const color = attachPending ? ArrowColor.GREEN : ArrowColor.RED;
-          // Look up the source card element by its data attributes to
-          // anchor the arrow at its center. Uses querySelector rather
-          // than a ref so we don't have to plumb the source ref out of
-          // the render loop.
-          const el = document.querySelector(
-            `[data-card-id="${CSS.escape(String(pending.sourceCardId))}"][data-card-owner="${CSS.escape(String(playerId))}"][data-card-zone="${CSS.escape(ZoneName.TABLE)}"]`,
-          ) as HTMLElement | null;
-          if (!el) return null;
-          const r = el.getBoundingClientRect();
-          const sx = r.left + r.width / 2;
-          const sy = r.top + r.height / 2;
-          const geom = buildArrowGeometry(sx, sy, pendingArrowPointer.x, pendingArrowPointer.y);
-          if (!geom) return null;
+          // Attach fires from every selected source (primary + extras
+          // snapshotted at start) so multi-attach shows one green arrow
+          // per source card, all converging on the pointer. Draw-arrow
+          // is always single-source.
+          const sourceIds: readonly number[] = attachPending
+            ? [attachPending.sourceCardId, ...attachExtraSourceIds]
+            : [drawArrowPending!.sourceCardId];
           // Cockatrice's ArrowItem::paint uses alpha 150 while unlocked
           // and 200 when snapped to a target. We don't do target-snap
           // preview here (menu flows resolve on click), so always draw
           // at 200 to read as "committed direction".
           const fill = rgbaToCss({ ...color, a: 200 });
+          // Look each source card up by its data attributes so we don't
+          // have to plumb a ref out of the render loop.
+          type Geom = NonNullable<ReturnType<typeof buildArrowGeometry>>;
+          const geoms: { sourceId: number; geom: Geom }[] = [];
+          for (const sourceId of sourceIds) {
+            const cardIdSel = CSS.escape(String(sourceId));
+            const ownerSel = CSS.escape(String(playerId));
+            const zoneSel = CSS.escape(ZoneName.TABLE);
+            const el = document.querySelector(
+              `[data-card-id="${cardIdSel}"][data-card-owner="${ownerSel}"][data-card-zone="${zoneSel}"]`,
+            ) as HTMLElement | null;
+            if (!el) {
+              continue;
+            }
+            const r = el.getBoundingClientRect();
+            const sx = r.left + r.width / 2;
+            const sy = r.top + r.height / 2;
+            const geom = buildArrowGeometry(sx, sy, pendingArrowPointer.x, pendingArrowPointer.y);
+            if (!geom) {
+              continue;
+            }
+            geoms.push({ sourceId, geom });
+          }
+          if (geoms.length === 0) {
+            return null;
+          }
           return createPortal(
             <svg
               style={{
@@ -8215,17 +9407,20 @@ function PlayerBox(
               }}
               aria-hidden
             >
-              <g
-                transform={`translate(${geom.originX} ${geom.originY}) rotate(${geom.angleDeg})`}
-              >
-                <path
-                  d={geom.d}
-                  fill={fill}
-                  stroke="black"
-                  strokeWidth={1}
-                  strokeLinejoin="round"
-                />
-              </g>
+              {geoms.map(({ sourceId, geom }) => (
+                <g
+                  key={sourceId}
+                  transform={`translate(${geom.originX} ${geom.originY}) rotate(${geom.angleDeg})`}
+                >
+                  <path
+                    d={geom.d}
+                    fill={fill}
+                    stroke="black"
+                    strokeWidth={1}
+                    strokeLinejoin="round"
+                  />
+                </g>
+              ))}
             </svg>,
             document.body,
           );
@@ -8250,6 +9445,23 @@ function PlayerBox(
               onDumpTopCards?.(value, viewNCardsModal.isReversed);
               setTopCardsView({ isReversed: viewNCardsModal.isReversed });
               setViewNCardsModal(null);
+            }}
+          />,
+          document.body,
+        )}
+
+      {/* "Put top cards on stack until…" — Cockatrice's aMoveTopCardsUntil.
+          Submit kicks off the iterative loop; the useEffect above
+          drives the reveal / match / decide cycle on each stackCards
+          update. */}
+      {moveTopUntilModalOpen &&
+        createPortal(
+          <MoveTopUntilModal
+            deckSize={deckCount}
+            onCancel={() => setMoveTopUntilModalOpen(false)}
+            onConfirm={(args) => {
+              setMoveTopUntilModalOpen(false);
+              startMoveTopUntil(args);
             }}
           />,
           document.body,
@@ -8642,7 +9854,7 @@ function PlayerBox(
                 // player and points at any card or player. Fires the
                 // same setDrawArrowPending flow as the own-side menu.
                 label: 'Draw arrow...',
-                shortcut: 'Alt+A',
+                shortcut: shortcutHints['game.drawArrow'],
                 onClick: () => {
                   if (numeric && card) {
                     setDrawArrowPending({
@@ -8660,7 +9872,7 @@ function PlayerBox(
                 // side clone: Command_CreateToken is sent by the
                 // local client so the server assigns local ownership.
                 label: 'Clone',
-                shortcut: 'Ctrl+J',
+                shortcut: shortcutHints['game.cloneCard'],
                 onClick: () => {
                   if (onCloneCard && targets.length > 0) {
                     for (const bc of targets) {
@@ -8696,7 +9908,7 @@ function PlayerBox(
                 // its power from my life" outcome. Same coincidence
                 // Cockatrice itself relies on.
                 label: 'Reduce life by power',
-                shortcut: 'Ctrl+Shift+L',
+                shortcut: shortcutHints['game.reduceLifeByPower'],
                 onClick: () => {
                   let total = 0;
                   for (const bc of targets) {
@@ -8728,20 +9940,21 @@ function PlayerBox(
                 // it here highlights the opponent's cards visually so
                 // a subsequent Draw arrow / Clone can act on the group.
                 label: 'Select All',
-                shortcut: 'Ctrl+A',
+                shortcut: shortcutHints['game.selectAllBattlefield'],
                 onClick: () => {
                   const ids = new Set(
                     battlefieldDisplayList.map((bc) => bc.id),
                   );
                   if (ids.size > 0) {
                     setSelection({ zone: 'battlefield', ids });
+                    claimSelectionOwnership();
                   }
                   close();
                 },
               },
               {
                 label: 'Select Row',
-                shortcut: 'Ctrl+Shift+X',
+                shortcut: shortcutHints['game.selectRowBattlefield'],
                 onClick: () => {
                   if (!card) {
                     close();
@@ -8754,6 +9967,7 @@ function PlayerBox(
                   );
                   if (ids.size > 0) {
                     setSelection({ zone: 'battlefield', ids });
+                    claimSelectionOwnership();
                   }
                   close();
                 },
@@ -8903,6 +10117,7 @@ function PlayerBox(
             ]
             : [];
           const menu = buildCardContextMenu({
+            shortcutHints,
             faceDown: card?.faceDown ?? false,
             doesntUntap: card?.doesntUntap ?? false,
             onTapUntap: () => {
@@ -8923,6 +10138,22 @@ function PlayerBox(
               if (targetIds.length > 0 && onFlipCard) {
                 const target = !card?.faceDown;
                 for (const id of targetIds) onFlipCard(id, target);
+              }
+              close();
+            },
+            onPeek: () => {
+              // Only peek face-down cards in the selection — face-up
+              // cards are already known to us, so a peek is noise.
+              if (!onPeekCards || targetCards.length === 0) {
+                close();
+                return;
+              }
+              const ids = targetCards
+                .filter((bc) => bc.faceDown)
+                .map((bc) => Number(bc.id))
+                .filter((n) => Number.isFinite(n));
+              if (ids.length > 0) {
+                onPeekCards(ids);
               }
               close();
             },
@@ -9080,10 +10311,22 @@ function PlayerBox(
             },
             onAttachToCard: () => {
               if (numeric && card) {
+                // Right-clicked card is the visual anchor (arrow origin).
+                // If it's part of a multi-selection, the rest of the
+                // selection rides along as extras — matches Cockatrice's
+                // attach-many behavior. `targetCards` is already the
+                // selection when the right-clicked card is part of it,
+                // else just this card, so we filter it out to leave the
+                // extras.
+                const extras = targetCards
+                  .filter((bc) => Number(bc.id) !== cardIdNum)
+                  .map((bc) => Number(bc.id))
+                  .filter((n) => Number.isFinite(n));
                 setAttachPending({
                   sourceCardId: cardIdNum,
                   sourceCardName: card.name,
                 });
+                setAttachExtraSourceIds(extras);
               }
               close();
             },
@@ -9144,6 +10387,7 @@ function PlayerBox(
               const ids = new Set(battlefieldDisplayList.map((bc) => bc.id));
               if (ids.size > 0) {
                 setSelection({ zone: "battlefield", ids });
+                claimSelectionOwnership();
                 broadcastBattlefieldSelection?.(new Map());
               }
               close();
@@ -9165,6 +10409,7 @@ function PlayerBox(
               );
               if (ids.size > 0) {
                 setSelection({ zone: "battlefield", ids });
+                claimSelectionOwnership();
                 broadcastBattlefieldSelection?.(new Map());
               }
               close();
@@ -9260,7 +10505,7 @@ function PlayerBox(
               // battlefield cards / player anchors are valid targets
               // — Cockatrice never lets you target grave/exile cards.
               label: "Draw arrow...",
-              shortcut: "Alt+A",
+              shortcut: shortcutHints['game.drawArrow'],
               onClick: () => {
                 if (numeric) {
                   setDrawArrowPending({
@@ -9281,7 +10526,7 @@ function PlayerBox(
               // resetCardState), so pass empties. Only wired when we
               // have a real numeric card id (mock-id no-op).
               label: "Clone",
-              shortcut: isMac() ? "⌘J" : "Ctrl+J",
+              shortcut: shortcutHints['game.cloneCard'],
               onClick: () => {
                 if (numeric) {
                   const graveCard =
@@ -9316,11 +10561,11 @@ function PlayerBox(
               // until a caller actually needs multi-select in this
               // flow — the menu shape stays 1:1 with Cockatrice.
               label: "Select All",
-              shortcut: isMac() ? "⌘A" : "Ctrl+A",
+              shortcut: shortcutHints['game.selectAllBattlefield'],
             },
             {
               label: "Select Column",
-              shortcut: isMac() ? "⌘⇧C" : "Ctrl+Shift+C",
+              shortcut: shortcutHints['game.selectColumnBattlefield'],
             },
           ];
           return createPortal(
@@ -9328,6 +10573,325 @@ function PlayerBox(
               items={items}
               anchorX={pileCardMenu.x}
               anchorY={pileCardMenu.y}
+              disabled={!numeric}
+            />,
+            document.body,
+          );
+        })()}
+
+      {/* Stack-card context menu — ports Cockatrice's
+          `CardMenu::createStackMenu` (card_menu.cpp:201-227). Own-stack
+          gets the full item set (Play / Play Face Down / Clone /
+          Move to / Attach / Draw arrow / Select All); opponent-stack
+          gets the trimmed view-only branch (Draw arrow / Clone / Select
+          All). Wire cannot fire moves for opponent-owned stack cards
+          (server rejects), so those items are omitted rather than shown
+          disabled. */}
+      {stackCardMenu &&
+        (() => {
+          const cardIdNum = Number(stackCardMenu.cardId);
+          const card = stackDisplayList.find((sc) => sc.id === stackCardMenu.cardId);
+          const numeric = Number.isFinite(cardIdNum) && card != null;
+          const close = () => setStackCardMenu(null);
+          // Selection scope: same rule as the battlefield menu — the
+          // right-clicked card acts on the whole selection when part
+          // of a ≥2 selection on THIS box's stack, else just itself.
+          const targets = card
+            && selection?.zone === 'stack'
+            && selection.ids.has(card.id)
+            ? stackDisplayList.filter((sc) => selection.ids.has(sc.id))
+            : card
+              ? [card]
+              : [];
+          const targetIds = targets
+            .map((sc) => Number(sc.id))
+            .filter((n) => Number.isFinite(n));
+          if (!isSelf) {
+            // Opponent stack — Draw arrow / Clone / Select All only.
+            const opponentItems: CardMenuItem[] = [
+              {
+                label: 'Draw arrow...',
+                shortcut: shortcutHints['game.drawArrow'],
+                onClick: () => {
+                  if (numeric && card) {
+                    setDrawArrowPending({
+                      sourceCardId: cardIdNum,
+                      sourceCardName: card.name,
+                      sourceZone: ZoneName.STACK,
+                    });
+                  }
+                  close();
+                },
+              },
+              { divider: true },
+              {
+                label: 'Clone',
+                shortcut: shortcutHints['game.cloneCard'],
+                onClick: () => {
+                  if (onCloneCard && targets.length > 0) {
+                    for (const sc of targets) {
+                      if (!Number.isFinite(Number(sc.id))) {
+                        continue;
+                      }
+                      onCloneCard({
+                        name: sc.name,
+                        providerId: sc.scryfallId,
+                        color: '',
+                        pt: '',
+                        annotation: sc.annotation ?? '',
+                        y: 0,
+                      });
+                    }
+                  }
+                  close();
+                },
+              },
+              { divider: true },
+              {
+                label: 'Select All',
+                shortcut: shortcutHints['game.selectAllBattlefield'],
+                onClick: () => {
+                  const ids = new Set(stackDisplayList.map((sc) => sc.id));
+                  if (ids.size > 0) {
+                    setSelection({ zone: 'stack', ids });
+                    claimSelectionOwnership();
+                  }
+                  close();
+                },
+              },
+              // Related "Token: …" items — same as the battlefield
+              // menu. Fires as the LOCAL player so the token lands on
+              // OUR side even when right-clicking an opponent's stack
+              // card, matching Cockatrice's cross-player Clone rule.
+              ...(() => {
+                if (!card) {
+                  return [];
+                }
+                const tokens = [
+                  ...buildRelatedTokenItems(
+                    cardMetaByName.get(card.name)?.related ?? [],
+                    tokenMetaByName,
+                    onCreateToken,
+                  ),
+                  ...buildTransformItems(
+                    cardMetaByName.get(card.name),
+                    Number.isFinite(cardIdNum) ? cardIdNum : undefined,
+                    card.name,
+                    onCreateToken,
+                  ),
+                ];
+                return tokens.length > 0
+                  ? [{ divider: true } as CardMenuItem, ...tokens]
+                  : [];
+              })(),
+            ];
+            return createPortal(
+              <CardContextMenuPopup
+                items={opponentItems}
+                anchorX={stackCardMenu.x}
+                anchorY={stackCardMenu.y}
+                disabled={!numeric}
+              />,
+              document.body,
+            );
+          }
+          // Own stack — full menu.
+          const moveFromStack = (
+            targetZone: string,
+            extra: { x?: number; y?: number; isReversed?: boolean } = {},
+          ) => {
+            if (!onMoveCard || playerId == null || targetIds.length === 0) {
+              return;
+            }
+            onMoveCard({
+              startPlayerId: playerId,
+              startZone: ZoneName.STACK,
+              cardsToMove: {
+                card: targetIds.map((cardId) => ({ cardId })),
+              },
+              targetPlayerId: playerId,
+              targetZone,
+              x: extra.x ?? 0,
+              y: extra.y ?? 0,
+              isReversed: extra.isReversed ?? false,
+            });
+          };
+          const items: CardMenuItem[] = [
+            {
+              label: 'Play',
+              onClick: () => {
+                moveFromStack(ZoneName.TABLE, { x: -1, y: 0 });
+                close();
+              },
+            },
+            {
+              label: 'Play Face Down',
+              onClick: () => {
+                if (!onMoveCard || playerId == null || targetIds.length === 0) {
+                  close();
+                  return;
+                }
+                onMoveCard({
+                  startPlayerId: playerId,
+                  startZone: ZoneName.STACK,
+                  cardsToMove: {
+                    card: targetIds.map((cardId) => ({ cardId, faceDown: true })),
+                  },
+                  targetPlayerId: playerId,
+                  targetZone: ZoneName.TABLE,
+                  x: -1,
+                  y: 0,
+                });
+                close();
+              },
+            },
+            { divider: true },
+            {
+              label: 'Clone',
+              shortcut: shortcutHints['game.cloneCard'],
+              onClick: () => {
+                if (onCloneCard && targets.length > 0) {
+                  for (const sc of targets) {
+                    if (!Number.isFinite(Number(sc.id))) {
+                      continue;
+                    }
+                    onCloneCard({
+                      name: sc.name,
+                      providerId: sc.scryfallId,
+                      color: '',
+                      pt: '',
+                      annotation: sc.annotation ?? '',
+                      y: 0,
+                    });
+                  }
+                }
+                close();
+              },
+            },
+            {
+              label: 'Move to',
+              submenu: [
+                {
+                  label: 'Hand',
+                  onClick: () => {
+                    moveFromStack(ZoneName.HAND, { x: -1, y: 0 });
+                    close();
+                  },
+                },
+                {
+                  label: 'Battlefield',
+                  onClick: () => {
+                    moveFromStack(ZoneName.TABLE, { x: -1, y: 0 });
+                    close();
+                  },
+                },
+                {
+                  label: 'Graveyard',
+                  onClick: () => {
+                    moveFromStack(ZoneName.GRAVE, { x: 0, y: 0 });
+                    close();
+                  },
+                },
+                {
+                  label: 'Exile',
+                  onClick: () => {
+                    moveFromStack(ZoneName.EXILE, { x: 0, y: 0 });
+                    close();
+                  },
+                },
+                { divider: true },
+                {
+                  label: 'Top of Library',
+                  onClick: () => {
+                    moveFromStack(ZoneName.DECK, { x: 0, y: 0 });
+                    close();
+                  },
+                },
+                {
+                  label: 'Bottom of Library',
+                  onClick: () => {
+                    moveFromStack(ZoneName.DECK, { x: -1, y: 0 });
+                    close();
+                  },
+                },
+              ],
+            },
+            { divider: true },
+            {
+              label: 'Attach to card...',
+              shortcut: shortcutHints['game.attachCard'],
+              onClick: () => {
+                if (numeric && card) {
+                  const extras = targets
+                    .filter((sc) => Number(sc.id) !== cardIdNum)
+                    .map((sc) => Number(sc.id))
+                    .filter((n) => Number.isFinite(n));
+                  setAttachPending({
+                    sourceCardId: cardIdNum,
+                    sourceCardName: card.name,
+                  });
+                  setAttachExtraSourceIds(extras);
+                }
+                close();
+              },
+            },
+            {
+              label: 'Draw arrow...',
+              shortcut: shortcutHints['game.drawArrow'],
+              onClick: () => {
+                if (numeric && card) {
+                  setDrawArrowPending({
+                    sourceCardId: cardIdNum,
+                    sourceCardName: card.name,
+                    sourceZone: ZoneName.STACK,
+                  });
+                }
+                close();
+              },
+            },
+            { divider: true },
+            {
+              label: 'Select All',
+              shortcut: shortcutHints['game.selectAllBattlefield'],
+              onClick: () => {
+                const ids = new Set(stackDisplayList.map((sc) => sc.id));
+                if (ids.size > 0) {
+                  setSelection({ zone: 'stack', ids });
+                  claimSelectionOwnership();
+                }
+                close();
+              },
+            },
+            // Related "Token: …" items — same block as the battlefield
+            // menu. Divider prefix when non-empty, otherwise omitted so
+            // there's no dangling separator at the bottom of the menu.
+            ...(() => {
+              if (!card) {
+                return [];
+              }
+              const tokens = [
+                ...buildRelatedTokenItems(
+                  cardMetaByName.get(card.name)?.related ?? [],
+                  tokenMetaByName,
+                  onCreateToken,
+                ),
+                ...buildTransformItems(
+                  cardMetaByName.get(card.name),
+                  Number.isFinite(cardIdNum) ? cardIdNum : undefined,
+                  card.name,
+                  onCreateToken,
+                ),
+              ];
+              return tokens.length > 0
+                ? [{ divider: true } as CardMenuItem, ...tokens]
+                : [];
+            })(),
+          ];
+          return createPortal(
+            <CardContextMenuPopup
+              items={items}
+              anchorX={stackCardMenu.x}
+              anchorY={stackCardMenu.y}
               disabled={!numeric}
             />,
             document.body,
@@ -9349,46 +10913,65 @@ function PlayerBox(
         drag.moved &&
         createPortal(
           <>
-            {drag.cards.map((c, i) => (
-              <div
-                key={c.id}
-                style={{
-                  position: "fixed",
-                  left: drag.pointerX - drag.offsetX + i * 4,
-                  top: drag.pointerY - drag.offsetY + i * 4,
-                  width: CARD_WIDTH,
-                  height: CARD_HEIGHT,
-                  pointerEvents: "none",
-                  // Above the search-library dialog (z-1000) so a card
-                  // dragged out of the dialog is visible under the
-                  // cursor from the moment the drag starts.
-                  zIndex: 1100 + i,
-                  transform: "rotate(2deg)",
-                  filter: "drop-shadow(0 8px 12px rgba(0,0,0,0.4))",
-                }}
-              >
-                {drag.sourceZone === "library" &&
-                drag.sourcePlayerId === undefined ? (
-                  <img
-                    src={CARD_BACK_URL}
-                    alt=""
-                    draggable={false}
-                    className="w-full h-full select-none pointer-events-none"
-                    style={{ borderRadius: CARD_CORNER_RADIUS }}
-                  />
-                ) : (
-                  // Foreign library drag = a card we've already seen via
-                  // reveal / lend. Show the face — hiding it would be
-                  // confusing since we KNOW what card we're dragging.
-                  <Card
-                    name={c.name}
-                    scryfallId={c.scryfallId}
-                    pt={cardMetaByName.get(c.name)?.pt}
-                    imageUri={resolveFaceImageUri(c.name)}
-                  />
-                )}
-              </div>
-            ))}
+            {drag.cards.map((c, i) => {
+              // Runtime object is the FULL BattlefieldCard when the
+              // source is the battlefield (BattlefieldCard extends
+              // HandCard so the widening at drag start doesn't strip
+              // the fields — they just get erased in the static type).
+              // Cast to read the extended props so the ghost mirrors
+              // what the resting card looks like: modified P/T, on-card
+              // counters, annotation pill, face-down flip, tapped
+              // rotation, picked printing. Non-battlefield sources
+              // (hand / graveyard / exile / stack) leave the extended
+              // fields undefined, and Card handles that gracefully.
+              const bc = c as BattlefieldCard;
+              const baseMeta = cardMetaByName.get(c.name);
+              const isLibraryBack =
+                drag.sourceZone === 'library' && drag.sourcePlayerId === undefined;
+              return (
+                <div
+                  key={c.id}
+                  style={{
+                    position: 'fixed',
+                    left: drag.pointerX - drag.offsetX + i * 4,
+                    top: drag.pointerY - drag.offsetY + i * 4,
+                    width: CARD_WIDTH,
+                    height: CARD_HEIGHT,
+                    pointerEvents: 'none',
+                    // Above the search-library dialog (z-1000) so a
+                    // card dragged out of the dialog is visible under
+                    // the cursor from the moment the drag starts.
+                    zIndex: 1100 + i,
+                    // Tapped cards drag rotated 90° like they render
+                    // on the board (plus a small tilt for depth).
+                    transform: `rotate(${bc.tapped ? 92 : 2}deg)`,
+                    filter: 'drop-shadow(0 8px 12px rgba(0,0,0,0.4))',
+                  }}
+                >
+                  {isLibraryBack ? (
+                    <img
+                      src={CARD_BACK_URL}
+                      alt=''
+                      draggable={false}
+                      className='w-full h-full select-none pointer-events-none'
+                      style={{ borderRadius: CARD_CORNER_RADIUS }}
+                    />
+                  ) : (
+                    <Card
+                      id={c.id}
+                      name={c.name}
+                      scryfallId={c.scryfallId || baseMeta?.scryfallId}
+                      pt={bc.pt || (bc.faceDown ? undefined : baseMeta?.pt)}
+                      basePT={baseMeta?.pt}
+                      annotation={bc.annotation}
+                      counters={bc.counters}
+                      faceDown={bc.faceDown}
+                      imageUri={resolveFaceImageUri(c.name)}
+                    />
+                  )}
+                </div>
+              );
+            })}
           </>,
           document.body,
         )}

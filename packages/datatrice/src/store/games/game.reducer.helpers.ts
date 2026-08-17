@@ -128,19 +128,24 @@ export function buildEmptyCard(
   });
 }
 
-// Port of desktop Cockatrice CardItem::resetState(): wipes battlefield-only transient
-// state when a card leaves the table. Event_MoveCard carries none of these fields and
-// Servatrice emits no per-attribute reset event, so the client applies it on
-// TABLE -> non-TABLE moves (see game.listeners.ts). Returns a fresh proto via cloneWith
-// (a spread would drop the card's unset proto2 fields — see cloneWith).
-export function resetCardState(card: ServerInfo_Card): ServerInfo_Card {
+// Port of Cockatrice's `Server_Card::resetState(bool keepAnnotations)`
+// (server_card.cpp:51-61). Wipes battlefield-only transient state when
+// a card leaves the table. Servatrice keeps annotations ONLY when the
+// target zone is the STACK — `keepAnnotations = (targetzone->getName()
+// == ZoneNames::STACK)` at the call site in
+// server_abstract_player.cpp:429. Every other non-battlefield target
+// (hand, deck, graveyard, exile) clears them.
+export function resetCardState(
+  card: ServerInfo_Card,
+  keepAnnotations: boolean = false,
+): ServerInfo_Card {
   return cloneWith(ServerInfo_CardSchema, card, {
     tapped: false,
     attacking: false,
     doesntUntap: false,
     pt: '',
     color: '',
-    annotation: '',
+    annotation: keepAnnotations ? card.annotation : '',
     counterList: [],
   });
 }

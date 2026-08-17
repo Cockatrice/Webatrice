@@ -90,6 +90,16 @@ export interface GameDialogsState {
    *  Sideboard button and the battlefield menu's Sideboard → View
    *  sideboard item. */
   viewSideboardOpen: boolean;
+  /** Trigger flags for the local player's PlayerBox to open its own
+   *  LibrarySearchDialog / pileView. State lives in PlayerBox because
+   *  the dialog is entangled with local props (enrichedDeckCards,
+   *  onDumpTopCards, shuffle-on-close, drag refs). These booleans let
+   *  external triggers — F3/F4 shortcuts, sidebar buttons — request
+   *  the same dialog the battlefield menu opens, without duplicating
+   *  the wire/dump/close plumbing. Owner-only: PlayerBox no-ops if
+   *  `!isSelf`. */
+  viewLibraryOpen: boolean;
+  viewGraveyardOpen: boolean;
   gameInfoOpen: boolean;
   concedeConfirm: ConcedeConfirm;
   /** True while the leave-game confirmation dialog is open. Mirrors
@@ -152,6 +162,11 @@ export interface GameDialogsActions {
 
   openViewSideboard: () => void;
   closeViewSideboard: () => void;
+
+  openViewLibrary: () => void;
+  closeViewLibrary: () => void;
+  openViewGraveyard: () => void;
+  closeViewGraveyard: () => void;
 
   openGameInfo: () => void;
   closeGameInfo: () => void;
@@ -245,6 +260,10 @@ export const NOOP_GAME_DIALOGS_ACTIONS: GameDialogsActions = {
   handleToggleSideboardLock: noopDialogAction,
   openViewSideboard: noopDialogAction,
   closeViewSideboard: noopDialogAction,
+  openViewLibrary: noopDialogAction,
+  closeViewLibrary: noopDialogAction,
+  openViewGraveyard: noopDialogAction,
+  closeViewGraveyard: noopDialogAction,
   openGameInfo: noopDialogAction,
   closeGameInfo: noopDialogAction,
   openConcede: noopDialogAction,
@@ -350,6 +369,8 @@ export function useGameDialogs({
   const [createTokenOpen, setCreateTokenOpen] = useState(false);
   const [sideboardOpen, setSideboardOpen] = useState(false);
   const [viewSideboardOpen, setViewSideboardOpen] = useState(false);
+  const [viewLibraryOpen, setViewLibraryOpen] = useState(false);
+  const [viewGraveyardOpen, setViewGraveyardOpen] = useState(false);
   const [revealState, setRevealState] = useState<RevealState | null>(null);
   const [playerMenu, setPlayerMenu] = useState<AnchorPosition | null>(null);
   const [handMenu, setHandMenu] = useState<AnchorPosition | null>(null);
@@ -1294,6 +1315,10 @@ export function useGameDialogs({
   const closeSideboard = useCallback(() => setSideboardOpen(false), []);
   const openViewSideboard = useCallback(() => setViewSideboardOpen(true), []);
   const closeViewSideboard = useCallback(() => setViewSideboardOpen(false), []);
+  const openViewLibrary = useCallback(() => setViewLibraryOpen(true), []);
+  const closeViewLibrary = useCallback(() => setViewLibraryOpen(false), []);
+  const openViewGraveyard = useCallback(() => setViewGraveyardOpen(true), []);
+  const closeViewGraveyard = useCallback(() => setViewGraveyardOpen(false), []);
   const openGameInfo = useCallback(() => setGameInfoOpen(true), []);
   const closeGameInfo = useCallback(() => setGameInfoOpen(false), []);
   const openConcede = useCallback(() => setConcedeConfirm('concede'), []);
@@ -1333,6 +1358,10 @@ export function useGameDialogs({
       handleToggleSideboardLock,
       openViewSideboard,
       closeViewSideboard,
+      openViewLibrary,
+      closeViewLibrary,
+      openViewGraveyard,
+      closeViewGraveyard,
       openGameInfo,
       closeGameInfo,
       openConcede,
@@ -1398,6 +1427,10 @@ export function useGameDialogs({
       handleToggleSideboardLock,
       openViewSideboard,
       closeViewSideboard,
+      openViewLibrary,
+      closeViewLibrary,
+      openViewGraveyard,
+      closeViewGraveyard,
       openGameInfo,
       closeGameInfo,
       openConcede,
@@ -1455,6 +1488,8 @@ export function useGameDialogs({
       createTokenOpen,
       sideboardOpen,
       viewSideboardOpen,
+      viewLibraryOpen,
+      viewGraveyardOpen,
       gameInfoOpen,
       concedeConfirm,
       leaveConfirm,
@@ -1474,6 +1509,8 @@ export function useGameDialogs({
       createTokenOpen,
       sideboardOpen,
       viewSideboardOpen,
+      viewLibraryOpen,
+      viewGraveyardOpen,
       gameInfoOpen,
       concedeConfirm,
       leaveConfirm,

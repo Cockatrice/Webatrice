@@ -2,6 +2,8 @@ import { useRef } from 'react';
 import { MessageSquare } from 'lucide-react';
 import { classifyLogTone, type LogSegment, type LogTone } from '@cockatrice/datatrice';
 
+import { ShortcutScope, useShortcut } from '@app/feature-widgets/shortcuts';
+
 import { useGameId } from '../ui/GameIdContext';
 import { useHoveredCard } from '../PlayerBox/hoveredCard';
 import { useBigCardPreview } from '../PlayerBox/bigCardPreview';
@@ -63,6 +65,7 @@ const SEGMENT_CLASS: Record<LogSegment['kind'], string> = {
 export default function ChatLog() {
   const gameId = useGameId();
   const listRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const { setHoveredCard } = useHoveredCard();
   const { openBigPreview, closeBigPreview } = useBigCardPreview();
   const {
@@ -78,6 +81,24 @@ export default function ChatLog() {
   } = useGameLog({ gameId, listRef });
   // Composite disabled state — no active game OR spectator-can't-chat.
   const inputDisabled = gameId == null || !canChat;
+
+  // Cockatrice-parity focus-chat shortcut (Shift+Enter). Registered
+  // GLOBAL so it fires regardless of route, but only actually mounted
+  // when ChatLog is on-screen. Disabled state gates it — focusing a
+  // disabled input would be a no-op, but skipping the preventDefault
+  // lets Shift+Enter fall through to whatever else is listening.
+  useShortcut(
+    'chat.focus',
+    () => {
+      const el = inputRef.current;
+      if (!el || inputDisabled) {
+        return;
+      }
+      el.focus();
+      el.select();
+    },
+    { scope: ShortcutScope.GAME, enabled: !inputDisabled },
+  );
   const inputTitle = chatDisabledReason ?? undefined;
   const inputPlaceholder = gameId == null
     ? 'Chat unavailable'
@@ -206,6 +227,7 @@ export default function ChatLog() {
         </label>
         <input
           id="game-log-say-input"
+          ref={inputRef}
           type="text"
           value={draft}
           onChange={(e) => setDraft(e.target.value)}

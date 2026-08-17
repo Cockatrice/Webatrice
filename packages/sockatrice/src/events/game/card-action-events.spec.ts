@@ -23,10 +23,11 @@ import { setCardAttr } from './setCardAttr';
 const meta = { gameId: 5, playerId: 2, context: null, secondsElapsed: 0, forcedByJudge: 0 };
 
 describe('moveCard event', () => {
-  it('delegates to WebClient.instance.response.game.cardMoved with gameId, playerId and data', () => {
+  it('delegates to WebClient.instance.response.game.cardMoved with gameId, playerId, data, and isUndoDraw=false', () => {
     const data = create(Event_MoveCardSchema, { cardId: 3 });
     moveCard(data, meta);
-    expect(WebClient.instance.response.game.cardMoved).toHaveBeenCalledWith(5, 2, data);
+    // isUndoDraw is derived from meta.context; absent context ⇒ false. See moveCard.ts.
+    expect(WebClient.instance.response.game.cardMoved).toHaveBeenCalledWith(5, 2, data, false);
   });
 
   it('forwards the full move payload intact so reducer-side implicit-detach can fire', () => {
@@ -49,7 +50,7 @@ describe('moveCard event', () => {
   it('forwards an empty move payload (malformed: no cardId or zones) without dropping it', () => {
     const data = create(Event_MoveCardSchema, {});
     moveCard(data, meta);
-    expect(WebClient.instance.response.game.cardMoved).toHaveBeenCalledWith(5, 2, data);
+    expect(WebClient.instance.response.game.cardMoved).toHaveBeenCalledWith(5, 2, data, false);
   });
 });
 

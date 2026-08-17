@@ -108,6 +108,37 @@ export function displaySequence(sequence: string): string {
   return [...mods, displayCode(code)].join('+');
 }
 
+/** Same idea as `displaySequence`, but returns the parts as an array
+ *  instead of a `+`-joined string. Split BEFORE display formatting so
+ *  labels that contain a `+` (e.g. `NumpadAdd` → `Num+`) don't get
+ *  chopped by a naive `split('+')` on the joined form. */
+export function displaySequenceParts(sequence: string): string[] {
+  const parts = sequence.split('+');
+  const code = parts[parts.length - 1] ?? '';
+  const mods = parts.slice(0, -1);
+  return [...mods, displayCode(code)];
+}
+
+/** Mac-style symbol variant — `⌘⇧D` instead of `Ctrl+Shift+D`. Ctrl and
+ *  Meta both map to ⌘ (matches Cockatrice desktop / Qt's treatment of
+ *  Ctrl as the primary modifier). Non-Mac formatting stays word-joined. */
+const MAC_MODIFIER: Record<string, string> = {
+  Ctrl: '⌘',
+  Meta: '⌘',
+  Alt: '⌥',
+  Shift: '⇧',
+};
+export function displaySequenceForOs(sequence: string, isMac: boolean): string {
+  if (!isMac) {
+    return displaySequence(sequence);
+  }
+  const parts = sequence.split('+');
+  const code = parts[parts.length - 1] ?? '';
+  const mods = parts.slice(0, -1).map((m) => MAC_MODIFIER[m] ?? m);
+  // Mac convention: no separators between modifier symbols.
+  return `${mods.join('')}${displayCode(code)}`;
+}
+
 // Stable string comparison key for de-duping a sequence list (modifier order is fixed).
 export function normalizeSequence(sequence: string): string {
   const parsed = parseSequence(sequence);

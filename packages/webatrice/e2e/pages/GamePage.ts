@@ -4,23 +4,22 @@ import { DeckSelectPage } from './DeckSelectPage';
 
 // Page object for the game view (`/game/:gameId`). Covers the entry
 // sequence (deck-select → ready → board) and a small set of in-game
-// actions: draw a card from the library, play a card from hand by
-// double-click (`Game.tsx` wires double-click on a CardSlot to
-// `arrows.handleCardDoubleClick`, which plays from hand), end turn via
-// the TurnControls "Pass Turn" button, and leave.
+// actions.
 //
-// Production exposes several `data-testid`s that we can rely on:
-//   - `game-container`, `game-empty`
-//   - `turn-controls`, `right-panel`, `spectating-tag`
-//   - `card-slot`, `zone-stack-<zoneName>`, `hand-zone`,
-//     `player-board-<playerId>`
+// The Tailwind rewrite dropped the old `turn-controls` panel entirely.
+// The right rail is now `BattlefieldSidebar` (`data-testid="right-panel"`)
+// which owns the Leave button (opens the "Leave this game?" ConfirmDialog)
+// and hosts the spectator flag. There is no visible "Pass Turn" or
+// in-panel "Leave Game" button anymore — leaving is: sidebar Leave →
+// confirm.
 //
-// "Attack with" is intentionally a simplification: in Cockatrice attack
-// is just toggling the card's `attacking` flag via right-click → Tap+set
-// attacking, which the desktop client maps to a double-click on a
-// battlefield creature. We expose `attackWith(cardName)` for parity with
-// the planned API; it taps the named creature's slot via double-click on
-// the battlefield.
+// Production exposes these `data-testid`s that we rely on:
+//   • `game-container`, `game-empty`
+//   • `right-panel`, `spectating-tag`
+//   • `card-slot`, `zone-stack-<zoneName>`, `hand-zone`,
+//     `player-board-<playerId>`, `battlefield`, `battlefield-row-<row>`
+//   • `card-context-menu`, `zone-context-menu`
+//   • `zone-view-dialog`, `zone-view-card-<cardId>` (+ `.zone-view-dialog__header`)
 
 export class GamePage {
   readonly deckSelect: DeckSelectPage;
@@ -37,22 +36,17 @@ export class GamePage {
     return this.page.getByTestId('right-panel');
   }
 
-  get turnControls(): Locator {
-    return this.page.getByTestId('turn-controls');
-  }
-
   get spectatingTag(): Locator {
     return this.page.getByTestId('spectating-tag');
   }
 
   async waitForBoard(): Promise<void> {
-    await expect(this.container).toBeVisible({ timeout: 30_000 });
+    await expect(this.container).toBeVisible({ timeout: 60_000 });
     await expect(this.rightPanel).toBeVisible();
     await expect(this.page.locator('.game__board-grid')).toBeVisible({ timeout: 30_000 });
-    // DeckSelectDialog (a MUI modal) aria-hides its siblings while open, so
-    // locators inside turn-controls match nothing until it is dismissed. Gate
-    // on dismissal (= game.started && local readyStart, per
-    // useDeckSelectDialog's open predicate) before callers drive endTurn/leaveGame.
+    // The lobby readies up and unmounts before the board renders. The
+    // MUI DeckSelectDialog only shows in the "reverted to lobby" edge
+    // case, so it's expected to stay hidden here.
     await expect(this.deckSelect.dialog).toBeHidden({ timeout: 30_000 });
   }
 
@@ -73,7 +67,7 @@ export class GamePage {
   }
 
   async drawCard(): Promise<void> {
-    const localBoard = this.page.locator('[data-local-player]');
+    const localBoard = this.localBoard;
     const deckStack = localBoard.locator('[data-testid="zone-stack-deck"]');
     await deckStack.click({ button: 'right' });
     const menu = this.page.getByTestId('zone-context-menu');
@@ -96,21 +90,23 @@ export class GamePage {
     await card.dblclick();
   }
 
-  async endTurn(): Promise<void> {
-    // Runs after waitForBoard: game started, DeckSelectDialog closed.
-    const passTurn = this.turnControls.locator('button', { hasText: /pass turn/i });
-    await expect(passTurn).toBeEnabled({ timeout: 10_000 });
-    await passTurn.click();
-  }
-
+  // Leave the in-progress game via BattlefieldSidebar's Leave button.
+  // That opens the "Leave this game?" ConfirmDialog (Game.tsx wires the
+  // sidebar's onRequestLeave → dialogs.openLeaveConfirm), which we then
+  // confirm to actually dispatch `leaveGame(gameId)`.
   async leaveGame(): Promise<void> {
-    // In-game leave via the turn-controls panel. Valid only while the game is
-    // still started (DeckSelectDialog closed). Once a started game drops to
-    // one player it reverts to lobby state and DeckSelectDialog re-opens over
-    // the board — the last remaining player must leave via LeftNavPage.
-    const leave = this.turnControls.locator('button', { hasText: /leave game/i });
+    const leave = this.rightPanel.getByRole('button', { name: /^leave$/i });
     await expect(leave).toBeEnabled({ timeout: 10_000 });
     await leave.click();
+
+    // ConfirmDialog is an MUI Dialog titled "Leave this game?" with a
+    // destructive "Leave" button in DialogActions.
+    const confirm = this.page.getByRole('dialog').filter({ hasText: /leave this game\?/i });
+    await expect(confirm).toBeVisible({ timeout: 5_000 });
+    await confirm.getByRole('button', { name: /^leave$/i }).click();
+    // After leaving: the local session drops out of the game. Route may
+    // stay on `/game/:id` (empty state) or revert; the container is
+    // what upstream tests assert against.
     await expect(this.container).toBeHidden({ timeout: 30_000 });
   }
 
@@ -118,7 +114,7 @@ export class GamePage {
     return (await this.spectatingTag.count()) > 0;
   }
 
-  // ---- Zones / cards / popups (added for the popup-drag + zone-move specs) ----
+  // ---- Zones / cards / popups ----
 
   // The local player's board carries the `data-local-player` attribute
   // (PlayerBoard.tsx); opponents are the other `player-board-*` nodes.
@@ -134,7 +130,8 @@ export class GamePage {
     return board.locator(`[data-testid="zone-stack-${zoneName}"]`);
   }
 
-  // First battlefield row of a board — the drop target for a card move/give.
+  // First battlefield row of a board — the drop target for a card
+  // move/give. BattlefieldRow.tsx sets `data-testid="battlefield-row-<row>"`.
   battlefieldRow(board: Locator = this.localBoard): Locator {
     return board.locator('[data-testid^="battlefield-row-"]').first();
   }
@@ -149,7 +146,7 @@ export class GamePage {
     return Number(text.trim());
   }
 
-  // The ZoneViewDialog is a role="dialog" whose aria-label is
+  // ZoneViewDialog is a `div[role="dialog"]` whose aria-label is
   // "<player> <ZoneLabel> (<count>)", so match by the zone label text.
   zoneView(zoneLabel: RegExp): Locator {
     return this.page.getByRole('dialog', { name: zoneLabel });
@@ -159,12 +156,15 @@ export class GamePage {
     return dialog.locator('[data-testid^="zone-view-card-"]');
   }
 
-  // The draggable header of a zone-view popup (drag it to reposition the popup).
+  // The draggable header of a zone-view popup (drag it to reposition
+  // the popup).
   zoneViewHeader(dialog: Locator): Locator {
     return dialog.locator('.zone-view-dialog__header');
   }
 
-  // Click the local zone stack to open its popup, then wait for the dialog.
+  // Click the local zone stack to open its popup, then wait for the
+  // dialog. For the local deck, left-click triggers a dumpZone in
+  // addition to opening the popup (see useGameDialogs.handleZoneClick).
   async openZoneView(zoneName: string, zoneLabel: RegExp): Promise<Locator> {
     await this.zoneStack(zoneName).click();
     const dialog = this.zoneView(zoneLabel);
@@ -180,11 +180,12 @@ export class GamePage {
     await menu.getByRole('menuitem', { name: item }).click();
   }
 
-  // Rubber-band select every card on the local battlefield. The battlefield
-  // surface (`[data-testid="battlefield"]`, `data-zone-box-select`) starts a
-  // box-select only on empty space — a mousedown on a card begins a card
-  // interaction instead — so the drag begins at the top-left corner and sweeps
-  // corner-to-corner over the rows below.
+  // Rubber-band select every card on the local battlefield. The
+  // battlefield surface (`[data-testid="battlefield"]`,
+  // `data-zone-box-select`) starts a box-select only on empty space —
+  // a mousedown on a card begins a card interaction instead — so the
+  // drag begins at the top-left corner and sweeps corner-to-corner
+  // over the rows below.
   async boxSelectBattlefield(): Promise<void> {
     const battlefield = this.localBoard.locator('[data-testid="battlefield"]');
     const box = await battlefield.boundingBox();

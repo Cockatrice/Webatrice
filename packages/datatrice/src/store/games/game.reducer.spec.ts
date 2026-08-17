@@ -61,9 +61,11 @@ function dispatchCardMoved(
 
 
 describe('2A: Initialisation & lifecycle', () => {
-  it('returns initialState ({ games: {} }) when called with undefined state', () => {
+  it('returns initialState (games map + null incomingReveal) when called with undefined state', () => {
     const result = gamesReducer(undefined, { type: '@@INIT' });
-    expect(result).toEqual({ games: {} });
+    // incomingReveal was added to the initial state so components can subscribe
+    // to it without needing to fold a default in every selector.
+    expect(result).toEqual({ games: {}, incomingReveal: null });
   });
 
   it('CLEAR_STORE → resets to initialState', () => {
@@ -1992,7 +1994,9 @@ describe('2I: Zone operations', () => {
       gameId: 1, playerId: 1, zoneName: 'deck', cards, isReversed: false,
     }));
 
-    expect(result.games[1].players[1].zones['deck'].revealedCards).toBe(cards);
+    // Reducer clones the array to keep the caller's reference detached from
+    // store state; identity check would fail, so compare by value.
+    expect(result.games[1].players[1].zones['deck'].revealedCards).toStrictEqual(cards);
   });
 
   it('ZONE_VIEW_CLEARED → removes zone.revealedCards', () => {

@@ -97,11 +97,21 @@ describe('GameArrowOverlay', () => {
       preloadedState: stateWithOneArrow(),
     });
 
-    const line = screen.getByTestId('arrow-1');
-    expect(line.getAttribute('x1')).toBe('125');
-    expect(line.getAttribute('y1')).toBe('125');
-    expect(line.getAttribute('x2')).toBe('325');
-    expect(line.getAttribute('y2')).toBe('325');
+    // Post-rewrite the arrow is a <path> in a local coord frame parented by
+    // a <g transform="translate(sx sy) rotate(angle)"> so it can rotate as
+    // one piece (Cockatrice `ArrowItem` parity, see arrowPath.ts). Assert
+    // origin lands at the start card center and the local +X tip in the path
+    // sits at the shaft length matching the (200,200) delta between centers
+    // — i.e. hypot = sqrt(80000) ≈ 282.843.
+    const shape = screen.getByTestId('arrow-1');
+    const group = shape.parentElement as unknown as SVGGElement;
+    const transform = group.getAttribute('transform') ?? '';
+    expect(transform).toMatch(/translate\(125 125\)/);
+    // 45° line from (125,125) to (325,325) in a Y-down SVG frame.
+    expect(transform).toMatch(/rotate\(45\)/);
+    const d = shape.getAttribute('d') ?? '';
+    // The tip of the shaft is drawn as `L <lineLength> 0` in local coords.
+    expect(d).toMatch(/L 282\.843 0/);
   });
 
   it('skips arrows whose endpoints are not registered yet', () => {

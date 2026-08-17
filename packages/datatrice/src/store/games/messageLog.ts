@@ -480,14 +480,56 @@ export function formatCardsDrawn(
     : L`${p(actor)} draws ${n(number)} cards.`;
 }
 
+/**
+ * Undo-draw log — Cockatrice's `logUndoDraw`
+ * (message_log_widget.cpp:794-803). Fired when a move event carries
+ * the `Context_UndoDraw` extension (top-of-hand back to top-of-library
+ * in a single command). When the card name is known, we suffix it in
+ * parens for parity with desktop's " (Card Name)" form.
+ */
+export function formatCardUndoneDraw(
+  game: Enriched.GameEntry,
+  actorPlayerId: number,
+  cardName: string,
+): LogEntry {
+  const actor = nameOf(game, actorPlayerId);
+  if (cardName) {
+    return L`${p(actor)} undoes their last draw (${c(cardName)}).`;
+  }
+  return L`${p(actor)} undoes their last draw.`;
+}
+
 export function formatZoneShuffled(game: Enriched.GameEntry, playerId: number): LogEntry {
   return L`${p(nameOf(game, playerId))} shuffles their library.`;
 }
 
 /**
+ * Peek log — Cockatrice's `logRevealCards` face-down branch
+ * (message_log_widget.cpp:547-557). One line per peeked card:
+ *   "{player} peeks at face down card #{cardId}: {cardName}."
+ * or (no name resolved) "{player} peeks at face down card #{cardId}."
+ * The peek listener iterates `data.cards` and calls this per card,
+ * mirroring Cockatrice's for-loop in `eventRevealCards`.
+ */
+export function formatCardPeeked(
+  game: Enriched.GameEntry,
+  actorPlayerId: number,
+  cardId: number,
+  cardName: string,
+): LogEntry {
+  const actor = nameOf(game, actorPlayerId);
+  if (cardName) {
+    return L`${p(actor)} peeks at face down card #${n(cardId)}: ${c(cardName)}.`;
+  }
+  return L`${p(actor)} peeks at face down card #${n(cardId)}.`;
+}
+
+/**
  * Mirrors Cockatrice's MessageLogWidget::logRevealCards. Returns null
  * for card-id-populated branches we don't handle (random reveals,
- * specific-card reveals from hand, peek-face-down).
+ * specific-card reveals from hand, peek-face-down — the peek branch
+ * lives in `formatCardPeeked` above and is emitted per-card by the
+ * `cardsRevealed` listener).
  */
 export function formatCardsRevealed(
   game: Enriched.GameEntry,
@@ -521,6 +563,25 @@ export function formatCardsRevealed(
     return count === 1
       ? L`${p(actor)} reveals ${n(1)} card from ${zone}.`
       : L`${p(actor)} reveals ${n(count)} cards from ${zone}.`;
+  }
+
+  // Observer-side peek log. When the source peeks their own face-down
+  // card, Servatrice sends the fully-populated Event_RevealCards to
+  // the recipient (source == target) — that path emits per-card
+  // "peeks at face down card #N" logs from the listener via
+  // formatCardPeeked. Observers receive the same event with card
+  // details stripped (empty `cards[]`), only card ids and the reveal
+  // target. Cockatrice's `logRevealCards` "else if (otherPlayer)"
+  // branch (message_log_widget.cpp:558-566) is what produces the
+  // "SonicBliss reveals 1 card(s) from play to SonicBliss." line on
+  // observer clients — that's this branch.
+  if (data.cards.length === 0 && data.cardId.length > 0) {
+    const count = data.cardId.length;
+    const fromLabel = data.zoneName === ZoneName.TABLE ? 'play' : zoneLabelReveal(data.zoneName, false);
+    if (targetName) {
+      return L`${p(actor)} reveals ${n(count)} card(s) from ${fromLabel} to ${p(targetName)}.`;
+    }
+    return L`${p(actor)} reveals ${n(count)} card(s) from ${fromLabel}.`;
   }
 
   return null;

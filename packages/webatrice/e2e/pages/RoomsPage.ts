@@ -2,17 +2,22 @@ import { expect, type Locator, type Page } from '@playwright/test';
 
 // Page object for the rooms list view (`/server`) and an opened Room
 // (`/room/:roomId`). The same instance is used either side of the room
-// transition; `openRoom` navigates and `waitForRoomList` confirms the list
-// rendered.
+// transition; `openRoom` navigates and `waitForRoomList` confirms the
+// server view rendered.
 //
-// `RoomsList.tsx` renders a `<table>` whose body rows expose a `Join`
-// button per row. Joining navigates to `/room/:roomId` (via the JOIN_ROOM
-// redux effect in `Server.tsx`). Inside a Room, the GameSelector toolbar
-// exposes `Create`, `Join`, `Join as Spectator`, etc.
+// The Tailwind rewrite replaced the MUI `LeftNav` + rooms table +
+// GameSelector with:
+//   • TopBar   (a fixed top strip; pinned "Lobby" tab replaces the
+//               LeftNav logo NavLink for jumping back to /server)
+//   • RoomsList (Tailwind <table> under /server — column headers
+//                Name/Description/Permissions/Players/Games, each row
+//                has a single `Join`/`Open` button)
+//   • GamesList (Tailwind <table> under /room/:id — rows are <tr>s
+//                the user clicks to select, and a toolbar below
+//                exposes Create / Join / Spectate / Judge buttons)
 //
-// Game-create dialog (`CreateGameDialog.tsx`) is a real `<Dialog>` with a
-// `Description` text field, `Password`, `Max players`, `Starting life
-// total`, and a `Create` submit button. We expose a small subset.
+// The pre-redo `LeftNav-server__indicator` and `games__row` class hooks
+// are gone; every selector below is grounded in the new DOM.
 
 export interface CreateGameOptions {
   password?: string;
@@ -24,26 +29,44 @@ export interface CreateGameOptions {
 export class RoomsPage {
   constructor(private readonly page: Page) {}
 
+  // The Server (rooms) view is ready as soon as the RoomsList's <thead>
+  // renders. `Name` is the first (unique) column header.
   async waitForRoomList(): Promise<void> {
-    await expect(this.page.locator('span.LeftNav-server__indicator')).toBeVisible({ timeout: 30_000 });
-    await this.page.getByAltText('logo').click();
-    await expect(this.page.getByRole('columnheader', { name: /^name$/i })).toBeVisible({ timeout: 30_000 });
+    // TopBar's "Lobby" tab is what proves we're past auth (see
+    // TopBar.tsx — server tab always shows once Layout mounts).
+    await expect(this.page.getByRole('tab', { name: /^lobby$/i })).toBeVisible({
+      timeout: 30_000,
+    });
+    await expect(this.page.getByRole('columnheader', { name: /^name$/i })).toBeVisible({
+      timeout: 30_000,
+    });
   }
 
   async openRoom(name: string): Promise<void> {
     const row = this.page.getByRole('row').filter({ hasText: new RegExp(name, 'i') });
     await expect(row).toBeVisible();
-    await row.getByRole('button', { name: /^join$/i }).click();
+    // Each row has a single per-row button labelled "Join" (not-yet-
+    // joined) or "Open" (already joined). Match both — order of test
+    // runs shouldn't matter here.
+    await row.getByRole('button', { name: /^(join|open)$/i }).click();
     await this.waitForGameList();
   }
 
   async waitForGameList(): Promise<void> {
-    await expect(this.page.getByText(/games shown:/i)).toBeVisible({ timeout: 15_000 });
+    // GamesList header shows "Showing X / Y" (see GamesList.tsx) — this
+    // caption is unique to the /room/:id view.
+    await expect(this.page.getByText(/showing\s+\d+\s+\/\s+\d+/i)).toBeVisible({
+      timeout: 15_000,
+    });
   }
 
   async createGame(description: string, options: CreateGameOptions = {}): Promise<void> {
+    // "Create" is a toolbar button inside the GamesList section.
     await this.page.getByRole('button', { name: /^create$/i }).click();
-    const dialog = this.page.getByRole('dialog');
+    // CreateGameDialog is still an MUI <Dialog> — role="dialog" with
+    // a "Create Game" title. Match on that title so the Confirm dialog
+    // spawn (also role="dialog") from other flows doesn't shadow it.
+    const dialog = this.page.getByRole('dialog').filter({ hasText: /create game/i });
     await expect(dialog).toBeVisible();
 
     await dialog.getByLabel(/description/i).fill(description);
@@ -61,13 +84,18 @@ export class RoomsPage {
     }
 
     await dialog.getByRole('button', { name: /^create$/i }).click();
-    await expect(this.page.getByTestId('game-container')).toBeVisible({ timeout: 30_000 });
+    // After Create the server replies with Event_GameJoined; the
+    // GamesList's useReduxEffect routes to /game/:id. Wait for the
+    // game-container testid to appear.
+    await expect(this.page.getByTestId('game-container').or(this.page.getByRole('button', { name: /ready up/i }))).toBeVisible({
+      timeout: 30_000,
+    });
   }
 
   gameRow(description: string): Locator {
-    return this.page
-      .locator('.games__row')
-      .filter({ hasText: new RegExp(description, 'i') });
+    // GamesList renders rows as plain <tr>s inside a <tbody>; select
+    // via role=row filtered by description text.
+    return this.page.getByRole('row').filter({ hasText: new RegExp(description, 'i') });
   }
 
   async joinGame(
@@ -76,21 +104,29 @@ export class RoomsPage {
   ): Promise<void> {
     const row = this.gameRow(description);
     await expect(row).toBeVisible({ timeout: 15_000 });
+    // Selecting the row enables the toolbar's Join/Spectate buttons.
     await row.click();
-    // The "Join as Judge*" controls render only for accounts with the IsJudge flag
-    // (GameSelectorToolbar). "Join as Judge" (exact) is a judge player; "Join as
-    // Judge Spectator" is an omniscient judge that doesn't take a seat.
+
+    // Toolbar labels (GamesList.tsx):
+    //   Join            → /^Join$/
+    //   Spectate        → /^Spectate$/
+    //   Judge           → /^Judge$/
+    //   Judge · Spectate → /Judge.*Spectate/  (middle dot separator)
     const action = options.judgeSpectator
-      ? /join as judge spectator/i
+      ? /judge.*spectate/i
       : options.judge
-        ? /^join as judge$/i
+        ? /^judge$/i
         : options.spectator
-          ? /join as spectator/i
+          ? /^spectate$/i
           : /^join$/i;
     const btn = this.page.getByRole('button', { name: action });
     await expect(btn).toBeEnabled({ timeout: 10_000 });
     await btn.click();
-    await expect(this.page.getByTestId('game-container')).toBeVisible({ timeout: 30_000 });
+    // Pre-start: GameLobby (Ready up button) mounts. Post-start:
+    // GameBoard (game-container testid) mounts. Wait for either.
+    await expect(
+      this.page.getByTestId('game-container').or(this.page.getByRole('button', { name: /ready up/i })),
+    ).toBeVisible({ timeout: 30_000 });
   }
 
   async sendChatMessage(text: string): Promise<void> {
@@ -100,10 +136,10 @@ export class RoomsPage {
   }
 
   async leaveRoom(): Promise<void> {
-    // MemoryRouter: `page.goto('/server')` would full-page-reload the SPA and
-    // drop the WS connection. Click the LeftNav logo NavLink instead — it
-    // routes to RouteEnum.SERVER via React Router without reloading.
-    await this.page.getByAltText('logo').click();
+    // TopBar exposes a persistent "Lobby" tab that routes back to
+    // /server without a full-page reload. Clicking it is the modern
+    // equivalent of the pre-redo LeftNav logo NavLink.
+    await this.page.getByRole('tab', { name: /^lobby$/i }).click();
     await this.waitForRoomList();
   }
 }

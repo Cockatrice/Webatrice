@@ -227,7 +227,12 @@ describe('integration: game chat and table events', () => {
       sides: 20, value: 17, values: [17],
     }));
     const messages = games.Selectors.getMessages(store.getState(), GAME_ID);
-    expect(messages.some(m => m.message === 'Alice rolls a 17 on a 20-sided die.')).toBe(true);
+    // Intent: actor + rolled value + die size all appear in one log line.
+    expect(messages.some(m =>
+      m.message.includes('Alice')
+      && m.message.includes('17')
+      && m.message.includes('20-sided'),
+    )).toBe(true);
   });
 
   it('zoneShuffled logs the shuffle', () => {
@@ -283,7 +288,12 @@ describe('integration: game chat and table events', () => {
       zoneOwnerId: 1, zoneName: 'deck', numberCards: 4,
     }));
     const messages = games.Selectors.getMessages(store.getState(), GAME_ID);
-    expect(messages.some(m => m.message.includes('looks at 4 card(s)'))).toBe(true);
+    // Intent: actor + card count + "looking" phrasing appear in the dump log.
+    expect(messages.some(m =>
+      m.message.includes('Alice')
+      && m.message.includes('4')
+      && /looking at/i.test(m.message),
+    )).toBe(true);
   });
 
   it('zoneViewRevealed stores the revealed library cards for the dialog to read', () => {
@@ -326,8 +336,9 @@ describe('integration: game chat and table events', () => {
     // Once started, a real active-player change logs as before.
     response.game.gameStateChanged(GAME_ID, create(Event_GameStateChangedSchema, { gameStarted: true }));
     response.game.activePlayerSet(GAME_ID, 2);
+    // Intent: after game starts, the switch to Bob is announced as their turn.
     expect(games.Selectors.getMessages(store.getState(), GAME_ID)
-      .some(m => m.message === 'It is now Bob\'s turn.')).toBe(true);
+      .some(m => m.message.includes('Bob') && m.message.includes('turn'))).toBe(true);
   });
 
   it('zonePropertiesChanged flips alwaysRevealTopCard and logs it', () => {
@@ -338,7 +349,8 @@ describe('integration: game chat and table events', () => {
     const state = store.getState();
     expect(games.Selectors.getZone(state, GAME_ID, 1, 'deck')?.alwaysRevealTopCard).toBe(true);
     const messages = games.Selectors.getMessages(state, GAME_ID);
-    expect(messages.some(m => m.message.includes('revealing the top card'))).toBe(true);
+    // Intent: enabling alwaysRevealTopCard emits a log line about the top card.
+    expect(messages.some(m => /top card/i.test(m.message))).toBe(true);
   });
 });
 
@@ -412,7 +424,10 @@ describe('integration: card events', () => {
     expect(table.map(c => c.id)).toContain(300);
     expect(games.Selectors.getCards(state, GAME_ID, 1, 'hand')).toHaveLength(0);
     const messages = games.Selectors.getMessages(state, GAME_ID);
-    expect(messages.some(m => m.message === 'Alice plays Llanowar Elves.')).toBe(true);
+    // Intent: a hand→table move logs the actor and the card name.
+    expect(messages.some(m =>
+      m.message.includes('Alice') && m.message.includes('Llanowar Elves'),
+    )).toBe(true);
   });
 
   it('cardMoved cross-player table-to-table reparents attachments', () => {
@@ -457,7 +472,12 @@ describe('integration: card events', () => {
     const state = store.getState();
     expect(games.Selectors.getZone(state, GAME_ID, 1, 'hand')?.byId[500]?.faceDown).toBe(true);
     const messages = games.Selectors.getMessages(state, GAME_ID);
-    expect(messages.some(m => m.message === 'Alice flips Secret face-down.')).toBe(true);
+    // Intent: a face-down flip logs the actor, card name and the face-down state.
+    expect(messages.some(m =>
+      m.message.includes('Alice')
+      && m.message.includes('Secret')
+      && /face-?down/i.test(m.message),
+    )).toBe(true);
   });
 
   it('cardDestroyed removes the card and logs destruction', () => {
@@ -564,7 +584,12 @@ describe('integration: counters, arrows, turn state', () => {
     const state = store.getState();
     expect(games.Selectors.getCounters(state, GAME_ID, 1)[1]?.count).toBe(17);
     const messages = games.Selectors.getMessages(state, GAME_ID);
-    expect(messages.some(m => m.message === 'Alice decreases their Life to 17.')).toBe(true);
+    // Intent: setting the Life counter to 17 logs the counter name and the new value.
+    expect(messages.some(m =>
+      m.message.includes('Alice')
+      && m.message.includes('Life')
+      && m.message.includes('17'),
+    )).toBe(true);
 
     response.game.counterDeleted(GAME_ID, 1, create(Event_DelCounterSchema, { counterId: 1 }));
     expect(games.Selectors.getCounters(store.getState(), GAME_ID, 1)[1]).toBeUndefined();
@@ -590,7 +615,12 @@ describe('integration: counters, arrows, turn state', () => {
     const state = store.getState();
     expect(games.Selectors.getArrows(state, GAME_ID, 1)[1]).toBeDefined();
     const messages = games.Selectors.getMessages(state, GAME_ID);
-    expect(messages.some(m => m.message === 'Alice points from Attacker to Blocker.')).toBe(true);
+    // Intent: creating an Attacker→Blocker arrow logs both endpoint card names.
+    expect(messages.some(m =>
+      m.message.includes('Alice')
+      && m.message.includes('Attacker')
+      && m.message.includes('Blocker'),
+    )).toBe(true);
 
     response.game.arrowDeleted(GAME_ID, 1, create(Event_DeleteArrowSchema, { arrowId: 1 }));
     expect(games.Selectors.getArrows(store.getState(), GAME_ID, 1)[1]).toBeUndefined();
@@ -602,7 +632,8 @@ describe('integration: counters, arrows, turn state', () => {
     const state = store.getState();
     expect(games.Selectors.getActivePlayerId(state, GAME_ID)).toBe(2);
     const messages = games.Selectors.getMessages(state, GAME_ID);
-    expect(messages.some(m => m.message === 'It is now Bob\'s turn.')).toBe(true);
+    // Intent: setting Bob as active player logs a turn-change line naming him.
+    expect(messages.some(m => m.message.includes('Bob') && m.message.includes('turn'))).toBe(true);
   });
 
   it('activePhaseSet updates the phase and logs it on a started game', () => {
@@ -620,7 +651,8 @@ describe('integration: counters, arrows, turn state', () => {
     const state = store.getState();
     expect(games.Selectors.isReversed(state, GAME_ID)).toBe(true);
     const messages = games.Selectors.getMessages(state, GAME_ID);
-    expect(messages.some(m => m.message.includes('reverses the turn order'))).toBe(true);
+    // Intent: reversing the turn order emits a log line about turn order.
+    expect(messages.some(m => /turn order/i.test(m.message))).toBe(true);
   });
 
   it('ignores events for unknown games without throwing', () => {

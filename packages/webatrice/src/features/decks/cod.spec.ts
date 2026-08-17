@@ -43,7 +43,12 @@ describe('parseCod', () => {
   <zone name="commander"><card number="1" name="Zur the Enchanter"/></zone>
 </cockatrice_deck>`;
     const deck = parseCod(xml);
-    expect(deck.cards[0].category).toBe('commander');
+    // Webatrice doesn't model a `commander` deck category anymore —
+    // Servatrice only ships `main`/`side` into the game library at
+    // start, so the commander zone coerces to `main` while the card
+    // keeps its `isCommander` flag (parseCod comment).
+    expect(deck.cards[0].category).toBe('main');
+    expect(deck.cards[0].isCommander).toBe(true);
   });
 
   it('defaults quantity to 1 when the number attribute is missing', () => {
@@ -111,6 +116,9 @@ describe('serializeCod → parseCod round-trip', () => {
 
     const parsed = parseCod(xml);
     expect(parsed.name).toBe('Round Trip');
+    // serializeCod groups cards into one <zone> per category (main
+     // first, then sideboard), so the round-tripped order isn't the
+     // original input order — it's category-then-input order.
     expect(parsed.cards).toEqual([
       {
         name: 'Sol Ring',
@@ -121,8 +129,8 @@ describe('serializeCod → parseCod round-trip', () => {
         scryfallId: 'abc-123',
       },
       { name: 'Lightning Bolt', quantity: 1, category: 'main' },
-      { name: 'Force of Will', quantity: 1, category: 'sideboard' },
       { name: 'Zur the Enchanter', quantity: 1, category: 'main', isCommander: true },
+      { name: 'Force of Will', quantity: 1, category: 'sideboard' },
     ]);
     expect(parsed.meta.description).toBe('Test deck');
     expect(parsed.meta.priceUsd).toBe(12.34);

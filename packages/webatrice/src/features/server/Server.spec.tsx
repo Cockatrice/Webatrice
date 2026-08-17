@@ -27,25 +27,34 @@ describe('Server', () => {
       preloadedState: connectedWithRoomsState,
     });
 
-    // "Main Room" also appears as a LeftNav joined-room link, so scope the
-    // table assertions to RoomsList's own `.rooms` container.
-    const roomsTable = within(container.querySelector('.rooms') as HTMLElement);
+    // Rooms table is inside RoomsList's <table>; scope to it so we don't
+    // collide with any tab labels for the same room name in TopBar.
+    const roomsTable = within(container.querySelector('table') as HTMLElement);
     expect(roomsTable.getByText('Name')).toBeInTheDocument();
     expect(roomsTable.getByText('Main Room')).toBeInTheDocument();
-    expect(screen.getByText(/Users connected to server:/)).toBeInTheDocument();
+    // ServerUsers panel shows a "N connected" count instead of the old
+    // "Users connected to server:" copy.
+    expect(screen.getByText(/\d+ connected/)).toBeInTheDocument();
   });
 
   it('renders the sanitized server message html', () => {
-    const { container } = renderWithProviders(<Server />, {
+    renderWithProviders(<Server />, {
       preloadedState: connectedState,
     });
-    expect(container.querySelector('.serverMessage__content')?.innerHTML).toContain('Welcome');
+    // Server MOTD is `<b>Welcome</b>` from the fixture, injected via
+    // dangerouslySetInnerHTML on the new ServerMotd panel. The old
+    // `.serverMessage__content` container class is gone, so assert on
+    // the rendered <b> tag directly.
+    const bold = screen.getByText('Welcome');
+    expect(bold.tagName).toBe('B');
   });
 
   it('renders without rooms', () => {
     const { container } = renderWithProviders(<Server />, {
       preloadedState: connectedState,
     });
-    expect(container.querySelector('.server-rooms')).toBeInTheDocument();
+    // Empty-state row from RoomsList's <tbody> is the new "no rooms" signal;
+    // the old `.server-rooms` container class no longer exists.
+    expect(within(container).getByText(/No rooms available\./)).toBeInTheDocument();
   });
 });

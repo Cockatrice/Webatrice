@@ -135,7 +135,7 @@ export interface IGameResponse {
   gameHostChanged(gameId: number, hostId: number): void;
   kicked(gameId: number): void;
   gameSay(gameId: number, playerId: number, message: string, timeReceived: number): void;
-  cardMoved(gameId: number, playerId: number, data: Event_MoveCard): void;
+  cardMoved(gameId: number, playerId: number, data: Event_MoveCard, isUndoDraw?: boolean): void;
   cardFlipped(gameId: number, playerId: number, data: Event_FlipCard): void;
   cardDestroyed(gameId: number, playerId: number, data: Event_DestroyCard): void;
   cardAttached(gameId: number, playerId: number, data: Event_AttachCard): void;

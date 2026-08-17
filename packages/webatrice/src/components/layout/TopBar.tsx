@@ -3,6 +3,7 @@ import { useLocation, useNavigate, generatePath, matchPath } from 'react-router-
 import {
   User, LogOut, Home as HomeIcon, Swords, Library, LibraryBig,
   UserCircle2, Settings as SettingsIcon, FileText, X, Circle, Grid3x3,
+  Keyboard,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -25,6 +26,7 @@ type TabType =
   | 'deck'    // /deck/:id — deck editor
   | 'my-decks'
   | 'settings'
+  | 'shortcuts'
   | 'account'
   | 'logs'
   | 'player'
@@ -47,6 +49,7 @@ const TYPE_ICON: Record<TabType, LucideIcon> = {
   deck: Library,
   'my-decks': LibraryBig,
   settings: SettingsIcon,
+  shortcuts: Keyboard,
   account: UserCircle2,
   logs: FileText,
   player: User,
@@ -92,7 +95,10 @@ export default function TopBar() {
   useEffect(() => {
     const transient = detectTransientTab(location.pathname);
     if (!transient) return;
-    const shouldStick = transient.type === 'decks' || transient.type === 'deck';
+    const shouldStick =
+      transient.type === 'decks' ||
+      transient.type === 'deck' ||
+      transient.type === 'shortcuts';
     if (!shouldStick) return;
     setStickyTabs((prev) => {
       // Deck editor: single-slot — replace the previous 'deck' tab if any.
@@ -100,7 +106,7 @@ export default function TopBar() {
         const others = prev.filter((t) => t.type !== 'deck');
         return [...others, transient];
       }
-      // Decks list: additive, no-op if already present.
+      // Decks list / Shortcuts: additive, no-op if already present.
       return prev.some((t) => t.key === transient.key) ? prev : [...prev, transient];
     });
   }, [location.pathname]);
@@ -258,10 +264,10 @@ export default function TopBar() {
 
   const handleClose = (tab: Tab) => {
     tab.onClose?.();
-    // Sticky (decks / deck editor) tabs need to be removed from the
-    // sticky list too — otherwise the useEffect above would re-add
-    // them on the next render.
-    if (tab.type === 'decks' || tab.type === 'deck') {
+    // Sticky (decks / deck editor / shortcuts) tabs need to be removed
+    // from the sticky list too — otherwise the effect above would leave
+    // them pinned even after the user navigates away.
+    if (tab.type === 'decks' || tab.type === 'deck' || tab.type === 'shortcuts') {
       setStickyTabs((prev) => prev.filter((t) => t.key !== tab.key));
     }
     if (activeKey === tab.key) {
@@ -307,22 +313,6 @@ export default function TopBar() {
         {/* Right cluster */}
         <div className="flex items-center gap-2 shrink-0 pl-3 pr-4">
           <button
-            onClick={() => setSnapGridVisible(!snapGridVisible)}
-            className={[
-              'flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors',
-              // Toggled-on state gets the accent color + a subtle bg so
-              // the state is obvious at a glance. Toggled-off looks like
-              // the neighboring Decks button.
-              snapGridVisible
-                ? 'bg-accent/20 text-accent hover:bg-accent/30'
-                : 'text-text-secondary hover:text-text-primary hover:bg-bg-elevated',
-            ].join(' ')}
-            title={snapGridVisible ? 'Hide snap grid' : 'Show snap grid'}
-            aria-pressed={snapGridVisible}
-          >
-            <Grid3x3 size={16} /> Snap grid
-          </button>
-          <button
             onClick={() => navigate(generatePath(RouteEnum.DECKS))}
             className="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium text-text-secondary hover:text-text-primary hover:bg-bg-elevated transition-colors"
             title="View your decks"
@@ -330,7 +320,13 @@ export default function TopBar() {
             <Library size={16} /> Decks
           </button>
           <div className="w-px h-6 bg-border-subtle mx-1" />
-          <UserMenu userName={user?.name ?? null} onSignOut={() => webClient.request.authentication.disconnect()} />
+          <UserMenu
+            userName={user?.name ?? null}
+            snapGridVisible={snapGridVisible}
+            onToggleSnapGrid={() => setSnapGridVisible(!snapGridVisible)}
+            onOpenShortcuts={() => navigate(generatePath(RouteEnum.SHORTCUTS))}
+            onSignOut={() => webClient.request.authentication.disconnect()}
+          />
         </div>
       </div>
     </header>
@@ -397,10 +393,19 @@ function TabList({ tabs, activeKey, onActivate, onClose }: TabListProps) {
 
 interface UserMenuProps {
   userName: string | null;
+  snapGridVisible: boolean;
+  onToggleSnapGrid: () => void;
+  onOpenShortcuts: () => void;
   onSignOut: () => void;
 }
 
-function UserMenu({ userName, onSignOut }: UserMenuProps) {
+function UserMenu({
+  userName,
+  snapGridVisible,
+  onToggleSnapGrid,
+  onOpenShortcuts,
+  onSignOut,
+}: UserMenuProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -434,6 +439,30 @@ function UserMenu({ userName, onSignOut }: UserMenuProps) {
           <div className="px-3 py-2 border-b border-border-subtle">
             <span className="text-sm font-medium text-text-primary truncate">{displayName}</span>
           </div>
+          <button
+            onClick={onToggleSnapGrid}
+            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-text-secondary hover:text-text-primary hover:bg-bg-elevated transition-colors"
+            aria-pressed={snapGridVisible}
+          >
+            <Grid3x3 size={14} />
+            <span className="flex-1 text-left">Snap grid</span>
+            {snapGridVisible && (
+              <span className="text-xs text-accent" aria-hidden>
+                ✓
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => {
+              setOpen(false);
+              onOpenShortcuts();
+            }}
+            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-text-secondary hover:text-text-primary hover:bg-bg-elevated transition-colors"
+          >
+            <Keyboard size={14} />
+            <span className="flex-1 text-left">Shortcuts</span>
+          </button>
+          <div className="my-1 border-t border-border-subtle" />
           <button
             onClick={() => {
               setOpen(false);
@@ -478,6 +507,9 @@ function detectTransientTab(pathname: string): Tab | null {
   }
   if (matchPath({ path: RouteEnum.SETTINGS, end: true }, pathname)) {
     return { key: 'settings', type: 'settings', title: 'Settings', route: pathname, closeable: true };
+  }
+  if (matchPath({ path: RouteEnum.SHORTCUTS, end: true }, pathname)) {
+    return { key: 'shortcuts', type: 'shortcuts', title: 'Shortcuts', route: pathname, closeable: true };
   }
   if (matchPath({ path: RouteEnum.ACCOUNT, end: true }, pathname)) {
     return { key: 'account', type: 'account', title: 'Account', route: pathname, closeable: true };

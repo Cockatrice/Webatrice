@@ -10,6 +10,7 @@ import { Login } from '@app/features/login';
 import { Room } from '@app/features/rooms';
 import { Server } from '@app/features/server';
 import { Settings } from '@app/features/settings';
+import { Shortcuts } from '@app/features/shortcuts';
 import { Initialize, Unsupported } from '@app/features/shell';
 
 const AppShellRoutes = () => (
@@ -26,6 +27,7 @@ const AppShellRoutes = () => (
       <Route path={RouteEnum.ROOM} element={<Room />} />
       <Route path={RouteEnum.SERVER} element={<Server />} />
       <Route path={RouteEnum.SETTINGS} element={<Settings />} />
+      <Route path={RouteEnum.SHORTCUTS} element={<Shortcuts />} />
       <Route path={RouteEnum.LOGIN} element={<Login />} />
       <Route path={RouteEnum.UNSUPPORTED} element={<Unsupported />} />
     </Routes>

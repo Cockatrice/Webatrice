@@ -11,6 +11,7 @@ export enum RouteEnum {
   ADMINISTRATION = '/administration',
   REPLAYS = '/replays',
   SETTINGS = '/settings',
+  SHORTCUTS = '/shortcuts',
   INITIALIZE = '/initialize',
   UNSUPPORTED = '/unsupported',
 }

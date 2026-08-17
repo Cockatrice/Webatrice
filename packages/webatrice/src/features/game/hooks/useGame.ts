@@ -107,7 +107,30 @@ export function useGame(): Game {
     getSelectedCards,
   });
 
-  useGameShortcuts({ gameId, onRequestConcede: dialogs.openConcede });
+  useGameShortcuts({
+    gameId,
+    onRequestConcede: dialogs.openConcede,
+    onRequestDrawMultiple: dialogs.handleRequestDrawN,
+    onRequestUndoDraw: dialogs.handleRequestUndoDraw,
+    onRequestRollDie: dialogs.openRollDie,
+    onRequestLeave: dialogs.openLeaveConfirm,
+    onRequestViewSideboard: dialogs.openViewSideboard,
+    onRequestSortHandByType: () => dialogs.handleRequestSortHandBy('maintype'),
+    onRequestViewLibrary: dialogs.openViewLibrary,
+    onRequestViewGraveyard: dialogs.openViewGraveyard,
+    onRequestPlayTop: () => dialogs.handleRequestPlayTop(false),
+    onRequestMoveTopToGrave: () => dialogs.handleRequestMoveTopCardToZone('grave'),
+    onRequestMoveTopNToGrave: () => dialogs.handleRequestMoveTopNToZone('grave'),
+    // Esc close-recent-view: pops the topmost zone-view dialog if any
+    // exist. Returns whether it actually consumed the keystroke so the
+    // shortcut handler can decide to preventDefault or fall through.
+    onCloseRecentZoneView: () => {
+      const top = dialogs.zoneViews[dialogs.zoneViews.length - 1];
+      if (!top) return false;
+      dialogs.handleCloseZoneView(top.playerId, top.zoneName);
+      return true;
+    },
+  });
 
   return {
     ...current,

@@ -76,9 +76,13 @@ describe('usePhaseBar', () => {
       result.current.handlePhaseClick(Phase.DeclareAttackers);
     });
 
+    // handlePhaseClick now passes an optimistic rollback callback as
+    // the third arg — assert the leading positional args, allow the
+    // options bag with an onError handler.
     expect(webClient.request.game.setActivePhase).toHaveBeenCalledWith(
       1,
       { phase: Phase.DeclareAttackers },
+      expect.objectContaining({ onError: expect.any(Function) }),
     );
   });
 

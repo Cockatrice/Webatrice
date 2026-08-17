@@ -134,9 +134,7 @@ describe('LoginForm — hashed-password gating', () => {
 
   const hasRemember = (root: HTMLElement) => Boolean(root.querySelector('input[name="remember"]'));
   const hasAutoConnect = (root: HTMLElement) =>
-    Boolean(Array.from(root.querySelectorAll('.MuiFormControlLabel-root')).find((n) =>
-      n.textContent?.includes('LoginForm.label.autoConnect'),
-    ));
+    Boolean(root.querySelector('input[name="autoConnect"]'));
 
   test('hides Remember + Auto Connect when the host does not support hashed passwords', () => {
     const { container } = renderWith(

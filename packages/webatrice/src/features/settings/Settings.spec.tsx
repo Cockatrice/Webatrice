@@ -28,7 +28,6 @@ describe('Settings', () => {
   it('renders all default-binding accordion groups inside the shortcuts panel', () => {
     renderWithProviders(<Settings />, { preloadedState: connectedState });
 
-    expect(screen.getByText(/ShortcutsTab\.group\.global/)).toBeInTheDocument();
     expect(screen.getByText(/ShortcutsTab\.group\.game$/)).toBeInTheDocument();
     expect(screen.getByText(/ShortcutsTab\.group\.gamePhases/)).toBeInTheDocument();
     expect(screen.getByText(/ShortcutsTab\.group\.deckEditor/)).toBeInTheDocument();
@@ -39,7 +38,7 @@ describe('Settings', () => {
     renderWithProviders(<Settings />, { preloadedState: connectedState });
 
     expect(screen.getByText(/ShortcutsTab\.action\.deck\.save/)).toBeInTheDocument();
-    expect(screen.getByText(/ShortcutsTab\.action\.app\.openSettings/)).toBeInTheDocument();
+    expect(screen.getByText(/ShortcutsTab\.action\.chat\.focus/)).toBeInTheDocument();
 
     const searchInput = screen.getByLabelText(/ShortcutsTab\.search/);
     await act(async () => {
@@ -47,7 +46,7 @@ describe('Settings', () => {
     });
 
     expect(screen.getByText(/ShortcutsTab\.action\.deck\.save/)).toBeInTheDocument();
-    expect(screen.queryByText(/ShortcutsTab\.action\.app\.openSettings/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/ShortcutsTab\.action\.chat\.focus/)).not.toBeInTheDocument();
   });
 
   it('shows the no-results message when the search filters everything out', async () => {

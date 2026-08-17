@@ -35,7 +35,9 @@ describe('Room (integration)', () => {
     );
 
     expect(container.querySelector('.room-view')).toBeInTheDocument();
-    expect(screen.getByText(/Users in this room:/)).toBeInTheDocument();
+    // Side pane is now RoomUsers with Buddies + Players Online cards; the
+    // old "Users in this room:" copy was replaced by these headings.
+    expect(screen.getByRole('heading', { name: 'Players Online' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Send' })).toBeInTheDocument();
   });
 

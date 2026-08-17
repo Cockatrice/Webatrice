@@ -1,12 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import Accordion from '@mui/material/Accordion';
-import AccordionDetails from '@mui/material/AccordionDetails';
-import AccordionSummary from '@mui/material/AccordionSummary';
-import Paper from '@mui/material/Paper';
-import TextField from '@mui/material/TextField';
-import Typography from '@mui/material/Typography';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import { ChevronDown } from 'lucide-react';
 
 import { shortcuts, useAppSelector } from '@app/store';
 
@@ -15,11 +9,8 @@ import { ActionId, ShortcutGroupId, ShortcutScope } from '../types';
 import SequenceEdit from './SequenceEdit';
 import ShortcutsRow from './ShortcutsRow';
 
-import './ShortcutsTab.css';
-
-// Display order; matches Cockatrice's group ordering pattern (Global → Game → Editor).
+// Display order; matches Cockatrice's group ordering pattern (Game → Editor).
 const GROUP_ORDER: ShortcutGroupId[] = [
-  'global',
   'game',
   'gamePhases',
   'deckEditor',
@@ -32,6 +23,7 @@ const ShortcutsTab = () => {
 
   const [search, setSearch] = useState('');
   const [editingActionId, setEditingActionId] = useState<ActionId | null>(null);
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<ShortcutGroupId>>(new Set());
 
   // Static grouping; defaults map doesn't change at runtime.
   const grouped = useMemo(() => {
@@ -102,56 +94,102 @@ const ShortcutsTab = () => {
 
   const hasResults = GROUP_ORDER.some((g) => filteredGroups[g].length > 0);
 
+  const toggleGroup = (groupId: ShortcutGroupId) => {
+    setCollapsedGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(groupId)) {
+        next.delete(groupId);
+      } else {
+        next.add(groupId);
+      }
+      return next;
+    });
+  };
+
   return (
-    <Paper>
-      <div className="ShortcutsTab__header">
-        <Typography variant="h6">{t('ShortcutsTab.title')}</Typography>
-        <Typography variant="body2" color="text.secondary">
+    <div className="max-w-4xl mx-auto">
+      <div className="mb-4">
+        <h1 className="font-modern text-xl font-semibold text-text-primary">
+          {t('ShortcutsTab.title')}
+        </h1>
+        <p className="text-sm text-text-secondary mt-1">
           {t('ShortcutsTab.description')}
-        </Typography>
+        </p>
       </div>
-      <div className="ShortcutsTab__search">
-        <TextField
-          fullWidth
-          size="small"
-          label={t('ShortcutsTab.search')}
+      <div className="mb-4">
+        <input
+          type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
+          placeholder={t('ShortcutsTab.search')}
+          aria-label={t('ShortcutsTab.search')}
+          className={[
+            'w-full bg-bg-base border border-border-subtle rounded-md',
+            'px-3 py-2 text-sm text-text-primary placeholder:text-text-muted',
+            'focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent',
+          ].join(' ')}
         />
       </div>
 
       {!hasResults ? (
-        <div className="ShortcutsTab__noResults">{t('ShortcutsTab.noResults')}</div>
+        <div className="p-4 text-center text-sm text-text-muted">
+          {t('ShortcutsTab.noResults')}
+        </div>
       ) : (
-        GROUP_ORDER.map((groupId) => {
-          const ids = filteredGroups[groupId];
-          if (ids.length === 0) {
-            return null;
-          }
-          return (
-            <Accordion key={groupId} defaultExpanded>
-              <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                <Typography>{t(`ShortcutsTab.group.${groupId}`)}</Typography>
-              </AccordionSummary>
-              <AccordionDetails>
-                {ids.map((id) => (
-                  <ShortcutsRow
-                    key={id}
-                    actionId={id}
-                    conflicts={conflictsByAction.get(id) ?? []}
-                    onEdit={() => setEditingActionId(id)}
+        <div className="flex flex-col gap-3">
+          {GROUP_ORDER.map((groupId) => {
+            const ids = filteredGroups[groupId];
+            if (ids.length === 0) {
+              return null;
+            }
+            const collapsed = collapsedGroups.has(groupId);
+            return (
+              <section
+                key={groupId}
+                className="rounded-lg bg-bg-surface border border-border-subtle overflow-hidden"
+              >
+                <button
+                  type="button"
+                  onClick={() => toggleGroup(groupId)}
+                  className="w-full flex items-center gap-2 px-4 py-3 text-left hover:bg-bg-elevated transition-colors"
+                  aria-expanded={!collapsed}
+                >
+                  <ChevronDown
+                    size={16}
+                    className={[
+                      'text-text-muted transition-transform',
+                      collapsed ? '-rotate-90' : '',
+                    ].join(' ')}
                   />
-                ))}
-              </AccordionDetails>
-            </Accordion>
-          );
-        })
+                  <span className="text-sm font-semibold text-text-primary">
+                    {t(`ShortcutsTab.group.${groupId}`)}
+                  </span>
+                  <span className="text-xs text-text-muted ml-auto">
+                    {ids.length}
+                  </span>
+                </button>
+                {!collapsed && (
+                  <div className="border-t border-border-subtle">
+                    {ids.map((id) => (
+                      <ShortcutsRow
+                        key={id}
+                        actionId={id}
+                        conflicts={conflictsByAction.get(id) ?? []}
+                        onEdit={() => setEditingActionId(id)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </section>
+            );
+          })}
+        </div>
       )}
 
       {editingActionId && (
         <SequenceEdit actionId={editingActionId} onClose={() => setEditingActionId(null)} />
       )}
-    </Paper>
+    </div>
   );
 };
 

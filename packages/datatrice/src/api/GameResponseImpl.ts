@@ -65,8 +65,8 @@ export class GameResponseImpl implements WebsocketTypes.IGameResponse {
     this.store.dispatch(GameActions.gameSay({ gameId, playerId, message, timeReceived }));
   }
 
-  cardMoved(gameId: number, playerId: number, data: Event_MoveCard): void {
-    this.store.dispatch(GameActions.cardMoved({ gameId, playerId, data }));
+  cardMoved(gameId: number, playerId: number, data: Event_MoveCard, isUndoDraw?: boolean): void {
+    this.store.dispatch(GameActions.cardMoved({ gameId, playerId, data, isUndoDraw }));
   }
 
   cardFlipped(gameId: number, playerId: number, data: Event_FlipCard): void {

@@ -29,12 +29,14 @@ import {
   formatArrowCreated,
   formatCardAttached,
   formatCardsRevealed,
+  formatCardPeeked,
   formatCardAttrChanged,
   formatCardAttrChangedBulk,
   formatCardCounterChanged,
   formatCardDestroyed,
   formatCardFlipped,
   formatCardMoved,
+  formatCardUndoneDraw,
   formatCardsDrawn,
   formatCounterSet,
   formatGameStart,
@@ -48,7 +50,7 @@ export function registerGameListeners(mw: ListenerMiddlewareInstance<unknown>): 
   mw.startListening({
     actionCreator: Actions.cardMoved,
     effect: (action, api) => {
-      const { gameId, playerId, data } = action.payload;
+      const { gameId, playerId, data, isUndoDraw } = action.payload;
       const {
         cardId, cardName, startPlayerId, startZone, position,
         targetPlayerId, targetZone, x, y, newCardId, faceDown, newCardProviderId,
@@ -103,6 +105,18 @@ export function registerGameListeners(mw: ListenerMiddlewareInstance<unknown>): 
               gameId, playerId: targetPlayerId, zoneName: effectiveTargetZone, delta: 1,
             }));
           }
+          // Undo-draw fires even when we can't see the card (opponent's
+          // hand → deck is hidden on both ends). The log line doesn't
+          // need the card name — "X undoes their last draw" is the
+          // Cockatrice-parity output — so dispatch it here before the
+          // hidden-card early return, otherwise opponent undo-draws
+          // are silently swallowed for the recipient.
+          if (isUndoDraw) {
+            api.dispatch(Actions.gameMessageAppended({
+              gameId, playerId,
+              message: formatCardUndoneDraw(game, playerId, cardName ?? ''),
+            }));
+          }
           return;
         }
         // Hidden-card reveal-reorder path: dispatch the snapshot splice directly.
@@ -139,8 +153,12 @@ export function registerGameListeners(mw: ListenerMiddlewareInstance<unknown>): 
         : buildEmptyCard(effectiveNewId, cardName, x, y, faceDown, newCardProviderId ?? '');
 
       // Leaving the battlefield wipes transient card state (tapped, counters, etc.) to
-      // mirror desktop Cockatrice's CardItem::resetState(); see resetCardState.
-      const movedCard = isLeavingBattlefield ? resetCardState(baseCard) : baseCard;
+      // mirror desktop Cockatrice's CardItem::resetState(); see resetCardState. STACK
+      // is the one target that KEEPS annotations (server_abstract_player.cpp:429 passes
+      // `keepAnnotations = (targetzone == STACK)` — matches Cockatrice's own carve-out).
+      const movedCard = isLeavingBattlefield
+        ? resetCardState(baseCard, effectiveTargetZone === ZoneName.STACK)
+        : baseCard;
 
       // Capture before the move dispatch: if an open zone-view (deck) snapshot
       // holds this zone, the moved card must be pruned from it (see below).
@@ -234,6 +252,36 @@ export function registerGameListeners(mw: ListenerMiddlewareInstance<unknown>): 
               // remove-then-insert net-zeroes cardCount (each side
               // -1/+1) and leaves the target zone with only the
               // server-authoritative entry keyed by the new id.
+              //
+              // Rebase off the optimistically-inserted card, not the
+              // freshly-built `movedCard`: the optimistic path
+              // already removed the source entry, so `removedCard`
+              // above is undefined and `movedCard` fell back to
+              // `buildEmptyCard` — which wipes annotation, counters,
+              // PT, etc. The optimistic card in `targetZoneState`
+              // still carries the source's full state (it was
+              // dispatched via `{ ...sourceCard, x, y }`), so use it
+              // as the base and just re-key to the server id + apply
+              // the fields the wire actually updated.
+              //
+              // Matters most for the "Owner: <name>" annotation on
+              // reverse cross-player moves (server only re-sets it
+              // when the annotation doesn't already contain "Owner:",
+              // so a return trip to the original owner never
+              // re-broadcasts it — the client is the only line of
+              // defense). Same principle for other client-tracked
+              // fields the wire omits.
+              const optimisticCard = targetZoneState.byId[resolvedCardId];
+              const migratedCard = optimisticCard
+                ? cloneWith(ServerInfo_CardSchema, optimisticCard, {
+                  id: effectiveId,
+                  x: movedCard.x,
+                  y: movedCard.y,
+                  faceDown: movedCard.faceDown,
+                  name: movedCard.name || optimisticCard.name,
+                  providerId: movedCard.providerId || optimisticCard.providerId,
+                })
+                : movedCard;
               api.dispatch(Actions.cardRemovedFromZone({
                 gameId,
                 playerId: targetPlayerId,
@@ -244,7 +292,7 @@ export function registerGameListeners(mw: ListenerMiddlewareInstance<unknown>): 
                 gameId,
                 playerId: targetPlayerId,
                 zoneName: effectiveTargetZone,
-                card: movedCard,
+                card: migratedCard,
               }));
             } else if (targetZoneState.byId[effectiveId]) {
               api.dispatch(Actions.cardFieldsUpdated({
@@ -360,30 +408,25 @@ export function registerGameListeners(mw: ListenerMiddlewareInstance<unknown>): 
           toPlayerId: targetPlayerId,
           toCardId: effectiveNewId,
         }));
-        // Second pass: if the webatrice UI already reparented children
-        // optimistically to (targetPlayerId, resolvedCardId) before the
-        // server assigned effectiveNewId, the first reparent above
-        // (which matches on fromPlayerId=startPlayerId) misses them.
-        // Carry them over the id migration too. Idempotent when no
-        // optimistic reparent happened — no child matches.
-        if (effectiveNewId !== resolvedCardId) {
-          api.dispatch(Actions.cardAttachmentReparented({
-            gameId,
-            fromPlayerId: targetPlayerId,
-            fromCardId: resolvedCardId,
-            toPlayerId: targetPlayerId,
-            toCardId: effectiveNewId,
-          }));
-        }
       }
 
-      const message = formatCardMoved(
-        game, playerId,
-        { ...data, targetZone: effectiveTargetZone },
-        { resolvedCardName: removedCard?.name ?? '' },
-      );
-      if (message) {
+      if (isUndoDraw) {
+        // Cockatrice-parity: undo-draw suppresses the generic move log
+        // in favour of "X undoes their last draw" (optionally with the
+        // returned card name in parens when known).
+        const message = formatCardUndoneDraw(
+          game, playerId, removedCard?.name ?? cardName ?? '',
+        );
         api.dispatch(Actions.gameMessageAppended({ gameId, playerId, message }));
+      } else {
+        const message = formatCardMoved(
+          game, playerId,
+          { ...data, targetZone: effectiveTargetZone },
+          { resolvedCardName: removedCard?.name ?? '' },
+        );
+        if (message) {
+          api.dispatch(Actions.gameMessageAppended({ gameId, playerId, message }));
+        }
       }
     },
   });
@@ -621,6 +664,24 @@ export function registerGameListeners(mw: ListenerMiddlewareInstance<unknown>): 
       // by the cardsRevealed reducer's isAutoTopReveal branch), not
       // via the popup — matches Cockatrice's desktop UX.
       if (isAutoTopReveal) return;
+      // Peek reveals — any card in the payload flagged `faceDown` means
+      // the server is answering an `actPeek` (a hidden card on the
+      // battlefield or in an opponent's zone that the source revealed
+      // to itself). Cockatrice suppresses the receiver dialog for peeks
+      // (player_event_handler.cpp:474-484) and emits one log line per
+      // peeked card instead. The general `formatCardsRevealed` above
+      // returns null for the peek branch (comment on that function),
+      // so we emit peek logs here per-card, then return before the
+      // popup dispatch.
+      const isPeek = data.cards.some((c) => c.faceDown);
+      if (isPeek) {
+        for (const card of data.cards) {
+          if (!card.faceDown) continue;
+          const peekMessage = formatCardPeeked(game, playerId, card.id, card.name ?? '');
+          api.dispatch(Actions.gameMessageAppended({ gameId, playerId, message: peekMessage }));
+        }
+        return;
+      }
       // Also seed the source's zone.revealedCards on OUR client, so the
       // existing zoneViewCardRemoved / zoneViewCardReordered auto-prune
       // paths keep the reveal snapshot in sync when we (or anyone) move

@@ -80,6 +80,8 @@ const NOOP_GAME_DIALOGS: GameDialogs = {
   createTokenOpen: false,
   sideboardOpen: false,
   viewSideboardOpen: false,
+  viewLibraryOpen: false,
+  viewGraveyardOpen: false,
   gameInfoOpen: false,
   concedeConfirm: null,
   leaveConfirm: false,

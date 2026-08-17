@@ -10,6 +10,13 @@ import { LocationProbe, buildEventGameJoined, buildEventGameStateChanged, regist
 
 registerGameBoardHooks();
 
+// PlayerBox rewrite dropped `player-board-N`; identify a seated cell via the
+// life-total anchor's `[data-arrow-target-player-id]` instead.
+function findBoardCell(playerId: number): HTMLElement | null {
+  const anchor = document.querySelector(`[data-arrow-target-player-id="${playerId}"]`);
+  return anchor ? (anchor.closest('.game__board-cell') as HTMLElement | null) : null;
+}
+
 describe('Game end navigation', () => {
   it('navigates to /server when the local user is kicked', async () => {
     renderFeatureScreen(
@@ -25,7 +32,7 @@ describe('Game end navigation', () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByTestId('player-board-1')).toBeInTheDocument();
+      expect(findBoardCell(1)).not.toBeNull();
     });
 
     act(() => {
@@ -51,7 +58,7 @@ describe('Game end navigation', () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByTestId('player-board-1')).toBeInTheDocument();
+      expect(findBoardCell(1)).not.toBeNull();
     });
 
     act(() => {

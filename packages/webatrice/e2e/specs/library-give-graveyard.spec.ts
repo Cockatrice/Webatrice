@@ -98,11 +98,19 @@ test('view library → drag to battlefield → give to opponent → opponent gra
     await expect.poll(() => joinerGame.zoneStackCount('grave')).toBe(1);
     await expect(joinerGame.cardsOnBoard(joinerGame.localBoard)).toHaveCount(0);
 
-    // Teardown: host leaves (reverts joiner to lobby), joiner leaves via deck-select.
+    // Teardown: host leaves (reverts joiner to lobby, since the current
+    // Game.tsx replaces GameBoard with the full-page GameLobby whenever
+    // `game && !isStarted`). Joiner then leaves via the lobby's Leave
+    // button.
     await hostGame.leaveGame();
     await joinerGame.deckSelect.waitForOpen();
     await joinerGame.deckSelect.leaveGame();
-    await expect(joinerGame.container).toBeHidden({ timeout: 30_000 });
+    // The GameLobby-driven leave path doesn't trigger
+    // useGameLifecycleNavigation (that hook only mounts on GameBoard),
+    // so the SPA doesn't auto-route to /server. Instead the empty-state
+    // fallback (`game-empty` testid) becomes visible once the local
+    // `games` slice removes the game.
+    await expect(joinerPage.getByTestId('game-empty')).toBeVisible({ timeout: 30_000 });
   } finally {
     await hostCtx.close();
     await joinerCtx.close();

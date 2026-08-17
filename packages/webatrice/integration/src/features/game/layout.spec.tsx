@@ -1,4 +1,4 @@
-import { act, waitFor, screen, within } from '@testing-library/react';
+import { act, waitFor } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
 import { store } from '../../helpers/setup';
@@ -10,6 +10,22 @@ import { buildEventGameJoined, buildEventGameStateChanged, registerGameBoardHook
 
 registerGameBoardHooks();
 
+// PlayerBox rewrite removed the `data-testid="player-board-N"` marker. The
+// current DOM identifies each seated cell via `.game__board-cell` containing
+// `[data-arrow-target-player-id="N"]` (the life-total anchor). Helper mirrors
+// the previous test intent while staying attached to markers PlayerBox still
+// emits.
+function findBoardCell(playerId: number): HTMLElement | null {
+  const anchor = document.querySelector(`[data-arrow-target-player-id="${playerId}"]`);
+  return anchor ? (anchor.closest('.game__board-cell') as HTMLElement | null) : null;
+}
+
+function expectBoardCell(playerId: number): HTMLElement {
+  const cell = findBoardCell(playerId);
+  expect(cell, `expected cell for player ${playerId}`).not.toBeNull();
+  return cell!;
+}
+
 describe('Game board layout', () => {
   it('renders every seated player board as players join', async () => {
     renderFeatureScreen(<Game />);
@@ -20,11 +36,11 @@ describe('Game board layout', () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByTestId('player-board-1')).toBeInTheDocument();
+      expect(findBoardCell(1)).not.toBeNull();
     });
 
     // All seated players render at once: the local board plus each opponent.
-    expect(screen.getByTestId('player-board-2')).toBeInTheDocument();
+    expect(findBoardCell(2)).not.toBeNull();
 
     act(() => {
       store.dispatch(games.Actions.gameStateChanged({ gameId: 42, data: buildEventGameStateChanged([1, 2, 3], 1), }));
@@ -32,10 +48,10 @@ describe('Game board layout', () => {
 
     await waitFor(() => {
       // A third player adds a third board (the single-column 3-stack).
-      expect(screen.getByTestId('player-board-3')).toBeInTheDocument();
+      expect(findBoardCell(3)).not.toBeNull();
     });
-    expect(screen.getByTestId('player-board-1')).toBeInTheDocument();
-    expect(screen.getByTestId('player-board-2')).toBeInTheDocument();
+    expect(findBoardCell(1)).not.toBeNull();
+    expect(findBoardCell(2)).not.toBeNull();
   });
 
   it('renders only the local board when no opponent has joined yet', async () => {
@@ -47,17 +63,17 @@ describe('Game board layout', () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByTestId('player-board-1')).toBeInTheDocument();
+      expect(findBoardCell(1)).not.toBeNull();
     });
     // A lone player gets the whole board to themselves: no second cell.
-    expect(screen.queryByTestId('player-board-2')).not.toBeInTheDocument();
+    expect(findBoardCell(2)).toBeNull();
 
     act(() => {
       store.dispatch(games.Actions.gameStateChanged({ gameId: 42, data: buildEventGameStateChanged([1, 2], 1), }));
     });
 
     await waitFor(() => {
-      expect(screen.getByTestId('player-board-2')).toBeInTheDocument();
+      expect(findBoardCell(2)).not.toBeNull();
     });
   });
 
@@ -70,32 +86,19 @@ describe('Game board layout', () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByTestId('player-board-2')).toHaveClass('player-board--mirrored');
+      expect(findBoardCell(2)).not.toBeNull();
     });
 
-    expect(screen.getByTestId('player-board-1')).not.toHaveClass('player-board--mirrored');
+    // Mirroring is now expressed via `game__board-cell--mirrored`; the
+    // legacy `player-board--mirrored` class shipped with the removed
+    // PlayerBoard component.
+    expect(expectBoardCell(2)).toHaveClass('game__board-cell--mirrored');
+    expect(expectBoardCell(1)).not.toHaveClass('game__board-cell--mirrored');
   });
 
-  it('renders the deck/graveyard/exile zones inside the info panel in desktop order', async () => {
-    renderFeatureScreen(<Game />);
-
-    act(() => {
-      store.dispatch(games.Actions.gameJoined({ data: buildEventGameJoined({ gameId: 42, localPlayerId: 1, hostId: 1 }), }));
-      store.dispatch(games.Actions.gameStateChanged({ gameId: 42, data: buildEventGameStateChanged([1, 2], 1), }));
-    });
-
-    await waitFor(() => {
-      expect(screen.getByTestId('player-board-1')).toBeInTheDocument();
-    });
-
-    const localBoard = screen.getByTestId('player-board-1');
-    const zones = localBoard.querySelector('.player-info-panel__zones')!;
-    const labels = Array.from(zones.querySelectorAll('.zone-stack__label')).map(
-      (n) => n.textContent,
-    );
-    expect(labels).toEqual(['Deck', 'Hand', 'Graveyard', 'Exile']);
-    // Stack is now its own column, not a zone inside the rail.
-    expect(within(zones as HTMLElement).queryByText('Stack')).not.toBeInTheDocument();
-    expect(within(localBoard).getByTestId('stack-column-1')).toBeInTheDocument();
-  });
+  // Removed: `renders the deck/graveyard/exile zones inside the info panel in
+  // desktop order` — PlayerInfoPanel's `.player-info-panel__zones` /
+  // `.zone-stack__label` DOM was superseded by the PlayerBox rewrite, which
+  // renders deck/graveyard/exile as its own zone pile widgets without a
+  // labeled rail. There is no direct successor structure to assert against.
 });

@@ -59,7 +59,16 @@ function deckPositionToRevealIndex(
 export const cardReducers = {
   cardMoved: (() => {}) as CaseReducer<
     GamesState,
-    PayloadAction<{ gameId: number; playerId: number; data: Event_MoveCard }>
+    PayloadAction<{
+      gameId: number;
+      playerId: number;
+      data: Event_MoveCard;
+      /** True when the surrounding GameEventContext carries
+       *  `Context_UndoDraw` — flips the listener into the
+       *  "X undoes their last draw" log path (mirrors Cockatrice's
+       *  logUndoDraw). */
+      isUndoDraw?: boolean;
+    }>
   >,
 
   cardFlipped: ((state, action) => {

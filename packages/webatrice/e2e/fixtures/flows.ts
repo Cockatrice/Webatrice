@@ -32,8 +32,19 @@ async function reachHost(login: LoginPage): Promise<void> {
 // Click the first joinable room (server seeds at least one). Picking the first
 // row rather than naming the room avoids coupling to servatrice seed drift; two
 // sessions both calling this land in the same room.
+//
+// RoomsList.tsx renders each row as a plain <tr> with a single per-row
+// button labelled "Join" (not-yet-joined) or "Open" (already joined).
+// The pre-redo `.rooms` container class is gone; the rooms table is
+// the one <table> under the "Name" column header on /server, so we
+// anchor the button lookup to the table's <tbody>.
 async function joinFirstRoom(page: Page, rooms: RoomsPage): Promise<void> {
-  const firstJoinable = page.locator('.rooms').getByRole('button', { name: /^join$/i }).first();
+  const roomsTable = page.getByRole('table').filter({
+    has: page.getByRole('columnheader', { name: /^name$/i }),
+  });
+  const firstJoinable = roomsTable
+    .getByRole('button', { name: /^(join|open)$/i })
+    .first();
   await expect(firstJoinable).toBeVisible({ timeout: 15_000 });
   await firstJoinable.click();
   await rooms.waitForGameList();

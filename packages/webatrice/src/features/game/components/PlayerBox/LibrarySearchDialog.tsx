@@ -12,6 +12,7 @@ import Card from "./Card";
 import { CARD_HEIGHT, CARD_WIDTH } from "./cardSize";
 import { useHoveredCard } from "./hoveredCard";
 import { useBigCardPreview } from "./bigCardPreview";
+import { lookupCardsCached } from "../../../decks/cardLookup";
 import {
   compareCards,
   groupCards,
@@ -594,34 +595,139 @@ export default function LibrarySearchDialog({
     return m;
   }, [deckCards]);
 
-  // Enrich, filter by query, sort by sortBy, then group. A revealed
-  // card whose name isn't in the deck (rare edge case — e.g. a card
-  // moved INTO our deck from an opponent's zone) falls back to
-  // placeholder metadata so it still shows, just in the "Other" bucket.
+  // Async metadata backfill for cards whose `deckCards` entry lacks
+  // `type_line` (or that aren't in the deck at all — e.g. tokens, or
+  // an opponent's card that ended up in our zone). Without this, those
+  // cards fall through to placeholder meta and bucket to "Other" under
+  // Group by Type — exactly the "cards with types being placed in
+  // Other" bug. Mirrors IncomingRevealDialog's pattern: fetch via
+  // `lookupCardsCached`, then override the group/sort mode until every
+  // unique name has a resolved `type_line`.
+  const [lookupMetaByName, setLookupMetaByName] = useState<Map<string, DeckCard>>(
+    () => new Map(),
+  );
+  const uniqueNames = useMemo(
+    () => new Set(library.map((c) => c.name).filter((n) => n.length > 0)),
+    [library],
+  );
+  useEffect(() => {
+    if (!isOpen || uniqueNames.size === 0) {
+      return;
+    }
+    // Only look up names whose deck-side meta is missing OR has a
+    // null type_line. Names we already have a good bucket for skip
+    // the async round-trip.
+    const needsLookup = Array.from(uniqueNames).filter((name) => {
+      const meta = metaByName.get(name);
+      const lookup = lookupMetaByName.get(name);
+      return (!meta || !meta.type_line) && !lookup;
+    });
+    if (needsLookup.length === 0) {
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      const results = await lookupCardsCached(needsLookup);
+      if (cancelled) {
+        return;
+      }
+      setLookupMetaByName((prev) => {
+        const next = new Map(prev);
+        for (const [name, r] of results) {
+          next.set(name, {
+            id: `lookup-${name}`,
+            card_scryfall_id: r.printings[0]?.scryfallId ?? '',
+            name,
+            mana_cost: r.manaCost ?? null,
+            type_line: r.typeLine ?? null,
+            cmc: r.cmc ?? null,
+            colors: r.colors ?? [],
+            set: r.printings[0]?.set ?? null,
+            collector_number: r.printings[0]?.collectorNumber ?? null,
+            power: r.power ?? null,
+            toughness: r.toughness ?? null,
+            quantity: 1,
+            category: 'main',
+          });
+        }
+        return next;
+      });
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, uniqueNames, metaByName, lookupMetaByName]);
+
+  // Resolved meta per name: deck meta wins, falling back to the async
+  // lookup for anything the deck doesn't cover. If deck meta HAS an
+  // entry but its type_line is null (partial data), fill in from the
+  // lookup so grouping / sorting stops burying it in "Other".
+  const resolveMeta = (name: string, scryfallId: string): DeckCard => {
+    const deck = metaByName.get(name);
+    const lookup = lookupMetaByName.get(name);
+    if (deck && deck.type_line) {
+      return deck;
+    }
+    if (deck && lookup) {
+      return {
+        ...deck,
+        type_line: deck.type_line ?? lookup.type_line,
+        mana_cost: deck.mana_cost ?? lookup.mana_cost,
+        cmc: deck.cmc ?? lookup.cmc,
+        colors: deck.colors.length > 0 ? deck.colors : lookup.colors,
+        power: deck.power ?? lookup.power,
+        toughness: deck.toughness ?? lookup.toughness,
+      };
+    }
+    if (deck) {
+      return deck;
+    }
+    if (lookup) {
+      return lookup;
+    }
+    return {
+      id: `unknown-${name}`,
+      card_scryfall_id: scryfallId,
+      name,
+      mana_cost: null,
+      type_line: null,
+      cmc: null,
+      colors: [],
+      set: null,
+      collector_number: null,
+      power: null,
+      toughness: null,
+      quantity: 1,
+      category: 'main',
+    };
+  };
+
+  // Metadata-loaded gate — same idea as IncomingRevealDialog. Every
+  // unique name in the visible list must have a resolved type_line
+  // before we let Group by Type / Sort by Type / etc. run. Otherwise
+  // a card with real meta racing against one still loading would
+  // temporarily be the only thing outside the "Other" bucket.
+  const metadataLoaded = Array.from(uniqueNames).every((name) => {
+    const deck = metaByName.get(name);
+    if (deck?.type_line) {
+      return true;
+    }
+    return lookupMetaByName.get(name) !== undefined;
+  });
+  const effectiveGroupBy: GroupMode = metadataLoaded ? groupBy : 'none';
+  const effectiveSortBy: SortMode = metadataLoaded ? sortBy : 'none';
+
   const groups = useMemo(() => {
     const enriched: EnrichedCard[] = [];
     for (const hc of library) {
-      const meta = metaByName.get(hc.name) ?? {
-        id: `unknown-${hc.name}`,
-        card_scryfall_id: hc.scryfallId,
-        name: hc.name,
-        mana_cost: null,
-        type_line: null,
-        cmc: null,
-        colors: [],
-        set: null,
-        collector_number: null,
-        power: null,
-        toughness: null,
-        quantity: 1,
-        category: 'main' as const,
-      };
+      const meta = resolveMeta(hc.name, hc.scryfallId);
       if (!matchesQuery(meta, query)) continue;
       enriched.push({ handCard: hc, meta });
     }
-    enriched.sort((a, b) => compareCards(a.meta, b.meta, sortBy));
-    return groupCards(enriched, groupBy);
-  }, [library, metaByName, query, sortBy, groupBy]);
+    enriched.sort((a, b) => compareCards(a.meta, b.meta, effectiveSortBy));
+    return groupCards(enriched, effectiveGroupBy);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [library, metaByName, lookupMetaByName, query, effectiveSortBy, effectiveGroupBy]);
 
   const totalShown = groups.reduce((n, g) => n + g.cards.length, 0);
 
