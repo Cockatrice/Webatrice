@@ -1,19 +1,16 @@
 import { expect, type Locator, type Page } from '@playwright/test';
 
-// Page object for the global connection-status indicator rendered by
-// `src/feature-wrappers/layout/LeftNav.tsx`. The red dot
-// (`span.LeftNav-server__indicator`) is mounted iff `selectIsConnected`
-// (Datatrice: `server.status.state === LOGGED_IN`) returns true; when
-// connection drops the entire `.LeftNav-content` subtree is hidden along
-// with the indicator. There is no dedicated reconnect banner today, so the
-// indicator's visibility is the canonical "is the WebClient still
-// LOGGED_IN" assertion surface for e2e.
-
+// Page object for the global connection-status indicator. The pre-redo
+// LeftNav is gone; TopBar.tsx now renders a small lucide `<Circle>` next
+// to the Webatrice logo whose `aria-label` flips between "Connected"
+// (green) and "Disconnected" (red) off `selectIsConnected` (Datatrice:
+// `server.status.state === LOGGED_IN`). Match by role+name so we don't
+// depend on Tailwind class hashes.
 export class ConnectionStatus {
   constructor(private readonly page: Page) {}
 
   get indicator(): Locator {
-    return this.page.locator('span.LeftNav-server__indicator');
+    return this.page.getByRole('img', { name: /^connected$/i });
   }
 
   async expectConnected(timeoutMs = 5_000): Promise<void> {

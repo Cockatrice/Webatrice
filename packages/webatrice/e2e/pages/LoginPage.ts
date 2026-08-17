@@ -81,11 +81,15 @@ export class LoginPage {
 
   async selectHost(label: string): Promise<void> {
     await this.openHostPicker();
-    // Dropdown options are plain <div>s (no role) with an inline <span>
-    // holding the host name. Match on visible text; the KnownHosts
-    // dropdown lives inside the same <label> subtree.
+    // Dropdown options are plain <div class="group ...">s (no role). Each
+    // row renders the host name and address in adjacent <span>s inside a
+    // wrapping <span class="flex-1 min-w-0 truncate"> — the two collapse
+    // to one textContent like "e2elocalhost:4748" (no separator). Match
+    // the row by the dedicated `<span class="font-medium">{host.name}</span>`
+    // so an anchored equality on the host name doesn't collide with the
+    // address, and no word-boundary tricks are needed.
     const option = this.page.locator('div.group', {
-      hasText: new RegExp(`\\b${label}\\b`, 'i'),
+      has: this.page.locator('span.font-medium', { hasText: new RegExp(`^${label}$`, 'i') }),
     });
     await expect(option.first()).toBeVisible();
     await option.first().click();
@@ -98,7 +102,11 @@ export class LoginPage {
     await this.loginButton.click();
   }
 
-  async register(username: string, password: string, email?: string): Promise<void> {
+  async register(
+    username: string,
+    password: string,
+    options: { email?: string; hostLabel?: string } = {},
+  ): Promise<void> {
     await this.registerButton.click();
     // RegistrationDialog is a DialogShell (role="dialog") aria-labelled
     // "Registration" (RegistrationDialog.i18n.json → RegistrationDialog.title).
@@ -114,26 +122,39 @@ export class LoginPage {
     await dialog.getByLabel(/^password$/i).fill(password);
     await dialog.getByLabel(/confirm password/i).fill(password);
 
-    if (email) {
-      await dialog.getByLabel(/^email$/i).fill(email);
-      await dialog.getByLabel(/confirm email/i).fill(email);
+    if (options.email) {
+      await dialog.getByLabel(/^email$/i).fill(options.email);
+      await dialog.getByLabel(/confirm email/i).fill(options.email);
     }
 
-    // RegisterForm has its own KnownHosts picker with `selectedHost:
-    // undefined` (see RegisterForm.tsx defaultValues), so nothing is
-    // pre-selected. Pick the first non-Add entry from the dropdown.
-    await this.openHostPicker(dialog);
-    // The dropdown menu is a sibling of the trigger inside the same
-    // KnownHosts root; each entry is a <div class="group ...">. Skip
-    // the "Add new host" button (a real <button>) and pick the first
-    // option div.
-    const option = dialog.locator('div.group').first();
-    await expect(option).toBeVisible();
-    await option.click();
+    // RegisterForm mounts its own KnownHosts widget, but the "selected
+    // host" state is shared through useKnownHostsComponent — whatever
+    // the outer form picked (via `selectHost`) is already reflected on
+    // the dialog's Host button. So: read the button's visible text; if
+    // it already names the desired host, skip the dropdown entirely.
+    // This is important because the dropdown menu is positioned
+    // absolutely inside the DialogShell body and gets visually clipped
+    // by the dialog's overflow, making the option unclickable.
+    const picker = this.hostPickerIn(dialog);
+    const pickerText = (await picker.innerText()).toLowerCase();
+    const wantsHost = options.hostLabel?.toLowerCase();
+    const alreadyPicked = wantsHost != null && pickerText.includes(wantsHost);
+    if (!alreadyPicked) {
+      await this.openHostPicker(dialog);
+      const option = options.hostLabel
+        ? dialog.locator('div.group', {
+          has: dialog.locator('span.font-medium', {
+            hasText: new RegExp(`^${options.hostLabel}$`, 'i'),
+          }),
+        }).first()
+        : dialog.locator('div.group').first();
+      await expect(option).toBeVisible();
+      await option.click();
+    }
 
-    // RegisterForm's submit is a plain MUI Button (label "Register").
-    // Locate by text with role=button; there's exactly one enabled
-    // submit-typed button in the dialog once fields validate.
+    // Register submit is a plain <button type="submit"> labelled from
+    // i18n. Match by role name — there's exactly one enabled Register-
+    // named button in the dialog once fields validate.
     const submit = dialog.getByRole('button', { name: /^register$/i });
     await expect(submit).toBeEnabled({ timeout: 15_000 });
     await submit.click();

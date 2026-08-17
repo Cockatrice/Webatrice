@@ -30,13 +30,15 @@ export class RoomsPage {
   constructor(private readonly page: Page) {}
 
   // The Server (rooms) view is ready as soon as the RoomsList's <thead>
-  // renders. `Name` is the first (unique) column header.
+  // renders. `Name` is the first (unique) column header. Servatrice
+  // auto-joins the "General room" for freshly-registered accounts, so
+  // the caller usually lands on /room/:id (games list) instead of
+  // /server (rooms list). Click the pinned Lobby tab first to force
+  // the /server view before asserting.
   async waitForRoomList(): Promise<void> {
-    // TopBar's "Lobby" tab is what proves we're past auth (see
-    // TopBar.tsx — server tab always shows once Layout mounts).
-    await expect(this.page.getByRole('tab', { name: /^lobby$/i })).toBeVisible({
-      timeout: 30_000,
-    });
+    const lobbyTab = this.page.getByRole('tab', { name: /^lobby$/i });
+    await expect(lobbyTab).toBeVisible({ timeout: 30_000 });
+    await lobbyTab.click();
     await expect(this.page.getByRole('columnheader', { name: /^name$/i })).toBeVisible({
       timeout: 30_000,
     });
