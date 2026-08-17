@@ -13,7 +13,6 @@ import { expect, type Locator, type Page } from '@playwright/test';
 // Tailwind DialogShell (portalled `role="dialog"` with `aria-modal`).
 
 // Text used by the KnownHosts dropdown from KnownHosts.i18n.json.
-const HOST_LABEL_TEXT = /^host$/i;
 const ADD_NEW_HOST_TEXT = /add new host/i;
 
 export class LoginPage {
@@ -27,28 +26,20 @@ export class LoginPage {
   }
 
   // The KnownHosts trigger is a plain <button> inside a wrapping
-  // <label> whose leading <span> renders the "Host" text from i18n.
-  // <label> doesn't accessibility-label a <button> (buttons aren't
-  // labellable form elements), so `getByLabel` isn't reliable here —
-  // grab the <label> node containing the localized text and drill
-  // into its child button instead.
+  // <label class="block"> whose leading <span> renders the "Host" text
+  // from i18n. `<label>` doesn't associate with `<button>` per HTML
+  // spec, so we don't trust Chromium's accessible-name derivation —
+  // locate the label by its exact "Host" caption text, then descend to
+  // the button. `:text-is("Host")` guards against "Host Name" / "Host
+  // Address" in KnownHostDialog's own field labels.
   get hostPicker(): Locator {
-    return this.hostPickerIn(this.page.locator('body'));
+    return this.hostPickerIn(this.page);
   }
 
   // Same lookup, but scoped to a specific dialog (registration form has
   // its OWN independent KnownHosts picker per RegisterForm.tsx).
-  private hostPickerIn(scope: Locator): Locator {
-    // Every InputField / KnownHosts caption is rendered as a leaf <span>
-    // inside its wrapping <label>. Anchor via a leaf span whose exact
-    // text is "Host" — this rules out "Host Name" / "Host Address"
-    // (KnownHostDialog fields) and every other InputField label.
-    return scope
-      .locator('label', {
-        has: scope.locator('span', { hasText: HOST_LABEL_TEXT }),
-      })
-      .locator('button')
-      .first();
+  private hostPickerIn(scope: Page | Locator): Locator {
+    return scope.locator('label:has(span:text-is("Host")) button').first();
   }
 
   get loginButton(): Locator {
@@ -59,7 +50,7 @@ export class LoginPage {
     return this.page.getByRole('button', { name: /create an account/i });
   }
 
-  async openHostPicker(scope: Locator = this.page.locator('body')): Promise<void> {
+  async openHostPicker(scope: Page | Locator = this.page): Promise<void> {
     await this.hostPickerIn(scope).click();
   }
 

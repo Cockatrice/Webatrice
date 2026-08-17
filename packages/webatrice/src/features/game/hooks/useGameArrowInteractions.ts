@@ -10,7 +10,7 @@ import { makeCardKey, makePlayerKey, parseCardKey, type CardRegistry } from '../
 import { useJudgeTarget } from './useJudgeTarget';
 import { bulkTargetsFor, type SelectedCard } from '../utils/selection';
 
-import { playCardViaTableRow } from './playCard';
+import { autoPlayCard, playCardViaTableRow } from './playCard';
 
 interface CardSource {
   sourcePlayerId: number;
@@ -546,14 +546,20 @@ export function useGameArrowInteractions({
         return;
       }
       collapseUnlessSelected(sourcePlayerId, sourceZone, card);
-      if (sourceZone === ZoneName.HAND && sourcePlayerId != null && game != null) {
-        // Play onto the card owner's table; a judge playing a foreign hand card
-        // wraps as the owner, own cards send bare. Mirrors the card-menu play.
-        void playCardViaTableRow({
+      if (
+        (sourceZone === ZoneName.HAND || sourceZone === ZoneName.STACK)
+        && sourcePlayerId != null
+        && game != null
+      ) {
+        // Two-step auto-play chain: hand→stack for non-lands (lands still go
+        // straight to the battlefield), then stack→(graveyard | table) on the
+        // second double-click. `autoPlayCard` owns the routing; judge-target
+        // wrapping stays the same as the card-menu play.
+        void autoPlayCard({
           webClient,
           gameId,
           sourcePlayerId,
-          sourceZone: ZoneName.HAND,
+          sourceZone,
           card,
           faceDown: false,
           isInverted: invertVerticalCoordinate,

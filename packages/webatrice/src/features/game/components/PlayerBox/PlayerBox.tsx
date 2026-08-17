@@ -8484,6 +8484,77 @@ function PlayerBox(
                       y: e.clientY,
                     });
                   }}
+                  onDoubleClick={
+                    isSelf
+                      ? async () => {
+                        // Resolves the second step of the auto-play chain:
+                        // an instant/sorcery on the stack goes to the
+                        // graveyard; anything else (creature / other
+                        // permanent / unknown) lands on the battlefield at
+                        // the tablerow-appropriate row. Card type comes
+                        // from the prefetched cache; on cache miss we
+                        // block on a fresh lookup so the first click
+                        // routes correctly. Wire x = -1 lets the server
+                        // pick a column.
+                        const cardId = Number(c.id);
+                        if (
+                          !Number.isFinite(cardId) ||
+                          !onMoveCard ||
+                          playerId == null
+                        ) {
+                          return;
+                        }
+                        let typeLine =
+                          cardMetaByName.get(c.name)?.typeLine ??
+                          cards.find((dc) => dc.name === c.name)?.type_line ??
+                          '';
+                        if (!typeLine) {
+                          const r = await lookupCard(c.name);
+                          typeLine = r.typeLine ?? '';
+                          const pt =
+                            r.power != null && r.toughness != null
+                              ? `${r.power}/${r.toughness}`
+                              : undefined;
+                          if (typeLine || pt) {
+                            setCardMetaByName((prev) => {
+                              const existing = prev.get(c.name);
+                              if (
+                                existing?.typeLine === typeLine &&
+                                existing?.pt === pt
+                              ) {
+                                return prev;
+                              }
+                              const next = new Map(prev);
+                              next.set(c.name, { typeLine, pt });
+                              return next;
+                            });
+                          }
+                        }
+                        const tableRow = typeLineToTableRow(typeLine);
+                        if (tableRow === 3) {
+                          onMoveCard({
+                            startPlayerId: playerId,
+                            startZone: ZoneName.STACK,
+                            cardsToMove: { card: [{ cardId }] },
+                            targetPlayerId: playerId,
+                            targetZone: ZoneName.GRAVE,
+                            x: -1,
+                            y: 0,
+                          });
+                        } else {
+                          onMoveCard({
+                            startPlayerId: playerId,
+                            startZone: ZoneName.STACK,
+                            cardsToMove: { card: [{ cardId }] },
+                            targetPlayerId: playerId,
+                            targetZone: ZoneName.TABLE,
+                            x: -1,
+                            y: tableRowToGridY(tableRow),
+                          });
+                        }
+                      }
+                      : undefined
+                  }
                   className="absolute hover:z-10"
                   style={{
                     left: pos.x,
@@ -9043,15 +9114,16 @@ function PlayerBox(
                         startCardDrag(e, c, "hand", handDisplayList)
                       }
                       onDoubleClick={async () => {
-                        // Auto-route mirrors Cockatrice's
-                        // `PlayerActions::playCard()`. Card type comes
-                        // from the prefetched cache; on cache miss we
-                        // block on a fresh lookup so the first click
-                        // routes correctly even if prefetch hasn't
-                        // completed. Wire y = tableRowToGridY(tableRow)
-                        // for permanents; instants/sorceries route to
-                        // the stack. Wire x = -1 lets the server pick
-                        // a column.
+                        // Double-click auto-play chain: lands go straight to
+                        // the battlefield; everything else takes a stack
+                        // detour so spells are visible before resolving. The
+                        // stack card itself has its own double-click handler
+                        // that resolves the second step (instant/sorcery →
+                        // graveyard, permanent → battlefield). Card type
+                        // comes from the prefetched cache; on cache miss we
+                        // block on a fresh lookup so the first click routes
+                        // correctly even if prefetch hasn't completed. Wire
+                        // x = -1 lets the server pick a column.
                         const cardId = Number(c.id);
                         if (
                           !Number.isFinite(cardId) ||
@@ -9087,17 +9159,8 @@ function PlayerBox(
                           }
                         }
                         const tableRow = typeLineToTableRow(typeLine);
-                        if (tableRow === 3) {
-                          onMoveCard({
-                            startPlayerId: playerId,
-                            startZone: ZoneName.HAND,
-                            cardsToMove: { card: [{ cardId }] },
-                            targetPlayerId: playerId,
-                            targetZone: ZoneName.STACK,
-                            x: -1,
-                            y: 0,
-                          });
-                        } else {
+                        if (tableRow === 0) {
+                          // Land — straight to the battlefield bottom row.
                           onMoveCard({
                             startPlayerId: playerId,
                             startZone: ZoneName.HAND,
@@ -9106,6 +9169,18 @@ function PlayerBox(
                             targetZone: ZoneName.TABLE,
                             x: -1,
                             y: tableRowToGridY(tableRow),
+                          });
+                        } else {
+                          // Non-land (creature / other permanent / instant /
+                          // sorcery / unknown) — detour through the stack.
+                          onMoveCard({
+                            startPlayerId: playerId,
+                            startZone: ZoneName.HAND,
+                            cardsToMove: { card: [{ cardId }] },
+                            targetPlayerId: playerId,
+                            targetZone: ZoneName.STACK,
+                            x: -1,
+                            y: 0,
                           });
                         }
                       }}
