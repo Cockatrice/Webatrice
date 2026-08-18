@@ -19,6 +19,16 @@ export default defineConfig({
       ...viteConfig.test?.coverage,
       reportsDirectory: './coverage/integration',
       include: ['src/**/*.ts'],
+      // Project-wide floor.
+      thresholds: {
+        statements: 60,
+        functions: 60,
+        lines: 60,
+        branches: 50,
+        // Per-feature floors, same 60/60/60/50 target, applied per-glob.
+        'src/commands/**': { statements: 60, functions: 60, lines: 60, branches: 50 },
+        'src/events/**': { statements: 60, functions: 60, lines: 60, branches: 50 },
+      },
     },
   },
 });

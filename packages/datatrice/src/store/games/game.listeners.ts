@@ -627,7 +627,9 @@ export function registerGameListeners(mw: ListenerMiddlewareInstance<unknown>): 
       const { gameId, playerId, data } = action.payload;
       const state = api.getState() as { games: GamesState };
       const game = state.games.games[gameId];
-      if (!game) return;
+      if (!game) {
+        return;
+      }
 
       // Detect Servatrice's auto-reveal from revealTopCardIfNeeded up
       // front — both the chat log and the receiver dialog want to
@@ -659,11 +661,15 @@ export function registerGameListeners(mw: ListenerMiddlewareInstance<unknown>): 
       // got the face-up card list. Spectator-side Event_RevealCards has
       // an empty `cards[]` (server sends the summary via eventOthers)
       // — nothing to display for those.
-      if (!data.cards || data.cards.length === 0) return;
+      if (!data.cards || data.cards.length === 0) {
+        return;
+      }
       // Auto-reveals render on the pile via zone.topRevealedCard (set
       // by the cardsRevealed reducer's isAutoTopReveal branch), not
       // via the popup — matches Cockatrice's desktop UX.
-      if (isAutoTopReveal) return;
+      if (isAutoTopReveal) {
+        return;
+      }
       // Peek reveals — any card in the payload flagged `faceDown` means
       // the server is answering an `actPeek` (a hidden card on the
       // battlefield or in an opponent's zone that the source revealed
@@ -676,7 +682,9 @@ export function registerGameListeners(mw: ListenerMiddlewareInstance<unknown>): 
       const isPeek = data.cards.some((c) => c.faceDown);
       if (isPeek) {
         for (const card of data.cards) {
-          if (!card.faceDown) continue;
+          if (!card.faceDown) {
+            continue;
+          }
           const peekMessage = formatCardPeeked(game, playerId, card.id, card.name ?? '');
           api.dispatch(Actions.gameMessageAppended({ gameId, playerId, message: peekMessage }));
         }

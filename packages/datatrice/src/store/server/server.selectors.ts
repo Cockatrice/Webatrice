@@ -1,5 +1,10 @@
 import { createSelector } from '@reduxjs/toolkit';
-import { Event_UserMessage, ServerInfo_ReplayMatch, ServerInfo_User, ServerInfo_User_UserLevelFlag } from '@cockatrice/sockatrice/generated';
+import {
+  Event_UserMessage,
+  ServerInfo_ReplayMatch,
+  ServerInfo_User,
+  ServerInfo_User_UserLevelFlag,
+} from '@cockatrice/sockatrice/generated';
 import { WebsocketTypes } from '@cockatrice/sockatrice/types';
 import { SortUtil } from '../../common';
 import { ServerState } from './server.interfaces';

@@ -790,13 +790,13 @@ describe('classifyLogTone', () => {
     expect(classifyLogTone('It is now the first main phase.')).toBe('phase');
   });
   it('turn banner → "turn"', () => {
-    expect(classifyLogTone("Alice's turn.")).toBe('turn');
-    expect(classifyLogTone("Bob's turn.")).toBe('turn');
+    expect(classifyLogTone('Alice\'s turn.')).toBe('turn');
+    expect(classifyLogTone('Bob\'s turn.')).toBe('turn');
   });
   it('accepts a LogEntry input directly', () => {
     expect(classifyLogTone({
-      text: "Alice's turn.",
-      segments: [{ text: 'Alice', kind: 'player' }, { text: "'s turn.", kind: 'plain' }],
+      text: 'Alice\'s turn.',
+      segments: [{ text: 'Alice', kind: 'player' }, { text: '\'s turn.', kind: 'plain' }],
     })).toBe('turn');
   });
   it('lifecycle events → "system"', () => {
@@ -1186,7 +1186,7 @@ describe('formatCardsRevealed', () => {
         attacking: false, color: '', pt: '', annotation: '',
         destroyOnZoneChange: false, doesntUntap: false, counterList: [],
         attachPlayerId: -1, attachZone: '', attachCardId: -1, providerId: '',
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
       } as any], numberOfCards: 1,
     });
     expect(msg).toBeNull();

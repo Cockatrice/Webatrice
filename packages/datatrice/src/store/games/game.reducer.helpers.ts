@@ -51,7 +51,9 @@ export function pushEventMessage(
   }
   const text = typeof message === 'string' ? message : message.text;
   const segments = typeof message === 'string' ? undefined : message.segments;
-  if (!text) return;
+  if (!text) {
+    return;
+  }
   if (game.messages.length >= MAX_GAME_MESSAGES) {
     game.messages = game.messages.slice(game.messages.length - MAX_GAME_MESSAGES + 1);
   }

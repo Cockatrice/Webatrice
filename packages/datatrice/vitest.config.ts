@@ -40,6 +40,15 @@ export default defineConfig({
         'src/testing/**',
         'src/setupTests.ts',
       ],
+      // Unit-suite thresholds — the agreed cross-repo standard of
+      // 95/95/95/90. Integration coverage is gated separately via
+      // vitest.integration.config.ts. Ratchet up only.
+      thresholds: {
+        statements: 95,
+        functions: 95,
+        lines: 95,
+        branches: 90,
+      },
     },
   },
 });

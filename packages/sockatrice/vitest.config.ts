@@ -1,7 +1,7 @@
 // Unit test suite. Each spec (colocated as src/**/*.spec.ts) exercises a
 // single module in isolation — command builders, event handlers, protobuf
 // framing, utilities — in jsdom with no network and no WebSocket. Fast and
-// deterministic; the coverage gate only ratchets up.
+// deterministic; the coverage gate below only ratchets up.
 
 import { defineConfig } from 'vitest/config';
 
@@ -28,6 +28,12 @@ export default defineConfig({
         'src/testing/**',
         'src/setupTests.ts',
       ],
+      thresholds: {
+        statements: 95,
+        functions: 95,
+        lines: 95,
+        branches: 95,
+      },
     },
   },
 });

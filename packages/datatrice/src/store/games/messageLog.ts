@@ -71,7 +71,9 @@ const n = (value: number | string): LogSegment => ({ text: String(value), kind: 
 /** Card-name segment. Unknown card names ("a card") fall back to a
  *  plain segment — the preview hover expects a real name. */
 function c(name: string | undefined | null): LogSegment {
-  if (!name) return { text: 'a card', kind: 'plain' };
+  if (!name) {
+    return { text: 'a card', kind: 'plain' };
+  }
   return { text: name, kind: 'card' };
 }
 
@@ -90,11 +92,15 @@ type LogPart = LogSegment | string;
 function L(strings: TemplateStringsArray, ...values: LogPart[]): LogEntry {
   const raw: LogSegment[] = [];
   strings.forEach((str, i) => {
-    if (str) raw.push(t(str));
+    if (str) {
+      raw.push(t(str));
+    }
     if (i < values.length) {
       const v = values[i];
       if (typeof v === 'string') {
-        if (v) raw.push(t(v));
+        if (v) {
+          raw.push(t(v));
+        }
       } else {
         raw.push(v);
       }
@@ -451,7 +457,9 @@ const COUNTER_DISPLAY_NAME: Record<string, string> = {
 };
 
 function displayCounterName(name: string | undefined): string {
-  if (!name) return 'counter';
+  if (!name) {
+    return 'counter';
+  }
   return COUNTER_DISPLAY_NAME[name.toLowerCase()] ?? name;
 }
 
@@ -544,17 +552,23 @@ export function formatCardsRevealed(
 
   if (data.cardId.length === 0) {
     if (isLend) {
-      if (!targetName) return L`${p(actor)} reveals ${zone}.`;
+      if (!targetName) {
+        return L`${p(actor)} reveals ${zone}.`;
+      }
       return L`${p(actor)} lends ${zone} to ${p(targetName)}.`;
     }
-    if (targetName) return L`${p(actor)} reveals ${zone} to ${p(targetName)}.`;
+    if (targetName) {
+      return L`${p(actor)} reveals ${zone} to ${p(targetName)}.`;
+    }
     return L`${p(actor)} reveals ${zone}.`;
   }
 
   const isTopNReveal = data.cardId.length === 1 && data.cardId[0] === 0;
   if (isTopNReveal) {
     const count = data.numberOfCards || data.cards.length;
-    if (count <= 0) return null;
+    if (count <= 0) {
+      return null;
+    }
     if (targetName) {
       return count === 1
         ? L`${p(actor)} reveals ${n(1)} card from ${zone} to ${p(targetName)}.`
@@ -596,7 +610,9 @@ export function formatZoneDumped(
   const isOwner = data.zoneOwnerId === playerId;
   const zoneLabel = zoneLabelReveal(data.zoneName, isOwner);
   if (data.numberCards < 0) {
-    if (isOwner) return L`${p(actor)} is looking at ${zoneLabel}.`;
+    if (isOwner) {
+      return L`${p(actor)} is looking at ${zoneLabel}.`;
+    }
     const ownerName = nameOf(game, data.zoneOwnerId);
     return L`${p(actor)} is looking at ${p(ownerName)}'s ${zoneLabel.replace(/^the /, '')}.`;
   }
@@ -805,8 +821,12 @@ export function formatPropertyDiff(
  */
 export function classifyLogTone(input: string | LogEntry): LogTone {
   const text = typeof input === 'string' ? input : input.text;
-  if (/^It is now the /.test(text)) return 'phase';
-  if (/'s turn\.$/.test(text)) return 'turn';
+  if (/^It is now the /.test(text)) {
+    return 'phase';
+  }
+  if (/'s turn\.$/.test(text)) {
+    return 'turn';
+  }
   if (
     /^The game has (started|been closed)\.$/.test(text)
     || / has joined the game\.$/.test(text)

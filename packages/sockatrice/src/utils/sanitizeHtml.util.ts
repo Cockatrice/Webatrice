@@ -10,7 +10,9 @@ import type DOMPurifyType from 'dompurify';
 // available, we fall back to whatever the default export was.
 let instance: typeof DOMPurifyType | null = null;
 function getPurify(): typeof DOMPurifyType {
-  if (instance && typeof instance.sanitize === 'function') return instance;
+  if (instance && typeof instance.sanitize === 'function') {
+    return instance;
+  }
   const win = (globalThis as { window?: Window }).window;
   const asFactory = createDOMPurify as unknown as ((w?: Window) => typeof DOMPurifyType);
   instance = (win && typeof asFactory === 'function')
@@ -30,7 +32,9 @@ function getPurify(): typeof DOMPurifyType {
 export function sanitizeHtml(msg: string): string {
   // See .github/instructions/sockatrice.instructions.md#server-message-sanitization.
   const purify = getPurify();
-  if (typeof purify.sanitize !== 'function') return msg;
+  if (typeof purify.sanitize !== 'function') {
+    return msg;
+  }
   return purify.sanitize(msg, {
     ALLOWED_TAGS: ['br', 'a', 'img', 'center', 'b', 'font'],
     ALLOWED_ATTR: ['href', 'color', 'rel', 'target', 'src', 'alt'],

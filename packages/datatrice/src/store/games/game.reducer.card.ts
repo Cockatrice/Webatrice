@@ -47,12 +47,16 @@ function deckPositionToRevealIndex(
   zone: { cardCount: number; revealedCards?: ServerInfo_Card[]; revealedIsReversed?: boolean },
   deckPosition: number,
 ): number {
-  if (!zone.revealedCards) return -1;
+  if (!zone.revealedCards) {
+    return -1;
+  }
   const startId = zone.revealedIsReversed
     ? zone.cardCount - zone.revealedCards.length
     : 0;
   const idx = deckPosition - startId;
-  if (idx < 0 || idx >= zone.revealedCards.length) return -1;
+  if (idx < 0 || idx >= zone.revealedCards.length) {
+    return -1;
+  }
   return idx;
 }
 
@@ -208,9 +212,13 @@ export const cardReducers = {
   zoneViewCardRemoved: ((state, action) => {
     const { gameId, playerId, zoneName, position } = action.payload;
     const zone = state.games[gameId]?.players[playerId]?.zones[zoneName];
-    if (!zone || !zone.revealedCards) return;
+    if (!zone || !zone.revealedCards) {
+      return;
+    }
     const revealIndex = deckPositionToRevealIndex(zone, position);
-    if (revealIndex < 0) return;
+    if (revealIndex < 0) {
+      return;
+    }
     const remaining = zone.revealedCards.filter((_, i) => i !== revealIndex);
     if (remaining.length === 0) {
       delete zone.revealedCards;
@@ -234,14 +242,18 @@ export const cardReducers = {
   zoneViewCardInserted: ((state, action) => {
     const { gameId, playerId, zoneName, position, card } = action.payload;
     const zone = state.games[gameId]?.players[playerId]?.zones[zoneName];
-    if (!zone || !zone.revealedCards) return;
+    if (!zone || !zone.revealedCards) {
+      return;
+    }
     // For inserts, cardCount already reflects the added card. Compute
     // startId from the current cardCount and the SOON-to-grow reveal
     // length so the resulting invariant still holds after splice.
     const nextLen = zone.revealedCards.length + 1;
     const startId = zone.revealedIsReversed ? zone.cardCount - nextLen : 0;
     const revealIndex = position - startId;
-    if (revealIndex < 0 || revealIndex > zone.revealedCards.length) return;
+    if (revealIndex < 0 || revealIndex > zone.revealedCards.length) {
+      return;
+    }
     const next = [...zone.revealedCards];
     next.splice(revealIndex, 0, card);
     zone.revealedCards = reindexRevealed(next, startId);
@@ -265,9 +277,13 @@ export const cardReducers = {
   zoneViewCardReordered: ((state, action) => {
     const { gameId, playerId, zoneName, fromPosition, toPosition } = action.payload;
     const zone = state.games[gameId]?.players[playerId]?.zones[zoneName];
-    if (!zone || !zone.revealedCards) return;
+    if (!zone || !zone.revealedCards) {
+      return;
+    }
     const fromIdx = deckPositionToRevealIndex(zone, fromPosition);
-    if (fromIdx < 0) return;
+    if (fromIdx < 0) {
+      return;
+    }
     const startId = zone.revealedIsReversed
       ? zone.cardCount - zone.revealedCards.length
       : 0;
@@ -318,7 +334,9 @@ export const cardReducers = {
   topRevealedCardCleared: ((state, action) => {
     const { gameId, playerId, zoneName } = action.payload;
     const zone = state.games[gameId]?.players[playerId]?.zones[zoneName];
-    if (!zone) return;
+    if (!zone) {
+      return;
+    }
     delete zone.topRevealedCard;
   }) as CaseReducer<
     GamesState,
