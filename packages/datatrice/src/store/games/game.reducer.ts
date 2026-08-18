@@ -12,7 +12,7 @@ import { turnReducers } from './game.reducer.turn';
 
 export { MAX_GAME_MESSAGES } from './game.reducer.helpers';
 
-const initialState: GamesState = { games: {} };
+const initialState: GamesState = { games: {}, incomingReveal: null };
 
 export const gamesSlice = createSlice({
   name: 'games',

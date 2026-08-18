@@ -1,6 +1,8 @@
 .player-view {
-  display: flex;
-  justify-content: center;
+  /* Layout switched to Tailwind flex-row on the JSX side so the
+   * side-by-side profile + private-chat pair can share the viewport
+   * height. Padding here would fight against the row spacing —
+   * leave it to the JSX gap/margin instead. */
   padding: 24px;
 }
 
@@ -8,6 +10,13 @@
   width: 100%;
   max-width: 640px;
   padding: 24px;
+  /* Keep the profile card at its intrinsic width so the chat panel
+   * on the right can flex to fill. `overflow-y-auto` lets long
+   * profile content scroll internally rather than pushing the row
+   * beyond viewport height. */
+  flex-shrink: 0;
+  overflow-y: auto;
+  align-self: stretch;
 }
 
 .player-view__avatar-wrapper {

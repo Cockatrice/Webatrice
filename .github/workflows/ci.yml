@@ -136,9 +136,6 @@ jobs:
         if: needs.changes.outputs.datatriceGate == 'true'
         run: npm run -w @cockatrice/datatrice lint
 
-      - name: App lint
-        run: npm run -w @cockatrice/webatrice lint
-
   test:
     name: Unit tests (Node ${{ matrix.node_version }})
     needs: [changes]

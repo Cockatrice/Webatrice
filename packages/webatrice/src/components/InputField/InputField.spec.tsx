@@ -71,19 +71,24 @@ describe('InputField', () => {
   });
 
   it('renders the validation error icon alongside the error text when touched', () => {
-    const { container } = render(
-      <InputField {...defaultProps} touched error="Required" />,
-    );
-    const errorBlock = container.querySelector('.InputField-error');
+    render(<InputField {...defaultProps} touched error="Required" />);
+    // Post-Tailwind rewrite: the error is a <span> containing the text +
+    // a lucide-react AlertCircle SVG. No BEM class anymore — locate by
+    // walking up from the error text to the span that owns the icon.
+    const errorText = screen.getByText('Required');
+    const errorBlock = errorText.closest('span');
     expect(errorBlock).not.toBeNull();
     expect(errorBlock?.textContent).toContain('Required');
     expect(errorBlock?.querySelector('svg')).not.toBeNull();
   });
 
   it('omits validation styling when there is no error, even if touched', () => {
-    const { container } = render(<InputField {...defaultProps} touched />);
-    expect(container.querySelector('.InputField-validation')).toBeNull();
-    expect(container.querySelector('.InputField-error')).toBeNull();
+    render(<InputField {...defaultProps} touched />);
+    // No error → no AlertCircle icon rendered anywhere in the field.
+    expect(screen.queryByText('Required')).toBeNull();
+    // The AlertCircle is the only svg the field renders when errored.
+    const label = screen.getByRole('textbox').closest('label');
+    expect(label?.querySelector('svg')).toBeNull();
   });
 
   it('forwards focus/blur callbacks to the underlying input', () => {

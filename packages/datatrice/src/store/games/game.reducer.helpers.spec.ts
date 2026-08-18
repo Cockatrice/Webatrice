@@ -11,13 +11,21 @@ import { makeCard, makeGameEntry, makePlayerProperties } from '../../testing/fix
 
 describe('formatLeaveMessage', () => {
   it('maps a known leave reason to its message', () => {
-    expect(formatLeaveMessage('Alice', 2)).toBe('Alice has left the game (kicked by game host or moderator).');
-    expect(formatLeaveMessage('Alice', 3)).toBe('Alice has left the game (player left the game).');
-    expect(formatLeaveMessage('Alice', 4)).toBe('Alice has left the game (player disconnected from server).');
+    expect(formatLeaveMessage('Alice', 2).text).toBe('Alice has left the game (kicked by game host or moderator).');
+    expect(formatLeaveMessage('Alice', 3).text).toBe('Alice has left the game (player left the game).');
+    expect(formatLeaveMessage('Alice', 4).text).toBe('Alice has left the game (player disconnected from server).');
   });
 
   it('falls back to "reason unknown" for an unrecognized reason code', () => {
-    expect(formatLeaveMessage('Bob', 999)).toBe('Bob has left the game (reason unknown).');
+    expect(formatLeaveMessage('Bob', 999).text).toBe('Bob has left the game (reason unknown).');
+  });
+
+  it('splits the leave message into player-name + plain segments', () => {
+    const entry = formatLeaveMessage('Alice', 2);
+    expect(entry.segments).toEqual([
+      { text: 'Alice', kind: 'player' },
+      { text: ' has left the game (kicked by game host or moderator).', kind: 'plain' },
+    ]);
   });
 });
 
@@ -28,6 +36,30 @@ describe('pushEventMessage', () => {
     pushEventMessage(game, 1, undefined);
     pushEventMessage(game, 1, '');
     expect(game.messages).toHaveLength(0);
+  });
+
+  it('no-ops when a LogEntry with empty text is passed', () => {
+    // `if (!text) return;` — accepts the LogEntry shape but bails
+    // when the pre-computed text ended up empty (only whitespace-
+    // stripped separator segments, or a format function that
+    // returned an empty template).
+    const game = makeGameEntry({ messages: [] });
+    pushEventMessage(game, 1, { text: '', segments: [] });
+    expect(game.messages).toHaveLength(0);
+  });
+
+  it('appends a LogEntry with its segments preserved', () => {
+    const game = makeGameEntry({ messages: [] });
+    pushEventMessage(game, 2, {
+      text: 'Alice plays Bolt.',
+      segments: [{ text: 'Alice', kind: 'player' }, { text: ' plays Bolt.', kind: 'plain' }],
+    });
+    expect(game.messages).toHaveLength(1);
+    expect(game.messages[0].message).toBe('Alice plays Bolt.');
+    expect(game.messages[0].segments).toEqual([
+      { text: 'Alice', kind: 'player' },
+      { text: ' plays Bolt.', kind: 'plain' },
+    ]);
   });
 
   it('appends an event message with playerId, kind and a timestamp', () => {

@@ -64,7 +64,7 @@ describe('Toast component', () => {
         dismiss me
       </Toast>,
     );
-    const closeButton = await screen.findByRole('button', { name: /close/i });
+    const closeButton = await screen.findByRole('button', { name: /dismiss/i });
     act(() => {
       closeButton.click();
     });

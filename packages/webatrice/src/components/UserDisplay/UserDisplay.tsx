@@ -1,11 +1,10 @@
 import { NavLink, generatePath } from 'react-router-dom';
 
-import Menu from '@mui/material/Menu';
-import MenuItem from '@mui/material/MenuItem';
-
 import { Images } from '@app/images';
 import { ServerInfo_User } from '@cockatrice/sockatrice/generated';
 import { RouteEnum } from '@app/types';
+import { UserBadges } from '../UserBadges/UserBadges';
+import UserActionsMenu from './UserActionsMenu';
 import { useUserDisplay } from './useUserDisplay';
 
 import './UserDisplay.css';
@@ -15,7 +14,7 @@ interface UserDisplayProps {
 }
 
 const UserDisplay = ({ user }: UserDisplayProps) => {
-  const { name, country } = user;
+  const { name, country, userLevel } = user;
   const {
     position,
     isABuddy,
@@ -34,34 +33,23 @@ const UserDisplay = ({ user }: UserDisplayProps) => {
         <div className="user-display__details" onContextMenu={handleClick}>
           <img className="user-display__country" src={Images.Countries[country]} alt={country} />
           <div className="user-display__name single-line-ellipsis">{name}</div>
+          <UserBadges userLevel={userLevel} size={12} className="ml-1" />
         </div>
       </NavLink>
-      <div className="user-display__menu">
-        <Menu
-          open={Boolean(position)}
+      {position && (
+        <UserActionsMenu
+          x={position.x}
+          y={position.y}
           onClose={handleClose}
-          anchorReference='anchorPosition'
-          anchorPosition={
-            position !== null
-              ? { top: position.y, left: position.x }
-              : undefined
-          }
-        >
-          <NavLink to={generatePath(RouteEnum.PLAYER, { name })} className="user-display__link plain-link">
-            <MenuItem dense>Chat</MenuItem>
-          </NavLink>
-          {
-            !isABuddy
-              ? (<MenuItem dense onClick={onAddBuddy}>Add to Buddy List</MenuItem>)
-              : (<MenuItem dense onClick={onRemoveBuddy}>Remove From Buddy List</MenuItem>)
-          }
-          {
-            !isIgnored
-              ? (<MenuItem dense onClick={onAddIgnore}>Add to Ignore List</MenuItem>)
-              : (<MenuItem dense onClick={onRemoveIgnore}>Remove From Ignore List</MenuItem>)
-          }
-        </Menu>
-      </div>
+          name={name}
+          isABuddy={isABuddy}
+          isIgnored={isIgnored}
+          onAddBuddy={onAddBuddy}
+          onRemoveBuddy={onRemoveBuddy}
+          onAddIgnore={onAddIgnore}
+          onRemoveIgnore={onRemoveIgnore}
+        />
+      )}
     </div>
   );
 };

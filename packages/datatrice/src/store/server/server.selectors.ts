@@ -1,5 +1,10 @@
 import { createSelector } from '@reduxjs/toolkit';
-import { ServerInfo_ReplayMatch, ServerInfo_User, ServerInfo_User_UserLevelFlag } from '@cockatrice/sockatrice/generated';
+import {
+  Event_UserMessage,
+  ServerInfo_ReplayMatch,
+  ServerInfo_User,
+  ServerInfo_User_UserLevelFlag,
+} from '@cockatrice/sockatrice/generated';
 import { WebsocketTypes } from '@cockatrice/sockatrice/types';
 import { SortUtil } from '../../common';
 import { ServerState } from './server.interfaces';
@@ -8,6 +13,7 @@ type State = { server: ServerState };
 
 const EMPTY_USERS: ServerInfo_User[] = [];
 const EMPTY_REPLAYS: ServerInfo_ReplayMatch[] = [];
+const EMPTY_MESSAGES: Event_UserMessage[] = [];
 
 export const Selectors = {
   getInitialized: ({ server }: State) => server.initialized,
@@ -57,14 +63,51 @@ export const Selectors = {
       return (user.userLevel & mask) === mask;
     }
   ),
+
+  // Admin flag on the local user. Mirrors getIsUserModerator; used by
+  // the player-list context menu to gate the Promote/Demote items
+  // (Cockatrice's user_context_menu.cpp:401-402, 410-411 — those
+  // entries are only added when the local user has UserLevelFlag.IsAdmin).
+  getIsUserAdmin: createSelector(
+    [({ server }: State) => server.user],
+    (user): boolean => {
+      if (!user) {
+        return false;
+      }
+      const mask = ServerInfo_User_UserLevelFlag.IsAdmin;
+      return (user.userLevel & mask) === mask;
+    }
+  ),
   getUserInfoByName: ({ server }: State, userName: string): ServerInfo_User | undefined =>
     server.userInfo[userName],
+
+  // History / notes lookups keyed by target user name. The state slots
+  // are hydrated by the moderator response handlers (see
+  // ModeratorResponseImpl.banHistory / warnHistory / getAdminNotes).
+  // Callers dispatch the corresponding sockatrice command
+  // (getBanHistory / getWarnHistory / getAdminNotes) and read here
+  // once the response lands.
+  getBanHistoryByUser: ({ server }: State, userName: string) =>
+    server.banHistory[userName],
+  getWarnHistoryByUser: ({ server }: State, userName: string) =>
+    server.warnHistory[userName],
+  getAdminNotesByUser: ({ server }: State, userName: string) =>
+    server.adminNotes[userName],
   getLogs: ({ server }: State) => server.logs,
   getBackendDecks: ({ server }: State) => server.backendDecks,
   getDownloadedDeck: ({ server }: State) => server.downloadedDeck,
   getDownloadedReplay: ({ server }: State) => server.downloadedReplay,
   getRegistrationError: ({ server }: State) => server.registrationError,
   getSortUsersBy: ({ server }: State) => server.sortUsersBy,
+
+  // Private-message history with a specific user. Both directions
+  // (sent + received) are stored under the OTHER user's name — the
+  // reducer keys on `sender === self ? receiver : sender` — so a
+  // single lookup returns the full conversation. Returns a stable
+  // empty array when there's no history yet so callers can rely on
+  // referential equality in memoized selectors.
+  getPrivateMessagesForUser: ({ server }: State, userName: string): Event_UserMessage[] =>
+    server.messages[userName] ?? EMPTY_MESSAGES,
 
   getUsers: ({ server }: State) => server.users,
   getBuddyList: ({ server }: State) => server.buddyList,

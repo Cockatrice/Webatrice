@@ -31,7 +31,10 @@ function buildState(
 }
 
 describe('PlayerList', () => {
-  it('lists every player in the game with a ping-dot tooltip', () => {
+  it('lists every player in the game', () => {
+    // Post-rewrite: PlayerList no longer renders a ping dot or ping
+    // seconds — the sidebar shows avatar + name + role only. Kept the
+    // test's intent (every player is listed) but removed ping assertions.
     const p1 = makePlayerEntry({
       properties: makePlayerProperties({
         playerId: 1,
@@ -53,97 +56,14 @@ describe('PlayerList', () => {
 
     expect(screen.getByText('Alice')).toBeInTheDocument();
     expect(screen.getByText('Bob')).toBeInTheDocument();
-    expect(screen.getByLabelText('ping 10s')).toBeInTheDocument();
-    expect(screen.getByLabelText('ping 20s')).toBeInTheDocument();
-    // Raw-seconds text no longer renders; the dot carries the info via tooltip.
-    expect(screen.queryByText('10s')).not.toBeInTheDocument();
-    expect(screen.queryByText('20s')).not.toBeInTheDocument();
   });
 
-  describe('ping-dot color', () => {
-    it('colors a low ping green', () => {
-      const p = makePlayerEntry({
-        properties: makePlayerProperties({
-          playerId: 1,
-          userInfo: makeUser({ name: 'Alice' }),
-          pingSeconds: 0,
-        }),
-      });
-      renderWithProviders(<PlayerList />, {
-        preloadedState: buildState([p], 1),
-      });
+  // ping-dot color tests removed: the redo sidebar drops the ping
+  // indicator entirely (see PlayerList.tsx — no ping dot / seconds
+  // element renders). Nothing to assert against.
 
-      expect(screen.getByTestId('ping-dot-1')).toHaveStyle({
-        background: 'hsl(120, 100%, 50%)',
-      });
-    });
-
-    it('colors a saturated ping red (clamped at 10s)', () => {
-      const p = makePlayerEntry({
-        properties: makePlayerProperties({
-          playerId: 1,
-          userInfo: makeUser({ name: 'Alice' }),
-          pingSeconds: 15,
-        }),
-      });
-      renderWithProviders(<PlayerList />, {
-        preloadedState: buildState([p], 1),
-      });
-
-      expect(screen.getByTestId('ping-dot-1')).toHaveStyle({
-        background: 'hsl(0, 100%, 50%)',
-      });
-    });
-
-    it('colors a disconnected player black (ping < 0)', () => {
-      const p = makePlayerEntry({
-        properties: makePlayerProperties({
-          playerId: 1,
-          userInfo: makeUser({ name: 'Alice' }),
-          pingSeconds: -1,
-        }),
-      });
-      renderWithProviders(<PlayerList />, {
-        preloadedState: buildState([p], 1),
-      });
-
-      expect(screen.getByTestId('ping-dot-1')).toHaveStyle({
-        background: '#000',
-      });
-    });
-  });
-
-  describe('sideboard lock', () => {
-    it('shows the 🔒 icon for a player with a locked sideboard', () => {
-      const p = makePlayerEntry({
-        properties: makePlayerProperties({
-          playerId: 1,
-          userInfo: makeUser({ name: 'Alice' }),
-          sideboardLocked: true,
-        }),
-      });
-      renderWithProviders(<PlayerList />, {
-        preloadedState: buildState([p], 1),
-      });
-
-      expect(screen.getByLabelText('sideboard locked')).toBeInTheDocument();
-    });
-
-    it('hides the 🔒 icon for a player with an unlocked sideboard', () => {
-      const p = makePlayerEntry({
-        properties: makePlayerProperties({
-          playerId: 1,
-          userInfo: makeUser({ name: 'Alice' }),
-          sideboardLocked: false,
-        }),
-      });
-      renderWithProviders(<PlayerList />, {
-        preloadedState: buildState([p], 1),
-      });
-
-      expect(screen.queryByLabelText('sideboard locked')).not.toBeInTheDocument();
-    });
-  });
+  // sideboard-lock icon tests removed: the redo sidebar doesn't
+  // render a lock affordance in the player row (see PlayerList.tsx).
 
   it('highlights the active player', () => {
     const p1 = makePlayerEntry({
@@ -163,15 +83,16 @@ describe('PlayerList', () => {
       preloadedState: buildState([p1, p2], 2),
     });
 
-    expect(screen.getByTestId('player-list-item-2')).toHaveClass(
-      'player-list__item--active',
-    );
-    expect(screen.getByTestId('player-list-item-1')).not.toHaveClass(
-      'player-list__item--active',
-    );
+    // Post-Tailwind rewrite: active row uses `bg-accent/10` in place of
+    // the old BEM `player-list__item--active` modifier class.
+    expect(screen.getByTestId('player-list-item-2')).toHaveClass('bg-accent/10');
+    expect(screen.getByTestId('player-list-item-1')).not.toHaveClass('bg-accent/10');
   });
 
-  it('dims conceded players', () => {
+  it('marks conceded players with the Conceded role tag', () => {
+    // Post-rewrite: there's no dedicated dim class for a conceded row.
+    // The signal moved to the role label under the player's name
+    // ("Conceded") plus a muted avatar treatment — assert the label.
     const p1 = makePlayerEntry({
       properties: makePlayerProperties({
         playerId: 1,
@@ -184,9 +105,8 @@ describe('PlayerList', () => {
       preloadedState: buildState([p1], 0),
     });
 
-    expect(screen.getByTestId('player-list-item-1')).toHaveClass(
-      'player-list__item--conceded',
-    );
+    const row = screen.getByTestId('player-list-item-1');
+    expect(row.textContent).toMatch(/Conceded/);
   });
 
   it('shows empty state when there are no players', () => {
@@ -224,9 +144,12 @@ describe('PlayerList', () => {
       preloadedState: buildState([p1, p2], 1, 2),
     });
 
+    // Post-Tailwind rewrite: the host badge is a lucide-react Crown
+    // icon rendered with `aria-label="Host"` in place of the old BEM
+    // `.player-list__host-badge` element.
     const bobRow = screen.getByTestId('player-list-item-2');
     const aliceRow = screen.getByTestId('player-list-item-1');
-    expect(bobRow.querySelector('.player-list__host-badge')).not.toBeNull();
-    expect(aliceRow.querySelector('.player-list__host-badge')).toBeNull();
+    expect(bobRow.querySelector('[aria-label="Host"]')).not.toBeNull();
+    expect(aliceRow.querySelector('[aria-label="Host"]')).toBeNull();
   });
 });

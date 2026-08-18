@@ -48,7 +48,7 @@ describe('RequestPasswordResetDialog', () => {
       />,
       { preloadedState: disconnectedState },
     );
-    const closeButton = document.querySelector('.dialog-title button') as HTMLElement;
+    const closeButton = screen.getByRole('button', { name: /close/i });
     expect(closeButton).toBeTruthy();
     fireEvent.click(closeButton);
     expect(handleClose).toHaveBeenCalledTimes(1);

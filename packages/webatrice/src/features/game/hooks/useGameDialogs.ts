@@ -83,8 +83,30 @@ export interface GameDialogsState {
   lastDieCount: number;
   createTokenOpen: boolean;
   sideboardOpen: boolean;
+  /** In-game live sideboard viewer — separate from `sideboardOpen`
+   *  (which drives the older MUI sideboard-PLAN editor). Owner-only
+   *  view, mounts the fancy LibrarySearchDialog against the player's
+   *  own SIDEBOARD zone. Toggled from both the right-sidebar's
+   *  Sideboard button and the battlefield menu's Sideboard → View
+   *  sideboard item. */
+  viewSideboardOpen: boolean;
+  /** Trigger flags for the local player's PlayerBox to open its own
+   *  LibrarySearchDialog / pileView. State lives in PlayerBox because
+   *  the dialog is entangled with local props (enrichedDeckCards,
+   *  onDumpTopCards, shuffle-on-close, drag refs). These booleans let
+   *  external triggers — F3/F4 shortcuts, sidebar buttons — request
+   *  the same dialog the battlefield menu opens, without duplicating
+   *  the wire/dump/close plumbing. Owner-only: PlayerBox no-ops if
+   *  `!isSelf`. */
+  viewLibraryOpen: boolean;
+  viewGraveyardOpen: boolean;
   gameInfoOpen: boolean;
   concedeConfirm: ConcedeConfirm;
+  /** True while the leave-game confirmation dialog is open. Mirrors
+   *  `concedeConfirm` — same guard-rail pattern for a destructive
+   *  action, so accidental clicks on the sidebar Leave button don't
+   *  drop the user out of a game they meant to stay in. */
+  leaveConfirm: boolean;
   revealState: RevealState | null;
 }
 
@@ -138,6 +160,14 @@ export interface GameDialogsActions {
   handleSideboardSubmit: (moveList: SideboardPlanMove[]) => void;
   handleToggleSideboardLock: (locked: boolean) => void;
 
+  openViewSideboard: () => void;
+  closeViewSideboard: () => void;
+
+  openViewLibrary: () => void;
+  closeViewLibrary: () => void;
+  openViewGraveyard: () => void;
+  closeViewGraveyard: () => void;
+
   openGameInfo: () => void;
   closeGameInfo: () => void;
 
@@ -146,6 +176,10 @@ export interface GameDialogsActions {
   closeConcedeConfirm: () => void;
   confirmConcede: () => void;
   confirmUnconcede: () => void;
+
+  openLeaveConfirm: () => void;
+  closeLeaveConfirm: () => void;
+  confirmLeave: () => void;
 
   // Reveal-cards dialog
   closeReveal: () => void;
@@ -224,6 +258,12 @@ export const NOOP_GAME_DIALOGS_ACTIONS: GameDialogsActions = {
   closeSideboard: noopDialogAction,
   handleSideboardSubmit: noopDialogAction,
   handleToggleSideboardLock: noopDialogAction,
+  openViewSideboard: noopDialogAction,
+  closeViewSideboard: noopDialogAction,
+  openViewLibrary: noopDialogAction,
+  closeViewLibrary: noopDialogAction,
+  openViewGraveyard: noopDialogAction,
+  closeViewGraveyard: noopDialogAction,
   openGameInfo: noopDialogAction,
   closeGameInfo: noopDialogAction,
   openConcede: noopDialogAction,
@@ -231,6 +271,9 @@ export const NOOP_GAME_DIALOGS_ACTIONS: GameDialogsActions = {
   closeConcedeConfirm: noopDialogAction,
   confirmConcede: noopDialogAction,
   confirmUnconcede: noopDialogAction,
+  openLeaveConfirm: noopDialogAction,
+  closeLeaveConfirm: noopDialogAction,
+  confirmLeave: noopDialogAction,
   closeReveal: noopDialogAction,
   handleRequestSetPT: noopDialogAction,
   handleRequestSetAnnotation: noopDialogAction,
@@ -325,10 +368,14 @@ export function useGameDialogs({
   const [lastDieCount, setLastDieCount] = useState(DEFAULT_DIE_COUNT);
   const [createTokenOpen, setCreateTokenOpen] = useState(false);
   const [sideboardOpen, setSideboardOpen] = useState(false);
+  const [viewSideboardOpen, setViewSideboardOpen] = useState(false);
+  const [viewLibraryOpen, setViewLibraryOpen] = useState(false);
+  const [viewGraveyardOpen, setViewGraveyardOpen] = useState(false);
   const [revealState, setRevealState] = useState<RevealState | null>(null);
   const [playerMenu, setPlayerMenu] = useState<AnchorPosition | null>(null);
   const [handMenu, setHandMenu] = useState<AnchorPosition | null>(null);
   const [concedeConfirm, setConcedeConfirm] = useState<ConcedeConfirm>(null);
+  const [leaveConfirm, setLeaveConfirm] = useState(false);
   const [gameInfoOpen, setGameInfoOpen] = useState(false);
 
   const handleZoneClick = useCallback((playerId: number, zoneName: string) => {
@@ -1238,6 +1285,19 @@ export function useGameDialogs({
     setConcedeConfirm(null);
   }, [gameId, webClient]);
 
+  // Fire Command_LeaveGame and mirror useLeaveGame's local dispatch —
+  // servatrice strips the leaver from Event_Leave before broadcast so
+  // the client would never see itself leave without this. Same pattern
+  // as `useLeaveGame`; kept here so the confirm flow owns the whole
+  // side effect.
+  const confirmLeave = useCallback(() => {
+    if (gameId != null) {
+      webClient.request.game.leaveGame(gameId);
+      dispatch(games.Actions.gameLeft({ gameId }));
+    }
+    setLeaveConfirm(false);
+  }, [gameId, webClient, dispatch]);
+
   // Simple open/close setters, hoisted out of the return literal so the whole
   // object can be memoized (a fresh return object each render would churn
   // GameDialogsContext's value and force every dialog/menu consumer to re-render
@@ -1253,11 +1313,19 @@ export function useGameDialogs({
   const closeCreateToken = useCallback(() => setCreateTokenOpen(false), []);
   const openSideboard = useCallback(() => setSideboardOpen(true), []);
   const closeSideboard = useCallback(() => setSideboardOpen(false), []);
+  const openViewSideboard = useCallback(() => setViewSideboardOpen(true), []);
+  const closeViewSideboard = useCallback(() => setViewSideboardOpen(false), []);
+  const openViewLibrary = useCallback(() => setViewLibraryOpen(true), []);
+  const closeViewLibrary = useCallback(() => setViewLibraryOpen(false), []);
+  const openViewGraveyard = useCallback(() => setViewGraveyardOpen(true), []);
+  const closeViewGraveyard = useCallback(() => setViewGraveyardOpen(false), []);
   const openGameInfo = useCallback(() => setGameInfoOpen(true), []);
   const closeGameInfo = useCallback(() => setGameInfoOpen(false), []);
   const openConcede = useCallback(() => setConcedeConfirm('concede'), []);
   const openUnconcede = useCallback(() => setConcedeConfirm('unconcede'), []);
   const closeConcedeConfirm = useCallback(() => setConcedeConfirm(null), []);
+  const openLeaveConfirm = useCallback(() => setLeaveConfirm(true), []);
+  const closeLeaveConfirm = useCallback(() => setLeaveConfirm(false), []);
   const closeReveal = useCallback(() => setRevealState(null), []);
 
   // The action surface is decoupled from game state (handlers read the latest
@@ -1288,6 +1356,12 @@ export function useGameDialogs({
       closeSideboard,
       handleSideboardSubmit,
       handleToggleSideboardLock,
+      openViewSideboard,
+      closeViewSideboard,
+      openViewLibrary,
+      closeViewLibrary,
+      openViewGraveyard,
+      closeViewGraveyard,
       openGameInfo,
       closeGameInfo,
       openConcede,
@@ -1295,6 +1369,9 @@ export function useGameDialogs({
       closeConcedeConfirm,
       confirmConcede,
       confirmUnconcede,
+      openLeaveConfirm,
+      closeLeaveConfirm,
+      confirmLeave,
       closeReveal,
       handleRequestSetPT,
       handleRequestSetAnnotation,
@@ -1348,6 +1425,12 @@ export function useGameDialogs({
       closeSideboard,
       handleSideboardSubmit,
       handleToggleSideboardLock,
+      openViewSideboard,
+      closeViewSideboard,
+      openViewLibrary,
+      closeViewLibrary,
+      openViewGraveyard,
+      closeViewGraveyard,
       openGameInfo,
       closeGameInfo,
       openConcede,
@@ -1355,6 +1438,9 @@ export function useGameDialogs({
       closeConcedeConfirm,
       confirmConcede,
       confirmUnconcede,
+      openLeaveConfirm,
+      closeLeaveConfirm,
+      confirmLeave,
       closeReveal,
       handleRequestSetPT,
       handleRequestSetAnnotation,
@@ -1401,8 +1487,12 @@ export function useGameDialogs({
       lastDieCount,
       createTokenOpen,
       sideboardOpen,
+      viewSideboardOpen,
+      viewLibraryOpen,
+      viewGraveyardOpen,
       gameInfoOpen,
       concedeConfirm,
+      leaveConfirm,
       revealState,
       ...actions,
     }),
@@ -1418,8 +1508,12 @@ export function useGameDialogs({
       lastDieCount,
       createTokenOpen,
       sideboardOpen,
+      viewSideboardOpen,
+      viewLibraryOpen,
+      viewGraveyardOpen,
       gameInfoOpen,
       concedeConfirm,
+      leaveConfirm,
       revealState,
       actions,
     ],

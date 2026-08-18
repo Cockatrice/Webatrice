@@ -203,6 +203,8 @@ describe('game', () => {
         targetZone: 'table',
         x: 100,
       }),
+      // isUndoDraw — false without a Context_UndoDraw on the surrounding GameEventContext.
+      false,
     );
   });
 
@@ -548,6 +550,8 @@ describe('game', () => {
     })));
     expect(getMockResponse().game.zoneViewRevealed).toHaveBeenCalledWith(
       42, 1, 'deck', expect.arrayContaining([expect.objectContaining({ name: 'Forest' })]),
+      // isReversed — dumpZone forwards the requester's flip flag; unset here ⇒ false.
+      false,
     );
 
     GameCommands.changeZoneProperties(42, { zoneName: 'deck', alwaysRevealTopCard: true });
@@ -771,6 +775,7 @@ describe('game', () => {
       99,
       1,
       expect.objectContaining({ targetZone: 'grave' }),
+      false,
     );
 
     GameCommands.concede(99);

@@ -2,15 +2,12 @@ import { useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useTranslation } from 'react-i18next';
-
-import Button from '@mui/material/Button';
-import AnchorLink from '@mui/material/Link';
+import { ExternalLink } from 'lucide-react';
 
 import { InputField } from '@app/components';
 import type { HostDTO } from '@app/services';
 
 import { buildKnownHostFormSchema, type KnownHostFormValues } from './knownHostFormSchema';
-import './KnownHostForm.css';
 
 export type { KnownHostFormValues };
 
@@ -37,9 +34,7 @@ const KnownHostForm = ({ host, onRemove, onSubmit }: KnownHostFormProps) => {
   const submit = handleSubmit(onSubmit);
 
   const handleRemoveClick = () => {
-    if (!host) {
-      return;
-    }
+    if (!host) return;
     if (!confirmDelete) {
       setConfirmDelete(true);
       return;
@@ -48,56 +43,78 @@ const KnownHostForm = ({ host, onRemove, onSubmit }: KnownHostFormProps) => {
   };
 
   return (
-    <form className="KnownHostForm" onSubmit={submit}>
-      <div className="KnownHostForm-item">
-        <Controller
-          name="name"
-          control={control}
-          render={({ field, fieldState }) => (
-            <InputField {...field} label={t('Common.label.hostName')} error={fieldState.error?.message} touched={fieldState.isTouched} />
-          )}
-        />
-      </div>
-      <div className="KnownHostForm-item">
-        <Controller
-          name="host"
-          control={control}
-          render={({ field, fieldState }) => (
-            <InputField {...field} label={t('Common.label.hostAddress')} error={fieldState.error?.message} touched={fieldState.isTouched} />
-          )}
-        />
-      </div>
-      <div className="KnownHostForm-item">
-        <Controller
-          name="port"
-          control={control}
-          render={({ field, fieldState }) => (
-            <InputField
-              {...field}
-              label={t('Common.label.port')}
-              type="number"
-              error={fieldState.error?.message}
-              touched={fieldState.isTouched}
-            />
-          )}
-        />
-      </div>
+    <form onSubmit={submit} className="space-y-4">
+      <Controller
+        name="name"
+        control={control}
+        render={({ field, fieldState }) => (
+          <InputField
+            {...field}
+            label={t('Common.label.hostName')}
+            error={fieldState.error?.message}
+            touched={fieldState.isTouched}
+          />
+        )}
+      />
+      <Controller
+        name="host"
+        control={control}
+        render={({ field, fieldState }) => (
+          <InputField
+            {...field}
+            label={t('Common.label.hostAddress')}
+            error={fieldState.error?.message}
+            touched={fieldState.isTouched}
+          />
+        )}
+      />
+      <Controller
+        name="port"
+        control={control}
+        render={({ field, fieldState }) => (
+          <InputField
+            {...field}
+            label={t('Common.label.port')}
+            type="number"
+            error={fieldState.error?.message}
+            touched={fieldState.isTouched}
+          />
+        )}
+      />
 
-      <Button className="KnownHostForm-submit" color="primary" variant="contained" type="submit">
+      <button
+        type="submit"
+        className="w-full px-4 py-2.5 rounded-md text-sm font-semibold bg-accent text-white hover:bg-accent-hover shadow-glow transition-colors"
+      >
         {host ? t('Common.label.saveChanges') : t('KnownHostForm.label.add')}
-      </Button>
+      </button>
 
-      <div className="KnownHostForm-actions">
-        <div className="KnownHostForm-actions__delete">
+      <div className="flex items-center justify-between pt-1">
+        <div>
           {host && (
-            <Button color="inherit" onClick={handleRemoveClick}>
+            <button
+              type="button"
+              onClick={handleRemoveClick}
+              className={[
+                'px-3 py-1.5 rounded-md text-sm font-medium transition-colors',
+                confirmDelete
+                  ? 'bg-red-500/15 text-red-300 border border-red-500/40 hover:bg-red-500/25'
+                  : 'text-text-secondary hover:text-text-primary hover:bg-bg-elevated',
+              ].join(' ')}
+            >
               {!confirmDelete ? t('Common.label.delete') : t('Common.label.confirmSure')}
-            </Button>
+            </button>
           )}
         </div>
-        <AnchorLink href='https://github.com/Cockatrice/Cockatrice/wiki/Public-Servers' target='_blank'>
+        <a
+          href="https://github.com/Cockatrice/Cockatrice/wiki/Public-Servers"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1 text-sm text-accent hover:text-accent-hover transition-colors"
+        >
           {t('KnownHostForm.label.find')}
-        </AnchorLink>
+          <ExternalLink size={12} />
+        </a>
       </div>
     </form>
   );

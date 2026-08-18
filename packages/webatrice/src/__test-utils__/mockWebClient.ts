@@ -24,6 +24,12 @@ export function createMockWebClient() {
         accountImage: vi.fn(),
         message: vi.fn(),
         joinRoom: vi.fn(),
+        deckList: vi.fn(),
+        deckDownload: vi.fn(),
+        deckUpload: vi.fn(),
+        deckDel: vi.fn(),
+        deckNewDir: vi.fn(),
+        deckDelDir: vi.fn(),
       },
       rooms: {
         joinRoom: vi.fn(),

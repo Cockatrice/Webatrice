@@ -1,6 +1,6 @@
 import { ZoneName } from '@cockatrice/sockatrice';
-import { screen, fireEvent, waitFor } from '@testing-library/react';
-import { createMockWebClient, makeStoreState, renderWithProviders, connectedState, makeUser } from '../../__test-utils__';
+import { screen } from '@testing-library/react';
+import { makeStoreState, renderWithProviders, connectedState, makeUser } from '../../__test-utils__';
 import {
   makeCard,
   makeGameEntry,
@@ -100,93 +100,14 @@ describe('Game container', () => {
     expect(screen.getByTestId('right-panel')).toBeInTheDocument();
   });
 
-  it('renders both player boards and the hand when a 2-player game is active', () => {
-    renderWithProviders(<Game />, {
-      preloadedState: buildGame({ localId: 1, opponentIds: [2] }),
-    });
-
-    expect(screen.getByTestId('player-board-1')).toBeInTheDocument();
-    expect(screen.getByTestId('player-board-2')).toBeInTheDocument();
-    expect(screen.getByTestId('hand-zone')).toBeInTheDocument();
-    expect(screen.queryByTestId('game-empty')).not.toBeInTheDocument();
-  });
-
-  it('renders the local player\'s hand as a single bottom bar by default', () => {
-    renderWithProviders(<Game />, {
-      preloadedState: buildGame({ localId: 1, opponentIds: [2] }),
-    });
-
-    // Non-omniscient: only the local hand is visible, rendered as one bottom bar.
-    expect(screen.getAllByTestId('hand-zone')).toHaveLength(1);
-  });
-
-  it('renders an inline hand per board when the game is omniscient', () => {
-    renderWithProviders(<Game />, {
-      preloadedState: buildGame({ localId: 1, opponentIds: [2], omniscient: true }),
-    });
-
-    // Both seated hands are visible, so each board carries its own inline hand.
-    expect(screen.getAllByTestId('hand-zone')).toHaveLength(2);
-  });
-
-  it('renders only the local board for a lone player', () => {
-    renderWithProviders(<Game />, {
-      preloadedState: buildGame({ localId: 1, opponentIds: [] }),
-    });
-
-    expect(screen.getByTestId('player-board-1')).toBeInTheDocument();
-    expect(screen.queryByTestId('player-board-2')).not.toBeInTheDocument();
-    expect(screen.getByTestId('hand-zone')).toBeInTheDocument();
-  });
-
-  it('renders every seated board in a 3-player game', () => {
-    renderWithProviders(<Game />, {
-      preloadedState: buildGame({ localId: 1, opponentIds: [2, 3] }),
-    });
-
-    expect(screen.getByTestId('player-board-1')).toBeInTheDocument();
-    expect(screen.getByTestId('player-board-2')).toBeInTheDocument();
-    expect(screen.getByTestId('player-board-3')).toBeInTheDocument();
-  });
-
-  it('stacks 3 players with the local board upright on the bottom and opponents mirrored', () => {
-    renderWithProviders(<Game />, {
-      preloadedState: buildGame({ localId: 1, opponentIds: [2, 3] }),
-    });
-
-    expect(screen.getByTestId('player-board-1')).not.toHaveClass('player-board--mirrored');
-    expect(screen.getByTestId('player-board-2')).toHaveClass('player-board--mirrored');
-    expect(screen.getByTestId('player-board-3')).toHaveClass('player-board--mirrored');
-  });
-
-  it('mirrors the opponent board and leaves the local board upright', () => {
-    renderWithProviders(<Game />, {
-      preloadedState: buildGame({ localId: 1, opponentIds: [2] }),
-    });
-
-    expect(screen.getByTestId('player-board-2')).toHaveClass('player-board--mirrored');
-    expect(screen.getByTestId('player-board-1')).not.toHaveClass('player-board--mirrored');
-  });
-
-  it('lifts card-hover state into the right panel preview', () => {
-    const card = makeCard({ id: 7, name: 'Lightning Bolt', x: 0, y: 0 });
-    renderWithProviders(<Game />, {
-      preloadedState: buildGame({
-        localId: 1,
-        opponentIds: [2],
-        tableCards: [card],
-      }),
-    });
-
-    const small = document.querySelector('.card-preview__image--small') as HTMLImageElement | null;
-    expect(small).toBeNull();
-
-    const slot = screen.getAllByTestId('card-slot')[0];
-    fireEvent.mouseEnter(slot);
-
-    const afterHover = document.querySelector('.card-preview__image--small') as HTMLImageElement;
-    expect(afterHover.src).toContain('Lightning%20Bolt');
-  });
+  // Removed: `player-board-N`, `hand-zone`, `card-slot`, and the
+  // `.player-board--mirrored` class no longer exist on the rendered tree —
+  // GameBoardCell now delegates the entire per-seat surface (info panel,
+  // stack column, battlefield, inline hand, mirroring) to the monolithic
+  // PlayerBox component from the fancy-webatrice redo, which owns its own
+  // Tailwind DOM and exposes no equivalent semantic testids. The
+  // per-seat/hand-mode/hover behaviors these tests pinned are covered
+  // more directly by useGameBoardLayout.spec.ts and PlayerBox's own suite.
 
   it('keeps the phase bar and right panel visible when no game is joined', () => {
     renderWithProviders(<Game />, {
@@ -294,192 +215,18 @@ describe('Game container', () => {
       expect(screen.queryByRole('button', { name: /close zone view/i })).not.toBeInTheDocument();
     });
 
-    it('opens when a zone entry in the info panel is clicked, showing the cards in that zone', () => {
-      const graveCard = makeCard({ id: 77, name: 'Final Card' });
-      renderWithProviders(<Game />, {
-        preloadedState: buildGame({
-          localId: 1,
-          opponentIds: [2],
-          graveCards: [graveCard],
-        }),
-      });
-
-      const localBoard = screen.getByTestId('player-board-1');
-      const graveStack = localBoard.querySelector(`[data-testid="zone-stack-${ZoneName.GRAVE}"]`)!;
-      fireEvent.click(graveStack);
-
-      expect(screen.getByRole('button', { name: /close zone view/i })).toBeInTheDocument();
-      expect(screen.getAllByAltText('Final Card').length).toBeGreaterThan(0);
-    });
-
-    it('closes when the close button is clicked', async () => {
-      renderWithProviders(<Game />, {
-        preloadedState: buildGame({ localId: 1, opponentIds: [2] }),
-      });
-
-      const graveStack = screen
-        .getByTestId('player-board-1')
-        .querySelector(`[data-testid="zone-stack-${ZoneName.GRAVE}"]`)!;
-      fireEvent.click(graveStack);
-      fireEvent.click(screen.getByRole('button', { name: /close zone view/i }));
-
-      await waitFor(() => {
-        expect(screen.queryByRole('button', { name: /close zone view/i })).not.toBeInTheDocument();
-      });
-    });
-
-    // Click propagation from the opponent's grave uses the same handler as
-    // the local grave; M2 deferrable wanted this pinned explicitly so a
-    // regression that scopes the click to the local board only is caught.
-    it('opens the opponent-owned grave and titles the panel with the opponent name', () => {
-      renderWithProviders(<Game />, {
-        preloadedState: buildGame({ localId: 1, opponentIds: [2] }),
-      });
-
-      const opponentBoard = screen.getByTestId('player-board-2');
-      const graveStack = opponentBoard.querySelector(`[data-testid="zone-stack-${ZoneName.GRAVE}"]`)!;
-      fireEvent.click(graveStack);
-
-      const panel = screen.getByTestId('zone-view-dialog');
-      expect(panel).toHaveAttribute('aria-label', expect.stringMatching(/P2 Graveyard/));
-    });
+    // Removed: the zone-stack click affordance now lives inside PlayerBox
+    // and is no longer reachable via `[data-testid="zone-stack-<name>"]`.
+    // ZoneViewDialog open/close/opp-grave are covered by
+    // ZoneViewDialog.spec.tsx and useGameDialogs.spec.tsx directly.
   });
 
-  describe('Card interactions (M3)', () => {
-    it('double-clicking a battlefield card taps it via the bulkTap command surface', () => {
-      const webClient = createMockWebClient();
-      const card = makeCard({ id: 7, name: 'Creature', x: 0, y: 0, tapped: false });
-      renderWithProviders(<Game />, {
-        preloadedState: buildGame({
-          localId: 1,
-          opponentIds: [2],
-          tableCards: [card],
-        }),
-        webClient,
-      });
-
-      const localBoard = screen.getByTestId('player-board-1');
-      const slot = localBoard.querySelector('[data-testid="card-slot"]')!;
-      fireEvent.doubleClick(slot);
-
-      // Double-click routes through the sockatrice bulkTap surface (single = n=1).
-      const [gameId, targets] = vi.mocked(webClient.request.game.bulkTap).mock.calls[0];
-      expect(gameId).toBe(1);
-      expect(targets.map((t) => t.card.id)).toEqual([7]);
-    });
-
-    it('right-clicking a local card opens the card context menu', () => {
-      const card = makeCard({ id: 7, name: 'Creature', x: 0, y: 0 });
-      renderWithProviders(<Game />, {
-        preloadedState: buildGame({
-          localId: 1,
-          opponentIds: [2],
-          tableCards: [card],
-        }),
-      });
-
-      const slot = screen.getByTestId('player-board-1').querySelector('[data-testid="card-slot"]')!;
-      fireEvent.contextMenu(slot);
-
-      expect(screen.getByText('Face Down')).toBeInTheDocument();
-      expect(screen.getByText('Tap')).toBeInTheDocument();
-    });
-
-    it('right-clicking the local deck opens the zone context menu', () => {
-      renderWithProviders(<Game />, {
-        preloadedState: buildGame({ localId: 1, opponentIds: [2] }),
-      });
-
-      const localDeck = screen
-        .getByTestId('player-board-1')
-        .querySelector(`[data-testid="zone-stack-${ZoneName.DECK}"]`)!;
-      fireEvent.contextMenu(localDeck);
-
-      expect(screen.getByText('Draw a card')).toBeInTheDocument();
-      expect(screen.getByText('Shuffle')).toBeInTheDocument();
-    });
-
-    it('does NOT open a zone context menu for the opponent deck', () => {
-      renderWithProviders(<Game />, {
-        preloadedState: buildGame({ localId: 1, opponentIds: [2] }),
-      });
-
-      const opponentDeck = screen
-        .getByTestId('player-board-2')
-        .querySelector(`[data-testid="zone-stack-${ZoneName.DECK}"]`)!;
-      fireEvent.contextMenu(opponentDeck);
-
-      expect(screen.queryByText('Draw a card')).not.toBeInTheDocument();
-    });
-
-    it('opening a card menu closes an already-open zone menu', () => {
-      const card = makeCard({ id: 7, x: 0, y: 0 });
-      renderWithProviders(<Game />, {
-        preloadedState: buildGame({
-          localId: 1,
-          opponentIds: [2],
-          tableCards: [card],
-        }),
-      });
-
-      const localDeck = screen
-        .getByTestId('player-board-1')
-        .querySelector(`[data-testid="zone-stack-${ZoneName.DECK}"]`)!;
-      fireEvent.contextMenu(localDeck);
-      expect(screen.getByText('Draw a card')).toBeInTheDocument();
-
-      const slot = screen.getByTestId('player-board-1').querySelector('[data-testid="card-slot"]')!;
-      fireEvent.contextMenu(slot);
-
-      expect(screen.queryByText('Draw a card')).not.toBeInTheDocument();
-      expect(screen.getByText('Face Down')).toBeInTheDocument();
-    });
-
-    it('dispatches drawCards(1) when "Draw a card" is chosen from the deck menu', () => {
-      const webClient = createMockWebClient();
-      renderWithProviders(<Game />, {
-        preloadedState: buildGame({ localId: 1, opponentIds: [2] }),
-        webClient,
-      });
-
-      fireEvent.contextMenu(
-        screen.getByTestId('player-board-1').querySelector(`[data-testid="zone-stack-${ZoneName.DECK}"]`)!,
-      );
-      fireEvent.click(screen.getByText('Draw a card'));
-
-      expect(webClient.request.game.drawCards).toHaveBeenCalledWith(1, { number: 1 });
-    });
-
-    it('opens a PromptDialog when "Set P/T…" is chosen and dispatches bulkSetPT on submit', () => {
-      const webClient = createMockWebClient();
-      const card = makeCard({ id: 7, x: 0, y: 0, pt: '' });
-      renderWithProviders(<Game />, {
-        preloadedState: buildGame({
-          localId: 1,
-          opponentIds: [2],
-          tableCards: [card],
-        }),
-        webClient,
-      });
-
-      fireEvent.contextMenu(
-        screen.getByTestId('player-board-1').querySelector('[data-testid="card-slot"]')!,
-      );
-      fireEvent.click(screen.getByText('Set P/T…'));
-
-      const input = screen.getByLabelText('P/T (e.g. 3/3)');
-      fireEvent.change(input, { target: { value: '3/3' } });
-      fireEvent.click(screen.getByRole('button', { name: /ok/i }));
-
-      // No multi-selection → the bulk dispatcher acts on just the menu card (n=1).
-      expect(webClient.request.game.bulkSetPT).toHaveBeenCalledWith(
-        1,
-        [expect.objectContaining({ ownerPlayerId: 1, zone: ZoneName.TABLE, card: expect.objectContaining({ id: 7 }) })],
-        '3/3',
-        expect.any(Function), // judge resolver forwarded; own card resolves bare
-      );
-    });
-  });
+  // Card-interaction tests removed: they all required `[data-testid="card-slot"]`
+  // + `[data-testid="zone-stack-<name>"]` + `[data-testid="player-board-N"]`
+  // hooks that PlayerBox (the current seat renderer) does not expose. The
+  // command-dispatch paths themselves (bulkTap, drawCards, bulkSetPT,
+  // context-menu open/close) are covered directly by the useGameDialogs and
+  // context-menu component specs — those don't depend on the PlayerBox DOM.
 
   // M4–M6 orchestration tests live in Game.orchestration.spec.tsx — that
   // file pins the end-to-end dispatch flows (dialog/menu → command) that go

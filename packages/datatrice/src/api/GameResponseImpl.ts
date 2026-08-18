@@ -65,8 +65,8 @@ export class GameResponseImpl implements WebsocketTypes.IGameResponse {
     this.store.dispatch(GameActions.gameSay({ gameId, playerId, message, timeReceived }));
   }
 
-  cardMoved(gameId: number, playerId: number, data: Event_MoveCard): void {
-    this.store.dispatch(GameActions.cardMoved({ gameId, playerId, data }));
+  cardMoved(gameId: number, playerId: number, data: Event_MoveCard, isUndoDraw?: boolean): void {
+    this.store.dispatch(GameActions.cardMoved({ gameId, playerId, data, isUndoDraw }));
   }
 
   cardFlipped(gameId: number, playerId: number, data: Event_FlipCard): void {
@@ -121,8 +121,8 @@ export class GameResponseImpl implements WebsocketTypes.IGameResponse {
     this.store.dispatch(GameActions.cardsRevealed({ gameId, playerId, data }));
   }
 
-  zoneViewRevealed(gameId: number, playerId: number, zoneName: string, cards: ServerInfo_Card[]): void {
-    this.store.dispatch(GameActions.zoneViewRevealed({ gameId, playerId, zoneName, cards }));
+  zoneViewRevealed(gameId: number, playerId: number, zoneName: string, cards: ServerInfo_Card[], isReversed: boolean): void {
+    this.store.dispatch(GameActions.zoneViewRevealed({ gameId, playerId, zoneName, cards, isReversed }));
   }
 
   zoneShuffled(gameId: number, playerId: number, data: Event_Shuffle): void {

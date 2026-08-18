@@ -1,30 +1,46 @@
-:root {
-  --thin-scrollbar-color: rgba(255, 255, 255, 0.3);
-  --thin-scrollbar-gutter: stable;
-}
+/* Global scrollbar theming so every scrollable surface (MUI dialogs,
+   panels, dropdowns, the main viewport) picks up the fancy palette.
+   The pre-redo styling opted-in via a `.scrollable` class; that class
+   is preserved for backwards compatibility with places that still
+   apply it, but the visual rules now target `*` so nothing slips
+   through with a default OS scrollbar. */
 
-.scrollable {
-  overflow: auto;
-
+/* Firefox */
+* {
   scrollbar-width: thin;
-  scrollbar-color: var(--thin-scrollbar-color) transparent;
-  scrollbar-gutter: var(--thin-scrollbar-gutter);
+  scrollbar-color: rgb(var(--border-strong)) transparent;
 }
 
-.scrollable.no-gutter {
-  --thin-scrollbar-gutter: auto;
+/* WebKit (Chrome, Safari, Edge) */
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
 }
-
-.scrollable::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+*::-webkit-scrollbar-track {
+  background: transparent;
 }
-
-.scrollable::-webkit-scrollbar-track {
+/* border + background-clip trick paints a 2px transparent gutter
+   around the thumb so it reads as a thinner pill floating in the
+   track, rather than filling the full 10px width. */
+*::-webkit-scrollbar-thumb {
+  background: rgb(var(--border-strong));
+  border-radius: 5px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: rgb(var(--accent-primary));
+  background-clip: padding-box;
+}
+*::-webkit-scrollbar-corner {
   background: transparent;
 }
 
-.scrollable::-webkit-scrollbar-thumb {
-  background: var(--thin-scrollbar-color);
-  border-radius: 3px;
+/* Explicit scrollable containers keep their gutter behavior. */
+.scrollable {
+  overflow: auto;
+  scrollbar-gutter: stable;
+}
+.scrollable.no-gutter {
+  scrollbar-gutter: auto;
 }

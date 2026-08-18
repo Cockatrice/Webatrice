@@ -17,8 +17,11 @@ describe('Server (integration)', () => {
   it('renders the rooms shell with the empty user count', () => {
     const { container } = renderFeatureScreen(<Server />);
 
-    expect(container.querySelector('.server-rooms')).toBeInTheDocument();
-    expect(screen.getByText(/Users connected to server:/)).toBeInTheDocument();
+    // Old `.server-rooms` container is gone; the rooms shell is now a
+    // <table> inside RoomsList. ServerUsers panel exposes user count as
+    // "N connected" instead of "Users connected to server:".
+    expect(container.querySelector('table')).toBeInTheDocument();
+    expect(screen.getByText(/\d+ connected/)).toBeInTheDocument();
   });
 
   it('shows a row in the rooms table for each known room', () => {
@@ -36,7 +39,9 @@ describe('Server (integration)', () => {
 
     const { container } = renderFeatureScreen(<Server />);
 
-    const tableRoom = container.querySelector('.rooms');
-    expect(tableRoom?.textContent).toContain('Lobby');
+    // `.rooms` class no longer exists — RoomsList renders a <table> and
+    // a <tr> per room; scope to the <tbody> to skip the header cells.
+    const tbody = container.querySelector('table tbody');
+    expect(tbody?.textContent).toContain('Lobby');
   });
 });

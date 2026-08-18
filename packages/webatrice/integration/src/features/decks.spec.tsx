@@ -14,6 +14,8 @@ describe('Decks (integration)', () => {
   it('renders the Decks placeholder when the user is connected', () => {
     renderFeatureScreen(<Decks />);
 
-    expect(screen.getByText('Decks', { selector: 'span' })).toBeInTheDocument();
+    // Placeholder is no longer a bare <span>Decks</span>; the page now
+    // renders an <h1>My Decks</h1> heading as its identifying element.
+    expect(screen.getByRole('heading', { level: 1, name: 'My Decks' })).toBeInTheDocument();
   });
 });

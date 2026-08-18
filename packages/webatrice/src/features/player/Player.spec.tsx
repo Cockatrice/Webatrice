@@ -1,5 +1,5 @@
 import { vi } from 'vitest';
-import { fireEvent, screen } from '@testing-library/react';
+import { fireEvent, screen, within } from '@testing-library/react';
 import { Route, Routes } from 'react-router-dom';
 import { ServerInfo_User_UserLevelFlag } from '@cockatrice/sockatrice/generated';
 
@@ -46,9 +46,12 @@ describe('Player', () => {
 
   it('renders the player name and details when the user is found', () => {
     const user = makeUser({ name: 'alice', realName: 'Alice A', country: 'us', userLevel: 0 });
-    renderPlayer(stateWithPlayer(user), 'alice');
-    expect(screen.getByText('alice')).toBeInTheDocument();
-    expect(screen.getByText('Alice A')).toBeInTheDocument();
+    const { container } = renderPlayer(stateWithPlayer(user), 'alice');
+    // "alice" also appears in the TopBar's Player tab; scope to the player-view
+    // card to keep this assertion about the profile details (not the tab).
+    const card = within(container.querySelector('.player-view__card') as HTMLElement);
+    expect(card.getByText('alice')).toBeInTheDocument();
+    expect(card.getByText('Alice A')).toBeInTheDocument();
   });
 
   it('shows action buttons for another user and wires the buddy action', () => {

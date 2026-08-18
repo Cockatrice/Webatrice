@@ -1,4 +1,4 @@
-import { act, waitFor, screen } from '@testing-library/react';
+import { act, waitFor, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
 import { store } from '../../helpers/setup';
@@ -9,6 +9,13 @@ import { renderFeatureScreen } from '../helpers';
 import { buildEventGameJoined, buildEventGameStateChanged, registerGameBoardHooks } from './helpers';
 
 registerGameBoardHooks();
+
+// PlayerList rewrite replaced the `.player-list__host-badge` className with a
+// lucide Crown icon carrying `aria-label="Host"`. The seat row still exposes
+// `data-testid="player-list-item-N"`.
+function findHostBadge(row: HTMLElement) {
+  return within(row).queryByLabelText('Host');
+}
 
 describe('Game host change', () => {
   it('reflects a host change through both PlayerList badge and PlayerInfoPanel', async () => {
@@ -24,12 +31,8 @@ describe('Game host change', () => {
     });
 
     // Host starts as 1; badge should be on row 1.
-    expect(
-      screen.getByTestId('player-list-item-1').querySelector('.player-list__host-badge'),
-    ).not.toBeNull();
-    expect(
-      screen.getByTestId('player-list-item-2').querySelector('.player-list__host-badge'),
-    ).toBeNull();
+    expect(findHostBadge(screen.getByTestId('player-list-item-1'))).not.toBeNull();
+    expect(findHostBadge(screen.getByTestId('player-list-item-2'))).toBeNull();
 
     // Host changes to player 2.
     act(() => {
@@ -37,12 +40,8 @@ describe('Game host change', () => {
     });
 
     await waitFor(() => {
-      expect(
-        screen.getByTestId('player-list-item-2').querySelector('.player-list__host-badge'),
-      ).not.toBeNull();
+      expect(findHostBadge(screen.getByTestId('player-list-item-2'))).not.toBeNull();
     });
-    expect(
-      screen.getByTestId('player-list-item-1').querySelector('.player-list__host-badge'),
-    ).toBeNull();
+    expect(findHostBadge(screen.getByTestId('player-list-item-1'))).toBeNull();
   });
 });

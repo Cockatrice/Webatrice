@@ -1,13 +1,17 @@
+/* Per-player board — cosmetic port of fancy webatrice's PlayerBox
+ * outer surface: semi-transparent bg-surface with the subtle purple
+ * border palette. Grid layout (150px info | 96px zones | 1fr
+ * battlefield) is unchanged. */
 .player-board {
   display: grid;
   grid-template-columns: 150px 96px minmax(0, 1fr);
   height: 100%;
   min-height: 0;
-  background: #0a1225;
-  border-bottom: 2px solid #1a2b52;
+  background: rgb(var(--bg-surface) / 0.6);
+  border-bottom: 2px solid rgb(var(--border-subtle));
 }
 
 .player-board--mirrored {
   border-bottom: none;
-  border-top: 2px solid #1a2b52;
+  border-top: 2px solid rgb(var(--border-subtle));
 }

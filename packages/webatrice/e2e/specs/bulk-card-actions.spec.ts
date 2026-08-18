@@ -47,8 +47,11 @@ test('bulk tap and bulk move act on every selected battlefield card', async ({ b
     //    ≥2 selection taps the whole TABLE subset (batched SetCardAttr).
     await game.boxSelectBattlefield();
     await game.cardsOnBoard().first().dblclick();
-    await expect(game.cardsOnBoard().nth(0)).toHaveClass(/card-slot--tapped/);
-    await expect(game.cardsOnBoard().nth(1)).toHaveClass(/card-slot--tapped/);
+    // PlayerBox renders tapped state as an inline `transform: rotate(90deg)`
+    // on the card's inner style container — no `.card-slot--tapped` class in
+    // the current DOM. Assert against the inline style instead.
+    await expect(game.cardsOnBoard().nth(0)).toHaveAttribute('style', /rotate\(90deg\)/);
+    await expect(game.cardsOnBoard().nth(1)).toHaveAttribute('style', /rotate\(90deg\)/);
 
     // 2. Bulk move: re-select (don't rely on the tap preserving selection), then
     //    "Send to Graveyard" on a selected card → both move in one MoveCard.

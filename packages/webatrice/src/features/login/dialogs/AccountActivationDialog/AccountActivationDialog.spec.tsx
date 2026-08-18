@@ -29,7 +29,7 @@ describe('AccountActivationDialog', () => {
       <AccountActivationDialog isOpen handleClose={handleClose} onSubmit={vi.fn()} />,
       { preloadedState: disconnectedState },
     );
-    const closeButton = document.querySelector('.dialog-title button') as HTMLElement;
+    const closeButton = screen.getByRole('button', { name: /close/i });
     expect(closeButton).toBeTruthy();
     fireEvent.click(closeButton);
     expect(handleClose).toHaveBeenCalledTimes(1);
@@ -40,6 +40,6 @@ describe('AccountActivationDialog', () => {
       <AccountActivationDialog isOpen onSubmit={vi.fn()} />,
       { preloadedState: disconnectedState },
     );
-    expect(document.querySelector('.dialog-title button')).toBeNull();
+    expect(screen.queryByRole('button', { name: /close/i })).toBeNull();
   });
 });

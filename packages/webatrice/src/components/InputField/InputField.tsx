@@ -1,62 +1,73 @@
-import type { ChangeEvent, FocusEvent } from 'react';
-import { styled } from '@mui/material/styles';
-import TextField, { TextFieldProps } from '@mui/material/TextField';
-import ErrorOutlinedIcon from '@mui/icons-material/ErrorOutlined';
+import type { ChangeEvent, FocusEvent, InputHTMLAttributes, ReactNode } from 'react';
+import { AlertCircle } from 'lucide-react';
 
-import './InputField.css';
-
-const PREFIX = 'InputField';
-
-const classes = {
-  root: `${PREFIX}-root`,
-};
-
-const Root = styled('div')(({ theme }) => ({
-  [`&.${classes.root}`]: {
-    '& .InputField-error': {
-      color: theme.palette.error.main,
-    },
-  },
-}));
-
-export interface InputFieldProps extends Omit<TextFieldProps, 'value' | 'onChange' | 'onBlur' | 'onFocus' | 'name' | 'error'> {
+// Value/change/focus/blur are our own strict signatures; everything
+// else (autoComplete, name, disabled, autoFocus, placeholder, min,
+// max, step, pattern, etc.) is passthrough via InputHTMLAttributes,
+// which matches the pre-Tailwind version's caller surface (that one
+// extended MUI TextFieldProps for the same reason).
+export interface InputFieldProps
+  extends Omit<
+    InputHTMLAttributes<HTMLInputElement>,
+    'value' | 'onChange' | 'onBlur' | 'onFocus'
+  > {
   value: string;
-  onChange: (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
-  onBlur?: (e: FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
-  onFocus?: (e: FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
-  name?: string;
+  onChange: (e: ChangeEvent<HTMLInputElement>) => void;
+  onBlur?: (e: FocusEvent<HTMLInputElement>) => void;
+  onFocus?: (e: FocusEvent<HTMLInputElement>) => void;
+  label: ReactNode;
   error?: string;
   touched?: boolean;
 }
 
-const InputField = ({ value, onChange, onBlur, onFocus, name, error, touched, ...args }: InputFieldProps) => {
-  const showError = touched && error;
-  return (
-    <Root className={`InputField ${classes.root}`}>
-      {showError && (
-        <div className="InputField-validation">
-          <div className="InputField-error">
-            {error}
-            <ErrorOutlinedIcon style={{ fontSize: 'small', fontWeight: 'bold' }} />
-          </div>
-        </div>
-      )}
+/**
+ * Text input, Tailwind-only. Replaces the pre-redo MUI-TextField
+ * wrapper. Same prop contract as before (value, onChange, label,
+ * error, touched, name, autoComplete, etc.) so every caller across
+ * the app keeps working without changes.
+ */
+const InputField = ({
+  value,
+  onChange,
+  onBlur,
+  onFocus,
+  label,
+  error,
+  touched,
+  className,
+  disabled,
+  ...rest
+}: InputFieldProps) => {
+  const showError = Boolean(touched && error);
 
-      <TextField
-        autoComplete="off"
+  return (
+    <label className={['block', className ?? ''].join(' ')}>
+      <span className="flex items-center justify-between text-xs font-medium text-text-muted mb-1">
+        <span>{label}</span>
+        {showError && (
+          <span className="flex items-center gap-1 text-[0.7rem] text-red-400">
+            <AlertCircle size={11} />
+            {error}
+          </span>
+        )}
+      </span>
+      <input
+        {...rest}
         value={value}
         onChange={onChange}
         onBlur={onBlur}
         onFocus={onFocus}
-        name={name}
-        {...args}
-        className="rounded"
-        variant="outlined"
-        margin="dense"
-        size="small"
-        fullWidth
+        disabled={disabled}
+        autoComplete={rest.autoComplete ?? 'off'}
+        className={[
+          'w-full px-3 py-2 rounded-md text-sm text-text-primary bg-bg-elevated border transition-colors',
+          'placeholder:text-text-muted',
+          'focus:outline-none focus:ring-1 focus:border-accent focus:ring-accent',
+          showError ? 'border-red-400/60' : 'border-border-subtle hover:border-border-strong',
+          disabled ? 'opacity-60 cursor-not-allowed' : '',
+        ].join(' ')}
       />
-    </Root>
+    </label>
   );
 };
 

@@ -19,6 +19,7 @@ export {
   bulkSetAnnotation,
   bulkIncCardCounter,
   bulkSetCardCounter,
+  bulkSetCardCounterEntries,
 } from './bulk';
 export { flipCard } from './flipCard';
 export { attachCard } from './attachCard';

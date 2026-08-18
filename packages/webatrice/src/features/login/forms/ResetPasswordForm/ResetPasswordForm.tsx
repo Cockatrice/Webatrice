@@ -52,7 +52,7 @@ const ResetPasswordForm = ({ onSubmit, userName }: ResetPasswordFormProps) => {
                 {...field}
                 label={t('Common.label.username')}
                 autoComplete='username'
-                slotProps={{ input: { readOnly: Boolean(userName) } }}
+                readOnly={Boolean(userName)}
                 error={fieldState.error?.message}
                 touched={fieldState.isTouched}
               />

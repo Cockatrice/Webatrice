@@ -15,6 +15,8 @@ export const playerReducers = {
       zones: {},
       counters: {},
       arrows: {},
+      drawSeq: 0,
+      lastDrawCount: 0,
     };
     // Track seat/join order; a re-join lands last (filter then push).
     game.seatOrder = game.seatOrder.filter((id) => id !== playerProperties.playerId);

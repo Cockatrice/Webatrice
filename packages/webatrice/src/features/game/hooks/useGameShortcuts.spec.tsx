@@ -99,11 +99,53 @@ function setup(opts: SetupOpts = {}) {
   });
 
   const onRequestConcede = vi.fn();
-  renderHook(() => useGameShortcuts({ gameId: 1, onRequestConcede }), {
+  const onRequestDrawMultiple = vi.fn();
+  const onRequestUndoDraw = vi.fn();
+  const onRequestRollDie = vi.fn();
+  const onRequestLeave = vi.fn();
+  const onRequestViewSideboard = vi.fn();
+  const onRequestSortHandByType = vi.fn();
+  const onRequestViewLibrary = vi.fn();
+  const onRequestViewGraveyard = vi.fn();
+  const onRequestPlayTop = vi.fn();
+  const onRequestMoveTopToGrave = vi.fn();
+  const onRequestMoveTopNToGrave = vi.fn();
+  const onCloseRecentZoneView = vi.fn(() => false);
+  renderHook(() => useGameShortcuts({
+    gameId: 1,
+    onRequestConcede,
+    onRequestDrawMultiple,
+    onRequestUndoDraw,
+    onRequestRollDie,
+    onRequestLeave,
+    onRequestViewSideboard,
+    onRequestSortHandByType,
+    onRequestViewLibrary,
+    onRequestViewGraveyard,
+    onRequestPlayTop,
+    onRequestMoveTopToGrave,
+    onRequestMoveTopNToGrave,
+    onCloseRecentZoneView,
+  }), {
     wrapper: Wrapper,
   });
 
-  return { webClient, onRequestConcede };
+  return {
+    webClient,
+    onRequestConcede,
+    onRequestDrawMultiple,
+    onRequestUndoDraw,
+    onRequestRollDie,
+    onRequestLeave,
+    onRequestViewSideboard,
+    onRequestSortHandByType,
+    onRequestViewLibrary,
+    onRequestViewGraveyard,
+    onRequestPlayTop,
+    onRequestMoveTopToGrave,
+    onRequestMoveTopNToGrave,
+    onCloseRecentZoneView,
+  };
 }
 
 function fire(actionId: string) {
@@ -173,7 +215,11 @@ describe('useGameShortcuts', () => {
 
     fire('game.nextPhase');
 
-    expect(webClient.request.game.setActivePhase).toHaveBeenCalledWith(1, { phase: 0 });
+    expect(webClient.request.game.setActivePhase).toHaveBeenCalledWith(
+      1,
+      { phase: 0 },
+      expect.objectContaining({ onError: expect.any(Function) }),
+    );
   });
 
   it('does not draw or pass turn when the local player has conceded', () => {

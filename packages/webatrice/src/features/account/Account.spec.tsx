@@ -24,11 +24,14 @@ beforeAll(() => {
 
 describe('Account', () => {
   it('renders server details and the current user', () => {
-    renderWithProviders(<Account />, { preloadedState: connectedState });
+    const { container } = renderWithProviders(<Account />, { preloadedState: connectedState });
 
     expect(screen.getByText('Server Name: Test Server')).toBeInTheDocument();
     expect(screen.getByText('Server Version: 1.0.0')).toBeInTheDocument();
-    expect(screen.getByText('testUser')).toBeInTheDocument();
+    // "testUser" also appears in the TopBar account button now; scope the
+    // profile-name assertion to the account-details panel's <strong>.
+    const strong = container.querySelector('.account-details strong');
+    expect(strong?.textContent).toBe('testUser');
     expect(screen.getByText(/Buddies Online:/)).toBeInTheDocument();
     expect(screen.getByText(/Ignored Users Online:/)).toBeInTheDocument();
   });

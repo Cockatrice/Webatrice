@@ -68,7 +68,10 @@ describe('RoomsList', () => {
       preloadedState: connectedState,
     });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Join' }));
+    // Joined rooms now render an "Open" button (navigate) instead of the
+    // "Join" button (webClient.joinRoom); assert it does not call the
+    // join request.
+    fireEvent.click(screen.getByRole('button', { name: 'Open' }));
     expect(hoisted.mockWebClient.request.session.joinRoom).not.toHaveBeenCalled();
   });
 });

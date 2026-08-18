@@ -3,27 +3,23 @@ import { screen } from '@testing-library/react';
 import { renderWithProviders, connectedState, disconnectedState } from '../../__test-utils__';
 import Decks from './Decks';
 
-// Coverage scope deferred: Decks.tsx is currently a placeholder (`<span>Decks</span>`)
-// with no list, selection, or management UI to exercise. List/selection/management
-// tests will land alongside the real implementation; see plans/gameboard-deferrables.md.
-describe('Decks (placeholder coverage)', () => {
-  it('renders the Decks placeholder content', () => {
+// Piece 2 coverage: smoke-test the new MyDecks list. Full RTL
+// coverage (create/delete flows, useReduxEffect navigation) lives in
+// integration tests to be added alongside Piece 3.
+describe('Decks (MyDecks page)', () => {
+  it('renders the page header + New Deck button when connected', () => {
     renderWithProviders(<Decks />, { preloadedState: connectedState });
-
-    // LeftNav also renders a "Decks" nav link, so scope to the page's own span.
-    expect(screen.getByText('Decks', { selector: 'span' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'My Decks' })).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: /new deck/i }).length).toBeGreaterThan(0);
   });
 
-  it('renders inside a Layout wrapper', () => {
-    const { container } = renderWithProviders(<Decks />, { preloadedState: connectedState });
-    // Layout is the page-level container; assert at least one ancestor element exists.
-    const span = screen.getByText('Decks', { selector: 'span' });
-    expect(span.parentElement).not.toBeNull();
-    expect(container.contains(span)).toBe(true);
+  it('shows the loading state while backendDecks is null', () => {
+    renderWithProviders(<Decks />, { preloadedState: connectedState });
+    expect(screen.getByText(/loading decks/i)).toBeInTheDocument();
   });
 
-  it('still renders the placeholder span when disconnected (AuthGuard does not blank the page)', () => {
+  it('still renders the page shell when disconnected (AuthGuard does not blank the page)', () => {
     renderWithProviders(<Decks />, { preloadedState: disconnectedState });
-    expect(screen.getByText('Decks', { selector: 'span' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'My Decks' })).toBeInTheDocument();
   });
 });

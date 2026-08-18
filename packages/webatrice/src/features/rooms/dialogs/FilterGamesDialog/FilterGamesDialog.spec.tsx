@@ -100,8 +100,10 @@ describe('FilterGamesDialog', () => {
 
   it('forwards the maxGameAgeSeconds when a Max age option is picked', () => {
     const { onSubmit } = renderDialog();
-    fireEvent.mouseDown(screen.getByLabelText(/Max age/i));
-    fireEvent.click(screen.getByRole('option', { name: /10 minutes/i }));
+    // Post-MUI: the dialog now uses a native <select>, so switching
+    // options is a change event carrying the new value string rather
+    // than mouseDown-then-click-option.
+    fireEvent.change(screen.getByLabelText(/Max age/i), { target: { value: '600' } });
     fireEvent.click(screen.getByRole('button', { name: /Apply/i }));
     expect(onSubmit.mock.calls[0][0].maxGameAgeSeconds).toBe(600);
   });

@@ -338,15 +338,12 @@
     "removeBinding": "Remove",
     "noBinding": "No binding",
     "group": {
-      "global": "Global",
       "game": "Game",
       "gamePhases": "Game Phases",
       "deckEditor": "Deck Editor",
       "room": "Room"
     },
     "action": {
-      "app.openSettings": "Open settings",
-      "app.toggleFullscreen": "Toggle fullscreen",
       "chat.focus": "Focus chat",
       "game.untapAll": "Untap all",
       "game.drawCard": "Draw card",

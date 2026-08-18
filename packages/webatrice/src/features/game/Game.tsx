@@ -1,20 +1,27 @@
 import { useMemo } from 'react';
+import { useParams } from 'react-router-dom';
 import { DndContext } from '@dnd-kit/core';
 
 import { AuthGuard } from '@app/components';
 import { Layout } from '@app/feature-wrappers/layout';
 import { ConfirmDialog, PromptDialog } from '@app/dialogs';
+import GameLobby from './GameLobby';
+import { useCurrentGame } from './hooks/useCurrentGame';
 import GameArrowOverlay from './components/arrows/GameArrowOverlay/GameArrowOverlay';
 import BoxSelectOverlay from './components/ui/BoxSelectOverlay/BoxSelectOverlay';
 import CardContextMenu from './components/context-menus/CardContextMenu/CardContextMenu';
 import HandContextMenu from './components/context-menus/HandContextMenu/HandContextMenu';
 import PlayerContextMenu from './components/context-menus/PlayerContextMenu/PlayerContextMenu';
 import ZoneContextMenu from './components/context-menus/ZoneContextMenu/ZoneContextMenu';
-import PhaseBar from './components/right-sidebar/PhaseBar/PhaseBar';
-import RightPanel from './components/right-sidebar/RightPanel/RightPanel';
+import PhaseTrack from './components/PhaseTrack/PhaseTrack';
+import BattlefieldSidebar from './components/BattlefieldSidebar/BattlefieldSidebar';
 import { CardDragOverlayHost } from './components/ui/CardDragOverlay/CardDragOverlay';
-import HandZone from './components/ui/HandZone/HandZone';
 import GameBoardCell from './components/ui/GameBoardCell/GameBoardCell';
+import { HoveredCardProvider } from './components/PlayerBox/hoveredCard';
+import { BigCardPreviewProvider } from './components/PlayerBox/bigCardPreview';
+import { CardScaleProvider } from './components/PlayerBox/cardScale';
+import IncomingRevealDialog from './components/PlayerBox/IncomingRevealDialog';
+import { ForeignDragProvider } from './components/PlayerBox/foreignDragContext';
 import CreateTokenDialog from './dialogs/CreateTokenDialog/CreateTokenDialog';
 import DeckSelectDialog from './dialogs/DeckSelectDialog/DeckSelectDialog';
 import GameInfoDialog from './dialogs/GameInfoDialog/GameInfoDialog';
@@ -36,7 +43,33 @@ import './Game.css';
 const CONCEDE_CONFIRM_MESSAGE =
   'You\'ll stay seated as a spectator until you click Unconcede or Leave Game. Others will see you as conceded.';
 
+const LEAVE_CONFIRM_MESSAGE =
+  'You\'ll be removed from the game entirely. To rejoin, you\'ll need a re-invite or to join as a spectator (if allowed).';
+
+/**
+ * Top-level game route. Splits the render into two paths:
+ *   • Pre-start (game exists but `started === false`): the full-page
+ *     GameLobby handles deck selection, ready toggling, and host
+ *     force-start (via kick).
+ *   • Started: the existing battlefield renders below in GameBoard.
+ * The gate lives outside useGame() so the heavy game infra (DND
+ * sensors, card registry, board layout memoization, arrow overlay)
+ * doesn't initialize while we're still lobbying — cheap since
+ * useCurrentGame is just a couple of Redux selectors.
+ */
 function Game() {
+  const params = useParams<{ gameId?: string }>();
+  const parsed = params.gameId != null ? Number(params.gameId) : NaN;
+  const routeGameId = Number.isFinite(parsed) ? parsed : undefined;
+  const { game, isStarted } = useCurrentGame(routeGameId);
+
+  if (game && !isStarted && routeGameId != null) {
+    return <GameLobby gameId={routeGameId} />;
+  }
+  return <GameBoard />;
+}
+
+function GameBoard() {
   const g = useGame();
   const {
     gameId,
@@ -98,8 +131,17 @@ function Game() {
       onRequestConcede: dialogs.openConcede,
       onRequestUnconcede: dialogs.openUnconcede,
       onRequestGameInfo: dialogs.openGameInfo,
+      onRequestViewSideboard: dialogs.openViewSideboard,
+      onRequestLeave: dialogs.openLeaveConfirm,
     }),
-    [dialogs.openRollDie, dialogs.openConcede, dialogs.openUnconcede, dialogs.openGameInfo],
+    [
+      dialogs.openRollDie,
+      dialogs.openConcede,
+      dialogs.openUnconcede,
+      dialogs.openGameInfo,
+      dialogs.openViewSideboard,
+      dialogs.openLeaveConfirm,
+    ],
   );
 
   return (
@@ -107,6 +149,10 @@ function Game() {
       <AuthGuard />
       <CardRegistryContext.Provider value={cardRegistry}>
         <GameIdProvider value={gameId}>
+          <HoveredCardProvider>
+          <BigCardPreviewProvider>
+          <ForeignDragProvider>
+          <CardScaleProvider containerRef={boardRef} rows={layout.rows}>
           <DndContext
             sensors={sensors}
             collisionDetection={dnd.collisionDetection}
@@ -129,7 +175,16 @@ function Game() {
                         ref={gameRef}
                         onMouseDown={handleGameMouseDown}
                       >
-                        <PhaseBar />
+                        <PhaseTrack />
+
+                        {/* Grid-column-1 placeholder. PhaseTrack is
+                             absolutely positioned so it doesn't consume
+                             a grid cell on its own — this empty div
+                             reserves the 8 px column so the play area
+                             lands in column 2 and its width stays
+                             constant whether the phase track is
+                             collapsed or expanded. */}
+                        <div aria-hidden />
 
                         <div
                           className="game__board"
@@ -154,6 +209,7 @@ function Game() {
                                 <GameBoardCell
                                   key={cell.playerId}
                                   cell={cell}
+                                  totalPlayers={layout.cells.length}
                                   onPlayerContextMenu={dialogs.handlePlayerContextMenu}
                                   onPlayerClick={arrows.handlePlayerClick}
                                   onHandContextMenu={dialogs.handleHandContextMenu}
@@ -161,15 +217,13 @@ function Game() {
                               ))}
                             </div>
                           )}
-                          {game && layout.bottomHand && (
-                            <HandZone
-                              playerId={layout.bottomHand.playerId}
-                              onHandContextMenu={dialogs.handleHandContextMenu}
-                            />
-                          )}
+                          {/* Bottom-bar HandZone removed: each PlayerBox now
+                              renders its own hand inline. Kept the space so
+                              downstream layout hooks that watched the empty
+                              bottom bar don't recompute their heights. */}
                         </div>
 
-                        <RightPanel />
+                        <BattlefieldSidebar />
 
                         <GameArrowOverlay containerRef={gameRef} dragPreview={arrows.dragPreview} />
 
@@ -217,6 +271,13 @@ function Game() {
 
                         <RevealCardsDialog />
 
+                        {/* Receiver-side popup: opens whenever an
+                            Event_RevealCards arrives with a populated
+                            card list (someone revealed a zone to us,
+                            or "to all players" including us). Reads /
+                            dismisses via the incomingReveal slice. */}
+                        <IncomingRevealDialog />
+
                         <ConfirmDialog
                           isOpen={dialogs.concedeConfirm === 'concede'}
                           title="Concede this game?"
@@ -236,6 +297,16 @@ function Game() {
                           onCancel={dialogs.closeConcedeConfirm}
                         />
 
+                        <ConfirmDialog
+                          isOpen={dialogs.leaveConfirm}
+                          title="Leave this game?"
+                          message={LEAVE_CONFIRM_MESSAGE}
+                          confirmLabel="Leave"
+                          destructive
+                          onConfirm={dialogs.confirmLeave}
+                          onCancel={dialogs.closeLeaveConfirm}
+                        />
+
                         <GameInfoDialog />
                       </div>
                     </GameDialogsProvider>
@@ -246,6 +317,10 @@ function Game() {
 
             <CardDragOverlayHost />
           </DndContext>
+          </CardScaleProvider>
+          </ForeignDragProvider>
+          </BigCardPreviewProvider>
+          </HoveredCardProvider>
         </GameIdProvider>
       </CardRegistryContext.Provider>
     </Layout>

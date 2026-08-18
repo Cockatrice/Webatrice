@@ -3,7 +3,7 @@ import { createSelector, lruMemoize } from '@reduxjs/toolkit';
 import { dequal } from 'dequal';
 import { Enriched } from '../../types';
 import { ServerInfo_Card } from '@cockatrice/sockatrice/generated';
-import { GamesState } from './game.interfaces';
+import { GamesState, IncomingReveal } from './game.interfaces';
 
 type State = { games: GamesState };
 
@@ -113,6 +113,12 @@ export const Selectors = {
   getGames: ({ games }: State): { [gameId: number]: Enriched.GameEntry } => games.games,
 
   getGame: ({ games }: State, gameId: number): Enriched.GameEntry | undefined => games.games[gameId],
+
+  /** The pending "someone revealed their zone to us" notification, or null.
+   *  Set by the cardsRevealed listener when Event_RevealCards arrives with
+   *  a non-empty card list, cleared when the user closes the dialog. */
+  getIncomingReveal: ({ games }: State): IncomingReveal | null =>
+    games.incomingReveal ?? null,
 
   getPlayers: ({ games }: State, gameId: number): { [playerId: number]: Enriched.PlayerEntry } | undefined =>
     games.games[gameId]?.players,

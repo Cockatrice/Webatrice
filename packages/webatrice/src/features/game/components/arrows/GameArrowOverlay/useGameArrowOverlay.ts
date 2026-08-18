@@ -13,6 +13,36 @@ import { PlayerEntry } from '@cockatrice/datatrice';
 import { ArrowColor, rgbaToCss } from '@app/types';
 import { makeCardKey, makePlayerKey, useCardRegistry } from '../../../utils/CardRegistry/CardRegistryContext';
 
+// Fallback DOM lookup for consumers that don't wire the CardRegistry
+// (e.g. the ported fancy PlayerBox). We tag battlefield cards with
+// `data-card-id`, `data-card-owner`, `data-card-zone` and player-target
+// hitboxes with `data-arrow-target-*` — a plain querySelector finds them.
+// CSS.escape guards against zone strings with punctuation.
+function findCardEl(playerId: number, zone: string, cardId: number): HTMLElement | null {
+  const exact = document.querySelector<HTMLElement>(
+    `[data-card-id="${CSS.escape(String(cardId))}"][data-card-owner="${CSS.escape(String(playerId))}"][data-card-zone="${CSS.escape(zone)}"]`,
+  );
+  if (exact) return exact;
+  // Fallback: arrows drawn from a card in a pile-type zone (grave /
+  // exile / library) can't hit-test the individual card element — the
+  // cards there either aren't rendered at all or live inside a
+  // portal-rendered pile-view modal that doesn't tag them with the
+  // owner/zone attrs. Anchor to the pile itself instead, matching
+  // Cockatrice desktop's behavior where an arrow from a grave card
+  // renders off the grave pile at both clients. The pile tags
+  // `data-arrow-anchor-owner` + `data-arrow-anchor-zone` on its
+  // outer div (LargeZoneBox / CardBackZone).
+  return document.querySelector<HTMLElement>(
+    `[data-arrow-anchor-owner="${CSS.escape(String(playerId))}"][data-arrow-anchor-zone="${CSS.escape(zone)}"]`,
+  );
+}
+
+function findPlayerEl(playerId: number): HTMLElement | null {
+  return document.querySelector(
+    `[data-arrow-target-kind="player"][data-arrow-target-player-id="${CSS.escape(String(playerId))}"]`,
+  );
+}
+
 export interface ResolvedArrow {
   arrowId: number;
   ownerPlayerId: number;
@@ -151,20 +181,19 @@ export function useGameArrowOverlay({
     const out: ResolvedArrow[] = [];
     for (const player of Object.values(players) as PlayerEntry[]) {
       for (const a of Object.values(player.arrows) as ServerInfo_Arrow[]) {
-        const sourceEl = registry.get(
-          makeCardKey(a.startPlayerId, a.startZone, a.startCardId),
-        );
+        const sourceEl =
+          registry.get(makeCardKey(a.startPlayerId, a.startZone, a.startCardId)) ??
+          findCardEl(a.startPlayerId, a.startZone, a.startCardId);
         // proto2-unset: bufbuild drops unset optional fields from the spread
         // POJO (live path) but keeps them as defaults on the raw proto (refresh
         // path). Accept undefined, '', -1, and 0 so both paths route to the
         // player anchor. See plan/arrows-should-be-drawable-sunny-river.md.
         const isPlayerTarget =
           !a.targetZone || a.targetCardId == null || a.targetCardId === -1;
-        const targetEl = registry.get(
-          isPlayerTarget
-            ? makePlayerKey(a.targetPlayerId)
-            : makeCardKey(a.targetPlayerId, a.targetZone, a.targetCardId),
-        );
+        const targetEl = isPlayerTarget
+          ? (registry.get(makePlayerKey(a.targetPlayerId)) ?? findPlayerEl(a.targetPlayerId))
+          : (registry.get(makeCardKey(a.targetPlayerId, a.targetZone, a.targetCardId)) ??
+             findCardEl(a.targetPlayerId, a.targetZone, a.targetCardId));
         if (!sourceEl || !targetEl) {
           continue;
         }

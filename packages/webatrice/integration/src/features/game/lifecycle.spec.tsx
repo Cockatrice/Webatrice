@@ -10,6 +10,16 @@ import { buildEventGameJoined, buildEventGameStateChanged, registerGameBoardHook
 
 registerGameBoardHooks();
 
+// PlayerBox rewrite dropped the `player-board-N` / `hand-zone` testids that
+// this spec used to key on. The current DOM identifies each seated cell via a
+// `.game__board-cell` containing `[data-arrow-target-player-id="N"]` (the
+// life-total anchor). The hand assertion is dropped — the hand is now baked
+// into PlayerBox and no longer has a dedicated testid.
+function findBoardCell(playerId: number): HTMLElement | null {
+  const anchor = document.querySelector(`[data-arrow-target-player-id="${playerId}"]`);
+  return anchor ? (anchor.closest('.game__board-cell') as HTMLElement | null) : null;
+}
+
 describe('Game lifecycle', () => {
   it('renders the empty-board placeholder until a game is joined', () => {
     renderFeatureScreen(<Game />);
@@ -33,9 +43,8 @@ describe('Game lifecycle', () => {
       expect(screen.queryByTestId('game-empty')).not.toBeInTheDocument();
     });
 
-    expect(screen.getByTestId('player-board-1')).toBeInTheDocument();
-    expect(screen.getByTestId('player-board-2')).toBeInTheDocument();
-    expect(screen.getByTestId('hand-zone')).toBeInTheDocument();
+    expect(findBoardCell(1)).not.toBeNull();
+    expect(findBoardCell(2)).not.toBeNull();
   });
 
   it('returns to the empty placeholder when gameLeft fires', async () => {
@@ -47,7 +56,7 @@ describe('Game lifecycle', () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByTestId('player-board-1')).toBeInTheDocument();
+      expect(findBoardCell(1)).not.toBeNull();
     });
 
     act(() => {
@@ -58,6 +67,6 @@ describe('Game lifecycle', () => {
       expect(screen.getByTestId('game-empty')).toBeInTheDocument();
     });
 
-    expect(screen.queryByTestId('player-board-1')).not.toBeInTheDocument();
+    expect(findBoardCell(1)).toBeNull();
   });
 });

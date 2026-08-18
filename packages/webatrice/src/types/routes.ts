@@ -6,11 +6,12 @@ export enum RouteEnum {
   LOGS = '/logs',
   GAME = '/game/:gameId',
   DECKS = '/decks',
-  DECK = '/deck',
+  DECK = '/deck/:deckId',
   ACCOUNT = '/account',
   ADMINISTRATION = '/administration',
   REPLAYS = '/replays',
   SETTINGS = '/settings',
+  SHORTCUTS = '/shortcuts',
   INITIALIZE = '/initialize',
   UNSUPPORTED = '/unsupported',
 }

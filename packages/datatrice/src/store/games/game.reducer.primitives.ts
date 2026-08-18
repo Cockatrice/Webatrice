@@ -11,6 +11,7 @@ import {
 import { cloneWith, mergeSetFields } from '../../common';
 import { GamesState } from './game.interfaces';
 import { pushEventMessage } from './game.reducer.helpers';
+import type { LogEntry } from './messageLog';
 
 export const primitiveReducers = {
   gamePlayersReplaced: ((state, action) => {
@@ -172,17 +173,29 @@ export const primitiveReducers = {
 
   // Bulk variant: apply the same field patch to every card in a zone in one
   // pass. Used for Cockatrice's "card_id unset" Event_SetCardAttr (untap-all).
+  //
+  // Mirrors Cockatrice's server-side skip in `Server_Card::setAttribute` (with
+  // `allCards=true`): a bulk `AttrTapped: "0"` untap does NOT touch cards that
+  // are flagged with `doesntUntap`. Servatrice enforces this before mutating
+  // its own state, but still broadcasts the bulk event without a card_id — so
+  // the client would blindly untap the flagged cards unless we replicate the
+  // filter here. See server_card.cpp:70.
   cardFieldsUpdatedBulk: ((state, action) => {
     const { gameId, playerId, zoneName, fields } = action.payload;
     const zone = state.games[gameId]?.players[playerId]?.zones[zoneName];
     if (!zone) {
       return;
     }
+    const isBulkUntap = fields.tapped === false;
     for (const id of zone.order) {
       const card = zone.byId[id];
-      if (card) {
-        zone.byId[id] = cloneWith(ServerInfo_CardSchema, card, fields);
+      if (!card) {
+        continue;
       }
+      if (isBulkUntap && card.doesntUntap) {
+        continue;
+      }
+      zone.byId[id] = cloneWith(ServerInfo_CardSchema, card, fields);
     }
   }) as CaseReducer<GamesState, PayloadAction<{
     gameId: number;
@@ -257,6 +270,23 @@ export const primitiveReducers = {
     properties: ServerInfo_PlayerProperties;
   }>>,
 
+  // Bumps the per-player draw beacon so UI can trigger a draw animation scoped to real
+  // Event_DrawCards deliveries — not zone→hand drags or reveal-to-hand paths. See
+  // PlayerEntry.drawSeq in types/enriched.ts.
+  drawBeaconBumped: ((state, action) => {
+    const { gameId, playerId, count } = action.payload;
+    const player = state.games[gameId]?.players[playerId];
+    if (!player) {
+      return;
+    }
+    player.drawSeq++;
+    player.lastDrawCount = count;
+  }) as CaseReducer<GamesState, PayloadAction<{
+    gameId: number;
+    playerId: number;
+    count: number;
+  }>>,
+
   gameMessageAppended: ((state, action) => {
     const { gameId, playerId, message } = action.payload;
     const game = state.games[gameId];
@@ -267,6 +297,6 @@ export const primitiveReducers = {
   }) as CaseReducer<GamesState, PayloadAction<{
     gameId: number;
     playerId: number;
-    message: string;
+    message: string | LogEntry;
   }>>,
 };

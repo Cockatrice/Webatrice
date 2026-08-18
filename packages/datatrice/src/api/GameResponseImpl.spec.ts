@@ -206,9 +206,9 @@ describe('GameResponseImpl', () => {
   it('zoneViewRevealed dispatches the zoneViewRevealed action', () => {
     const { impl, dispatch } = setup();
     const cards = [create(ServerInfo_CardSchema, { id: 0, name: 'Forest' })];
-    impl.zoneViewRevealed(7, 3, 'deck', cards);
+    impl.zoneViewRevealed(7, 3, 'deck', cards, false);
     expect(dispatch).toHaveBeenCalledWith(
-      GameActions.zoneViewRevealed({ gameId: 7, playerId: 3, zoneName: 'deck', cards }),
+      GameActions.zoneViewRevealed({ gameId: 7, playerId: 3, zoneName: 'deck', cards, isReversed: false }),
     );
   });
 

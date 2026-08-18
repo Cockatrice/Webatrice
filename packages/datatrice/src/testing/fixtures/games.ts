@@ -118,6 +118,8 @@ export function makePlayerEntry(overrides: Partial<Enriched.PlayerEntry> = {}): 
     },
     counters: {},
     arrows: {},
+    drawSeq: 0,
+    lastDrawCount: 0,
     ...overrides,
   };
 }
@@ -165,6 +167,7 @@ export function makeState(overrides: Partial<GamesState> = {}): GamesState {
     games: {
       1: makeGameEntry(),
     },
+    incomingReveal: null,
     ...overrides,
   };
 }

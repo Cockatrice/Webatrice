@@ -96,7 +96,7 @@ describe('Game commands — delegate to WebClient.instance.protobuf.sendGameComm
   it('createArrow sends Command_CreateArrow', () => {
     createArrow(gameId, { startPlayerId: 1, startZone: 'hand' });
     expect(WebClient.instance.protobuf.sendGameCommand).toHaveBeenCalledWith(
-      gameId, Command_CreateArrow_ext, expect.objectContaining({ startPlayerId: 1, startZone: 'hand' })
+      gameId, Command_CreateArrow_ext, expect.objectContaining({ startPlayerId: 1, startZone: 'hand' }), undefined
     );
   });
 
@@ -158,7 +158,9 @@ describe('Game commands — delegate to WebClient.instance.protobuf.sendGameComm
     const options = calls[calls.length - 1][3] as { onSuccess: (resp: unknown) => void };
     const cards = [{ id: 0, name: 'Forest' }];
     options.onSuccess({ zoneInfo: { cardList: cards } });
-    expect(WebClient.instance.response.game.zoneViewRevealed).toHaveBeenCalledWith(gameId, 2, 'deck', cards);
+    // dumpZone now forwards the isReversed flag from params (defaults to false)
+    // as the 5th arg to preserve view order when the sender flipped the pile.
+    expect(WebClient.instance.response.game.zoneViewRevealed).toHaveBeenCalledWith(gameId, 2, 'deck', cards, false);
   });
 
   it('flipCard sends Command_FlipCard', () => {
@@ -185,7 +187,7 @@ describe('Game commands — delegate to WebClient.instance.protobuf.sendGameComm
   it('incCounter sends Command_IncCounter', () => {
     incCounter(gameId, { counterId: 1, delta: 5 });
     expect(WebClient.instance.protobuf.sendGameCommand).toHaveBeenCalledWith(
-      gameId, Command_IncCounter_ext, expect.objectContaining({ counterId: 1, delta: 5 })
+      gameId, Command_IncCounter_ext, expect.objectContaining({ counterId: 1, delta: 5 }), undefined
     );
   });
 
@@ -243,7 +245,7 @@ describe('Game commands — delegate to WebClient.instance.protobuf.sendGameComm
   it('setActivePhase sends Command_SetActivePhase', () => {
     setActivePhase(gameId, { phase: 2 });
     expect(WebClient.instance.protobuf.sendGameCommand).toHaveBeenCalledWith(
-      gameId, Command_SetActivePhase_ext, expect.objectContaining({ phase: 2 })
+      gameId, Command_SetActivePhase_ext, expect.objectContaining({ phase: 2 }), undefined
     );
   });
 
@@ -265,7 +267,7 @@ describe('Game commands — delegate to WebClient.instance.protobuf.sendGameComm
   it('setCounter sends Command_SetCounter', () => {
     setCounter(gameId, { counterId: 1, value: 10 });
     expect(WebClient.instance.protobuf.sendGameCommand).toHaveBeenCalledWith(
-      gameId, Command_SetCounter_ext, expect.objectContaining({ counterId: 1, value: 10 })
+      gameId, Command_SetCounter_ext, expect.objectContaining({ counterId: 1, value: 10 }), undefined
     );
   });
 
