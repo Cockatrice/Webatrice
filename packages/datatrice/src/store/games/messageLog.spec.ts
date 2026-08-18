@@ -14,9 +14,14 @@ import {
   formatCardDestroyed,
   formatCardFlipped,
   formatCardMoved,
+  formatCardPeeked,
   formatCardsDrawn,
+  formatCardsRevealed,
+  formatCardUndoneDraw,
   formatCounterSet,
   formatDieRolled,
+  formatGameStart,
+  formatLeaveMessage,
   formatPlayerJoined,
   formatPropertyDiff,
   formatTokenCreated,
@@ -812,5 +817,536 @@ describe('classifyLogTone', () => {
     expect(classifyLogTone('Alice draws 1 card.')).toBe('action');
     expect(classifyLogTone('Alice taps Bolt.')).toBe('action');
     expect(classifyLogTone('Alice points from their Bolt to Bob\'s Bear.')).toBe('action');
+  });
+});
+
+// Additional branch-coverage-focused tests.
+// -----------------------------------------------------------------------------
+// The tests below exist to cover branches missed by the primary happy-path
+// tests above: system player names, non-owner zone labels, uncommon start /
+// target zones for card moves, empty-cardName / observer branches for
+// reveals, arrow crossings, uncommon die roll shapes, and negative / zero
+// counter deltas. Kept in one block so the diff is easy to read.
+
+describe('nameOf via formatActivePlayerSet (system fallback)', () => {
+  it('renders EVENT_PLAYER_ID_SYSTEM (-1) as "The server"', () => {
+    const game = gameWithTwoPlayers();
+    expect(formatActivePlayerSet(game, -1).text).toBe('The server\'s turn.');
+  });
+});
+
+describe('formatCardMoved — additional zone / bottom-of-library / face-down branches', () => {
+  function gameWithLibrary(cardCount: number) {
+    return makeGameEntry({
+      localPlayerId: 1,
+      activePlayerId: 1,
+      players: {
+        1: makePlayerEntry({
+          properties: makePlayerProperties({ playerId: 1, userInfo: { name: 'Alice' } }),
+          zones: {
+            hand: makeZoneEntry({ name: 'hand' }),
+            deck: makeZoneEntry({ name: 'deck', cardCount }),
+            table: makeZoneEntry({ name: 'table' }),
+          },
+        }),
+        2: makePlayerEntry({
+          properties: makePlayerProperties({ playerId: 2, userInfo: { name: 'Bob' } }),
+          zones: {
+            hand: makeZoneEntry({ name: 'hand' }),
+            deck: makeZoneEntry({ name: 'deck', cardCount }),
+            table: makeZoneEntry({ name: 'table' }),
+          },
+        }),
+      },
+    });
+  }
+
+  it('from exile → to hand renders "from exile"', () => {
+    const game = gameWithLibrary(0);
+    const msg = formatCardMoved(game, 1, {
+      cardId: 5, cardName: 'Bolt',
+      startPlayerId: 1, startZone: 'rfg',
+      targetPlayerId: 1, targetZone: 'hand',
+      position: -1, x: 0, y: 0, newCardId: -1, faceDown: false, newCardProviderId: '',
+    }, { resolvedCardName: 'Bolt' });
+    expect(msg?.text).toBe('Alice moves Bolt from exile to their hand.');
+  });
+
+  it('from sideboard → to hand renders "from sideboard"', () => {
+    const game = gameWithLibrary(0);
+    const msg = formatCardMoved(game, 1, {
+      cardId: 5, cardName: 'Bolt',
+      startPlayerId: 1, startZone: 'sb',
+      targetPlayerId: 1, targetZone: 'hand',
+      position: -1, x: 0, y: 0, newCardId: -1, faceDown: false, newCardProviderId: '',
+    }, { resolvedCardName: 'Bolt' });
+    expect(msg?.text).toBe('Alice moves Bolt from sideboard to their hand.');
+  });
+
+  it('from stack → to graveyard renders "from the stack"', () => {
+    const game = gameWithLibrary(0);
+    const msg = formatCardMoved(game, 1, {
+      cardId: 5, cardName: 'Bolt',
+      startPlayerId: 1, startZone: 'stack',
+      targetPlayerId: 1, targetZone: 'grave',
+      position: -1, x: 0, y: 0, newCardId: -1, faceDown: false, newCardProviderId: '',
+    }, { resolvedCardName: 'Bolt' });
+    expect(msg?.text).toBe('Alice puts Bolt from the stack into their graveyard.');
+  });
+
+  it('from custom start zone → to hand renders "from custom zone \'X\'"', () => {
+    const game = gameWithLibrary(0);
+    const msg = formatCardMoved(game, 1, {
+      cardId: 5, cardName: 'Bolt',
+      startPlayerId: 1, startZone: 'weird',
+      targetPlayerId: 1, targetZone: 'hand',
+      position: -1, x: 0, y: 0, newCardId: -1, faceDown: false, newCardProviderId: '',
+    }, { resolvedCardName: 'Bolt' });
+    expect(msg?.text).toBe('Alice moves Bolt from custom zone \'weird\' to their hand.');
+  });
+
+  it('deck bottom → hand with resolved card name uses "from the bottom of their library"', () => {
+    // cardCount is the post-move library size; position === postCount hits
+    // the bottom-of-library branch. Owner is actor, so possessive is "their".
+    const game = gameWithLibrary(3);
+    const msg = formatCardMoved(game, 1, {
+      cardId: 5, cardName: 'Bolt',
+      startPlayerId: 1, startZone: 'deck',
+      targetPlayerId: 1, targetZone: 'hand',
+      position: 3, x: 0, y: 0, newCardId: -1, faceDown: false, newCardProviderId: '',
+    }, { resolvedCardName: 'Bolt' });
+    expect(msg?.text).toBe('Alice moves Bolt from the bottom of their library to their hand.');
+  });
+
+  it('deck bottom → hand with empty cardName uses "the bottom card of their library" nameOverride', () => {
+    const game = gameWithLibrary(3);
+    const msg = formatCardMoved(game, 1, {
+      cardId: 5, cardName: '',
+      startPlayerId: 1, startZone: 'deck',
+      targetPlayerId: 1, targetZone: 'hand',
+      position: 3, x: 0, y: 0, newCardId: -1, faceDown: false, newCardProviderId: '',
+    }, { resolvedCardName: '' });
+    expect(msg?.text).toBe('Alice moves the bottom card of their library to their hand.');
+  });
+
+  it('deck bottom (cross-owner) with empty cardName uses "the bottom card of Alice\'s library"', () => {
+    const game = gameWithLibrary(3);
+    // Bob (acting) looks at Alice's library bottom card.
+    const msg = formatCardMoved(game, 2, {
+      cardId: 5, cardName: '',
+      startPlayerId: 1, startZone: 'deck',
+      targetPlayerId: 2, targetZone: 'hand',
+      position: 3, x: 0, y: 0, newCardId: -1, faceDown: false, newCardProviderId: '',
+    }, { resolvedCardName: '' });
+    expect(msg?.text).toBe('Bob moves the bottom card of Alice\'s library to their hand.');
+  });
+
+  it('deck top cross-owner with cardName renders "from the top of Alice\'s library"', () => {
+    const game = gameWithLibrary(3);
+    const msg = formatCardMoved(game, 2, {
+      cardId: 5, cardName: 'Bolt',
+      startPlayerId: 1, startZone: 'deck',
+      targetPlayerId: 2, targetZone: 'hand',
+      position: 0, x: 0, y: 0, newCardId: -1, faceDown: false, newCardProviderId: '',
+    }, { resolvedCardName: 'Bolt' });
+    expect(msg?.text).toBe('Bob moves Bolt from the top of Alice\'s library to their hand.');
+  });
+
+  it('deck middle position (0 < position < postCount) → "from their library" generic', () => {
+    // position=1 with postCount=3 hits the generic library from-clause.
+    const game = gameWithLibrary(3);
+    const msg = formatCardMoved(game, 1, {
+      cardId: 5, cardName: 'Bolt',
+      startPlayerId: 1, startZone: 'deck',
+      targetPlayerId: 1, targetZone: 'hand',
+      position: 1, x: 0, y: 0, newCardId: -1, faceDown: false, newCardProviderId: '',
+    }, { resolvedCardName: 'Bolt' });
+    expect(msg?.text).toBe('Alice moves Bolt from their library to their hand.');
+  });
+
+  it('cross-owner deck bottom → hand with cardName uses "Alice\'s library" possessive', () => {
+    const game = gameWithLibrary(3);
+    const msg = formatCardMoved(game, 2, {
+      cardId: 5, cardName: 'Bolt',
+      startPlayerId: 1, startZone: 'deck',
+      targetPlayerId: 2, targetZone: 'hand',
+      position: 3, x: 0, y: 0, newCardId: -1, faceDown: false, newCardProviderId: '',
+    }, { resolvedCardName: 'Bolt' });
+    expect(msg?.text).toBe('Bob moves Bolt from the bottom of Alice\'s library to their hand.');
+  });
+
+  it('target exile → "exiles ..."', () => {
+    const game = gameWithLibrary(0);
+    const msg = formatCardMoved(game, 1, {
+      cardId: 5, cardName: 'Bolt',
+      startPlayerId: 1, startZone: 'hand',
+      targetPlayerId: 1, targetZone: 'rfg',
+      position: -1, x: 0, y: 0, newCardId: -1, faceDown: false, newCardProviderId: '',
+    }, { resolvedCardName: 'Bolt' });
+    expect(msg?.text).toBe('Alice exiles Bolt from their hand.');
+  });
+
+  it('target exile with faceDown → "exiles ... face down"', () => {
+    const game = gameWithLibrary(0);
+    const msg = formatCardMoved(game, 1, {
+      cardId: 5, cardName: 'Bolt',
+      startPlayerId: 1, startZone: 'hand',
+      targetPlayerId: 1, targetZone: 'rfg',
+      position: -1, x: 0, y: 0, newCardId: -1, faceDown: true, newCardProviderId: '',
+    }, { resolvedCardName: 'Bolt' });
+    expect(msg?.text).toBe('Alice exiles Bolt from their hand face down.');
+  });
+
+  it('target sideboard → "moves ... to sideboard"', () => {
+    const game = gameWithLibrary(0);
+    const msg = formatCardMoved(game, 1, {
+      cardId: 5, cardName: 'Bolt',
+      startPlayerId: 1, startZone: 'hand',
+      targetPlayerId: 1, targetZone: 'sb',
+      position: -1, x: 0, y: 0, newCardId: -1, faceDown: false, newCardProviderId: '',
+    }, { resolvedCardName: 'Bolt' });
+    expect(msg?.text).toBe('Alice moves Bolt from their hand to sideboard.');
+  });
+
+  it('target custom zone → "moves ... to custom zone \'X\'"', () => {
+    const game = gameWithLibrary(0);
+    const msg = formatCardMoved(game, 1, {
+      cardId: 5, cardName: 'Bolt',
+      startPlayerId: 1, startZone: 'hand',
+      targetPlayerId: 1, targetZone: 'weird',
+      position: -1, x: 0, y: 0, newCardId: -1, faceDown: false, newCardProviderId: '',
+    }, { resolvedCardName: 'Bolt' });
+    expect(msg?.text).toBe('Alice moves Bolt from their hand to custom zone \'weird\'.');
+  });
+
+  it('target custom zone with faceDown adds "face down" suffix', () => {
+    const game = gameWithLibrary(0);
+    const msg = formatCardMoved(game, 1, {
+      cardId: 5, cardName: 'Bolt',
+      startPlayerId: 1, startZone: 'hand',
+      targetPlayerId: 1, targetZone: 'weird',
+      position: -1, x: 0, y: 0, newCardId: -1, faceDown: true, newCardProviderId: '',
+    }, { resolvedCardName: 'Bolt' });
+    expect(msg?.text).toBe('Alice moves Bolt from their hand to custom zone \'weird\' face down.');
+  });
+
+  it('deck target with x = targetCount - 1 → "onto the bottom of their library"', () => {
+    // targetCount is the post-move library size. x >= targetCount-1 triggers
+    // the bottom-of-library target branch.
+    const game = gameWithLibrary(5);
+    const msg = formatCardMoved(game, 1, {
+      cardId: 5, cardName: 'Bolt',
+      startPlayerId: 1, startZone: 'hand',
+      targetPlayerId: 1, targetZone: 'deck',
+      position: -1, x: 4, y: 0, newCardId: -1, faceDown: false, newCardProviderId: '',
+    }, { resolvedCardName: 'Bolt' });
+    expect(msg?.text).toBe('Alice puts Bolt from their hand onto the bottom of their library.');
+  });
+
+  it('deck target middle (x=2 with targetCount=5) → "N cards from the top"', () => {
+    const game = gameWithLibrary(5);
+    const msg = formatCardMoved(game, 1, {
+      cardId: 5, cardName: 'Bolt',
+      startPlayerId: 1, startZone: 'hand',
+      targetPlayerId: 1, targetZone: 'deck',
+      position: -1, x: 2, y: 0, newCardId: -1, faceDown: false, newCardProviderId: '',
+    }, { resolvedCardName: 'Bolt' });
+    expect(msg?.text).toBe('Alice puts Bolt from their hand into their library 3 cards from the top.');
+  });
+});
+
+describe('formatCardUndoneDraw', () => {
+  const game = gameWithTwoPlayers();
+  it('renders with card name', () => {
+    expect(formatCardUndoneDraw(game, 1, 'Bolt').text)
+      .toBe('Alice undoes their last draw (Bolt).');
+  });
+  it('renders without card name (empty string)', () => {
+    expect(formatCardUndoneDraw(game, 1, '').text)
+      .toBe('Alice undoes their last draw.');
+  });
+});
+
+describe('formatCardPeeked', () => {
+  const game = gameWithTwoPlayers();
+  it('renders with resolved card name', () => {
+    expect(formatCardPeeked(game, 1, 42, 'Bolt').text)
+      .toBe('Alice peeks at face down card #42: Bolt.');
+  });
+  it('renders without card name (empty string)', () => {
+    expect(formatCardPeeked(game, 1, 42, '').text)
+      .toBe('Alice peeks at face down card #42.');
+  });
+});
+
+describe('formatCardsRevealed', () => {
+  const game = gameWithTwoPlayers();
+
+  it('empty cardId + lend + no target → "reveals hand"', () => {
+    const msg = formatCardsRevealed(game, 1, {
+      zoneName: 'hand', cardId: [], otherPlayerId: -1,
+      grantWriteAccess: true, cards: [], numberOfCards: 0,
+    });
+    expect(msg?.text).toBe('Alice reveals their hand.');
+  });
+
+  it('empty cardId + lend + target → "lends hand to Bob"', () => {
+    const msg = formatCardsRevealed(game, 1, {
+      zoneName: 'hand', cardId: [], otherPlayerId: 2,
+      grantWriteAccess: true, cards: [], numberOfCards: 0,
+    });
+    expect(msg?.text).toBe('Alice lends their hand to Bob.');
+  });
+
+  it('empty cardId + no lend + target → "reveals hand to Bob"', () => {
+    const msg = formatCardsRevealed(game, 1, {
+      zoneName: 'hand', cardId: [], otherPlayerId: 2,
+      grantWriteAccess: false, cards: [], numberOfCards: 0,
+    });
+    expect(msg?.text).toBe('Alice reveals their hand to Bob.');
+  });
+
+  it('empty cardId + no lend + no target → "reveals hand"', () => {
+    const msg = formatCardsRevealed(game, 1, {
+      zoneName: 'hand', cardId: [], otherPlayerId: -1,
+      grantWriteAccess: false, cards: [], numberOfCards: 0,
+    });
+    expect(msg?.text).toBe('Alice reveals their hand.');
+  });
+
+  it('top-N single-card reveal without target', () => {
+    const msg = formatCardsRevealed(game, 1, {
+      zoneName: 'deck', cardId: [0], otherPlayerId: -1,
+      grantWriteAccess: false, cards: [], numberOfCards: 1,
+    });
+    expect(msg?.text).toBe('Alice reveals 1 card from their library.');
+  });
+
+  it('top-N single-card reveal with target', () => {
+    const msg = formatCardsRevealed(game, 1, {
+      zoneName: 'deck', cardId: [0], otherPlayerId: 2,
+      grantWriteAccess: false, cards: [], numberOfCards: 1,
+    });
+    expect(msg?.text).toBe('Alice reveals 1 card from their library to Bob.');
+  });
+
+  it('top-N multi-card reveal without target', () => {
+    const msg = formatCardsRevealed(game, 1, {
+      zoneName: 'deck', cardId: [0], otherPlayerId: -1,
+      grantWriteAccess: false, cards: [], numberOfCards: 3,
+    });
+    expect(msg?.text).toBe('Alice reveals 3 cards from their library.');
+  });
+
+  it('top-N multi-card reveal with target', () => {
+    const msg = formatCardsRevealed(game, 1, {
+      zoneName: 'deck', cardId: [0], otherPlayerId: 2,
+      grantWriteAccess: false, cards: [], numberOfCards: 3,
+    });
+    expect(msg?.text).toBe('Alice reveals 3 cards from their library to Bob.');
+  });
+
+  it('top-N with count=0 returns null', () => {
+    const msg = formatCardsRevealed(game, 1, {
+      zoneName: 'deck', cardId: [0], otherPlayerId: -1,
+      grantWriteAccess: false, cards: [], numberOfCards: 0,
+    });
+    expect(msg).toBeNull();
+  });
+
+  it('observer-side peek (empty cards + populated cardId) from TABLE uses "play" label', () => {
+    const msg = formatCardsRevealed(game, 1, {
+      zoneName: 'table', cardId: [11, 12], otherPlayerId: -1,
+      grantWriteAccess: false, cards: [], numberOfCards: 0,
+    });
+    expect(msg?.text).toBe('Alice reveals 2 card(s) from play.');
+  });
+
+  it('observer-side peek (empty cards + cardId) from GRAVE uses zone label', () => {
+    const msg = formatCardsRevealed(game, 1, {
+      zoneName: 'grave', cardId: [11], otherPlayerId: -1,
+      grantWriteAccess: false, cards: [], numberOfCards: 0,
+    });
+    expect(msg?.text).toBe('Alice reveals 1 card(s) from the graveyard.');
+  });
+
+  it('observer-side peek with target', () => {
+    const msg = formatCardsRevealed(game, 1, {
+      zoneName: 'table', cardId: [11], otherPlayerId: 2,
+      grantWriteAccess: false, cards: [], numberOfCards: 0,
+    });
+    expect(msg?.text).toBe('Alice reveals 1 card(s) from play to Bob.');
+  });
+
+  it('non-top-N with populated cards[] falls through to null', () => {
+    const msg = formatCardsRevealed(game, 1, {
+      zoneName: 'hand', cardId: [7], otherPlayerId: -1,
+      grantWriteAccess: false, cards: [{
+        id: 7, name: 'Bolt', x: 0, y: 0, faceDown: false, tapped: false,
+        attacking: false, color: '', pt: '', annotation: '',
+        destroyOnZoneChange: false, doesntUntap: false, counterList: [],
+        attachPlayerId: -1, attachZone: '', attachCardId: -1, providerId: '',
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } as any], numberOfCards: 1,
+    });
+    expect(msg).toBeNull();
+  });
+});
+
+describe('formatArrowCreated — additional cross branches', () => {
+  const game = gameWithTwoPlayers();
+
+  it('card-target: actor is source only → "their X to Bob\'s Y"', () => {
+    // Alice acts, source is Alice, target card owned by Bob.
+    const arrow = makeArrow({
+      id: 1, startPlayerId: 1, startZone: 'table', startCardId: 10,
+      targetPlayerId: 2, targetZone: 'table', targetCardId: 20,
+    });
+    expect(formatArrowCreated(game, 1, arrow).text)
+      .toBe('Alice points from their Bolt to Bob\'s Bear.');
+  });
+
+  it('card-target: actor is target only → "Bob\'s X to their own Y"', () => {
+    // Actor Alice, source owned by Bob, target card owned by Alice.
+    const arrow = makeArrow({
+      id: 1, startPlayerId: 2, startZone: 'table', startCardId: 20,
+      targetPlayerId: 1, targetZone: 'table', targetCardId: 10,
+    });
+    expect(formatArrowCreated(game, 1, arrow).text)
+      .toBe('Alice points from Bob\'s Bear to their own Bolt.');
+  });
+
+  it('card-target: fully cross (actor is neither source nor target)', () => {
+    // Add a third player for this cross scenario.
+    const g = makeGameEntry({
+      localPlayerId: 3,
+      players: {
+        1: makePlayerEntry({
+          properties: makePlayerProperties({ playerId: 1, userInfo: { name: 'Alice' } }),
+          zones: {
+            table: makeZoneEntry({ name: 'table', cards: [makeCard({ id: 10, name: 'Bolt' })], cardCount: 1 }),
+          },
+        }),
+        2: makePlayerEntry({
+          properties: makePlayerProperties({ playerId: 2, userInfo: { name: 'Bob' } }),
+          zones: {
+            table: makeZoneEntry({ name: 'table', cards: [makeCard({ id: 20, name: 'Bear' })], cardCount: 1 }),
+          },
+        }),
+        3: makePlayerEntry({
+          properties: makePlayerProperties({ playerId: 3, userInfo: { name: 'Cara' } }),
+          zones: {
+            table: makeZoneEntry({ name: 'table' }),
+          },
+        }),
+      },
+    });
+    const arrow = makeArrow({
+      id: 1, startPlayerId: 1, startZone: 'table', startCardId: 10,
+      targetPlayerId: 2, targetZone: 'table', targetCardId: 20,
+    });
+    expect(formatArrowCreated(g, 3, arrow).text)
+      .toBe('Cara points from Alice\'s Bolt to Bob\'s Bear.');
+  });
+
+  it('player-target: fully cross (actor is neither source owner nor target)', () => {
+    const g = makeGameEntry({
+      localPlayerId: 3,
+      players: {
+        1: makePlayerEntry({
+          properties: makePlayerProperties({ playerId: 1, userInfo: { name: 'Alice' } }),
+          zones: {
+            table: makeZoneEntry({ name: 'table', cards: [makeCard({ id: 10, name: 'Bolt' })], cardCount: 1 }),
+          },
+        }),
+        2: makePlayerEntry({
+          properties: makePlayerProperties({ playerId: 2, userInfo: { name: 'Bob' } }),
+        }),
+        3: makePlayerEntry({
+          properties: makePlayerProperties({ playerId: 3, userInfo: { name: 'Cara' } }),
+        }),
+      },
+    });
+    const arrow = makeArrow({
+      id: 1, startPlayerId: 1, startZone: 'table', startCardId: 10,
+      targetPlayerId: 2, targetZone: '', targetCardId: -1,
+    });
+    expect(formatArrowCreated(g, 3, arrow).text)
+      .toBe('Cara points from Alice\'s Bolt to Bob.');
+  });
+});
+
+describe('formatDieRolled — additional shapes', () => {
+  const game = gameWithTwoPlayers();
+
+  it('fallback path: values empty but scalar value present → uses [value] single-roll d20', () => {
+    // The `data.value ? [data.value] : []` branch chooses [value].
+    expect(formatDieRolled(game, 1, { sides: 20, value: 11, values: [] }).text)
+      .toBe('Alice rolls a 11 with a 20-sided die.');
+  });
+
+  it('single-roll d6 → "rolls a 4 with a 6-sided die"', () => {
+    expect(formatDieRolled(game, 1, { sides: 6, value: 4, values: [4] }).text)
+      .toBe('Alice rolls a 4 with a 6-sided die.');
+  });
+});
+
+describe('formatZoneDumped — non-owner + numberCards<0, and singular non-owner', () => {
+  const game = gameWithTwoPlayers();
+
+  it('non-owner + numberCards<0 → "looking at Bob\'s library" (no "the")', () => {
+    const msg = formatZoneDumped(game, 1, {
+      zoneOwnerId: 2, zoneName: 'deck', numberCards: -1, isReversed: false,
+    });
+    expect(msg.text).toBe('Alice is looking at Bob\'s library.');
+  });
+
+  it('non-owner + numberCards=1 → singular card noun', () => {
+    const msg = formatZoneDumped(game, 1, {
+      zoneOwnerId: 2, zoneName: 'grave', numberCards: 1, isReversed: false,
+    });
+    // "the graveyard" → strip "the " → "graveyard"
+    expect(msg.text).toBe('Alice is looking at the top 1 card of Bob\'s graveyard.');
+  });
+
+  it('non-owner + numberCards>1 + battlefield uses "the battlefield" → stripped to "battlefield"', () => {
+    const msg = formatZoneDumped(game, 1, {
+      zoneOwnerId: 2, zoneName: 'table', numberCards: 3, isReversed: false,
+    });
+    expect(msg.text).toBe('Alice is looking at the top 3 cards of Bob\'s battlefield.');
+  });
+});
+
+describe('formatCounterSet — negative delta and non-integer edge cases', () => {
+  const game = gameWithTwoPlayers();
+
+  it('negative delta keeps no sign prefix (already yields -N)', () => {
+    // The `sign = delta > 0 ? '+' : ''` branch — negative delta keeps '' so
+    // the negative sign inside `${delta}` alone provides "-N".
+    expect(formatCounterSet(game, 1, { counterId: 1, value: 15 }, 'life', 20).text)
+      .toBe('Alice sets counter Life to 15 (-5).');
+  });
+
+  it('zero delta → "(0)" (no sign, no minus)', () => {
+    expect(formatCounterSet(game, 1, { counterId: 1, value: 5 }, 'life', 5).text)
+      .toBe('Alice sets counter Life to 5 (0).');
+  });
+
+  it('unknown counter name passes through unchanged (displayCounterName fallthrough)', () => {
+    expect(formatCounterSet(game, 1, { counterId: 9, value: 2 }, 'poison', 0).text)
+      .toBe('Alice sets counter poison to 2 (+2).');
+  });
+});
+
+describe('formatLeaveMessage / formatGameStart', () => {
+  const game = gameWithTwoPlayers();
+  it('leave without reason', () => {
+    expect(formatLeaveMessage(game, 1).text).toBe('Alice has left the game.');
+  });
+  it('leave with reason', () => {
+    expect(formatLeaveMessage(game, 1, 'kicked').text).toBe('Alice has left the game (kicked).');
+  });
+  it('game start banner', () => {
+    expect(formatGameStart().text).toBe('The game has started.');
   });
 });

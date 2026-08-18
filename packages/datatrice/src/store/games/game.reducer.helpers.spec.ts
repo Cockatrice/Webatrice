@@ -38,6 +38,30 @@ describe('pushEventMessage', () => {
     expect(game.messages).toHaveLength(0);
   });
 
+  it('no-ops when a LogEntry with empty text is passed', () => {
+    // `if (!text) return;` — accepts the LogEntry shape but bails
+    // when the pre-computed text ended up empty (only whitespace-
+    // stripped separator segments, or a format function that
+    // returned an empty template).
+    const game = makeGameEntry({ messages: [] });
+    pushEventMessage(game, 1, { text: '', segments: [] });
+    expect(game.messages).toHaveLength(0);
+  });
+
+  it('appends a LogEntry with its segments preserved', () => {
+    const game = makeGameEntry({ messages: [] });
+    pushEventMessage(game, 2, {
+      text: 'Alice plays Bolt.',
+      segments: [{ text: 'Alice', kind: 'player' }, { text: ' plays Bolt.', kind: 'plain' }],
+    });
+    expect(game.messages).toHaveLength(1);
+    expect(game.messages[0].message).toBe('Alice plays Bolt.');
+    expect(game.messages[0].segments).toEqual([
+      { text: 'Alice', kind: 'player' },
+      { text: ' plays Bolt.', kind: 'plain' },
+    ]);
+  });
+
   it('appends an event message with playerId, kind and a timestamp', () => {
     const game = makeGameEntry({ messages: [] });
     pushEventMessage(game, 3, 'Alice plays Bolt.');

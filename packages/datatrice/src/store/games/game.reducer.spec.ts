@@ -2119,6 +2119,228 @@ describe('2I: Zone operations', () => {
     }))).toBe(state);
   });
 
+  it('ZONE_VIEW_CARD_REMOVED → no-op when the zone itself is missing', () => {
+    const state = makeState();
+    // No `nonexistent` zone on player 1 — the early `!zone` guard should
+    // short-circuit before the revealedCards check.
+    expect(gamesReducer(state, Actions.zoneViewCardRemoved({
+      gameId: 1, playerId: 1, zoneName: 'nonexistent', position: 0,
+    }))).toBe(state);
+  });
+
+  it('ZONE_VIEW_CARD_REORDERED → no-op when the zone has no revealed snapshot', () => {
+    const state = makeState({
+      games: {
+        1: makeGameEntry({
+          players: {
+            1: makePlayerEntry({
+              zones: { deck: makeZoneEntry({ name: 'deck', cards: [], cardCount: 3 }) },
+            }),
+          },
+        }),
+      },
+    });
+    expect(gamesReducer(state, Actions.zoneViewCardReordered({
+      gameId: 1, playerId: 1, zoneName: 'deck', fromPosition: 0, toPosition: 1,
+    }))).toBe(state);
+  });
+
+  it('ZONE_VIEW_CARD_INSERTED → inserts card at the target position and re-indexes', () => {
+    const state = deckViewState([
+      makeCard({ id: 0, name: 'Forest' }),
+      makeCard({ id: 1, name: 'Mountain' }),
+    ]);
+    // cardCount already reflects the incoming insert (listener adjusts
+    // it before dispatching); simulate by bumping cardCount +1.
+    state.games[1].players[1].zones['deck'].cardCount = 3;
+
+    const result = gamesReducer(state, Actions.zoneViewCardInserted({
+      gameId: 1, playerId: 1, zoneName: 'deck', position: 1,
+      card: makeCard({ id: 99, name: 'Island' }),
+    }));
+
+    const revealed = result.games[1].players[1].zones['deck'].revealedCards!;
+    expect(revealed.map((c) => c.name)).toEqual(['Forest', 'Island', 'Mountain']);
+    // reindexRevealed rewrites ids to positional (top view startId=0).
+    expect(revealed.map((c) => c.id)).toEqual([0, 1, 2]);
+  });
+
+  it('ZONE_VIEW_CARD_INSERTED → no-op when the zone has no revealed snapshot', () => {
+    const state = makeState({
+      games: {
+        1: makeGameEntry({
+          players: {
+            1: makePlayerEntry({
+              zones: { deck: makeZoneEntry({ name: 'deck', cards: [], cardCount: 3 }) },
+            }),
+          },
+        }),
+      },
+    });
+    expect(gamesReducer(state, Actions.zoneViewCardInserted({
+      gameId: 1, playerId: 1, zoneName: 'deck', position: 0,
+      card: makeCard({ id: 0 }),
+    }))).toBe(state);
+  });
+
+  it('ZONE_VIEW_CARD_INSERTED → no-op when the zone itself is missing', () => {
+    const state = makeState();
+    expect(gamesReducer(state, Actions.zoneViewCardInserted({
+      gameId: 1, playerId: 1, zoneName: 'nonexistent', position: 0,
+      card: makeCard({ id: 0 }),
+    }))).toBe(state);
+  });
+
+  it('ZONE_VIEW_CARD_INSERTED → no-op when the target position is outside the visible window', () => {
+    const state = deckViewState([makeCard({ id: 0, name: 'Forest' })]);
+    // Insert at deck position 99 — outside the reveal window.
+    expect(gamesReducer(state, Actions.zoneViewCardInserted({
+      gameId: 1, playerId: 1, zoneName: 'deck', position: 99,
+      card: makeCard({ id: 99, name: 'Island' }),
+    }))).toBe(state);
+  });
+
+  it('CARDS_REVEALED with unknown zone → state unchanged', () => {
+    const state = makeState();
+    expect(gamesReducer(state, Actions.cardsRevealed({
+      gameId: 1, playerId: 1,
+      data: { zoneName: 'nonexistent', cards: [makeCard({ id: 0 })] },
+    }))).toBe(state);
+  });
+
+  it('CARDS_REVEALED with alwaysRevealTopCard + single card → populates topRevealedCard', () => {
+    // Servatrice's revealTopCardIfNeeded path: alwaysRevealTopCard is
+    // already true on the zone (set by an earlier Event_ChangeZoneProperties),
+    // and a single-card reveal lands with card_id=[0]. The reducer
+    // clones the card into zone.topRevealedCard so the pile shows the face.
+    const state = makeState({
+      games: {
+        1: makeGameEntry({
+          players: {
+            1: makePlayerEntry({
+              zones: { deck: makeZoneEntry({ name: 'deck', cards: [], cardCount: 60 }) },
+            }),
+          },
+        }),
+      },
+    });
+    state.games[1].players[1].zones['deck'].alwaysRevealTopCard = true;
+    const revealed = makeCard({ id: 0, name: 'Sol Ring' });
+
+    const result = gamesReducer(state, Actions.cardsRevealed({
+      gameId: 1, playerId: 1, data: { zoneName: 'deck', cards: [revealed] },
+    }));
+
+    expect(result.games[1].players[1].zones['deck'].topRevealedCard?.name).toBe('Sol Ring');
+  });
+
+  it('CARDS_REVEALED with alwaysLookAtTopCard + single card → also populates topRevealedCard', () => {
+    // "Look at top card" is the other flag that gates auto-top-reveal
+    // (Cockatrice desktop shows the face to the owner only) — same
+    // reducer branch, different zone-property flag.
+    const state = makeState({
+      games: {
+        1: makeGameEntry({
+          players: {
+            1: makePlayerEntry({
+              zones: { deck: makeZoneEntry({ name: 'deck', cards: [], cardCount: 60 }) },
+            }),
+          },
+        }),
+      },
+    });
+    state.games[1].players[1].zones['deck'].alwaysLookAtTopCard = true;
+
+    const result = gamesReducer(state, Actions.cardsRevealed({
+      gameId: 1, playerId: 1,
+      data: { zoneName: 'deck', cards: [makeCard({ id: 0, name: 'Forest' })] },
+    }));
+
+    expect(result.games[1].players[1].zones['deck'].topRevealedCard?.name).toBe('Forest');
+  });
+
+  it('CARDS_REVEALED with multiple cards → does NOT populate topRevealedCard', () => {
+    // Auto-reveal only fires for single-card reveals — a multi-card
+    // reveal (e.g. actRevealCards N>1) is a different flow.
+    const state = makeState({
+      games: {
+        1: makeGameEntry({
+          players: {
+            1: makePlayerEntry({
+              zones: { deck: makeZoneEntry({ name: 'deck', cards: [], cardCount: 60 }) },
+            }),
+          },
+        }),
+      },
+    });
+    state.games[1].players[1].zones['deck'].alwaysRevealTopCard = true;
+
+    const result = gamesReducer(state, Actions.cardsRevealed({
+      gameId: 1, playerId: 1,
+      data: {
+        zoneName: 'deck',
+        cards: [makeCard({ id: 0, name: 'Forest' }), makeCard({ id: 1, name: 'Island' })],
+      },
+    }));
+
+    expect(result.games[1].players[1].zones['deck'].topRevealedCard).toBeUndefined();
+  });
+
+  it('TOP_REVEALED_CARD_CLEARED → removes zone.topRevealedCard', () => {
+    const state = makeState({
+      games: {
+        1: makeGameEntry({
+          players: {
+            1: makePlayerEntry({
+              zones: { deck: makeZoneEntry({ name: 'deck', cards: [], cardCount: 60 }) },
+            }),
+          },
+        }),
+      },
+    });
+    state.games[1].players[1].zones['deck'].topRevealedCard = makeCard({ id: 0, name: 'Sol Ring' });
+
+    const result = gamesReducer(state, Actions.topRevealedCardCleared({
+      gameId: 1, playerId: 1, zoneName: 'deck',
+    }));
+
+    expect(result.games[1].players[1].zones['deck'].topRevealedCard).toBeUndefined();
+  });
+
+  it('TOP_REVEALED_CARD_CLEARED → no-op when the zone is missing', () => {
+    const state = makeState();
+    expect(gamesReducer(state, Actions.topRevealedCardCleared({
+      gameId: 1, playerId: 1, zoneName: 'nonexistent',
+    }))).toBe(state);
+  });
+
+  it('INCOMING_REVEAL_SHOWN → sets the incoming-reveal payload on state', () => {
+    // "Someone revealed their zone to us" notification — the UI mounts
+    // IncomingRevealDialog against this. Only one at a time; a fresh
+    // reveal replaces any pending one.
+    const state = makeState();
+    const payload = {
+      sourceOwnerId: 2,
+      zoneName: 'hand',
+      cards: [makeCard({ id: 0, name: 'Bolt' })],
+      grantWriteAccess: false,
+    };
+    const result = gamesReducer(state, Actions.incomingRevealShown(payload));
+    expect(result.incomingReveal).toEqual(payload);
+  });
+
+  it('INCOMING_REVEAL_DISMISSED → clears the incoming-reveal payload', () => {
+    const state = makeState();
+    state.incomingReveal = {
+      sourceOwnerId: 2,
+      zoneName: 'hand',
+      cards: [],
+      grantWriteAccess: false,
+    };
+    const result = gamesReducer(state, Actions.incomingRevealDismissed());
+    expect(result.incomingReveal).toBeNull();
+  });
+
   it('ZONE_PROPERTIES_CHANGED → sets alwaysRevealTopCard and alwaysLookAtTopCard', () => {
     const state = makeState();
     const result = gamesReducer(state, Actions.zonePropertiesChanged({
@@ -2257,6 +2479,49 @@ describe('2K: Log-only actions', () => {
     const state = makeState();
     const result = gamesReducer(state, Actions.zoneShuffled({ gameId: 999, playerId: 1, data: {} }));
     expect(result).toBe(state);
+  });
+
+  it('ZONE_SHUFFLED on a HiddenZone (deck) → clears known-card tracking and appends log', () => {
+    // Shuffling a hidden zone (deck) invalidates any known card positions
+    // — any snapshot we had is now meaningless. clearZoneKnownCards
+    // resets order/byId/revealedCards/topRevealedCard but preserves
+    // cardCount (server never sends card ids for hidden zones anyway).
+    // Public / private zones keep their identities on shuffle.
+    const state = makeState({
+      games: {
+        1: makeGameEntry({
+          players: {
+            1: makePlayerEntry({
+              zones: {
+                deck: makeZoneEntry({
+                  name: 'deck',
+                  // type=2 is Cockatrice's HiddenZone (see ZoneType proto).
+                  type: 2,
+                  cards: [makeCard({ id: 0, name: 'Forest' })],
+                  cardCount: 60,
+                }),
+              },
+            }),
+          },
+        }),
+      },
+    });
+    state.games[1].players[1].zones['deck'].topRevealedCard = makeCard({ id: 0, name: 'Forest' });
+    state.games[1].players[1].zones['deck'].revealedCards = [makeCard({ id: 0, name: 'Forest' })];
+
+    const result = gamesReducer(state, Actions.zoneShuffled({
+      gameId: 1, playerId: 1, data: { zoneName: 'deck' },
+    }));
+
+    const deck = result.games[1].players[1].zones['deck'];
+    expect(deck.order).toEqual([]);
+    expect(deck.byId).toEqual({});
+    expect(deck.revealedCards).toBeUndefined();
+    expect(deck.topRevealedCard).toBeUndefined();
+    // cardCount is preserved.
+    expect(deck.cardCount).toBe(60);
+    // Log line still fires.
+    expect(result.games[1].messages.some((m) => m.message.includes('shuffles'))).toBe(true);
   });
 
   it('unknown action type → returns state unchanged (identity)', () => {

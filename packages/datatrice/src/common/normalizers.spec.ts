@@ -66,6 +66,16 @@ describe('normalizeGameObject', () => {
     expect(result.gameType).toBe('');
   });
 
+  it('returns empty string when gameTypes[0] is not in the gametypeMap', () => {
+    // Defensive fallback (`?? ''`) for when a room reports a gametype
+    // id its own gametypeMap doesn't define — mismatched wire data
+    // rather than a normal server state, but we don't want to leak
+    // `undefined` into the enriched game.
+    const game = create(ServerInfo_GameSchema, { gameId: 4, gameTypes: [999] });
+    const result = normalizeGameObject(game, { 1: 'Standard' });
+    expect(result.gameType).toBe('');
+  });
+
   it('stores raw proto on info', () => {
     const game = create(ServerInfo_GameSchema, { gameId: 3 });
     const result = normalizeGameObject(game, {});

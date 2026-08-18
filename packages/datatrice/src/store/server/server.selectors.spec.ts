@@ -236,6 +236,43 @@ describe('Selectors', () => {
     expect(Selectors.getIsUserRegistered(rootState(state))).toBe(false);
   });
 
+  it('getIsUserAdmin → true when user has IsAdmin flag', () => {
+    const Flag = ServerInfo_User_UserLevelFlag;
+    const user = makeUser({ userLevel: Flag.IsUser | Flag.IsAdmin });
+    const state = makeServerState({ user });
+    expect(Selectors.getIsUserAdmin(rootState(state))).toBe(true);
+  });
+
+  it('getIsUserAdmin → false when user lacks IsAdmin flag', () => {
+    const Flag = ServerInfo_User_UserLevelFlag;
+    const user = makeUser({ userLevel: Flag.IsUser | Flag.IsModerator });
+    const state = makeServerState({ user });
+    expect(Selectors.getIsUserAdmin(rootState(state))).toBe(false);
+  });
+
+  it('getIsUserAdmin → false when user is null', () => {
+    const state = makeServerState({ user: null });
+    expect(Selectors.getIsUserAdmin(rootState(state))).toBe(false);
+  });
+
+  it('getPrivateMessagesForUser → returns the stored conversation for that user', () => {
+    // The reducer keys both sent + received under the OTHER user's
+    // name, so a single lookup returns the full conversation.
+    const msg = { $typeName: 'Event_UserMessage' as const, senderName: 'Bob', receiverName: 'Alice', message: 'gg' } as never;
+    const state = makeServerState({ messages: { Bob: [msg] } });
+    expect(Selectors.getPrivateMessagesForUser(rootState(state), 'Bob')).toEqual([msg]);
+  });
+
+  it('getPrivateMessagesForUser → returns the same empty-array sentinel for unknown peers', () => {
+    // Stable empty-array reference so memoized selectors don't churn
+    // on every render when there's no conversation yet.
+    const state = makeServerState({ messages: {} });
+    const a = Selectors.getPrivateMessagesForUser(rootState(state), 'Bob');
+    const b = Selectors.getPrivateMessagesForUser(rootState(state), 'Carol');
+    expect(a).toEqual([]);
+    expect(a).toBe(b);
+  });
+
   it('getSortedBuddyList → returns EMPTY_USERS for empty map', () => {
     const state = makeServerState({ buddyList: {} });
     expect(Selectors.getSortedBuddyList(rootState(state))).toHaveLength(0);
