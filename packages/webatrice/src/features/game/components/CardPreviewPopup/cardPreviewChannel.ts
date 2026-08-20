@@ -1,3 +1,4 @@
+import type { PreviewMode } from '../BattlefieldSidebar/BattlefieldSidebar';
 import type { HoveredCard } from '../PlayerBox/hoveredCard';
 
 // Fixed channel name so the popped-out window can find the main
@@ -8,21 +9,81 @@ import type { HoveredCard } from '../PlayerBox/hoveredCard';
 const CHANNEL_NAME = 'webatrice-card-preview';
 
 /**
- * Wire payload between main window and the popped-out preview. `card:
- * null` explicitly clears the preview (nothing hovered).
+ * Wire payload between main window and the popped-out preview.
  *
- * `heartbeat` is a keep-alive tick posted by the main window on a
- * timer; the popup uses it to distinguish "quiet because nothing is
- * hovered" from "disconnected because the main window closed / refreshed".
- *
- * `close` is posted from the popup as an early-exit signal so the main
- * window can drop its "popup open" state without waiting for the
- * `beforeunload` race.
+ *   • `card` — the currently hovered card, or `null` to clear.
+ *   • `mode` — image / text / both. Mirrors the sidebar's segmented
+ *              control so the popup honors the same preference. Also
+ *              carries the extra Scryfall record fields the popup's
+ *              text mode needs to render without doing its own fetch.
+ *   • `heartbeat` — keep-alive tick from the main window so the popup
+ *              can distinguish "quiet because nothing is hovered" from
+ *              "disconnected because the main window closed / refreshed".
+ *   • `close` — early-exit signal from the popup so the main window
+ *              drops its "popup open" flag without waiting for the
+ *              `beforeunload` race.
  */
 export type CardPreviewMessage =
   | { kind: 'card'; card: HoveredCard | null }
+  | {
+      kind: 'mode';
+      mode: PreviewMode;
+      detail: CardPreviewDetail | null;
+      fetchState: CardPreviewFetchState;
+      // Name of the card one step back on the navigation stack, or
+      // undefined when there's nowhere to go back to. The popup uses
+      // this to render its "← Back to {name}" affordance.
+      previousName?: string;
+    }
   | { kind: 'heartbeat' }
-  | { kind: 'close' };
+  | { kind: 'close' }
+  // Popup → main: user clicked a related-card link in the popup's
+  // text pane. Main window applies it as the sidebar override so the
+  // fetch + broadcast cycle updates both surfaces.
+  | { kind: 'navigate'; target: { name: string; scryfallId?: string } }
+  // Popup → main: user clicked the back affordance in the popup.
+  // Main window pops its override stack, which triggers the usual
+  // fetch + broadcast so both surfaces revert together.
+  | { kind: 'back' };
+
+// Subset of the sidebar's ScryfallDetail — just the fields the popup
+// text panel needs. Kept structural (no import from ScryfallDetail)
+// so this file has no dependency direction back into the sidebar.
+export interface CardPreviewFace {
+  name?: string;
+  mana_cost?: string;
+  type_line?: string;
+  oracle_text?: string;
+  flavor_text?: string;
+  power?: string;
+  toughness?: string;
+  loyalty?: string;
+}
+export interface CardPreviewRelatedPart {
+  id?: string;
+  name?: string;
+  component?: string;
+  type_line?: string;
+}
+export interface CardPreviewDetail {
+  name: string;
+  mana_cost?: string;
+  type_line?: string;
+  oracle_text?: string;
+  flavor_text?: string;
+  power?: string;
+  toughness?: string;
+  loyalty?: string;
+  card_faces?: readonly CardPreviewFace[];
+  // Scryfall `all_parts` — powers the popup's related-links section
+  // (tokens, meld pieces, combo pieces). Same shape as CardRelatedLinks
+  // consumes so the popup can pass it straight through.
+  all_parts?: readonly CardPreviewRelatedPart[];
+}
+
+// Matches the sidebar's fetch state enum. Popup shows "Loading…" only
+// while the main window says the fetch is actually in flight.
+export type CardPreviewFetchState = 'idle' | 'loading' | 'loaded' | 'not-found';
 
 /** Guards against SSR / non-browser environments. */
 function makeChannel(): BroadcastChannel | null {

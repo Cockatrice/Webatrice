@@ -1,7 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import type { PreviewMode } from '../BattlefieldSidebar/BattlefieldSidebar';
 import type { HoveredCard } from '../PlayerBox/hoveredCard';
-import { postCardPreviewMessage, subscribeToCardPreviewChannel } from './cardPreviewChannel';
+import {
+  postCardPreviewMessage,
+  subscribeToCardPreviewChannel,
+  type CardPreviewDetail,
+  type CardPreviewFetchState,
+} from './cardPreviewChannel';
 
 // Main window → popup keep-alive cadence. Every tick, the main window
 // posts a heartbeat so the popup can distinguish "quiet" from
@@ -24,7 +30,23 @@ const POPUP_FEATURES = 'width=420,height=580,menubar=no,toolbar=no,location=no,s
  *   • popup posted a `close` message on its own beforeunload,
  *   • popup.window failed to open (blocked / navigation restrictions).
  */
-export function useCardPreviewPopup(card: HoveredCard | null): {
+export function useCardPreviewPopup(
+  card: HoveredCard | null,
+  mode: PreviewMode,
+  detail: CardPreviewDetail | null,
+  fetchState: CardPreviewFetchState,
+  // Called when the popup posts a `navigate` message (user clicked a
+  // related-card link there). The main window forwards it into its
+  // sidebar override so the fetch + broadcast cycle keeps both
+  // surfaces synced.
+  onNavigate?: (target: { name: string; scryfallId?: string }) => void,
+  // Name of the card one step back on the navigation stack, or
+  // undefined when there's nowhere to go back. Mirrored into the
+  // popup so it can render its own "← Back to {name}" button.
+  previousName?: string,
+  // Called when the popup posts a `back` message.
+  onBack?: () => void,
+): {
   isOpen: boolean;
   toggle: () => void;
 } {
@@ -39,6 +61,16 @@ export function useCardPreviewPopup(card: HoveredCard | null): {
     postCardPreviewMessage({ kind: 'card', card });
   }, [card, isOpen]);
 
+  // Mirror the sidebar's mode + text-detail state to the popup so it
+  // renders the same view (image / text / both) with the same fetched
+  // Scryfall record. Fires on any of these changing so the popup
+  // reflects user toggles immediately and text-mode transitions
+  // (loading → loaded → not-found) update in real time.
+  useEffect(() => {
+    if (!isOpen) return;
+    postCardPreviewMessage({ kind: 'mode', mode, detail, fetchState, previousName });
+  }, [mode, detail, fetchState, previousName, isOpen]);
+
   useEffect(() => {
     if (!isOpen) return;
     // Fire an immediate heartbeat so a freshly-opened popup gets
@@ -50,15 +82,27 @@ export function useCardPreviewPopup(card: HoveredCard | null): {
     return () => window.clearInterval(ticker);
   }, [isOpen]);
 
-  // Listen for the popup's `close` broadcast so we drop the flag
-  // immediately (avoids the polling window between the popup closing
-  // and the setInterval below noticing).
+  // Listen for the popup's `close`, `navigate`, and `back` broadcasts.
+  // Callbacks live behind refs so this subscription doesn't have to
+  // re-bind whenever the caller passes a fresh function identity.
+  const onNavigateRef = useRef(onNavigate);
+  const onBackRef = useRef(onBack);
+  useEffect(() => {
+    onNavigateRef.current = onNavigate;
+  }, [onNavigate]);
+  useEffect(() => {
+    onBackRef.current = onBack;
+  }, [onBack]);
   useEffect(() => {
     if (!isOpen) return;
     return subscribeToCardPreviewChannel((msg) => {
       if (msg.kind === 'close') {
         popupRef.current = null;
         setIsOpen(false);
+      } else if (msg.kind === 'navigate') {
+        onNavigateRef.current?.(msg.target);
+      } else if (msg.kind === 'back') {
+        onBackRef.current?.();
       }
     });
   }, [isOpen]);
