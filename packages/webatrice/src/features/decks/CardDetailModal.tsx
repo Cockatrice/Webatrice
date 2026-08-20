@@ -436,6 +436,10 @@ export default function CardDetailModal({
                 faces={detail.card_faces}
                 allParts={detail.all_parts}
                 parentName={detail.name}
+                // Face-level type wins for DFCs; falls back to the
+                // top-level record's type. Powers the token-detection
+                // that collapses the noisy reverse-graph section.
+                parentTypeLine={face?.type_line ?? detail.type_line}
                 currentFaceName={face?.name ?? detail.name}
                 pendingKey={pendingNavigation
                   ? relatedCardKey(pendingNavigation)

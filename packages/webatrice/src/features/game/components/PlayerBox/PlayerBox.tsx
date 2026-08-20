@@ -36,6 +36,7 @@ import {
   type BattlefieldSlot,
 } from "./gameBattlefield";
 import { useCardScale } from "./cardScale";
+import { CardImage } from '@app/components';
 import {
   CARD_BACK_URL,
   CARD_CORNER_RADIUS,
@@ -1553,7 +1554,7 @@ const LargeZoneBox = forwardRef<
         }
       >
         {topCard && (
-          <img
+          <CardImage
             // Mirror Card.tsx's fallback: Servatrice's Event_MoveCard
             // populates `new_card_provider_id` from the server-side card
             // DB (server_abstract_player.cpp:470,500), which returns
@@ -1566,7 +1567,7 @@ const LargeZoneBox = forwardRef<
                 ? `https://api.scryfall.com/cards/${topCard.scryfallId}?format=image&version=large`
                 : `https://api.scryfall.com/cards/named?exact=${encodeURIComponent(topCard.name)}&format=image&version=large`
             }
-            alt=""
+            name={topCard.name}
             draggable={false}
             className="pointer-events-none select-none absolute top-1/2 left-1/2"
             style={{

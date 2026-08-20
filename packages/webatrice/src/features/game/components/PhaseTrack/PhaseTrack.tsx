@@ -18,6 +18,7 @@ import {
 import { Phase } from '@cockatrice/datatrice';
 
 import { useGameId } from '../ui/GameIdContext';
+import { usePhaseTrackPinned } from '../../hooks/usePhaseTrackPinned';
 
 import { usePhaseBar } from './usePhaseBar';
 
@@ -102,7 +103,12 @@ const EXPANDED_WIDTH = 112;
 
 export default function PhaseTrack() {
   const gameId = useGameId();
-  const [expanded, setExpanded] = useState(false);
+  const pinned = usePhaseTrackPinned();
+  // Hover-driven expand still applies in unpinned mode; pinned mode
+  // treats `expanded` as always-true and skips the hover handlers so
+  // stray mouse-outs can't collapse the panel.
+  const [hoverExpanded, setHoverExpanded] = useState(false);
+  const expanded = pinned || hoverExpanded;
   const {
     activePhase,
     canPassTurn,
@@ -154,10 +160,19 @@ export default function PhaseTrack() {
     <nav
       data-testid="phase-bar"
       aria-label="Turn phases"
-      onMouseEnter={() => setExpanded(true)}
-      onMouseLeave={() => setExpanded(false)}
+      // Pinned mode: no hover-driven expand/collapse; the panel is
+      // always full-width and lives in its own grid column, so hover
+      // events are irrelevant. Unpinned mode: mouse in / out drives
+      // the auto-expand HUD behavior.
+      onMouseEnter={pinned ? undefined : () => setHoverExpanded(true)}
+      onMouseLeave={pinned ? undefined : () => setHoverExpanded(false)}
       className={[
-        'absolute top-0 bottom-0 left-0 z-20 flex flex-col gap-0.5 min-h-0 box-border',
+        // Pinned: `relative` so it takes up the reserved grid column.
+        // Unpinned: `absolute` so it floats over the play area and
+        //   only the 8-px stripe consumes real width.
+        pinned
+          ? 'relative flex flex-col gap-0.5 min-h-0 box-border h-full'
+          : 'absolute top-0 bottom-0 left-0 z-20 flex flex-col gap-0.5 min-h-0 box-border',
         'transition-[width,background-color,padding,box-shadow] duration-200 ease-out',
         expanded
           ? 'bg-bg-surface/85 backdrop-blur-sm border-r border-border-subtle py-4 px-2 gap-2 shadow-glow'

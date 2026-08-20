@@ -1,4 +1,5 @@
-import { ArrowRightLeft, Loader2, Puzzle, Sparkles, Users } from 'lucide-react';
+import { useState } from 'react';
+import { ArrowRightLeft, ChevronDown, ChevronRight, Loader2, Puzzle, Sparkles, Users } from 'lucide-react';
 
 /**
  * Clickable links to a card's related printings — the front/back faces
@@ -59,6 +60,7 @@ export function CardRelatedLinks({
   faces,
   allParts,
   parentName,
+  parentTypeLine,
   currentFaceName,
   onNavigate,
   pendingKey,
@@ -69,6 +71,15 @@ export function CardRelatedLinks({
    *  from `allParts` (Scryfall lists the parent alongside its parts,
    *  which would otherwise render as a link back to the same card). */
   parentName?: string;
+  /** Top-level type line — used to detect when the parent card is a
+   *  token. Scryfall's `all_parts` is bidirectional: a token's
+   *  `all_parts` lists every card that creates or references it
+   *  (dozens for Food / Treasure / Clue), plus other tokens that
+   *  share a creator. That's noise for the sidebar preview, so we
+   *  collapse those sections behind a "Show cards that use this
+   *  token" toggle when the parent is a token. Real cards keep
+   *  their small forward-facing lists visible by default. */
+  parentTypeLine?: string;
   /** Name of the face currently shown. Used to filter out that face
    *  from the "Other face" list — no point offering to switch to the
    *  face already displayed. Case-insensitive match. */
@@ -80,6 +91,12 @@ export function CardRelatedLinks({
    *  flicker. Match key is `relatedCardKey({ name, scryfallId })`. */
   pendingKey?: string;
 }) {
+  // "Token" appears in every token's type_line (Scryfall convention:
+  // "Token Artifact — Food", "Token Creature — 1/1 Boar"). Match on
+  // the space-delimited word so we don't false-positive real cards
+  // that happen to contain "token" in their name/text.
+  const parentIsToken = /\btoken\b/i.test(parentTypeLine ?? '');
+  const [reverseExpanded, setReverseExpanded] = useState(false);
   const anyPending = !!pendingKey;
   // Bucket `allParts` by component so we can render each group under
   // its own header. Filters:
@@ -122,9 +139,13 @@ export function CardRelatedLinks({
     }
   }
 
+  // `tokens` is hidden when the parent is itself a token (see render
+  // below), so exclude it from the "anything to show" gate in that
+  // case — otherwise we'd render the wrapping border for an empty panel.
+  const visibleTokenCount = parentIsToken ? 0 : tokens.length;
   if (
     otherFaces.length === 0
-    && tokens.length === 0
+    && visibleTokenCount === 0
     && meldPieces.length === 0
     && comboPieces.length === 0
   ) {
@@ -152,7 +173,15 @@ export function CardRelatedLinks({
           })}
         </Section>
       )}
-      {tokens.length > 0 && (
+      {/* Forward-facing "this card creates X token" list — always
+       *  visible for real cards (small, useful). Suppressed entirely
+       *  when the parent is itself a token; Scryfall's bidirectional
+       *  graph would surface unrelated sibling tokens (e.g. Boar
+       *  showing under Food because some card creates both), which
+       *  reads as noise. Users looking at a token still see what
+       *  cards create it via the collapsible "reverse related"
+       *  section below. */}
+      {tokens.length > 0 && !parentIsToken && (
         <Section
           icon={<Sparkles size={11} className="text-text-muted" />}
           label={tokens.length === 1 ? 'Token' : 'Tokens'}
@@ -198,24 +227,61 @@ export function CardRelatedLinks({
           })}
         </Section>
       )}
+      {/* Combo / referenced cards. For a real card, this list is
+       *  usually short and directly useful (Squire ↔ Rebel, meld
+       *  pairs cross-referenced, etc.). For a token, Scryfall's
+       *  graph pushes every card that produces or references this
+       *  token into this bucket — 40+ chips for Food / Treasure /
+       *  Clue is common. Collapse behind a toggle in that case so
+       *  the info is still reachable without blowing out the panel. */}
       {comboPieces.length > 0 && (
-        <Section
-          icon={<Users size={11} className="text-text-muted" />}
-          label="Related"
-        >
-          {comboPieces.map((c, i) => {
-            const key = relatedCardKey({ name: c.name!, scryfallId: c.id });
-            return (
-              <LinkChip
-                key={`combo-${i}`}
-                label={c.name!}
-                loading={pendingKey === key}
-                disabled={anyPending}
-                onClick={() => onNavigate({ name: c.name!, scryfallId: c.id, kind: 'combo_piece' })}
-              />
-            );
-          })}
-        </Section>
+        parentIsToken ? (
+          <div className="flex flex-col gap-1">
+            <button
+              type="button"
+              onClick={() => setReverseExpanded((v) => !v)}
+              className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-text-muted hover:text-text-primary transition-colors self-start"
+            >
+              {reverseExpanded ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
+              <Users size={11} />
+              {`Cards that use this token (${comboPieces.length})`}
+            </button>
+            {reverseExpanded && (
+              <div className="flex flex-wrap gap-1">
+                {comboPieces.map((c, i) => {
+                  const key = relatedCardKey({ name: c.name!, scryfallId: c.id });
+                  return (
+                    <LinkChip
+                      key={`combo-${i}`}
+                      label={c.name!}
+                      loading={pendingKey === key}
+                      disabled={anyPending}
+                      onClick={() => onNavigate({ name: c.name!, scryfallId: c.id, kind: 'combo_piece' })}
+                    />
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        ) : (
+          <Section
+            icon={<Users size={11} className="text-text-muted" />}
+            label="Related"
+          >
+            {comboPieces.map((c, i) => {
+              const key = relatedCardKey({ name: c.name!, scryfallId: c.id });
+              return (
+                <LinkChip
+                  key={`combo-${i}`}
+                  label={c.name!}
+                  loading={pendingKey === key}
+                  disabled={anyPending}
+                  onClick={() => onNavigate({ name: c.name!, scryfallId: c.id, kind: 'combo_piece' })}
+                />
+              );
+            })}
+          </Section>
+        )
       )}
     </div>
   );

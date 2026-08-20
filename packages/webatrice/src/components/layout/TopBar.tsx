@@ -3,11 +3,12 @@ import { useLocation, useNavigate, generatePath, matchPath } from 'react-router-
 import {
   User, LogOut, Home as HomeIcon, Swords, Library, LibraryBig,
   UserCircle2, Settings as SettingsIcon, FileText, X, Circle, Grid3x3,
-  Keyboard,
+  Keyboard, PanelLeftOpen,
   type LucideIcon,
 } from 'lucide-react';
 
 import { useSnapGridSetting } from '../../features/game/hooks/useSnapGridVisible';
+import { usePhaseTrackPinnedSetting } from '../../features/game/hooks/usePhaseTrackPinned';
 
 import { server, rooms, games } from '@cockatrice/datatrice';
 import type { ServerInfo_DeckStorage_TreeItem } from '@cockatrice/sockatrice/generated';
@@ -77,6 +78,7 @@ export default function TopBar() {
   const activeGames = useAppSelector(games.Selectors.getActiveGames);
   const backendDecks = useAppSelector(server.Selectors.getBackendDecks);
   const [snapGridVisible, setSnapGridVisible] = useSnapGridSetting();
+  const [phaseTrackPinned, setPhaseTrackPinned] = usePhaseTrackPinnedSetting();
 
   // Sticky tabs = the deck-related routes the user has visited and not
   // explicitly closed. Keeps My Decks pinned alongside the currently-
@@ -335,6 +337,8 @@ export default function TopBar() {
             userName={user?.name ?? null}
             snapGridVisible={snapGridVisible}
             onToggleSnapGrid={() => setSnapGridVisible(!snapGridVisible)}
+            phaseTrackPinned={phaseTrackPinned}
+            onTogglePhaseTrackPinned={() => setPhaseTrackPinned(!phaseTrackPinned)}
             onOpenShortcuts={() => navigate(generatePath(RouteEnum.SHORTCUTS))}
             onSignOut={() => webClient.request.authentication.disconnect()}
           />
@@ -406,6 +410,8 @@ interface UserMenuProps {
   userName: string | null;
   snapGridVisible: boolean;
   onToggleSnapGrid: () => void;
+  phaseTrackPinned: boolean;
+  onTogglePhaseTrackPinned: () => void;
   onOpenShortcuts: () => void;
   onSignOut: () => void;
 }
@@ -414,6 +420,8 @@ function UserMenu({
   userName,
   snapGridVisible,
   onToggleSnapGrid,
+  phaseTrackPinned,
+  onTogglePhaseTrackPinned,
   onOpenShortcuts,
   onSignOut,
 }: UserMenuProps) {
@@ -458,6 +466,26 @@ function UserMenu({
             <Grid3x3 size={14} />
             <span className="flex-1 text-left">Snap grid</span>
             {snapGridVisible && (
+              <span className="text-xs text-accent" aria-hidden>
+                ✓
+              </span>
+            )}
+          </button>
+          <button
+            onClick={onTogglePhaseTrackPinned}
+            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-text-secondary hover:text-text-primary hover:bg-bg-elevated transition-colors"
+            // The stored preference is `phaseTrackPinned`; this UI
+            // exposes the inverse ("auto-hide on/off") so `aria-pressed`
+            // and the checkmark flip together. When auto-hide is ON
+            // (checked), the phase track collapses to an 8-px HUD.
+            aria-pressed={!phaseTrackPinned}
+            title={phaseTrackPinned
+              ? 'Collapse the phase track into an auto-hiding HUD'
+              : 'Keep the phase track always visible'}
+          >
+            <PanelLeftOpen size={14} />
+            <span className="flex-1 text-left">Toggle auto-hide phase tracker</span>
+            {!phaseTrackPinned && (
               <span className="text-xs text-accent" aria-hidden>
                 ✓
               </span>
