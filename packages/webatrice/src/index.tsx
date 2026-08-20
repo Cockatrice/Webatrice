@@ -9,6 +9,7 @@ import { DatatriceProvider, WebClientProvider } from '@cockatrice/datatrice/reac
 import { extensions } from '@app/store';
 import { CLIENT_CONFIG, CLIENT_OPTIONS } from './clientConfig';
 import AppShell from './AppShell';
+import CardPreviewPopupPage from './features/game/components/CardPreviewPopup/CardPreviewPopupPage';
 
 import './i18n';
 import './index.css';
@@ -33,7 +34,17 @@ const App = () => (
   </DatatriceProvider>
 );
 
+// Popup carve-out: the card-preview popup opens as a fresh browser
+// window (window.open with a hash of `#/card-preview-popup`) and
+// boots the same bundle. Detect that hash at entry and render only
+// the popup page — no MemoryRouter, no DatatriceProvider, no
+// WebClientProvider. The popup receives its data via BroadcastChannel
+// from the main window, so it needs none of the app plumbing.
+const isCardPreviewPopup =
+  typeof window !== 'undefined'
+  && window.location.hash === '#/card-preview-popup';
+
 const container = document.getElementById('root');
 const root = createRoot(container!);
 
-root.render(<App />);
+root.render(isCardPreviewPopup ? <CardPreviewPopupPage /> : <App />);

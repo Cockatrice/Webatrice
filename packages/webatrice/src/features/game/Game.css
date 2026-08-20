@@ -1,13 +1,17 @@
-/* Shell layout — 3-column grid.
+/* Shell layout — 4-column grid.
  *
  * Column widths match the components inside them:
- *   • 8px — reserved for the collapsed PhaseTrack. The track itself
- *     stays absolutely positioned so it can overflow into the play
- *     area when expanded, but the reserved column ensures the play
- *     area doesn't reflow between collapse and expand (cards stay
- *     put; the expanded track just floats over them).
+ *   • var(--phase-track-width) — either 8px (default, PhaseTrack is
+ *     an auto-collapsing HUD that floats over the play area on
+ *     hover) or 112px (pinned mode — the track always takes real
+ *     width and the play area shrinks accordingly). Set inline on
+ *     `.game` from Game.tsx based on `usePhaseTrackPinned`.
  *   • 1fr — play area (`.game__board`), auto-placed into column 2.
- *   • 288px — BattlefieldSidebar (w-72), auto-placed into column 3.
+ *   • 8px — SidebarResizer drag handle (fixed width, hover-lights).
+ *   • var(--sidebar-width) — BattlefieldSidebar, user-resizable
+ *     between SIDEBAR_WIDTH_MIN and SIDEBAR_WIDTH_MAX (see
+ *     useSidebarWidth.ts). Width is set inline on `.game` from
+ *     Game.tsx and persists to localStorage.
  *
  * Colors + typography use the shared design tokens (--bg-base /
  * --text-primary) so the shell reads as the same dark purple
@@ -15,7 +19,7 @@
 .game {
   position: relative;
   display: grid;
-  grid-template-columns: 8px minmax(0, 1fr) 288px;
+  grid-template-columns: var(--phase-track-width, 8px) minmax(0, 1fr) 8px var(--sidebar-width, 288px);
   grid-template-rows: 1fr;
   height: 100%;
   min-height: 0;
