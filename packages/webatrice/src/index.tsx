@@ -7,6 +7,7 @@ import { StyledEngineProvider } from '@mui/material';
 
 import { DatatriceProvider, WebClientProvider } from '@cockatrice/datatrice/react';
 import { extensions } from '@app/store';
+import { initAnalytics } from '@app/services';
 import { CLIENT_CONFIG, CLIENT_OPTIONS } from './clientConfig';
 import AppShell from './AppShell';
 import CardPreviewPopupPage from './features/game/components/CardPreviewPopup/CardPreviewPopupPage';
@@ -43,6 +44,10 @@ const App = () => (
 const isCardPreviewPopup =
   typeof window !== 'undefined'
   && window.location.hash === '#/card-preview-popup';
+
+// Bootstrap Google Analytics from the per-deploy runtime config. No-ops when no
+// measurement id was injected for this environment (see services/analytics.ts).
+initAnalytics();
 
 const container = document.getElementById('root');
 const root = createRoot(container!);

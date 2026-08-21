@@ -13,6 +13,12 @@
     <link rel="apple-touch-icon" href="logo192.png" />
     <link rel="manifest" href="/manifest.json" />
     <title>Webatrice</title>
+
+    <!-- Runtime environment config (per-deploy). Loaded synchronously so
+         window.Cockatrice.env is set before the app module runs. The GA
+         measurement id lives here; src/services/analytics.ts reads it and
+         bootstraps Google Analytics only when a key is present. -->
+    <script src="/env.js"></script>
   </head>
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>

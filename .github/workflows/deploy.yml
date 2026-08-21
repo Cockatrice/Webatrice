@@ -10,6 +10,7 @@ on:
         type: choice
         options:
           - stage
+          - prod
       tag:
         description: "Optional release tag to deploy (defaults to the latest release)"
         required: false
@@ -63,6 +64,22 @@ jobs:
       - name: Extract archive
         run: tar -xzf webatrice-*.tar.gz
 
+      # Inject the per-environment Google Analytics measurement id into the
+      # runtime config the app reads (public/env.js -> build/env.js). Optional:
+      # when RR_GA_KEY is unset the file is written with an empty key and
+      # analytics stays disabled. Scoped to the chosen environment via the
+      # job-level `environment:` key below.
+      - name: Generate runtime GA config
+        env:
+          RR_GA_KEY: ${{ vars.RR_GA_KEY }}
+        run: |
+          printf 'window.Cockatrice = window.Cockatrice || {};\nwindow.Cockatrice.env = { RR_GA_KEY: "%s" };\n' "$RR_GA_KEY" > build/env.js
+          if [ -n "$RR_GA_KEY" ]; then
+            echo "GA enabled for this environment" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "RR_GA_KEY unset — analytics disabled" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
       - name: Read release SHA
         id: sha
         env:
@@ -75,14 +92,14 @@ jobs:
       - name: Set up SSH
         uses: shimataro/ssh-key-action@87a8f067114a8ce263df83e9ed5c849953548bc3  # v2.8.1
         with:
-          key: ${{ secrets.RR_BETA_SERVER_PRIVATE_SSH_KEY }}
-          known_hosts: ${{ secrets.RR_BETA_SERVER_KNOWN_HOSTS }}
+          key: ${{ secrets.RR_PRIVATE_SSH_KEY }}
+          known_hosts: ${{ secrets.RR_KNOWN_HOSTS }}
           name: deploy_key
 
       - name: Sync release to droplet
         env:
-          DEPLOY_USER: ${{ secrets.RR_BETA_SERVER_DEPLOY_USER }}
-          DEPLOY_HOST: ${{ secrets.RR_BETA_SERVER_DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.RR_DEPLOY_USER }}
+          DEPLOY_HOST: ${{ secrets.RR_DEPLOY_HOST }}
         run: |
           rsync -avz --delete \
             -e "ssh -i ~/.ssh/deploy_key -p 4924 -o StrictHostKeyChecking=accept-new" \
