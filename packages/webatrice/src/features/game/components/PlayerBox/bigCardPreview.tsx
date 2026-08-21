@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 
-import { CardRelatedLinks } from '@app/components';
+import { CardImage, CardRelatedLinks } from '@app/components';
 
 import { CARD_CORNER_RADIUS } from './cardSize';
 import { ManaSymbols, SymbolText } from './ManaSymbols';
@@ -170,9 +170,9 @@ export function BigCardPreviewProvider({ children }: { children: ReactNode }) {
                   which looks sharp at this size. */}
               <div className="shrink-0 p-4 bg-bg-base/40 rounded-t-lg">
                 {imageUrl && (
-                  <img
+                  <CardImage
                     src={imageUrl}
-                    alt={displayName}
+                    name={displayName}
                     draggable={false}
                     className="block w-full shadow-lg"
                     style={{
@@ -234,6 +234,10 @@ export function BigCardPreviewProvider({ children }: { children: ReactNode }) {
                     faces={detail.card_faces}
                     allParts={detail.all_parts}
                     parentName={detail.name}
+                    // Face-level type wins so a transformed DFC's back
+                    // face detects as its actual type (matters for
+                    // rare cases like a token that transforms).
+                    parentTypeLine={displayType || detail.type_line}
                     currentFaceName={displayName}
                     onNavigate={(next) => setCard(next)}
                   />

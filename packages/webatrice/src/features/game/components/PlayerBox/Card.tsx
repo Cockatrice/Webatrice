@@ -1,3 +1,4 @@
+import { CardImage } from '@app/components';
 import { CARD_BACK_URL, CARD_CORNER_RADIUS, CARD_HEIGHT, CARD_WIDTH } from './cardSize';
 import { useHoveredCard } from './hoveredCard';
 import { useBigCardPreview } from './bigCardPreview';
@@ -121,9 +122,12 @@ export default function Card({ name, scryfallId, pt, basePT, annotation, id, fac
         // Cockatrice, which paints only the back until the card is
         // turned face-up). Pass `imageUri` through so DFC back-face art
         // survives to the preview (Scryfall's default image endpoint
-        // always returns the front face).
+        // always returns the front face). PT + annotation ride along
+        // so the sidebar's text-mode preview can render them when the
+        // Scryfall fetch fails (user-created tokens without a
+        // matching Scryfall record).
         if (faceDown) return;
-        setHoveredCard({ name, scryfallId, imageUri });
+        setHoveredCard({ name, scryfallId, imageUri, pt, annotation });
       }}
       // Press-and-hold middle mouse to zoom the card (image + full
       // description). Opens on mousedown, dismisses on release —
@@ -153,15 +157,14 @@ export default function Card({ name, scryfallId, pt, basePT, annotation, id, fac
         if (e.button === 1) e.preventDefault();
       }}
     >
-      <img
+      <CardImage
         src={imageUrl}
-        // Empty alt so browsers don't render fallback alt-text inside
-        // the failed <img> bounds when the CDN fetch errors — the
-        // name pill overlay below is the accessible label, and the
-        // img is decorative. Without this, a broken image renders
-        // the alt at the img's origin AND the pill in the top-left
-        // corner, producing a doubled-name effect.
-        alt=""
+        // Don't pass `name` — this card already renders its name
+        // (or "# {id}" for face-down) in the top-left pill overlay
+        // below. A duplicate name inside the fallback would read as
+        // redundant. Surfaces without their own name overlay
+        // (sidebar preview, popped-out window, pile top-card) still
+        // pass `name` so their placeholder identifies the card.
         draggable={false}
         className="w-full h-full"
         style={{ imageRendering: '-webkit-optimize-contrast' }}

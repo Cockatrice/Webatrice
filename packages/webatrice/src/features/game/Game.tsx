@@ -15,6 +15,9 @@ import PlayerContextMenu from './components/context-menus/PlayerContextMenu/Play
 import ZoneContextMenu from './components/context-menus/ZoneContextMenu/ZoneContextMenu';
 import PhaseTrack from './components/PhaseTrack/PhaseTrack';
 import BattlefieldSidebar from './components/BattlefieldSidebar/BattlefieldSidebar';
+import SidebarResizer from './components/SidebarResizer/SidebarResizer';
+import { usePhaseTrackPinned } from './hooks/usePhaseTrackPinned';
+import { useSidebarWidth } from './hooks/useSidebarWidth';
 import { CardDragOverlayHost } from './components/ui/CardDragOverlay/CardDragOverlay';
 import GameBoardCell from './components/ui/GameBoardCell/GameBoardCell';
 import { HoveredCardProvider } from './components/PlayerBox/hoveredCard';
@@ -90,6 +93,16 @@ function GameBoard() {
     dialogs,
     dnd,
   } = g;
+
+  // Persisted width for the right rail. `.game` reads it via the
+  // `--sidebar-width` CSS variable set inline below; SidebarResizer
+  // commits new values via `setSidebarWidth` from its pointer-move.
+  const { width: sidebarWidth, setWidth: setSidebarWidth } = useSidebarWidth();
+  // Pinned mode grows the phase-track column from 8 px (HUD default)
+  // to 112 px so the always-expanded PhaseTrack takes real width
+  // instead of floating over the play area.
+  const phaseTrackPinned = usePhaseTrackPinned();
+  const phaseTrackColumnWidth = phaseTrackPinned ? 112 : 8;
 
   const interactionHandlers = useMemo(
     () => ({
@@ -174,17 +187,21 @@ function GameBoard() {
                         data-testid="game-container"
                         ref={gameRef}
                         onMouseDown={handleGameMouseDown}
+                        style={{
+                                  '--sidebar-width': `${sidebarWidth}px`,
+                                  '--phase-track-width': `${phaseTrackColumnWidth}px`,
+                        } as React.CSSProperties}
                       >
                         <PhaseTrack />
 
-                        {/* Grid-column-1 placeholder. PhaseTrack is
-                             absolutely positioned so it doesn't consume
-                             a grid cell on its own — this empty div
-                             reserves the 8 px column so the play area
-                             lands in column 2 and its width stays
-                             constant whether the phase track is
-                             collapsed or expanded. */}
-                        <div aria-hidden />
+                        {/* Grid-column-1 placeholder — only rendered
+                             when PhaseTrack is in its default floating
+                             (position: absolute) mode. In pinned mode
+                             the PhaseTrack itself is `position:
+                             relative` and consumes column 1, so a
+                             placeholder here would displace every
+                             other cell one column to the right. */}
+                        {!phaseTrackPinned && <div aria-hidden />}
 
                         <div
                           className="game__board"
@@ -222,6 +239,8 @@ function GameBoard() {
                               downstream layout hooks that watched the empty
                               bottom bar don't recompute their heights. */}
                         </div>
+
+                        <SidebarResizer width={sidebarWidth} onResize={setSidebarWidth} />
 
                         <BattlefieldSidebar />
 

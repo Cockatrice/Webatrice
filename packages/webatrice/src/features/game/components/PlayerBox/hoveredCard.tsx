@@ -25,6 +25,16 @@ export interface HoveredCard {
    *  returns the front face, so without this the preview would show
    *  the pre-transform art while the battlefield shows the new face. */
   imageUri?: string;
+  /** Current in-game power/toughness string (Cockatrice's `AttrPT`
+   *  value) — e.g. `"2/2"`. Published by Card.tsx so the sidebar's
+   *  text-mode preview can display PT even for user-created tokens
+   *  that don't exist in Scryfall (where the Scryfall fetch returns
+   *  null and there's no `power`/`toughness` to render). */
+  pt?: string;
+  /** Current annotation (Cockatrice `AttrAnnotation`). Same
+   *  motivation as `pt`: gives the text-mode preview a source of
+   *  card metadata for cards without Scryfall records. */
+  annotation?: string;
 }
 
 interface HoveredCardContextValue {
