@@ -193,8 +193,21 @@ const DeckEditor = () => {
     [editor.deck, isCommander],
   );
 
-  if (editor.loading) return <LoadingShell />;
+  // Preload every deck card's sidebar-preview image up-front so hover
+  // feels instant. Without this, `card.imageUri` is populated fast (from
+  // the Dexie Scryfall JSON cache) but the actual image bytes don't
+  // land until the sidebar `<img>` first mounts on hover — ~200-500ms
+  // per card the first time. The skeleton stays visible until every
+  // card's `normal`-size URL is in the browser HTTP cache.
+  const preload = useDeckImagePreload(
+    Number.isFinite(deckId) ? deckId : null,
+    editor.deck,
+    editor.loading,
+  );
+
+  if (editor.loading) return <DeckEditorSkeleton loaded={0} total={0} />;
   if (editor.notFound || !editor.deck) return <NotFoundShell />;
+  if (!preload.ready) return <DeckEditorSkeleton loaded={preload.loaded} total={preload.total} />;
 
   return (
     <Layout>
@@ -2275,13 +2288,138 @@ function SearchFilters({
 
 // ---------- Shells + misc ----------
 
-function LoadingShell() {
+/**
+ * Preloads every card's sidebar-preview image ahead of first hover so
+ * the CardPreview `<img>` mounts hit the browser HTTP cache instantly
+ * instead of triggering a fresh Scryfall CDN fetch (which was the
+ * "hovering feels laggy" symptom on cold decks).
+ *
+ * The preload runs exactly once per `deckId` — a value guard on
+ * `readyDeckId` prevents subsequent card additions / printing swaps
+ * from re-blocking the UI. A card added after the initial preload
+ * fetches its image the normal way when its `<img>` first mounts;
+ * only navigating to a different deck resets the gate.
+ *
+ * URLs are `upgradeScryfallImageSize`-normalized to match the exact
+ * strings the sidebar `<img src>` will request, so the browser sees
+ * a cache hit (not a similar-but-different URL). Errors count as done
+ * so a single 404 on a Scryfall-unknown card doesn't stall the deck.
+ */
+interface PreloadProgress {
+  ready: boolean;
+  loaded: number;
+  total: number;
+}
+function useDeckImagePreload(
+  deckId: number | null,
+  deck: HydratedDeck | null,
+  loading: boolean,
+): PreloadProgress {
+  const [readyDeckId, setReadyDeckId] = useState<number | null>(null);
+  const [progress, setProgress] = useState<{ loaded: number; total: number }>({
+    loaded: 0,
+    total: 0,
+  });
+
+  // Snapshot the deck in a ref so a mid-preload mutation (user hits
+  // + on a card row before all images have landed) doesn't trigger
+  // the effect and cancel the in-flight preload half-way through.
+  const deckRef = useRef(deck);
+  useEffect(() => {
+    deckRef.current = deck;
+  }, [deck]);
+
+  useEffect(() => {
+    if (loading || deckId == null) return;
+    if (readyDeckId === deckId) return;
+    const snapshot = deckRef.current;
+    if (!snapshot) return;
+
+    const urls = Array.from(
+      new Set(
+        snapshot.cards
+          .map((c) => upgradeScryfallImageSize(c.imageUri))
+          .filter((u): u is string => !!u),
+      ),
+    );
+
+    if (urls.length === 0) {
+      setProgress({ loaded: 0, total: 0 });
+      setReadyDeckId(deckId);
+      return;
+    }
+
+    setProgress({ loaded: 0, total: urls.length });
+
+    let cancelled = false;
+    let loaded = 0;
+    const tick = () => {
+      if (cancelled) return;
+      loaded += 1;
+      setProgress({ loaded, total: urls.length });
+      if (loaded === urls.length) setReadyDeckId(deckId);
+    };
+
+    urls.forEach((url) => {
+      const img = new Image();
+      img.onload = tick;
+      img.onerror = tick;
+      img.src = url;
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [deckId, loading, readyDeckId]);
+
+  return {
+    ready: readyDeckId === deckId,
+    loaded: progress.loaded,
+    total: progress.total,
+  };
+}
+
+/**
+ * Placeholder UI shown while the deck is hydrating and while its card
+ * images preload. Mirrors the real DeckEditor's 360px sidebar + main
+ * grid so the layout doesn't jump when the real content lands. Progress
+ * line only renders once the preload total is known (>0) — the initial
+ * hydration phase has nothing to count yet.
+ */
+function DeckEditorSkeleton({ loaded, total }: { loaded: number; total: number }) {
   return (
     <Layout>
       <AuthGuard />
-      <div className="h-full flex items-center justify-center bg-bg-base">
-        <div className="flex items-center gap-2 text-sm text-text-muted">
-          <Loader2 size={16} className="animate-spin text-accent" /> Loading deck…
+      <div
+        className="h-full grid bg-bg-base bg-purple-radial"
+        style={{ gridTemplateColumns: '360px 1fr' }}
+      >
+        {/* Sidebar skeleton */}
+        <div className="border-r border-border-subtle bg-bg-surface p-4 flex flex-col gap-4">
+          <div className="h-7 w-3/4 rounded bg-bg-elevated animate-pulse" />
+          <div className="h-4 w-1/3 rounded bg-bg-elevated animate-pulse" />
+          <div className="w-full max-w-[300px] mx-auto aspect-[5/7] rounded-xl bg-bg-elevated animate-pulse" />
+          <div className="h-4 w-1/2 mx-auto rounded bg-bg-elevated animate-pulse" />
+          <div className="h-9 w-full rounded-md bg-bg-elevated animate-pulse" />
+          <div className="mt-auto flex items-center justify-center gap-2 text-xs text-text-muted italic">
+            <Loader2 size={12} className="animate-spin text-accent" />
+            {total > 0 ? `Preloading ${loaded}/${total} cards…` : 'Loading deck…'}
+          </div>
+        </div>
+        {/* Main pane skeleton */}
+        <div className="p-6 flex flex-col gap-4">
+          <div className="h-10 w-full max-w-md rounded-md bg-bg-elevated animate-pulse" />
+          <div className="flex flex-col gap-3 mt-2">
+            {Array.from({ length: 14 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-3">
+                <div className="h-4 w-6 rounded bg-bg-elevated animate-pulse" />
+                <div
+                  className="h-4 rounded bg-bg-elevated animate-pulse"
+                  style={{ width: `${55 + ((i * 7) % 35)}%` }}
+                />
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </Layout>
