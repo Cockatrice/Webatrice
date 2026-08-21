@@ -10,6 +10,7 @@ import {
 } from '@cockatrice/sockatrice/generated';
 import { useAppSelector } from '@app/store';
 import { useReduxEffect } from '@app/hooks';
+import { trackEvent } from '@app/services';
 import { useWebClient } from '@cockatrice/datatrice/react';
 
 import { lookupCard } from './cardLookup';
@@ -164,6 +165,11 @@ export function useDeckEditor(deckId: number | null): UseDeckEditor {
           const hydrated = await hydrateDeck(parsed);
           setDeck(hydrated);
           savedSignatureRef.current = payload.deck;
+          // Analytics: capture the format distribution across opened
+          // decks. Normalized `hydrated.format` (defaults to `commander`
+          // when the .cod's <format> element is missing) so bucket
+          // counts stay consistent with what the editor UI shows.
+          trackEvent('deck_opened', { format: hydrated.format });
           // Seed the cache so subsequent mounts of this deck skip the
           // download + parse + hydrate round-trip. `deck`-change
           // effect below keeps the entry up to date after edits.

@@ -2,6 +2,7 @@ import { useState } from 'react';
 
 import { useWebClient } from '@cockatrice/datatrice/react';
 import { useLeaveGame } from '@app/hooks';
+import { trackEvent } from '@app/services';
 
 import { useCurrentGame } from '../../hooks/useCurrentGame';
 
@@ -112,6 +113,15 @@ export function useDeckSelectDialog(gameId: number | undefined): DeckSelectDialo
     }
     setValidationError(null);
     webClient.request.game.deckSelect(gameId, { deck: xml });
+    // Analytics: capture the format distribution of decks players
+    // actually bring into games. Lightweight regex against the .cod
+    // <format> element — avoids pulling parseCod (and its full parse
+    // cost) into this dialog just for one field. Falls back to
+    // 'unknown' for legacy .cod files that pre-date the format tag.
+    const format =
+      xml.match(/<format>\s*([^<]+?)\s*<\/format>/i)?.[1]?.toLowerCase() ??
+      'unknown';
+    trackEvent('game_deck_submitted', { format });
   };
 
   const handleToggleReady = () => {
