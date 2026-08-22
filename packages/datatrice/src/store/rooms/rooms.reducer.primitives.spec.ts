@@ -235,3 +235,98 @@ describe('roomGameRemoved', () => {
     expect(result.selectedGameIds[42]).toBeUndefined();
   });
 });
+
+describe('roomGamesBatchApplied', () => {
+  it('applies upserts and removals from one frame in a single dispatch', () => {
+    const kept = makeGame({ gameId: 5, description: 'kept' });
+    const removed = makeGame({ gameId: 7, description: 'closing' });
+    const room = makeRoom({ roomId: 1, games: { 5: kept, 7: removed } });
+    const state = makeRoomsState({ rooms: { 1: room } });
+    const added = makeGame({ gameId: 9, description: 'added' });
+    const merged = makeGame({ gameId: 5, description: 'merged' });
+
+    const result = roomsReducer(state, Actions.roomGamesBatchApplied({
+      roomId: 1,
+      changes: [
+        { gameId: 9, game: added },
+        { gameId: 5, game: merged },
+        { gameId: 7, game: null },
+      ],
+    }));
+
+    expect(result.rooms[1].games[9]).toBe(added);
+    expect(result.rooms[1].games[5]).toBe(merged);
+    expect(result.rooms[1].games[7]).toBeUndefined();
+    expect(Object.keys(result.rooms[1].games)).toHaveLength(2);
+  });
+
+  it('resolves repeated gameIds in event order (close then recreate → present)', () => {
+    const old = makeGame({ gameId: 7, description: 'old' });
+    const room = makeRoom({ roomId: 1, games: { 7: old } });
+    const state = makeRoomsState({ rooms: { 1: room } });
+    const recreated = makeGame({ gameId: 7, description: 'recreated' });
+
+    const result = roomsReducer(state, Actions.roomGamesBatchApplied({
+      roomId: 1,
+      changes: [
+        { gameId: 7, game: null },
+        { gameId: 7, game: recreated },
+      ],
+    }));
+
+    expect(result.rooms[1].games[7]).toBe(recreated);
+  });
+
+  it('resolves repeated gameIds in event order (upsert then close → absent)', () => {
+    const room = makeRoom({ roomId: 1, games: {} });
+    const state = makeRoomsState({ rooms: { 1: room } });
+
+    const result = roomsReducer(state, Actions.roomGamesBatchApplied({
+      roomId: 1,
+      changes: [
+        { gameId: 7, game: makeGame({ gameId: 7 }) },
+        { gameId: 7, game: null },
+      ],
+    }));
+
+    expect(result.rooms[1].games[7]).toBeUndefined();
+  });
+
+  it('clears selectedGameIds[roomId] when a removal matches the selection', () => {
+    const game = makeGame({ gameId: 7 });
+    const room = makeRoom({ roomId: 1, games: { 7: game } });
+    const state = makeRoomsState({
+      rooms: { 1: room },
+      selectedGameIds: { 1: 7 },
+    });
+
+    const result = roomsReducer(state, Actions.roomGamesBatchApplied({
+      roomId: 1,
+      changes: [{ gameId: 7, game: null }],
+    }));
+
+    expect(result.rooms[1].games[7]).toBeUndefined();
+    expect(result.selectedGameIds[1]).toBeUndefined();
+  });
+
+  it('skips upserts but still clears selection when the room is missing', () => {
+    // Defensive: mirrors roomGameUpserted (no-op) + roomGameRemoved
+    // (selection clear runs regardless) for a room deleted between listener
+    // dispatch and reducer application.
+    const state = makeRoomsState({
+      rooms: {},
+      selectedGameIds: { 42: 7 },
+    });
+
+    const result = roomsReducer(state, Actions.roomGamesBatchApplied({
+      roomId: 42,
+      changes: [
+        { gameId: 9, game: makeGame({ gameId: 9 }) },
+        { gameId: 7, game: null },
+      ],
+    }));
+
+    expect(result.rooms[42]).toBeUndefined();
+    expect(result.selectedGameIds[42]).toBeUndefined();
+  });
+});

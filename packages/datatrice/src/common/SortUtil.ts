@@ -1,6 +1,12 @@
 import { App } from '../types';
 import { ServerInfo_User } from '@cockatrice/sockatrice/generated';
 
+// Shared collator: string sorts over busy-server collections (thousands of
+// users/games) run one comparator per O(N log N) comparison — bare
+// localeCompare re-resolves locale data per call, while a prebuilt collator's
+// compare is a plain function. Same default-locale ordering semantics.
+const collator = new Intl.Collator();
+
 export default class SortUtil {
   static sortByField<T extends object>(arr: T[], sortBy: App.SortBy): void {
     if (arr.length) {
@@ -136,9 +142,9 @@ export default class SortUtil {
     }
 
     if (order === App.SortDirection.ASC) {
-      return aResolved.localeCompare(bResolved);
+      return collator.compare(aResolved, bResolved);
     } else {
-      return bResolved.localeCompare(aResolved);
+      return collator.compare(bResolved, aResolved);
     }
   }
 

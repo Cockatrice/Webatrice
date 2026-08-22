@@ -59,7 +59,7 @@ A **major** bump is required when any of these change:
 - `createStore(options?)` — returns a configured RTK store with listeners pre-registered.
 - `rootReducer` — for consumers embedding Datatrice in a larger `combineReducers`.
 - `attachResponseHandlers(store)` — returns a `WebsocketTypes.IWebClientResponse` wired to the given store.
-- `isSerializable`, `storeMiddlewareOptions` — protobuf-tolerant middleware helpers.
+- `isSerializable`, `storeMiddlewareOptions` — middleware helpers. The store ships with RTK's dev invariant checks disabled: state and actions carry protobuf messages at server scale, and the O(state)-per-dispatch walks froze dev sessions on busy servers. `isSerializable` remains exported for consumers that re-enable a scoped serializable check.
 - `server`, `rooms`, `games` — per-slice `{ actions, selectors }` namespaces.
 
 Opt-in React glue via `@cockatrice/datatrice/react`:

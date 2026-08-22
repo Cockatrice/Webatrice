@@ -250,6 +250,12 @@ describe('Selectors', () => {
       const state = makeRoomsState({ rooms: {} });
       expect(Selectors.getFilteredRoomGames(rootState(state), 999)).toHaveLength(0);
     });
+
+    it('shares the sorted base array with getSortedRoomGames when filters are at defaults (layered — no duplicate sort)', () => {
+      const room = makeRoom({ roomId: 1, games: { 1: makeGame({ gameId: 1 }), 2: makeGame({ gameId: 2 }) } });
+      const root = rootState(makeRoomsState({ rooms: { 1: room } }));
+      expect(Selectors.getFilteredRoomGames(root, 1)).toBe(Selectors.getSortedRoomGames(root, 1));
+    });
   });
 
   describe('getRoomGameCounts', () => {

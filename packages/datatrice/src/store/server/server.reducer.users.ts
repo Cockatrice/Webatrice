@@ -12,6 +12,7 @@ import { normalizeGameObject, normalizeGametypeMap } from '../../common';
 import { ServerState } from './server.interfaces';
 
 export const MAX_USER_MESSAGES = 1000;
+export const MAX_NOTIFICATIONS = 200;
 
 export const userReducers = {
   updateUser: ((state, action) => {
@@ -61,6 +62,11 @@ export const userReducers = {
   }) as CaseReducer<ServerState, PayloadAction<{ messageData: Event_UserMessage }>>,
 
   notifyUser: ((state, action) => {
+    if (state.notifications.length >= MAX_NOTIFICATIONS) {
+      state.notifications = state.notifications.slice(
+        state.notifications.length - MAX_NOTIFICATIONS + 1
+      );
+    }
     state.notifications.push(action.payload.notification);
   }) as CaseReducer<ServerState, PayloadAction<{ notification: Event_NotifyUser }>>,
 

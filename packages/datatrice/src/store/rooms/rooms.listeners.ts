@@ -64,9 +64,13 @@ export function registerRoomsListeners(mw: ListenerMiddlewareInstance<unknown>):
 
       const gametypeMap = room.gametypeMap ?? {};
 
+      // One dispatch per frame, not per game: a busy server's join snapshot
+      // carries thousands of games, and per-game dispatches invalidated the
+      // room selectors N times per frame (dev invariant walks went O(games²)).
+      const changes: { gameId: number; game: Enriched.Game | null }[] = [];
       for (const rawGame of games) {
         if (rawGame.closed) {
-          api.dispatch(Actions.roomGameRemoved({ roomId, gameId: rawGame.gameId }));
+          changes.push({ gameId: rawGame.gameId, game: null });
           continue;
         }
 
@@ -74,21 +78,24 @@ export function registerRoomsListeners(mw: ListenerMiddlewareInstance<unknown>):
         if (existing) {
           // clone base preserves existing's unset proto2 fields; rawGame's set fields win.
           const merged = cloneWith(ServerInfo_GameSchema, existing.info, rawGame);
-          const game: Enriched.Game = {
-            info: merged,
-            gameType: merged.gameTypes?.length
-              ? (gametypeMap[merged.gameTypes[0]] ?? '')
-              : existing.gameType,
-          };
-          api.dispatch(Actions.roomGameUpserted({ roomId, gameId: rawGame.gameId, game }));
+          changes.push({
+            gameId: rawGame.gameId,
+            game: {
+              info: merged,
+              gameType: merged.gameTypes?.length
+                ? (gametypeMap[merged.gameTypes[0]] ?? '')
+                : existing.gameType,
+            },
+          });
         } else {
-          api.dispatch(Actions.roomGameUpserted({
-            roomId,
+          changes.push({
             gameId: rawGame.gameId,
             game: normalizeGameObject(rawGame, gametypeMap),
-          }));
+          });
         }
       }
+
+      api.dispatch(Actions.roomGamesBatchApplied({ roomId, changes }));
     },
   });
 }

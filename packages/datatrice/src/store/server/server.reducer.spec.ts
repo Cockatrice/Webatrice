@@ -14,7 +14,7 @@
 } from '@cockatrice/sockatrice/generated';
 import { WebsocketTypes } from '@cockatrice/sockatrice/types';
 import { create } from '@bufbuild/protobuf';
-import { serverReducer, MAX_USER_MESSAGES } from './server.reducer';
+import { serverReducer, MAX_USER_MESSAGES, MAX_NOTIFICATIONS } from './server.reducer';
 import { Actions } from './server.actions';
 import {
   makeBanHistoryItem,
@@ -160,6 +160,29 @@ describe('User', () => {
     const result = serverReducer(state, Actions.updateUser({ user }));
     expect(result.user).toBe(user);
     expect(result.user.name).toBe('Alice');
+  });
+});
+
+
+describe('Connection Health', () => {
+  it('connectionHealthChanged → stores degraded health', () => {
+    const state = makeServerState();
+    const result = serverReducer(state, Actions.connectionHealthChanged({ missedPongs: 3, silentForMs: 15000 }));
+    expect(result.connectionHealth).toEqual({ missedPongs: 3, silentForMs: 15000 });
+  });
+
+  it('connectionHealthChanged → 0 clears degraded health', () => {
+    const state = makeServerState({ connectionHealth: { missedPongs: 4, silentForMs: 20000 } });
+    const result = serverReducer(state, Actions.connectionHealthChanged({ missedPongs: 0, silentForMs: 0 }));
+    expect(result.connectionHealth).toEqual({ missedPongs: 0, silentForMs: 0 });
+  });
+
+  it('updateStatus → resets stale health from the previous socket', () => {
+    const state = makeServerState({ connectionHealth: { missedPongs: 4, silentForMs: 20000 } });
+    const result = serverReducer(state, Actions.updateStatus({
+      status: { state: WebsocketTypes.StatusEnum.CONNECTED, description: 'Connected' },
+    }));
+    expect(result.connectionHealth).toEqual({ missedPongs: 0, silentForMs: 0 });
   });
 });
 
@@ -403,6 +426,17 @@ describe('User Info & Notifications', () => {
     const result = serverReducer(state, Actions.notifyUser({ notification }));
     expect(result.notifications).toHaveLength(1);
     expect(result.notifications[0]).toEqual(notification);
+  });
+
+  it(`NOTIFY_USER → caps notifications at MAX_NOTIFICATIONS (${MAX_NOTIFICATIONS})`, () => {
+    const filler = Array.from({ length: MAX_NOTIFICATIONS }, (_, i) =>
+      ({ type: 1, warningReason: `old-${i}`, customTitle: '', customContent: '' }) as unknown as Event_NotifyUser);
+    const state = makeServerState({ notifications: filler });
+    const newest = { type: 1, warningReason: 'newest', customTitle: '', customContent: '' } as unknown as Event_NotifyUser;
+    const result = serverReducer(state, Actions.notifyUser({ notification: newest }));
+    expect(result.notifications).toHaveLength(MAX_NOTIFICATIONS);
+    expect(result.notifications[MAX_NOTIFICATIONS - 1]).toEqual(newest);
+    expect(result.notifications[0]).toEqual(filler[1]);
   });
 
   it('SERVER_SHUTDOWN → sets serverShutdown to action.payload.data', () => {

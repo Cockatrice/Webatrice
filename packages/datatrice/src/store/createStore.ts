@@ -7,18 +7,25 @@ import {
 } from '@reduxjs/toolkit';
 
 import { listenerMiddleware } from './listenerMiddleware';
-import { isSerializable } from './isSerializable';
 import { rootReducer, type RootState } from './rootReducer';
 import { registerServerListeners } from './server/server.listeners';
 import { registerGameListeners } from './games/game.listeners';
 import { registerRoomsListeners } from './rooms/rooms.listeners';
 
 // Shared with the renderWithProviders-style test harness so test stores
-// tolerate the same proto-shaped actions as the production store.
+// behave like the production store.
+// Both dev-only invariant checks are OFF: every slice (rooms game lists,
+// server user lists, in-game board state) holds raw protobuf messages at
+// server scale by design, and the checks deep-walk state on every dispatch —
+// O(state), charged to whichever dispatch happens to run. On a busy server
+// that froze dev for minutes and starved the keepalive until the server
+// dropped the connection. Scoped ignoredPaths were tried and remained
+// whack-a-slice (host-supplied extension slices can't be pre-listed). Immer
+// guarantees reducer immutability; RTK strips these checks from prod builds.
 export const storeMiddlewareOptions = {
-  immutableCheck: { warnAfter: 128 },
-  serializableCheck: { isSerializable, warnAfter: 128 },
-} as const;
+  immutableCheck: false as const,
+  serializableCheck: false as const,
+};
 
 let listenersRegistered = false;
 function ensureListenersRegistered(): void {
