@@ -20,7 +20,11 @@ export async function serverIdentification(info: Event_ServerIdentification): Pr
   const options = consumePendingOptions();
 
   if (!options) {
-    SessionCommands.updateStatus(StatusEnum.DISCONNECTED, 'Missing connection options');
+    // Reached on a transport-level reconnect: pending options are single-use
+    // and were consumed by the original login, and the app retains no
+    // credentials to resume the session with. Land the user on the login page
+    // with an honest message instead of a cryptic internal error.
+    SessionCommands.updateStatus(StatusEnum.DISCONNECTED, 'Connection lost — please log in again');
     SessionCommands.disconnect();
     return;
   }

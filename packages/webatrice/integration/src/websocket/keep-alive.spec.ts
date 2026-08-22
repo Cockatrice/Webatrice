@@ -51,16 +51,45 @@ describe('keep-alive', () => {
     expect(getMockWebSocket().close).not.toHaveBeenCalled();
   });
 
-  it('disconnects with a timeout status when a ping goes unanswered', () => {
+  it('stays connected through sustained silence, reporting degraded health instead of closing', () => {
     connectRaw();
 
     vi.advanceTimersByTime(5000);
     expect(() => findLastSessionCommand(Command_Ping_ext)).not.toThrow();
     expect(store.getState().server.status.state).toBe(WebsocketTypes.StatusEnum.CONNECTED);
+    expect(store.getState().server.connectionHealth.missedPongs).toBe(0);
+
+    // Policy: the keepalive NEVER closes the connection — a lagged server
+    // that recovers resumes the session intact, and genuine death surfaces
+    // via the socket's own close/error events. Silence only degrades health.
+    vi.advanceTimersByTime(5000 * 6);
+    expect(getMockWebSocket().close).not.toHaveBeenCalled();
+    expect(store.getState().server.status.state).toBe(WebsocketTypes.StatusEnum.CONNECTED);
+    expect(store.getState().server.connectionHealth.missedPongs).toBeGreaterThanOrEqual(2);
+    expect(store.getState().server.connectionHealth.silentForMs).toBeGreaterThan(0);
+
+    // Pings keep flowing so a recovering server still hears from us.
+    const lastPing = findLastSessionCommand(Command_Ping_ext);
+    expect(lastPing.cmdId).toBeGreaterThan(1);
+  });
+
+  it('reports recovery and clears degraded health when a delayed pong arrives', () => {
+    connectRaw();
 
     vi.advanceTimersByTime(5000);
+    vi.advanceTimersByTime(5000);
+    vi.advanceTimersByTime(5000);
+    expect(store.getState().server.connectionHealth.missedPongs).toBeGreaterThanOrEqual(2);
 
-    expect(getMockWebSocket().close).toHaveBeenCalled();
-    expect(store.getState().server.status.state).toBe(WebsocketTypes.StatusEnum.DISCONNECTED);
+    // The latest ping finally gets its response: proof of life.
+    const ping = findLastSessionCommand(Command_Ping_ext);
+    deliverMessage(buildResponseMessage(buildResponse({
+      cmdId: ping.cmdId,
+      responseCode: Response_ResponseCode.RespOk,
+    })));
+
+    expect(store.getState().server.connectionHealth.missedPongs).toBe(0);
+    expect(getMockWebSocket().close).not.toHaveBeenCalled();
+    expect(store.getState().server.status.state).toBe(WebsocketTypes.StatusEnum.CONNECTED);
   });
 });

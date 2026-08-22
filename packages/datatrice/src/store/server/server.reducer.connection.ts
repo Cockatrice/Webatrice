@@ -15,6 +15,10 @@ export const initialState: ServerState = {
     state: WebsocketTypes.StatusEnum.DISCONNECTED,
     description: null
   },
+  connectionHealth: {
+    missedPongs: 0,
+    silentForMs: 0
+  },
   info: {
     message: null,
     name: null,
@@ -99,11 +103,19 @@ export const connectionReducers = {
     const { status } = action.payload;
     state.status.state = status.state;
     state.status.description = status.description;
+    // Any status transition is a socket lifecycle change; stale degraded
+    // health from the previous socket must not survive it.
+    state.connectionHealth = { missedPongs: 0, silentForMs: 0 };
 
     if (status.state === WebsocketTypes.StatusEnum.DISCONNECTED) {
       state.status.connectionAttemptMade = false;
     }
   }) as CaseReducer<ServerState, PayloadAction<{ status: Pick<ServerStateStatus, 'state' | 'description'> }>>,
+
+  connectionHealthChanged: ((state, action) => {
+    const { missedPongs, silentForMs } = action.payload;
+    state.connectionHealth = { missedPongs, silentForMs };
+  }) as CaseReducer<ServerState, PayloadAction<{ missedPongs: number; silentForMs: number }>>,
 
   serverShutdown: ((state, action) => {
     state.serverShutdown = action.payload.data;

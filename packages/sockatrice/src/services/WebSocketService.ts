@@ -15,6 +15,12 @@ export interface WebSocketServiceConfig {
   onStatusChange: (status: StatusEnum, description: string) => void;
   onConnectionFailed: () => void;
   onMessage: (message: MessageEvent) => void;
+  /**
+   * Keepalive health transitions: missedPongs > 0 while the server is not
+   * answering pings (degraded), 0 on recovery. The keepalive never closes the
+   * connection — genuine death arrives via the socket's own close/error events.
+   */
+  onConnectionHealth?: (missedPongs: number, silentForMs: number) => void;
   /** Opt-in automatic reconnect on unexpected socket close. */
   reconnect?: ReconnectConfig;
 }
@@ -50,9 +56,8 @@ export class WebSocketService {
 
     this.keepAliveService = new KeepAliveService(
       () => this.checkReadyState(WebSocket.OPEN),
-      () => {
-        this.disconnect();
-        this.config.onStatusChange(StatusEnum.DISCONNECTED, 'Connection timeout');
+      (missedPongs, silentForMs) => {
+        this.config.onConnectionHealth?.(missedPongs, silentForMs);
       },
     );
   }

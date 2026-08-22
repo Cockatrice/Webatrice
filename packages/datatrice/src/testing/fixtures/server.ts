@@ -168,6 +168,10 @@ export function makeServerState(overrides: Partial<ServerState> = {}): ServerSta
       state: WebsocketTypes.StatusEnum.DISCONNECTED,
       description: null,
     },
+    connectionHealth: {
+      missedPongs: 0,
+      silentForMs: 0,
+    },
     info: {
       message: null,
       name: null,

@@ -14,6 +14,7 @@ type State = { server: ServerState };
 const EMPTY_USERS: ServerInfo_User[] = [];
 const EMPTY_REPLAYS: ServerInfo_ReplayMatch[] = [];
 const EMPTY_MESSAGES: Event_UserMessage[] = [];
+const HEALTHY_CONNECTION = { missedPongs: 0, silentForMs: 0 };
 
 export const Selectors = {
   getInitialized: ({ server }: State) => server.initialized,
@@ -24,6 +25,10 @@ export const Selectors = {
   getState: ({ server }: State) => server.status.state,
   getConnectionAttemptMade: ({ server }: State) => server.status.connectionAttemptMade,
   getTestConnectionStatus: ({ server }: State) => server.testConnectionStatus,
+  // Stable fallback: preloaded/partial states (host-supplied or test
+  // fixtures) may predate the connectionHealth field.
+  getConnectionHealth: ({ server }: State) => server.connectionHealth ?? HEALTHY_CONNECTION,
+  getIsServerUnresponsive: ({ server }: State) => (server.connectionHealth?.missedPongs ?? 0) > 0,
   getUser: ({ server }: State) => server.user,
 
   getIsConnected: createSelector(

@@ -163,6 +163,12 @@ describe('SessionResponseImpl forwards', () => {
     expect(dispatch).toHaveBeenCalledWith(ServerActions.updateUser({ user }));
   });
 
+  it('updateConnectionHealth', () => {
+    const { impl, dispatch } = setup();
+    impl.updateConnectionHealth(2, 10000);
+    expect(dispatch).toHaveBeenCalledWith(ServerActions.connectionHealthChanged({ missedPongs: 2, silentForMs: 10000 }));
+  });
+
   it('updateUsers', () => {
     const { impl, dispatch } = setup();
     const users = [create(ServerInfo_UserSchema, { name: 'alice' })];

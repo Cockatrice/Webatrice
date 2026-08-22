@@ -64,17 +64,20 @@ describe('WebSocketService', () => {
       expect(service).toBeDefined();
     });
 
-    it('calls disconnect and updateStatus when keepalive timeout fires', () => {
-      const service = new WebSocketService(mockConfig);
+    it('never closes the socket on missed pongs; reports degraded health instead', () => {
+      const onConnectionHealth = vi.fn();
+      const service = new WebSocketService({ ...mockConfig, onConnectionHealth });
       service.connect({ host: 'localhost', port: '8080' });
       mockInstance.onopen();
-      // First tick arms the ping (lastPingPending → true); the mock keepAliveFn
-      // never resolves the pong callback, so the second tick observes the
-      // pending ping and fires onDisconnected.
+      // The mock keepAliveFn never resolves the pong callback: sustained
+      // silence. Policy: the keepalive never tears the connection down —
+      // death arrives via the socket's own close/error events.
       vi.advanceTimersByTime(1000);
-      vi.advanceTimersByTime(1000);
-      expect(mockInstance.close).toHaveBeenCalled();
-      expect(mockOnStatusChange).toHaveBeenCalledWith(StatusEnum.DISCONNECTED, 'Connection timeout');
+      vi.advanceTimersByTime(10_000);
+      expect(mockInstance.close).not.toHaveBeenCalled();
+      expect(mockOnStatusChange).not.toHaveBeenCalledWith(StatusEnum.DISCONNECTED, expect.anything());
+      expect(onConnectionHealth).toHaveBeenLastCalledWith(10, expect.any(Number));
+      void service;
     });
   });
 
@@ -167,6 +170,7 @@ describe('WebSocketService', () => {
       mockInstance.onclose();
       expect(endSpy).toHaveBeenCalled();
     });
+
   });
 
   describe('socket event handlers (onerror)', () => {

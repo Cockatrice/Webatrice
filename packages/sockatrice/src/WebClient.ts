@@ -83,6 +83,9 @@ export class WebClient {
       onConnectionFailed: () => {
         this.response.session.connectionFailed();
       },
+      onConnectionHealth: (missedPongs, silentForMs) => {
+        this.response.session.updateConnectionHealth?.(missedPongs, silentForMs);
+      },
       onMessage: (message) => {
         this.protobuf.handleMessageEvent(message);
       },

@@ -22,6 +22,10 @@ export interface ServerState {
   ignoreList: { [userName: string]: ServerInfo_User };
   info: ServerStateInfo;
   status: ServerStateStatus;
+  // Keepalive health while the socket stays open: missedPongs > 0 means the
+  // server is not answering pings (lagged or unreachable); 0 = healthy. The
+  // transport never self-disconnects on silence — see sockatrice KeepAliveService.
+  connectionHealth: ServerConnectionHealth;
   logs: ServerStateLogs;
   user: ServerInfo_User | null;
   users: { [userName: string]: ServerInfo_User };
@@ -56,6 +60,11 @@ export interface ServerStateStatus {
   connectionAttemptMade: boolean;
   description: string | null;
   state: WebsocketTypes.StatusEnum;
+}
+
+export interface ServerConnectionHealth {
+  missedPongs: number;
+  silentForMs: number;
 }
 
 export interface ServerStateInfo {
