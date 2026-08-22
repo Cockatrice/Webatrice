@@ -29,7 +29,6 @@ export class WebSocketService {
   private keepalive: number;
 
   private lastTarget: ConnectTarget | null = null;
-  private lastProtocol: string | null = null;
 
   private intentionalDisconnect = false;
   /**
@@ -58,11 +57,7 @@ export class WebSocketService {
     );
   }
 
-  public connect(target: ConnectTarget, protocol: string = 'wss'): void {
-    if (window.location.hostname === 'localhost') {
-      protocol = 'ws';
-    }
-
+  public connect(target: ConnectTarget): void {
     // Retire prior socket; retiringForReconnect suppresses orphan reconnect+DISCONNECTED.
     // See .github/instructions/sockatrice-transport.instructions.md#websocket-lifecycle.
     this.retiringForReconnect = true;
@@ -71,14 +66,13 @@ export class WebSocketService {
     this.retiringForReconnect = false;
 
     this.lastTarget = target;
-    this.lastProtocol = protocol;
     this.intentionalDisconnect = false;
     this.reconnectAttempts = 0;
     this.hasEverOpened = false;
     this.keepalive = this.config.keepalive;
 
     const { host, port } = target;
-    this.socket = this.createWebSocket(buildWebSocketUrl(protocol as 'ws' | 'wss', host, port));
+    this.socket = this.createWebSocket(buildWebSocketUrl(host, port));
   }
 
   public disconnect(): void {
@@ -194,13 +188,11 @@ export class WebSocketService {
 
     this.reconnectTimer = setTimeout(() => {
       this.reconnectTimer = null;
-      if (this.intentionalDisconnect || !this.lastTarget || !this.lastProtocol) {
+      if (this.intentionalDisconnect || !this.lastTarget) {
         return;
       }
       const { host, port } = this.lastTarget;
-      this.socket = this.createWebSocket(
-        buildWebSocketUrl(this.lastProtocol as 'ws' | 'wss', host, port),
-      );
+      this.socket = this.createWebSocket(buildWebSocketUrl(host, port));
     }, delay);
   }
 

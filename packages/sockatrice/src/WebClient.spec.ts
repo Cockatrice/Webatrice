@@ -282,14 +282,14 @@ describe('WebClient', () => {
       expect(first.close).toHaveBeenCalled();
     });
 
-    it('uses wss:// when hostname is not localhost', () => {
-      vi.stubGlobal('location', { ...window.location, hostname: 'example.com' });
-      try {
-        client.testConnect(target);
-        expect(MockWS).toHaveBeenCalledWith(expect.stringMatching(/^wss:\/\//));
-      } finally {
-        vi.unstubAllGlobals();
-      }
+    it('uses wss:// for a remote target', () => {
+      client.testConnect(target);
+      expect(MockWS).toHaveBeenCalledWith(expect.stringMatching(/^wss:\/\//));
+    });
+
+    it('uses ws:// for a local target', () => {
+      client.testConnect({ host: 'localhost', port: '4748' });
+      expect(MockWS).toHaveBeenCalledWith(expect.stringMatching(/^ws:\/\//));
     });
 
     it('ignores a second resolve once already resolved', () => {

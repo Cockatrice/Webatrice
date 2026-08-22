@@ -118,8 +118,7 @@ export class WebClient {
       this.testSocket = null;
     }
 
-    const protocol = window.location.hostname === 'localhost' ? 'ws' : 'wss';
-    const socket = new WebSocket(buildWebSocketUrl(protocol, target.host, target.port));
+    const socket = new WebSocket(buildWebSocketUrl(target.host, target.port));
     socket.binaryType = 'arraybuffer';
     this.testSocket = socket;
 

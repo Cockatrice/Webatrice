@@ -25,7 +25,11 @@ The worker URL is resolved relative to whichever chunk `KeepAliveService` ends u
 
 ## WebSocket URL construction
 
-Known hosts come in two shapes: a direct endpoint (`mtg.chickatrice.net` + port `4748` → `ws://mtg.chickatrice.net:4748`) or a reverse-proxied endpoint where the host string already encodes a path (`server.cockatrice.us/servatrice` → `wss://server.cockatrice.us/servatrice`). For the second shape, `port` is dev-convenience only — public TLS reaches the proxy on default `:443` and a naive `${protocol}://${host}:${port}` produces `wss://server.cockatrice.us/servatrice:4748`, which browsers parse as `path=/servatrice:4748`, bypassing the proxy and failing the WS upgrade. `buildWebSocketUrl` switches on whether `host` contains `/`. Anything that constructs a Sockatrice WS URL outside this helper must apply the same rule.
+`buildWebSocketUrl(host, port)` is the single decision point for both the path/port shape **and** the scheme.
+
+Known hosts come in two shapes: a direct endpoint (`mtg.chickatrice.net` + port `4748` → `wss://mtg.chickatrice.net:4748`) or a reverse-proxied endpoint where the host string already encodes a path (`server.cockatrice.us/servatrice` → `wss://server.cockatrice.us/servatrice`). For the second shape, `port` is dev-convenience only — public TLS reaches the proxy on default `:443` and a naive `${protocol}://${host}:${port}` produces `wss://server.cockatrice.us/servatrice:4748`, which browsers parse as `path=/servatrice:4748`, bypassing the proxy and failing the WS upgrade. `buildWebSocketUrl` switches the port on whether `host` contains `/`.
+
+Scheme is chosen by the **target** host, not the page origin: `ws://` iff the target hostname is local (`localhost`, `127.0.0.1`, `::1`/`[::1]`, or `*.localhost`), otherwise `wss://`. The page origin plays no role — an `http://localhost` dev page can and must open `wss://` to reach TLS-only servers like Rooster; mixed-content rules only block `ws://` *from* an `https://` page, never the reverse. (The earlier "downgrade to `ws://` whenever the page is on localhost" rule broke local dev against every TLS-only server.) Anything that constructs a Sockatrice WS URL outside this helper must apply the same rule.
 
 ## WebClient lifecycle
 

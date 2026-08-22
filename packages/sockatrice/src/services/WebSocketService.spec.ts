@@ -54,7 +54,7 @@ afterEach(() => {
 describe('WebSocketService', () => {
   function createConnectedService() {
     const service = new WebSocketService(mockConfig);
-    service.connect({ host: 'h', port: '1' }, 'ws');
+    service.connect({ host: 'h', port: '1' });
     return service;
   }
 
@@ -66,7 +66,7 @@ describe('WebSocketService', () => {
 
     it('calls disconnect and updateStatus when keepalive timeout fires', () => {
       const service = new WebSocketService(mockConfig);
-      service.connect({ host: 'localhost', port: '8080' }, 'ws');
+      service.connect({ host: 'localhost', port: '8080' });
       mockInstance.onopen();
       // First tick arms the ping (lastPingPending → true); the mock keepAliveFn
       // never resolves the pong callback, so the second tick observes the
@@ -79,18 +79,25 @@ describe('WebSocketService', () => {
   });
 
   describe('connect', () => {
-    it('creates a WebSocket with wss protocol by default', () => {
+    it('creates a wss:// WebSocket for a remote target', () => {
       const service = new WebSocketService(mockConfig);
-      locationRestores.push(withMockLocation({ hostname: 'example.com' }));
       service.connect({ host: 'example.com', port: '8080' });
       expect(MockWS).toHaveBeenCalledWith('wss://example.com:8080');
     });
 
-    it('switches to ws protocol when hostname is localhost', () => {
+    it('uses wss:// for a remote target even when the page is served from localhost', () => {
+      // Regression: the old code downgraded to ws:// based on the page origin,
+      // which broke local dev against TLS-only servers (e.g. Rooster).
       const service = new WebSocketService(mockConfig);
       locationRestores.push(withMockLocation({ hostname: 'localhost' }));
-      service.connect({ host: 'somehost', port: '1234' });
-      expect(MockWS).toHaveBeenCalledWith('ws://somehost:1234');
+      service.connect({ host: 'example.com', port: '8080' });
+      expect(MockWS).toHaveBeenCalledWith('wss://example.com:8080');
+    });
+
+    it('uses ws:// only when the target host itself is local', () => {
+      const service = new WebSocketService(mockConfig);
+      service.connect({ host: 'localhost', port: '1234' });
+      expect(MockWS).toHaveBeenCalledWith('ws://localhost:1234');
     });
 
     it('sets binaryType to arraybuffer', () => {
@@ -122,7 +129,7 @@ describe('WebSocketService', () => {
     it('starts the ping loop with the keepalive interval', () => {
       const service = new WebSocketService(mockConfig);
       const startSpy = vi.spyOn((service as WebSocketInternal).keepAliveService, 'startPingLoop');
-      service.connect({ host: 'h', port: '1' }, 'ws');
+      service.connect({ host: 'h', port: '1' });
       mockInstance.onopen();
       expect(startSpy).toHaveBeenCalledWith(1000, expect.any(Function));
     });
@@ -130,7 +137,7 @@ describe('WebSocketService', () => {
     it('ping loop callback calls keepAliveFn', () => {
       const service = new WebSocketService(mockConfig);
       const startSpy = vi.spyOn((service as WebSocketInternal).keepAliveService, 'startPingLoop');
-      service.connect({ host: 'h', port: '1' }, 'ws');
+      service.connect({ host: 'h', port: '1' });
       mockInstance.onopen();
       const pingCb = startSpy.mock.calls[0][1] as (done: Function) => void;
       const done = vi.fn();
@@ -156,7 +163,7 @@ describe('WebSocketService', () => {
     it('ends the ping loop on close', () => {
       const service = new WebSocketService(mockConfig);
       const endSpy = vi.spyOn((service as WebSocketInternal).keepAliveService, 'endPingLoop');
-      service.connect({ host: 'h', port: '1' }, 'ws');
+      service.connect({ host: 'h', port: '1' });
       mockInstance.onclose();
       expect(endSpy).toHaveBeenCalled();
     });
@@ -247,9 +254,9 @@ describe('WebSocketService', () => {
   describe('connect (re-entry)', () => {
     it('closes the prior socket when connect is called twice', () => {
       const service = new WebSocketService(mockConfig);
-      service.connect({ host: 'h', port: '1' }, 'ws');
+      service.connect({ host: 'h', port: '1' });
       const firstInstance = mockInstance;
-      service.connect({ host: 'h', port: '2' }, 'ws');
+      service.connect({ host: 'h', port: '2' });
       expect(firstInstance.close).toHaveBeenCalled();
     });
   });
@@ -263,7 +270,7 @@ describe('WebSocketService', () => {
 
     function createReconnectService() {
       const service = new WebSocketService({ ...mockConfig, reconnect });
-      service.connect({ host: 'h', port: '1' }, 'ws');
+      service.connect({ host: 'h', port: '1' });
       mockInstance.onopen();
       return service;
     }
@@ -292,7 +299,7 @@ describe('WebSocketService', () => {
     it('gives up after maxAttempts and emits DISCONNECTED', () => {
       const { instances } = installMockWebSocketHarness();
       const service = new WebSocketService({ ...mockConfig, reconnect });
-      service.connect({ host: 'h', port: '1' }, 'ws');
+      service.connect({ host: 'h', port: '1' });
       // Flip hasEverOpened so reconnect is eligible, then drop.
       instances[0].onopen();
       mockOnStatusChange.mockClear();
@@ -308,6 +315,14 @@ describe('WebSocketService', () => {
       const statuses = mockOnStatusChange.mock.calls.map(c => c[0]);
       expect(statuses).toContain(StatusEnum.DISCONNECTED);
       void service;
+    });
+
+    it('re-derives the same wss:// url when reconnecting', () => {
+      createReconnectService();
+      MockWS.mockClear();
+      mockInstance.onclose();
+      vi.advanceTimersByTime(reconnect.maxDelayMs);
+      expect(MockWS).toHaveBeenCalledWith('wss://h:1');
     });
 
     it('resets attempt counter on successful open', () => {
@@ -330,13 +345,13 @@ describe('WebSocketService', () => {
       // onclose — that's the only window where retiringForReconnect is still
       // true when the orphan's onclose handler reads it.
       const service = new WebSocketService(mockConfig);
-      service.connect({ host: 'h', port: '1' }, 'ws');
+      service.connect({ host: 'h', port: '1' });
       mockInstance.onopen();
       const firstSocket = mockInstance;
       firstSocket.close.mockImplementation(() => firstSocket.onclose());
       mockOnStatusChange.mockClear();
 
-      service.connect({ host: 'h', port: '2' }, 'ws');
+      service.connect({ host: 'h', port: '2' });
       const statuses = mockOnStatusChange.mock.calls.map(c => c[0]);
       expect(statuses).not.toContain(StatusEnum.DISCONNECTED);
     });
