@@ -1,4 +1,4 @@
-﻿// KeepAliveService timing scenarios — ping loop, pong correlation, timeout.
+﻿// KeepAliveService timing scenarios — ping loop, pong correlation, silence policy.
 
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
@@ -83,16 +83,24 @@ describe('keep-alive', () => {
     expect(getMockWebSocket().close).not.toHaveBeenCalled();
   });
 
-  it('disconnects with a timeout status when a ping goes unanswered', () => {
+  it('never closes the connection on unanswered pings — keeps pinging through sustained silence', () => {
     connectRaw();
 
     vi.advanceTimersByTime(5000);
-    expect(() => findLastSessionCommand(Data.Command_Ping_ext)).not.toThrow();
+    const first = findLastSessionCommand(Data.Command_Ping_ext);
+    expect(first.cmdId).toBeGreaterThan(0);
     expect(getWebClient().status).toBe(WebsocketTypes.StatusEnum.CONNECTED);
 
-    vi.advanceTimersByTime(5000);
+    // Policy: the keepalive NEVER closes the connection — a lagged server
+    // that recovers resumes the session intact, and genuine death surfaces
+    // via the socket's own close/error events. Missed pongs only degrade
+    // reported health (asserted store-side in webatrice integration).
+    vi.advanceTimersByTime(5000 * 6);
 
-    expect(getMockWebSocket().close).toHaveBeenCalled();
-    expect(getWebClient().status).toBe(WebsocketTypes.StatusEnum.DISCONNECTED);
+    expect(getMockWebSocket().close).not.toHaveBeenCalled();
+    expect(getWebClient().status).toBe(WebsocketTypes.StatusEnum.CONNECTED);
+    // Pings keep flowing so a recovering server still hears from us.
+    const last = findLastSessionCommand(Data.Command_Ping_ext);
+    expect(last.cmdId).toBeGreaterThan(first.cmdId);
   });
 });
