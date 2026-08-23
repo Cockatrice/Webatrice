@@ -222,6 +222,42 @@ describe('ADD_MESSAGE', () => {
     expect(result.messages[1][MAX_ROOM_MESSAGES - 1].message).toBe('new');
   });
 
+  it('keeps each surviving message\'s id across the cap trim (chat rows key on id)', () => {
+    // Chat rows key on message.id, not the array index. When the head is
+    // trimmed at the cap, every survivor must keep the id it was stored with —
+    // otherwise the keys shift and React remounts the whole scrollback.
+    const seeded = Array.from({ length: MAX_ROOM_MESSAGES }, (_, i) =>
+      makeMessage({ message: `msg-${i}`, id: i })
+    );
+    const state = makeRoomsState({ messages: { 1: seeded } });
+
+    const result = roomsReducer(state, Actions.addMessage({ roomId: 1, message: makeMessage({ message: 'new' }) }));
+    const messages = result.messages[1];
+
+    expect(messages).toHaveLength(MAX_ROOM_MESSAGES);
+    // Oldest (id 0) trimmed; the new head is the second-seeded message, still id 1.
+    expect(messages[0]).toMatchObject({ message: 'msg-1', id: 1 });
+    // Survivors keep their seeded ids — not re-indexed by position.
+    expect(messages[MAX_ROOM_MESSAGES - 2]).toMatchObject({
+      message: `msg-${MAX_ROOM_MESSAGES - 1}`,
+      id: MAX_ROOM_MESSAGES - 1,
+    });
+    // The appended message is stamped a real id at ingestion.
+    const tail = messages[MAX_ROOM_MESSAGES - 1];
+    expect(tail.message).toBe('new');
+    expect(tail.id).toBeTypeOf('number');
+  });
+
+  it('stamps each appended message a fresh, strictly increasing id', () => {
+    const state = makeRoomsState({ messages: { 1: [] } });
+    const r1 = roomsReducer(state, Actions.addMessage({ roomId: 1, message: makeMessage({ message: 'a' }) }));
+    const r2 = roomsReducer(r1, Actions.addMessage({ roomId: 1, message: makeMessage({ message: 'b' }) }));
+    const [a, b] = r2.messages[1];
+    expect(a.id).toBeTypeOf('number');
+    expect(b.id).toBeTypeOf('number');
+    expect(b.id!).toBeGreaterThan(a.id!);
+  });
+
   it('prepends "name: " to message when name is present', () => {
     const state = makeRoomsState({ messages: { 1: [] } });
     const message = makeMessage({ name: 'Alice', message: 'hello' });
