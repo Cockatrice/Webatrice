@@ -50,6 +50,8 @@ const DialogShell = ({
       role="dialog"
       aria-modal="true"
       aria-label={title}
+      // @critical React bubbles synthetic submit events along the React tree
+      onSubmit={(e) => e.stopPropagation()}
     >
       <div
         className="absolute inset-0 bg-black/60 backdrop-blur-[2px]"
