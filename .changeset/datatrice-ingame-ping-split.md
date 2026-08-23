@@ -1,0 +1,9 @@
+---
+'@cockatrice/datatrice': minor
+---
+
+In-game steady-state performance: the server's per-second broadcast streams no longer invalidate the render tree.
+
+**Ping clock split out of the player graph.** Servatrice broadcasts `Event_PlayerPropertiesChanged` carrying only `ping_seconds` roughly once per second for every seated player and spectator — ~5 events/second per open game, doubling with each additional game. That volatile clock lived inside `player.properties`, so every tick cloned the player entry and flipped the `players` reference, re-rendering every `getPlayers`/`getPlayer` subscriber (chat log, battlefield, arrow overlay, board cells) several times a second. The clock now lives in a new `GameEntry.pings` map beside the players graph: `playerPropertiesUpdated` routes a set `pingSeconds` there and, when no other field is on the wire (detected via `isFieldSet`, matching the documented ping-tick wire shape), returns without touching `player.properties` at all — player references stay identical and the tick stream invalidates nobody. Mixed payloads keep the existing sparse-merge semantics plus the pings write. New selectors `getPings(gameId)` and `getPlayerPing(gameId, playerId)` (with a snapshot fallback for preloaded states) are the authoritative read path; the `properties.pingSeconds` snapshot inside the graph is stale after join by design. Field-measured: ~290 ping events/minute that previously drove 13-20s/minute of main-thread long tasks now drive under one second per minute.
+
+**No-op room re-broadcasts skipped.** Servatrice re-sends `Event_ListRooms` every few seconds whether or not anything changed. The `updateRooms` listener now compares the sparse-merge result against the stored room (protobuf `equals`, plus order and gametype map) and skips the `roomUpserted` dispatch when nothing changed, so steady-state broadcasts stop flipping room references and re-rendering rooms subscribers.

@@ -98,6 +98,21 @@ describe('UPDATE_ROOMS', () => {
     expect(result.rooms[99].info.name).toBe('New Room');
   });
 
+  it('no-op re-broadcast leaves the room entry untouched by reference', () => {
+    // Servatrice re-broadcasts Event_ListRooms every few seconds regardless of
+    // change. When the sparse merge produces identical info (and order and
+    // gametypeMap are unchanged), the listener skips the roomUpserted dispatch
+    // entirely so steady-state broadcasts don't flip room refs and re-render
+    // rooms subscribers.
+    const state = makeRoomsState({ rooms: {} });
+    const room = makeRoom({ roomId: 1, name: 'Main Hall' }).info;
+    const first = dispatchThroughStore(state, Actions.updateRooms({ rooms: [room] }));
+    const entry = first.rooms[1];
+
+    const second = dispatchThroughStore(first, Actions.updateRooms({ rooms: [room] }));
+    expect(second.rooms[1]).toBe(entry);
+  });
+
   it('re-normalizes the gametypeMap when an existing room update carries a gametypeList', () => {
     const existingRoom = makeRoom({
       roomId: 1,

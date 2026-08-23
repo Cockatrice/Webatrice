@@ -27,6 +27,7 @@ export const lifecycleReducers = {
       reversed: false,
       players: {},
       seatOrder: [],
+      pings: {},
       messages: [],
     };
   }) as CaseReducer<GamesState, PayloadAction<{ data: Event_GameJoined }>>,

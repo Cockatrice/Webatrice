@@ -1,5 +1,5 @@
 import type { ListenerMiddlewareInstance } from '@reduxjs/toolkit';
-import { clone } from '@bufbuild/protobuf';
+import { clone, equals } from '@bufbuild/protobuf';
 
 import { Enriched } from '../../types';
 import { ServerInfo_GameSchema, ServerInfo_RoomSchema } from '@cockatrice/sockatrice/generated';
@@ -28,6 +28,17 @@ export function registerRoomsListeners(mw: ListenerMiddlewareInstance<unknown>):
           const nextGametypeMap = rawGametypeList.length > 0
             ? normalizeGametypeMap(rawGametypeList)
             : existing.gametypeMap;
+          // Servatrice re-broadcasts Event_ListRooms every few seconds whether
+          // or not anything changed. When the merge is a no-op, skip the
+          // dispatch entirely — otherwise the steady-state broadcast flips the
+          // room ref and re-renders every rooms subscriber for nothing.
+          if (
+            nextGametypeMap === existing.gametypeMap
+            && existing.order === order
+            && equals(ServerInfo_RoomSchema, nextInfo, existing.info)
+          ) {
+            return;
+          }
           api.dispatch(Actions.roomUpserted({
             roomId,
             info: nextInfo,

@@ -9,6 +9,7 @@ type State = { games: GamesState };
 
 const EMPTY_ARRAY: ServerInfo_Card[] = [];
 const EMPTY_OBJECT = {} as Record<string, never>;
+const EMPTY_PINGS: { [playerId: number]: number } = {};
 const EMPTY_ATTACHMENTS: ReadonlyMap<number, AttachedChild[]> = new Map();
 const EMPTY_PLAYERS: Enriched.PlayerEntry[] = [];
 
@@ -122,6 +123,21 @@ export const Selectors = {
 
   getPlayers: ({ games }: State, gameId: number): { [playerId: number]: Enriched.PlayerEntry } | undefined =>
     games.games[gameId]?.players,
+
+  /** Live ping clock per player. Authoritative over the stale
+   *  `properties.pingSeconds` snapshot inside `players` — see
+   *  `Enriched.GameEntry.pings`. */
+  getPings: ({ games }: State, gameId: number): { [playerId: number]: number } =>
+    games.games[gameId]?.pings ?? EMPTY_PINGS,
+
+  getPlayerPing: ({ games }: State, gameId: number, playerId: number): number => {
+    const game = games.games[gameId];
+    // Fall back to the join-time snapshot for preloaded/partial states that
+    // predate the pings field (host-supplied fixtures).
+    return game?.pings?.[playerId]
+      ?? game?.players[playerId]?.properties.pingSeconds
+      ?? 0;
+  },
 
   getSeatedPlayers: ({ games }: State, gameId: number): Enriched.PlayerEntry[] => {
     const game = games.games[gameId];

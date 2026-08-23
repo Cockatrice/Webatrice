@@ -775,11 +775,12 @@ describe('zoneCardCountAdjusted', () => {
 });
 
 describe('playerPropertiesUpdated', () => {
-  it('sparse merge: only set fields on the wire payload overwrite existing values', () => {
-    // Regression mirror for the per-second ping tick — the desktop server
-    // sends Event_PlayerPropertiesChanged with only ping_seconds populated;
-    // mergeSetFields uses isFieldSet tracking bits to leave the deck hash,
-    // ready flag, and sideboard lock untouched.
+  it('ping-only update routes to game.pings and leaves the player graph untouched by reference', () => {
+    // The per-second ping tick — the desktop server sends
+    // Event_PlayerPropertiesChanged with only ping_seconds populated.
+    // The volatile clock lands in game.pings; player/players refs MUST stay
+    // identical so the ~1/s-per-player stream invalidates no players
+    // subscriber (see Enriched.GameEntry.pings).
     const existing = makePlayerProperties({
       playerId: 1,
       deckHash: 'abc123',
@@ -797,11 +798,36 @@ describe('playerPropertiesUpdated', () => {
     const result = gamesReducer(state, Actions.playerPropertiesUpdated({
       gameId: 1, playerId: 1, properties: pingOnly,
     }));
+    expect(result.games[1].pings[1]).toBe(42);
+    expect(result.games[1].players).toBe(state.games[1].players);
+    expect(result.games[1].players[1].properties).toBe(existing);
+  });
+
+  it('sparse merge: a mixed payload merges set fields, preserves the rest, and still updates pings', () => {
+    // mergeSetFields uses isFieldSet tracking bits to leave the deck hash
+    // and sideboard lock untouched when the wire payload doesn't carry them.
+    const existing = makePlayerProperties({
+      playerId: 1,
+      deckHash: 'abc123',
+      readyStart: false,
+      sideboardLocked: true,
+    });
+    const state = makeState({
+      games: {
+        1: makeGameEntry({
+          players: { 1: makePlayerEntry({ properties: existing }) },
+        }),
+      },
+    });
+    const mixed = create(ServerInfo_PlayerPropertiesSchema, { pingSeconds: 42, readyStart: true });
+    const result = gamesReducer(state, Actions.playerPropertiesUpdated({
+      gameId: 1, playerId: 1, properties: mixed,
+    }));
     const merged = result.games[1].players[1].properties;
-    expect(merged.pingSeconds).toBe(42);
+    expect(merged.readyStart).toBe(true);
     expect(merged.deckHash).toBe('abc123');
-    expect(merged.readyStart).toBe(false);
     expect(merged.sideboardLocked).toBe(true);
+    expect(result.games[1].pings[1]).toBe(42);
   });
 
   it('no-ops when player is missing', () => {

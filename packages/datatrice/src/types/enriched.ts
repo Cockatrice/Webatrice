@@ -56,6 +56,14 @@ export interface GameEntry {
   // order the server sent (full-state syncs) and append-on-join, for board seating
   // and reveal-target lists. See seatedPlayersOf / Selectors.getSeatedPlayers.
   seatOrder: number[];
+  // @critical Live ping clock per player, AUTHORITATIVE over the stale
+  // `properties.pingSeconds` snapshot inside `players`. Servatrice broadcasts
+  // Event_PlayerPropertiesChanged carrying only ping_seconds ~1/s per seated
+  // player+spectator; keeping that volatile value inside the player graph
+  // invalidated every players-subscribed component several times a second.
+  // The reducer routes ping-only updates here and leaves `players` refs
+  // untouched — read ping via Selectors.getPings / getPlayerPing only.
+  pings: { [playerId: number]: number };
   messages: GameMessage[];
 }
 

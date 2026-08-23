@@ -300,11 +300,13 @@ describe('2B: Game state & player management', () => {
     expect(result.games[1].players[1].properties.playerId).toBe(1);
   });
 
-  it('PLAYER_PROPERTIES_CHANGED → partial update (only pingSeconds) preserves deckHash', () => {
+  it('PLAYER_PROPERTIES_CHANGED → ping-only tick lands in game.pings, preserves deckHash, and skips the player graph', () => {
     // Regression: the desktop server's per-second ping tick sends
     // Event_PlayerPropertiesChanged with only ping_seconds set. A naive
     // overwrite would wipe deck_hash and disable the Ready button in the
-    // deck-select dialog mid-lobby.
+    // deck-select dialog mid-lobby. The clock itself is volatile and is
+    // routed to game.pings so the player graph keeps its references
+    // (see Enriched.GameEntry.pings).
     const existing = makePlayerProperties({
       playerId: 1,
       deckHash: 'abc123',
@@ -324,11 +326,12 @@ describe('2B: Game state & player management', () => {
       playerId: 1,
       properties: pingOnly,
     }));
-    const merged = result.games[1].players[1].properties;
-    expect(merged.pingSeconds).toBe(42);
-    expect(merged.deckHash).toBe('abc123');
-    expect(merged.readyStart).toBe(false);
-    expect(merged.sideboardLocked).toBe(true);
+    expect(result.games[1].pings[1]).toBe(42);
+    const untouched = result.games[1].players[1].properties;
+    expect(untouched).toBe(existing);
+    expect(untouched.deckHash).toBe('abc123');
+    expect(untouched.readyStart).toBe(false);
+    expect(untouched.sideboardLocked).toBe(true);
   });
 
   it('PLAYER_PROPERTIES_CHANGED → partial update (only readyStart) preserves deckHash', () => {

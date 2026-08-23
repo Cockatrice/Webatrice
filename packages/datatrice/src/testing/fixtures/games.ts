@@ -153,6 +153,7 @@ export function makeGameEntry(overrides: Partial<Enriched.GameEntry> = {}): Enri
     players: {
       1: makePlayerEntry(),
     },
+    pings: {},
     messages: [],
     ...overrides,
     // Default seatOrder to the players' key order unless explicitly overridden,

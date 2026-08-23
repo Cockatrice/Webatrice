@@ -1,6 +1,6 @@
 import { ZoneName } from '@cockatrice/sockatrice';
 import { CaseReducer, PayloadAction } from '@reduxjs/toolkit';
-import { clone } from '@bufbuild/protobuf';
+import { clone, isFieldSet } from '@bufbuild/protobuf';
 import { Enriched } from '../../types';
 import {
   ServerInfo_Card,
@@ -25,6 +25,13 @@ export const primitiveReducers = {
     // fall back to the map's key order (numeric). Keep only ids that are present.
     const ids = order ?? Object.keys(players).map(Number);
     game.seatOrder = ids.filter((id) => players[id] != null);
+    // Reseed the live ping map from the snapshot — see Enriched.GameEntry.pings.
+    const pings: { [playerId: number]: number } = {};
+    for (const idKey of Object.keys(players)) {
+      const id = Number(idKey);
+      pings[id] = players[id].properties.pingSeconds;
+    }
+    game.pings = pings;
   }) as CaseReducer<GamesState, PayloadAction<{
     gameId: number;
     players: { [playerId: number]: Enriched.PlayerEntry };
@@ -255,8 +262,27 @@ export const primitiveReducers = {
 
   playerPropertiesUpdated: ((state, action) => {
     const { gameId, playerId, properties } = action.payload;
-    const player = state.games[gameId]?.players[playerId];
-    if (!player) {
+    const game = state.games[gameId];
+    const player = game?.players[playerId];
+    if (!game || !player) {
+      return;
+    }
+    // The ping clock is volatile (Servatrice broadcasts a ping-only
+    // Event_PlayerPropertiesChanged ~1/s per player) and lives in `game.pings`,
+    // NOT in the player graph — see Enriched.GameEntry.pings.
+    const pingField = ServerInfo_PlayerPropertiesSchema.field.pingSeconds;
+    if (isFieldSet(properties, pingField)) {
+      if (!game.pings) {
+        game.pings = {};
+      }
+      game.pings[playerId] = properties.pingSeconds;
+    }
+    // Ping-only fast path: leave `player.properties` (and thus the player and
+    // players refs) untouched so the tick stream invalidates no
+    // players-subscribed selector or component.
+    const hasNonPingField = ServerInfo_PlayerPropertiesSchema.fields
+      .some((field) => field !== pingField && isFieldSet(properties, field));
+    if (!hasNonPingField) {
       return;
     }
     // Clone-and-reassign: mergeSetFields mutates its target, which Immer can't track on a
