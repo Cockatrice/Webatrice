@@ -9,7 +9,24 @@ import { WebClientContext } from '@cockatrice/datatrice/react';
 vi.mock('./useKnownHosts');
 vi.mock('react-i18next', async (orig) => {
   const actual = await orig<typeof import('react-i18next')>();
-  return { ...actual, useTranslation: () => ({ t: (k: string) => k }) };
+  // Surface the interpolation `mode` so fire-time content is assertable
+  // (the real ICU string isn't formatted in the test env).
+  return {
+    ...actual,
+    useTranslation: () => ({
+      t: (k: string, opts?: { mode?: string }) => (opts?.mode ? `${k}:${opts.mode}` : k),
+    }),
+  };
+});
+
+// Capture the toast handle so we can assert what content `fireToast` opens with.
+const { openToast } = vi.hoisted(() => ({ openToast: vi.fn() }));
+vi.mock('@app/components', async (orig) => {
+  const actual = await orig<typeof import('@app/components')>();
+  return {
+    ...actual,
+    useToast: () => ({ openToast, closeToast: vi.fn(), removeToast: vi.fn() }),
+  };
 });
 
 import { rootReducerMap, type RootState } from '../../store';
@@ -52,6 +69,10 @@ function setup(args: {
 }
 
 describe('useKnownHostsComponent', () => {
+  beforeEach(() => {
+    openToast.mockClear();
+  });
+
   it('exposes hosts and selectedHost from useKnownHosts and fires testConnection on mount', () => {
     const host = makeHost();
     const { result, webClient, onChange } = setup({
@@ -153,5 +174,27 @@ describe('useKnownHostsComponent', () => {
     });
 
     expect(remove).not.toHaveBeenCalled();
+  });
+
+  it('fires the toast with the current mode computed at fire time (created / edited / deleted)', async () => {
+    const add = vi.fn().mockResolvedValue(undefined);
+    const update = vi.fn().mockResolvedValue(undefined);
+    const remove = vi.fn().mockResolvedValue(undefined);
+    const { result } = setup({ knownHostsOverrides: { add, update, remove } });
+
+    await act(async () => {
+      await result.current.handleDialogSubmit({ name: 'New', host: 'new.example', port: '4747' });
+    });
+    expect(openToast).toHaveBeenLastCalledWith('KnownHosts.toast:created');
+
+    await act(async () => {
+      await result.current.handleDialogSubmit({ id: 5, name: 'Edit', host: 'edit.example', port: '4747' });
+    });
+    expect(openToast).toHaveBeenLastCalledWith('KnownHosts.toast:edited');
+
+    await act(async () => {
+      await result.current.handleDialogRemove(makeHost({ id: 7 }));
+    });
+    expect(openToast).toHaveBeenLastCalledWith('KnownHosts.toast:deleted');
   });
 });

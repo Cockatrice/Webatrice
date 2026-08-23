@@ -50,11 +50,7 @@ export function useKnownHostsComponent({
   const { t } = useTranslation();
   const dispatch = useAppDispatch();
 
-  const [toastMode, setToastMode] = useState<ToastMode>('created');
-  const knownHostToast = useToast({
-    key: 'known-hosts-action',
-    children: t('KnownHosts.toast', { mode: toastMode }),
-  });
+  const knownHostToast = useToast({ key: 'known-hosts-action' });
 
   const [dialogState, setDialogState] = useState<{ open: boolean; edit: HostDTO | null }>({
     open: false,
@@ -107,9 +103,10 @@ export function useKnownHostsComponent({
     pendingTestRef.current = null;
   }, server.Types.TEST_CONNECTION_FAILED, []);
 
+  // Compute the toast text at fire time so it reflects the current mode and the
+  // current UI language — not whatever was rendered when the hook mounted.
   const fireToast = (mode: ToastMode) => {
-    setToastMode(mode);
-    knownHostToast.openToast();
+    knownHostToast.openToast(t('KnownHosts.toast', { mode }));
   };
 
   const onPick = async (id: number) => {
