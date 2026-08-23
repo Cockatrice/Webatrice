@@ -146,6 +146,37 @@ describe('sortUsersByField', () => {
 });
 
 
+describe('locale-aware sorting', () => {
+  it('collates using the provided BCP-47 locale', () => {
+    // Swedish sorts 'ä' after 'z'; default/English collation sorts it near 'a'.
+    const swedish = [{ name: 'ä' }, { name: 'z' }, { name: 'a' }];
+    SortUtil.sortByField(swedish, { field: 'name', order: App.SortDirection.ASC }, 'sv');
+    expect(swedish.map(x => x.name)).toEqual(['a', 'z', 'ä']);
+
+    const english = [{ name: 'ä' }, { name: 'z' }, { name: 'a' }];
+    SortUtil.sortByField(english, { field: 'name', order: App.SortDirection.ASC }, 'en-US');
+    expect(english.map(x => x.name)).toEqual(['a', 'ä', 'z']);
+  });
+
+  it('falls back to the environment default (no throw) when locale is undefined', () => {
+    const arr = [{ name: 'b' }, { name: 'a' }];
+    expect(() =>
+      SortUtil.sortByField(arr, { field: 'name', order: App.SortDirection.ASC })
+    ).not.toThrow();
+    expect(arr.map(x => x.name)).toEqual(['a', 'b']);
+  });
+
+  it('threads the locale through sortedUsersByField', () => {
+    const users = [
+      create(ServerInfo_UserSchema, { name: 'ä', userLevel: 1, accountageSecs: 0n, privlevel: '' }),
+      create(ServerInfo_UserSchema, { name: 'z', userLevel: 1, accountageSecs: 0n, privlevel: '' }),
+    ];
+    const sorted = SortUtil.sortedUsersByField(users, { field: 'name', order: App.SortDirection.ASC }, 'sv');
+    expect(sorted.map(u => u.name)).toEqual(['z', 'ä']);
+  });
+});
+
+
 describe('toggleSortBy', () => {
   it('same field + ASC → returns DESC', () => {
     const result = SortUtil.toggleSortBy('name', { field: 'name', order: App.SortDirection.ASC });

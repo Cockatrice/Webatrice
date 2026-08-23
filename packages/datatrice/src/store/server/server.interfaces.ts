@@ -30,6 +30,11 @@ export interface ServerState {
   user: ServerInfo_User | null;
   users: { [userName: string]: ServerInfo_User };
   sortUsersBy: ServerStateSortUsersBy;
+  // Active UI locale as a BCP-47 tag (webatrice normalizes the underscore
+  // Cockatrice code via toBcp47 before dispatching setLocale). Feeds the
+  // locale-aware string collation in the sorted-user/game selectors; undefined
+  // means "use the environment default". Preserved across connection resets.
+  locale: string | undefined;
   messages: {
     [userName: string]: Event_UserMessage[];
   };

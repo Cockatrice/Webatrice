@@ -65,6 +65,34 @@ describe('Initialisation', () => {
 });
 
 
+describe('Locale', () => {
+  it('SET_LOCALE → stores the BCP-47 locale tag', () => {
+    const state = makeServerState({ locale: undefined });
+    const result = serverReducer(state, Actions.setLocale('pt-BR'));
+    expect(result.locale).toBe('pt-BR');
+  });
+
+  it('preserves locale across INITIALIZED', () => {
+    const state = makeServerState({ locale: 'pt-BR', initialized: false });
+    const result = serverReducer(state, Actions.initialized());
+    expect(result.initialized).toBe(true);
+    expect(result.locale).toBe('pt-BR');
+  });
+
+  it('preserves locale across CLEAR_STORE', () => {
+    const state = makeServerState({ locale: 'fr' });
+    const result = serverReducer(state, Actions.clearStore());
+    expect(result.locale).toBe('fr');
+  });
+
+  it('preserves locale across DISCONNECTED', () => {
+    const state = makeServerState({ locale: 'nl' });
+    const result = serverReducer(state, Actions.disconnected());
+    expect(result.locale).toBe('nl');
+  });
+});
+
+
 describe('Account & Connection', () => {
   it('CONNECTION_ATTEMPTED → sets connectionAttemptMade to true', () => {
     const state = makeServerState({

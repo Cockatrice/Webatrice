@@ -30,12 +30,13 @@ const getSortedRoomGamesBase = createSelector(
   [
     (state: State, roomId: number) => state.rooms.rooms[roomId]?.games,
     (state: State) => state.rooms.sortGamesBy,
+    (state: State) => state.server?.locale,
   ],
-  (games, sortBy): Enriched.Game[] => {
+  (games, sortBy, locale): Enriched.Game[] => {
     if (!games) {
       return EMPTY_GAMES;
     }
-    return SortUtil.sortedByField(Object.values(games), sortBy);
+    return SortUtil.sortedByField(Object.values(games), sortBy, locale);
   }
 );
 
@@ -103,12 +104,13 @@ export const Selectors = {
     [
       (state: State, roomId: number) => state.rooms.rooms[roomId]?.users,
       (state: State) => state.rooms.sortUsersBy,
+      (state: State) => state.server?.locale,
     ],
-    (users, sortBy): ServerInfo_User[] => {
+    (users, sortBy, locale): ServerInfo_User[] => {
       if (!users) {
         return EMPTY_USERS;
       }
-      return SortUtil.sortedUsersByField(Object.values(users), sortBy);
+      return SortUtil.sortedUsersByField(Object.values(users), sortBy, locale);
     }
   ),
 

@@ -41,6 +41,7 @@ export const initialState: ServerState = {
     field: App.UserSortField.NAME,
     order: App.SortDirection.ASC
   },
+  locale: undefined,
   messages: {},
   userInfo: {},
   notifications: [],
@@ -60,10 +61,18 @@ export const initialState: ServerState = {
 };
 
 export const connectionReducers = {
-  initialized: (() => ({
+  // Reset reducers rebuild from initialState, which would drop the chosen UI
+  // locale on connect/disconnect; carry it through so locale-aware sorting
+  // survives a reconnect (see server.interfaces ServerState.locale).
+  initialized: ((state) => ({
     ...initialState,
     initialized: true,
+    locale: state.locale,
   })) as CaseReducer<ServerState>,
+
+  setLocale: ((state, action) => {
+    state.locale = action.payload;
+  }) as CaseReducer<ServerState, PayloadAction<string | undefined>>,
 
   connectionAttempted: ((state) => {
     state.status.connectionAttemptMade = true;
@@ -88,11 +97,13 @@ export const connectionReducers = {
   clearStore: ((state) => ({
     ...initialState,
     status: { ...state.status },
+    locale: state.locale,
   })) as CaseReducer<ServerState>,
 
   disconnected: ((state) => ({
     ...initialState,
     status: { ...state.status },
+    locale: state.locale,
   })) as CaseReducer<ServerState>,
 
   serverMessage: ((state, action) => {

@@ -25,6 +25,7 @@ export const disconnectedState: Partial<RootState> = {
     user: null,
     users: {},
     sortUsersBy: { field: UserSortField.NAME, order: SortDirection.ASC },
+    locale: undefined,
     messages: {},
     userInfo: {},
     notifications: [],

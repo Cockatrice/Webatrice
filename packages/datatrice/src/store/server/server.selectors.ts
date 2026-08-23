@@ -120,32 +120,44 @@ export const Selectors = {
   getReplays: ({ server }: State) => server.replays,
 
   getSortedUsers: createSelector(
-    [(state: State) => state.server.users, (state: State) => state.server.sortUsersBy],
-    (users, sortBy): ServerInfo_User[] => {
+    [
+      (state: State) => state.server.users,
+      (state: State) => state.server.sortUsersBy,
+      (state: State) => state.server.locale,
+    ],
+    (users, sortBy, locale): ServerInfo_User[] => {
       if (!users || Object.keys(users).length === 0) {
         return EMPTY_USERS;
       }
-      return SortUtil.sortedUsersByField(Object.values(users), sortBy);
+      return SortUtil.sortedUsersByField(Object.values(users), sortBy, locale);
     }
   ),
 
   getSortedBuddyList: createSelector(
-    [(state: State) => state.server.buddyList, (state: State) => state.server.sortUsersBy],
-    (buddyList, sortBy): ServerInfo_User[] => {
+    [
+      (state: State) => state.server.buddyList,
+      (state: State) => state.server.sortUsersBy,
+      (state: State) => state.server.locale,
+    ],
+    (buddyList, sortBy, locale): ServerInfo_User[] => {
       if (!buddyList || Object.keys(buddyList).length === 0) {
         return EMPTY_USERS;
       }
-      return SortUtil.sortedUsersByField(Object.values(buddyList), sortBy);
+      return SortUtil.sortedUsersByField(Object.values(buddyList), sortBy, locale);
     }
   ),
 
   getSortedIgnoreList: createSelector(
-    [(state: State) => state.server.ignoreList, (state: State) => state.server.sortUsersBy],
-    (ignoreList, sortBy): ServerInfo_User[] => {
+    [
+      (state: State) => state.server.ignoreList,
+      (state: State) => state.server.sortUsersBy,
+      (state: State) => state.server.locale,
+    ],
+    (ignoreList, sortBy, locale): ServerInfo_User[] => {
       if (!ignoreList || Object.keys(ignoreList).length === 0) {
         return EMPTY_USERS;
       }
-      return SortUtil.sortedUsersByField(Object.values(ignoreList), sortBy);
+      return SortUtil.sortedUsersByField(Object.values(ignoreList), sortBy, locale);
     }
   ),
 

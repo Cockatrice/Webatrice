@@ -10,6 +10,8 @@ import I18nBackend from './i18n-backend';
 // Bundle default translation with application
 import translation from './i18n-default.json';
 
+type IntlMessageFormatCtor = new (message: string, locale: string) => { format(opts?: unknown): string };
+
 i18n
   .use(ICU)
   .use(I18nBackend)
@@ -27,11 +29,11 @@ i18n
       // but IntlMessageFormat needs BCP-47 hyphens (`pt-BR`) or it throws
       // `RangeError: Invalid language tag`. Normalize only at this boundary.
       parseLngForICU: toBcp47,
-      parseErrorHandler: (err: unknown, key: string, res: string) => {
+      parseErrorHandler: (err: unknown, key: string, res: string, options?: unknown) => {
         if (import.meta.env.DEV) {
           console.error(`[i18n-icu] failed to format "${key}":`, err);
         }
-        return res;
+        return formatWithEnglishFallback(key, res, options);
       },
     },
 
@@ -40,5 +42,31 @@ i18n
       escapeValue: false,
     }
   });
+
+// Re-render a message that failed ICU parse/format from the bundled, validated
+// English source, so a malformed *translation* (a Transifex data error, e.g. a
+// missing `select` comma or localized ICU keywords) never reaches users as a raw
+// `{…}` template. Returns `res` unchanged when there's no usable English fallback
+// — including when the failing string IS the English source, which keeps our own
+// malformed strings visible rather than masking them. Uses the IntlMessageFormat
+// i18next-icu attaches to the instance, so there's no recursion through `t()`.
+function formatWithEnglishFallback(key: string, res: string, options?: unknown): string {
+  const en = key.split('.').reduce<unknown>(
+    (node, part) => (node && typeof node === 'object' ? (node as Record<string, unknown>)[part] : undefined),
+    translation,
+  );
+  if (typeof en !== 'string' || en === res) {
+    return res;
+  }
+  const IntlMessageFormat = (i18n as unknown as { IntlMessageFormat?: IntlMessageFormatCtor }).IntlMessageFormat;
+  if (!IntlMessageFormat) {
+    return res;
+  }
+  try {
+    return new IntlMessageFormat(en, Language['en-US']).format(options);
+  } catch {
+    return res; // English source also malformed — fall through to the raw string
+  }
+}
 
 export default i18n;
