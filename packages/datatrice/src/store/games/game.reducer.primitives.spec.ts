@@ -776,11 +776,8 @@ describe('zoneCardCountAdjusted', () => {
 
 describe('playerPropertiesUpdated', () => {
   it('ping-only update routes to state.pings and leaves the player graph untouched by reference', () => {
-    // The per-second ping tick — the desktop server sends
-    // Event_PlayerPropertiesChanged with only ping_seconds populated.
-    // The volatile clock lands in state.pings; player/players refs MUST stay
-    // identical so the ~1/s-per-player stream invalidates no players
-    // subscriber (see GamesState.pings).
+    // A ping-only Event_PlayerPropertiesChanged must land in state.pings and
+    // leave player/players refs identical — see GamesState.pings.
     const existing = makePlayerProperties({
       playerId: 1,
       deckHash: 'abc123',

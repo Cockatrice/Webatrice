@@ -5,9 +5,7 @@
 // constructor), so callers must supply `[::1]`.
 const LOCAL_HOSTNAMES = new Set(['localhost', '127.0.0.1', '[::1]']);
 
-// ws:// only when the TARGET is a local cert-less servatrice. The page origin
-// is irrelevant: an http://localhost page may open wss:// (mixed-content rules
-// only block insecure-from-secure, not the reverse).
+// Scheme is chosen by the TARGET host, not the page origin (see header ref).
 function isLocalTargetHost(host: string): boolean {
   const hostname = host.split('/')[0].toLowerCase();
   return LOCAL_HOSTNAMES.has(hostname) || hostname.endsWith('.localhost');

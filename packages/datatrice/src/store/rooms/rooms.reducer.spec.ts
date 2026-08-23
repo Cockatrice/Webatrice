@@ -99,11 +99,8 @@ describe('UPDATE_ROOMS', () => {
   });
 
   it('no-op re-broadcast leaves the room entry untouched by reference', () => {
-    // Servatrice re-broadcasts Event_ListRooms every few seconds regardless of
-    // change. When the sparse merge produces identical info (and order and
-    // gametypeMap are unchanged), the listener skips the roomUpserted dispatch
-    // entirely so steady-state broadcasts don't flip room refs and re-render
-    // rooms subscribers.
+    // Steady-state Event_ListRooms re-broadcasts must not flip room refs — see
+    // datatrice-store.instructions.md § UPDATE_ROOMS.
     const state = makeRoomsState({ rooms: {} });
     const room = makeRoom({ roomId: 1, name: 'Main Hall' }).info;
     const first = dispatchThroughStore(state, Actions.updateRooms({ rooms: [room] }));
@@ -235,14 +232,11 @@ describe('ADD_MESSAGE', () => {
     const messages = result.messages[1];
 
     expect(messages).toHaveLength(MAX_ROOM_MESSAGES);
-    // Oldest (id 0) trimmed; the new head is the second-seeded message, still id 1.
     expect(messages[0]).toMatchObject({ message: 'msg-1', id: 1 });
-    // Survivors keep their seeded ids — not re-indexed by position.
     expect(messages[MAX_ROOM_MESSAGES - 2]).toMatchObject({
       message: `msg-${MAX_ROOM_MESSAGES - 1}`,
       id: MAX_ROOM_MESSAGES - 1,
     });
-    // The appended message is stamped a real id at ingestion.
     const tail = messages[MAX_ROOM_MESSAGES - 1];
     expect(tail.message).toBe('new');
     expect(tail.id).toBeTypeOf('number');

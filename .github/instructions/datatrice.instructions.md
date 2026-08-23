@@ -53,6 +53,10 @@ Servatrice protocol behaviors the data layer accommodates:
 
 - **System-injected user messages can omit the username** (ban notifications targeting the current user, server announcements). [src/common/normalizers.ts](../../packages/datatrice/src/common/normalizers.ts) `normalizeUserMessage` preserves the omission as a no-op so the store always holds a clean string regardless of whether the server attributes the message to a user.
 
+## Store performance invariants
+
+**The live ping clock lives in `GamesState.pings`, not the game graph.** Servatrice broadcasts `Event_PlayerPropertiesChanged` carrying only `ping_seconds` ~1/s per seated player and spectator. Held inside the player graph, that volatile value flipped the game, players, and player references several times a second and re-rendered every subscriber. It is instead held in a sibling map keyed `[gameId][playerId]`, authoritative over the stale `properties.pingSeconds` snapshot on each player. Read it only via `Selectors.getPings` / `getPlayerPing`. A player-properties update whose set fields are all volatile (the ping clock plus the redundant `player_id`) routes to `state.pings` and skips the player clone/merge, so the tick stream flips no ref. Reducers assume `pings[gameId]` exists after `gameJoined`, so fixtures and preloaded/partial state must seed it; selectors `?.`-guard the partial case.
+
 ## Build, test, release
 
 | Command | Purpose |

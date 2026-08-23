@@ -200,10 +200,9 @@ export function renderWithProviders(
     selectedCardKeys: cardVisualState?.selectedCardKeys ?? EMPTY_SELECTION,
     canActFor: cardVisualState?.canActFor ?? DENY_ALL,
   };
-  // The games slice requires a `pings` sibling map (see GamesState.pings). Specs
-  // preload a partial games slice via makeStoreState's DeepPartial, which omits
-  // it; complete it here so a ping-touching reducer (gameLeft, playerJoined, …)
-  // doesn't hit an undefined `state.pings` — mirroring the real initialState.
+  // Specs preload a partial games slice (DeepPartial) that omits the required
+  // `pings` sibling map; complete it here so a ping-touching reducer doesn't hit
+  // an undefined `state.pings`, mirroring the real initialState. See GamesState.pings.
   const completedState = preloadedState?.games
     ? { ...preloadedState, games: { pings: {}, ...preloadedState.games } }
     : preloadedState;

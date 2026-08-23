@@ -301,12 +301,11 @@ describe('2B: Game state & player management', () => {
   });
 
   it('PLAYER_PROPERTIES_CHANGED → ping-only tick lands in state.pings, preserves deckHash, and skips the player graph', () => {
-    // Regression: the desktop server's per-second ping tick sends
-    // Event_PlayerPropertiesChanged with only ping_seconds set. A naive
-    // overwrite would wipe deck_hash and disable the Ready button in the
-    // deck-select dialog mid-lobby. The clock itself is volatile and is
-    // routed to state.pings so the player graph keeps its references
-    // (see GamesState.pings).
+    // Regression: the per-second ping tick sends Event_PlayerPropertiesChanged
+    // with only ping_seconds set. A naive overwrite would wipe deck_hash and
+    // disable the Ready button in the deck-select dialog mid-lobby; the clock is
+    // routed to state.pings instead so the player graph keeps its refs (see
+    // GamesState.pings).
     const existing = makePlayerProperties({
       playerId: 1,
       deckHash: 'abc123',

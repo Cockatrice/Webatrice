@@ -78,10 +78,9 @@ describe('integration: room lifecycle', () => {
     response.room.joinRoom(makeRoom(1, 'Main'));
 
     const before = rooms.Selectors.getRoom(store.getState(), 1);
-    // Servatrice re-broadcasts the full room (gametypeList included) every few
-    // seconds. normalizeGametypeMap allocates a fresh map each time, so a
-    // reference check would never match; the value compare must still see the
-    // merge as a no-op and leave the room ref untouched (no re-render churn).
+    // A full-room re-broadcast must value-compare as a no-op (normalizeGametypeMap
+    // allocates a fresh map, so a reference check never matches) and leave the
+    // room ref untouched — see datatrice-store.instructions.md § UPDATE_ROOMS.
     response.room.updateRooms([makeRoom(1, 'Main')]);
 
     expect(rooms.Selectors.getRoom(store.getState(), 1)).toBe(before);

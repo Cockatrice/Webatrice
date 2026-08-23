@@ -70,8 +70,8 @@ describe('WebSocketService', () => {
       service.connect({ host: 'localhost', port: '8080' });
       mockInstance.onopen();
       // The mock keepAliveFn never resolves the pong callback: sustained
-      // silence. Policy: the keepalive never tears the connection down —
-      // death arrives via the socket's own close/error events.
+      // silence, yet the keepalive never tears the connection down (see
+      // KeepAliveService).
       vi.advanceTimersByTime(1000);
       vi.advanceTimersByTime(10_000);
       expect(mockInstance.close).not.toHaveBeenCalled();

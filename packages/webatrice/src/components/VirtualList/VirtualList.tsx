@@ -20,12 +20,9 @@ function RowsRow<T>({ index, style, items, renderRow }: RowComponentProps<Virtua
 }
 
 /**
- * Windowed list: rows are built lazily for the visible window only, so a busy
- * server's thousands of games/users cost O(viewport) per delta frame instead of
- * O(collection). Prefer this over prebuilding an `items: ReactNode[]` array
- * (itself O(N)) for large live collections. Pass a referentially stable
- * `renderRow` (module-level fn or useCallback) so react-window's row
- * memoization holds across parent re-renders.
+ * Windowed list for large live collections — rows built lazily for the visible
+ * window only. Pass a referentially stable `renderRow`. See
+ * webatrice.instructions.md § Virtualized lists for when to prefer this and why.
  */
 export function VirtualRows<T>({ items, rowHeight, className = '', renderRow }: VirtualRowsProps<T>) {
   return (
@@ -41,9 +38,8 @@ export function VirtualRows<T>({ items, rowHeight, className = '', renderRow }: 
   );
 }
 
-// Stable module-level identity render so the VirtualList wrapper reuses
-// VirtualRows without handing it a fresh renderRow each render (which would
-// defeat row memoization).
+// Module-level so the renderRow identity stays stable across renders (row
+// memoization) — see webatrice.instructions.md § Virtualized lists.
 const renderNode = (node: ReactNode): ReactNode => node;
 
 interface VirtualListProps {

@@ -6,10 +6,9 @@ import { VirtualRows } from '../VirtualList/VirtualList';
 // px-3 py-1 text-sm rows: 8px padding + 20px line box.
 const USER_ROW_HEIGHT = 28;
 
-// Module-level so react-window's row memoization holds. Keyed by user.name so an
-// open UserDisplay action menu stays bound to its user when the roster
-// reshuffles (join/leave) — a changed key remounts the row rather than letting
-// the menu silently retarget to whoever slid into that row index.
+// Module-level for stable identity, and keyed by user.name (not slot index) so
+// an open UserDisplay action menu can't retarget on a roster reshuffle — see
+// webatrice.instructions.md § Virtualized lists.
 const renderUserRow = (user: ServerInfo_User) => (
   <div
     key={user.name}

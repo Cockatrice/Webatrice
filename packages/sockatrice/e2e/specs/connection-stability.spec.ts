@@ -46,10 +46,9 @@ describe('connection-stability', () => {
       // pings, Servatrice's max_player_inactivity_time (~15s) would close the
       // connection and flip status away from LOGGED_IN. At the e2e keepalive
       // of 5s, a 60s hold spans ~12 ping/pong cycles, so "stayed LOGGED_IN
-      // for the whole window" is itself proof that pings kept flowing. (The
-      // client itself never closes on missed pongs — it only degrades
-      // reported health; protocol-level keep-alive correctness is owned by
-      // the unit and integration suites.)
+      // for the whole window" is itself proof that pings kept flowing.
+      // (Protocol-level keep-alive correctness is owned by the unit and
+      // integration suites; the client never closes on missed pongs.)
       const samples: WebsocketTypes.StatusEnum[] = [];
       const deadline = Date.now() + SOAK_DURATION_MS;
       while (Date.now() < deadline) {

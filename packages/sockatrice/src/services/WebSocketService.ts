@@ -15,11 +15,8 @@ export interface WebSocketServiceConfig {
   onStatusChange: (status: StatusEnum, description: string) => void;
   onConnectionFailed: () => void;
   onMessage: (message: MessageEvent) => void;
-  /**
-   * Keepalive health transitions: missedPongs > 0 while the server is not
-   * answering pings (degraded), 0 on recovery. The keepalive never closes the
-   * connection — genuine death arrives via the socket's own close/error events.
-   */
+  /** Keepalive health: missedPongs > 0 while pings go unanswered, 0 on recovery.
+   *  The keepalive never closes the connection — see KeepAliveService. */
   onConnectionHealth?: (missedPongs: number, silentForMs: number) => void;
   /** Opt-in automatic reconnect on unexpected socket close. */
   reconnect?: ReconnectConfig;

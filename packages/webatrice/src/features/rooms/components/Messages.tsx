@@ -7,11 +7,9 @@ interface MessagesProps {
   messages?: MessageData[];
 }
 
-// Chat rows wrap to variable heights, so fixed-height virtualization doesn't
-// fit and every message must stay reachable in scrollback. The per-append
-// cost is bounded instead by memoizing rows (existing entries skip re-render).
-// Keying on the stable store-assigned `message.id` — not the array index —
-// keeps those keys stable across the head-trim at MAX_ROOM_MESSAGES.
+// Variable-height chat rows can't use fixed-height virtualization; memoize rows
+// instead (see webatrice.instructions.md § Virtualized lists) and key on the
+// store-assigned `message.id`, not the array index (see rooms.reducer.inline.ts).
 const MemoMessage = memo(Message);
 
 const Messages = ({ messages }: MessagesProps) => (

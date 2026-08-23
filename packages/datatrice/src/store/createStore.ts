@@ -12,16 +12,11 @@ import { registerServerListeners } from './server/server.listeners';
 import { registerGameListeners } from './games/game.listeners';
 import { registerRoomsListeners } from './rooms/rooms.listeners';
 
-// Shared with the renderWithProviders-style test harness so test stores
-// behave like the production store.
-// Both dev-only invariant checks are OFF: every slice (rooms game lists,
-// server user lists, in-game board state) holds raw protobuf messages at
-// server scale by design, and the checks deep-walk state on every dispatch —
-// O(state), charged to whichever dispatch happens to run. On a busy server
-// that froze dev for minutes and starved the keepalive until the server
-// dropped the connection. Scoped ignoredPaths were tried and remained
-// whack-a-slice (host-supplied extension slices can't be pre-listed). Immer
-// guarantees reducer immutability; RTK strips these checks from prod builds.
+// Shared with the renderWithProviders-style test harness so test stores behave
+// like the production store. Both dev-only invariant checks are OFF because
+// state holds raw protobuf messages at server scale and the O(state)-per-dispatch
+// walks froze dev on busy servers — see
+// .github/instructions/datatrice.instructions.md#initialization-order.
 export const storeMiddlewareOptions = {
   immutableCheck: false as const,
   serializableCheck: false as const,

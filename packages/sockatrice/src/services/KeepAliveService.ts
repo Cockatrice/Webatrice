@@ -1,18 +1,13 @@
 import type { TickMessage, WorkerMessage } from './keepAliveWorkerHandler';
 
-// The keepalive NEVER closes the connection. Without credential retention a
-// self-inflicted disconnect is strictly destructive (a lagged server that
-// recovers resumes the session intact; a forced close guarantees a re-login),
-// so missed pongs only degrade reported health. Genuine death surfaces via
-// the socket's own close/error events — and pinging every interval into a
-// dead connection is what forces TCP to discover it.
+// @critical The keepalive NEVER closes the connection — missed pongs only
+// degrade reported health. Rationale (no credential retention, TCP discovery)
+// in .github/instructions/sockatrice-transport.instructions.md#keep-alive-worker.
+
 // Report degraded after ~2 intervals of silence (~10s at the 5s default).
 const DEGRADED_AFTER_MISSES = 2;
-// A tick only counts as a miss if the pending ping is at least this fraction
-// of an interval old. Ticks queue up behind a stalled main thread and then
-// drain back-to-back milliseconds apart; without this guard the tick right
-// after a ping is armed would declare it missed 1-2ms after it was sent
-// (observed in field captures).
+// A tick counts as a miss only if the pending ping is at least this fraction of
+// an interval old (guards against burst-drained ticks — see tick() below).
 const MISS_MIN_AGE_FACTOR = 0.9;
 
 /** missedPongs = 0 signals recovery; silentForMs = time since the last pong. */

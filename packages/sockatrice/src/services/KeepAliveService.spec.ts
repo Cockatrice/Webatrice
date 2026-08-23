@@ -68,12 +68,11 @@ describe('KeepAliveService', () => {
     });
 
     it('should NEVER close the connection, no matter how many pongs are missed', () => {
-      // Policy: without credential retention a self-disconnect is strictly
-      // destructive; the socket's own close/error events decide death.
+      // The keepalive never tears the connection down — see
+      // sockatrice-transport.instructions.md § keep-alive worker.
       const timersBefore = vi.getTimerCount();
       vi.advanceTimersByTime(interval * 20);
 
-      // Loop still running (interval timer alive), health degraded, no teardown.
       expect(vi.getTimerCount()).toBe(timersBefore);
       expect(mockOnHealthChange).toHaveBeenLastCalledWith(20, expect.any(Number));
       expect((service as KeepAliveInternal).fallbackTimer).not.toBeNull();
@@ -227,7 +226,6 @@ describe('KeepAliveService', () => {
         mockWorker._listener!({ data: { type: 'tick' } } as MessageEvent);
       }
 
-      // Degraded from the 2nd miss; a ping is still armed on every tick.
       expect(workerOnHealthChange).toHaveBeenCalledWith(2, expect.any(Number));
       expect(workerOnHealthChange).toHaveBeenLastCalledWith(3, expect.any(Number));
       expect(pingFn).toHaveBeenCalledTimes(4);
@@ -238,19 +236,16 @@ describe('KeepAliveService', () => {
       workerService.startPingLoop(5000, pingFn);
 
       mockWorker._listener!({ data: { type: 'tick' } } as MessageEvent);
-      // Two genuine misses → degraded.
       vi.advanceTimersByTime(5000);
       mockWorker._listener!({ data: { type: 'tick' } } as MessageEvent);
       vi.advanceTimersByTime(5000);
       mockWorker._listener!({ data: { type: 'tick' } } as MessageEvent);
       expect(workerOnHealthChange).toHaveBeenLastCalledWith(2, expect.any(Number));
 
-      // The latest ping is answered: proof of life, recovery reported.
       const onPong = pingFn.mock.calls.at(-1)![0] as () => void;
       onPong();
       expect(workerOnHealthChange).toHaveBeenLastCalledWith(0, 0);
 
-      // Escalation restarts fresh: arm → miss 1 (no report) → miss 2 (report).
       workerOnHealthChange.mockClear();
       vi.advanceTimersByTime(5000);
       mockWorker._listener!({ data: { type: 'tick' } } as MessageEvent);

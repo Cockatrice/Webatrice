@@ -23,6 +23,8 @@ Slice authoring patterns and reducer-author hazards for the `server`, `rooms`, a
 
 **`UPDATE_ROOMS` is a sparse update.** Cockatrice's `server_room.cpp` `addClient`/`removeClient` emits `Event_ListRooms` with only `room_id` / `player_count` / `game_count` populated; a wholesale `info` replacement would blank `name` / `description` / `permissionlevel` until the next full listing. The `roomUpserted` listener uses `mergeSetFields` (`isFieldSet`-driven) so unset fields preserve their existing value. The `gametypeMap` follows the same rule — only replaced when `gametypeList` is non-empty.
 
+**Steady-state broadcasts must not churn refs.** Servatrice re-broadcasts `Event_ListRooms` every few seconds regardless of change; when the sparse merge produces identical info the listener skips the `roomUpserted` dispatch entirely, otherwise the broadcast flips the room ref and re-renders every rooms subscriber for nothing. `gametypeMap` is compared by value (`dequal`), not by reference, because `normalizeGametypeMap` allocates a fresh object whenever the broadcast carries a `gametypeList` — a reference check would never fire the skip. `Event_ListGames` applies as one dispatch per frame (changes in event order, `game: null` = removal, so a close-then-recreate of the same `gameId` within a frame resolves identically to the former per-game sequence): a busy server's join snapshot carries thousands of games, and per-game dispatches invalidated the room selectors N times per frame and made the dev invariant walks O(games²).
+
 ## Data structure invariants
 
 `Enriched.Room` and `Enriched.GameEntry` embed the raw protobuf snapshot under `.info` *and* normalize the same data into top-level sibling fields. The two are not interchangeable.

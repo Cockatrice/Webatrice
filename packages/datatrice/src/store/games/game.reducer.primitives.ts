@@ -16,9 +16,9 @@ import type { LogEntry } from './messageLog';
 const pingField = ServerInfo_PlayerPropertiesSchema.field.pingSeconds;
 
 // Fields a volatile ping tick may carry that never affect the player graph: the
-// clock itself, plus the redundant player_id the action already carries. An
-// update whose set fields are all in this set routes to state.pings and skips
-// the player-properties clone/merge, so the ~1/s tick stream flips no ref.
+// clock itself plus the redundant player_id the action already carries. An
+// update whose set fields are all volatile takes the ping-only fast path — see
+// GamesState.pings.
 const VOLATILE_PING_FIELDS = new Set([
   pingField,
   ServerInfo_PlayerPropertiesSchema.field.playerId,
@@ -283,9 +283,8 @@ export const primitiveReducers = {
     if (!game || !player) {
       return;
     }
-    // The ping clock is volatile (Servatrice broadcasts a ping-only
-    // Event_PlayerPropertiesChanged ~1/s per player) and lives in the sibling
-    // state.pings map, NOT in the player graph — see GamesState.pings.
+    // The ping clock lives in the sibling state.pings map, not the player
+    // graph — see GamesState.pings.
     if (isFieldSet(properties, pingField)) {
       state.pings[gameId][playerId] = properties.pingSeconds;
     }

@@ -87,10 +87,8 @@ describe('integration: session connection lifecycle', () => {
     const store = createStore();
     const response = attachResponseHandlers(store);
 
-    // The keepalive reports degraded health through this bridge seam
-    // (onConnectionHealth -> updateConnectionHealth) without closing the socket.
-    // `updateConnectionHealth` is optional on ISessionResponse; the concrete
-    // SessionResponseImpl always implements it.
+    // `updateConnectionHealth` is optional on ISessionResponse (hence the `!`);
+    // the concrete SessionResponseImpl always implements it.
     response.session.updateConnectionHealth!(2, 10000);
     expect(server.Selectors.getConnectionHealth(store.getState())).toEqual({ missedPongs: 2, silentForMs: 10000 });
     expect(server.Selectors.getIsServerUnresponsive(store.getState())).toBe(true);

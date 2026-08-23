@@ -91,10 +91,8 @@ describe('keep-alive', () => {
     expect(first.cmdId).toBeGreaterThan(0);
     expect(getWebClient().status).toBe(WebsocketTypes.StatusEnum.CONNECTED);
 
-    // Policy: the keepalive NEVER closes the connection — a lagged server
-    // that recovers resumes the session intact, and genuine death surfaces
-    // via the socket's own close/error events. Missed pongs only degrade
-    // reported health (asserted store-side in webatrice integration).
+    // The keepalive never closes the connection under sustained silence — see
+    // sockatrice-transport.instructions.md § keep-alive worker.
     vi.advanceTimersByTime(5000 * 6);
 
     expect(getMockWebSocket().close).not.toHaveBeenCalled();

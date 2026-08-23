@@ -45,19 +45,35 @@ const GAME_ROW_HEIGHT = 37;
 
 function formatRestrictions(info: ServerInfo_Game): string {
   const parts: string[] = [];
-  if (info.withPassword) parts.push('password');
-  if (info.onlyBuddies) parts.push('buddies only');
-  if (info.onlyRegistered) parts.push('reg. users only');
-  if (info.shareDecklistsOnLoad) parts.push('open decklists');
+  if (info.withPassword) {
+    parts.push('password');
+  }
+  if (info.onlyBuddies) {
+    parts.push('buddies only');
+  }
+  if (info.onlyRegistered) {
+    parts.push('reg. users only');
+  }
+  if (info.shareDecklistsOnLoad) {
+    parts.push('open decklists');
+  }
   return parts.join(', ');
 }
 
 function formatSpectators(info: ServerInfo_Game): string {
-  if (!info.spectatorsAllowed) return 'not allowed';
+  if (!info.spectatorsAllowed) {
+    return 'not allowed';
+  }
   const flags: string[] = [];
-  if (info.spectatorsCanChat) flags.push('can chat');
-  if (info.spectatorsOmniscient) flags.push('see hands');
-  if (flags.length === 0) return String(info.spectatorsCount);
+  if (info.spectatorsCanChat) {
+    flags.push('can chat');
+  }
+  if (info.spectatorsOmniscient) {
+    flags.push('see hands');
+  }
+  if (flags.length === 0) {
+    return String(info.spectatorsCount);
+  }
   return `${info.spectatorsCount} (${flags.join(' & ')})`;
 }
 
@@ -88,7 +104,9 @@ export default function GamesList({ room }: GamesListProps) {
 
   useReduxEffect<{ data: Event_GameJoined }>((action) => {
     const gameId = action.payload.data.gameInfo?.gameId;
-    if (gameId == null) return;
+    if (gameId == null) {
+      return;
+    }
     navigate(generatePath(RouteEnum.GAME, { gameId: gameId.toString() }));
   }, games.Types.GAME_JOINED, [navigate]);
 
@@ -116,7 +134,9 @@ export default function GamesList({ room }: GamesListProps) {
 
   function beginJoin(asSpectator: boolean, asJudge: boolean) {
     const game = selectedGame;
-    if (!game) return;
+    if (!game) {
+      return;
+    }
     const info = game.info;
     const effectiveSpectator = asSpectator || info.playerCount >= info.maxPlayers;
     const needsPassword =
@@ -143,16 +163,18 @@ export default function GamesList({ room }: GamesListProps) {
   };
 
   const handlePasswordSubmit = (password: string) => {
-    if (!pendingPasswordJoin) return;
+    if (!pendingPasswordJoin) {
+      return;
+    }
     sendJoin(pendingPasswordJoin.gameId, pendingPasswordJoin.asSpectator, pendingPasswordJoin.asJudge, password);
     setPendingPasswordJoin(null);
   };
 
   const sortOrder = sortBy.order.toLowerCase() === 'asc' ? 'asc' : 'desc';
 
-  // Stable row renderer so react-window skips unaffected rows on parent
-  // re-renders (filter typing, dialog toggles, join-pending). Only selection
-  // and the row handlers change what a row draws, so those are the deps.
+  // Stable renderRow identity (deps are only what changes a row's drawing:
+  // selection + the row handlers) so react-window's row memoization holds — see
+  // webatrice.instructions.md § Virtualized lists.
   const renderGameRow = useCallback((game: Game) => {
     const { info, gameType } = game;
     const isSelected = info.gameId === selectedGameId;

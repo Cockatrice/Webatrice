@@ -89,25 +89,21 @@ describe('UserRows', () => {
   });
 
   it('never retargets an open menu to the user that slides into its row on roster churn', () => {
-    // Regression guard: react-window recycles row slots by index. Rows are keyed
-    // by user name (UserRows.renderUserRow) so a roster reshuffle tears the row
-    // down instead of silently rebinding an open menu to whoever takes the slot.
+    // Regression guard for the name-keyed rows (not slot index) — see
+    // webatrice.instructions.md § Virtualized lists.
     const { container, rerender } = renderWithProviders(
       <UserRows users={[makeUser({ name: 'alice', country: 'us' }), makeUser({ name: 'bob', country: 'us' })]} empty="" />,
       { preloadedState: connectedState },
     );
     mountRows(container);
 
-    // Open alice's menu (row index 0), then churn: alice leaves and carol takes
-    // that same row index.
     openMenuFor('alice');
     expect(screen.getByRole('menu')).toBeInTheDocument();
 
     rerender(<UserRows users={[makeUser({ name: 'carol', country: 'us' }), makeUser({ name: 'bob', country: 'us' })]} empty="" />);
 
-    // With the name-keyed rows the menu is torn down; if any menu survives it
-    // must still belong to alice. Either way the action must never fire for
-    // carol (the user that took alice's slot).
+    // The menu must be torn down (or still belong to alice); the action must
+    // never fire for carol, who took alice's slot.
     const menu = screen.queryByRole('menu');
     if (menu) {
       fireEvent.click(within(menu).getByRole('menuitem', { name: /Add to Buddy List/i }));
