@@ -27,7 +27,7 @@ function stateWithDeck({
     localPlayerId: 1,
     players: { 1: player },
   });
-  return { games: { 1: game } };
+  return { games: { 1: game }, pings: {} };
 }
 
 function setup(

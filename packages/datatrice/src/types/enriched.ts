@@ -31,6 +31,11 @@ export interface Game {
 
 export type Message = Event_RoomSay & {
   timeReceived: number;
+  // Stable, monotonic client id assigned at store ingestion (rooms addMessage);
+  // absent on the wire-derived message before it's stored. Chat rows key on it
+  // so they survive the head-trim at MAX_ROOM_MESSAGES — array indexes shift
+  // there, ids don't.
+  id?: number;
 };
 
 // @critical `info` = wire snapshot at join time; top-level twins hold live values updated by game events.
@@ -56,14 +61,9 @@ export interface GameEntry {
   // order the server sent (full-state syncs) and append-on-join, for board seating
   // and reveal-target lists. See seatedPlayersOf / Selectors.getSeatedPlayers.
   seatOrder: number[];
-  // @critical Live ping clock per player, AUTHORITATIVE over the stale
-  // `properties.pingSeconds` snapshot inside `players`. Servatrice broadcasts
-  // Event_PlayerPropertiesChanged carrying only ping_seconds ~1/s per seated
-  // player+spectator; keeping that volatile value inside the player graph
-  // invalidated every players-subscribed component several times a second.
-  // The reducer routes ping-only updates here and leaves `players` refs
-  // untouched — read ping via Selectors.getPings / getPlayerPing only.
-  pings: { [playerId: number]: number };
+  // The live ping clock lives OUT of the game graph in GamesState.pings so its
+  // ~1/s-per-player tick stream flips no GameEntry/players/player reference —
+  // read ping via Selectors.getPings / getPlayerPing only.
   messages: GameMessage[];
 }
 

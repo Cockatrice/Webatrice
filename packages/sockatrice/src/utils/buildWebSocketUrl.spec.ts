@@ -29,6 +29,10 @@ describe('buildWebSocketUrl', () => {
     expect(buildWebSocketUrl('127.0.0.1', '4748')).toBe('ws://127.0.0.1:4748');
   });
 
+  it('uses ws:// for the bracketed IPv6 loopback (the only supported ::1 form)', () => {
+    expect(buildWebSocketUrl('[::1]', '4748')).toBe('ws://[::1]:4748');
+  });
+
   it('treats the local-host check case-insensitively', () => {
     expect(buildWebSocketUrl('LOCALHOST', '4748')).toBe('ws://LOCALHOST:4748');
   });

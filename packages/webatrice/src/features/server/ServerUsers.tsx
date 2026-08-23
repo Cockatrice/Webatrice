@@ -1,10 +1,7 @@
 import { Users } from 'lucide-react';
 
-import { UserDisplay, VirtualRows } from '@app/components';
+import { UserRows } from '@app/components';
 import type { ServerInfo_User } from '@cockatrice/sockatrice/generated';
-
-// px-3 py-1 text-sm rows: 8px padding + 20px line box.
-const USER_ROW_HEIGHT = 28;
 
 interface ServerUsersProps {
   users: ServerInfo_User[];
@@ -26,23 +23,7 @@ export default function ServerUsers({ users }: ServerUsersProps) {
           {users.length} connected
         </span>
       </div>
-      <div className="flex-1 min-h-0 py-1">
-        {users.length === 0 ? (
-          <div className="px-4 py-3 text-xs text-text-muted italic">
-            No one connected.
-          </div>
-        ) : (
-          <VirtualRows
-            items={users}
-            rowHeight={USER_ROW_HEIGHT}
-            renderRow={(user) => (
-              <div className="px-3 py-1 text-sm text-text-primary hover:bg-bg-elevated transition-colors cursor-default">
-                <UserDisplay user={user} />
-              </div>
-            )}
-          />
-        )}
-      </div>
+      <UserRows users={users} empty="No one connected." />
     </aside>
   );
 }

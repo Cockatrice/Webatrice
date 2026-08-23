@@ -8,13 +8,13 @@ import {
 import { WebsocketTypes } from '@cockatrice/sockatrice/types';
 import { SortUtil } from '../../common';
 import { ServerState } from './server.interfaces';
+import { HEALTHY_CONNECTION_HEALTH } from './server.reducer.connection';
 
 type State = { server: ServerState };
 
 const EMPTY_USERS: ServerInfo_User[] = [];
 const EMPTY_REPLAYS: ServerInfo_ReplayMatch[] = [];
 const EMPTY_MESSAGES: Event_UserMessage[] = [];
-const HEALTHY_CONNECTION = { missedPongs: 0, silentForMs: 0 };
 
 export const Selectors = {
   getInitialized: ({ server }: State) => server.initialized,
@@ -27,7 +27,7 @@ export const Selectors = {
   getTestConnectionStatus: ({ server }: State) => server.testConnectionStatus,
   // Stable fallback: preloaded/partial states (host-supplied or test
   // fixtures) may predate the connectionHealth field.
-  getConnectionHealth: ({ server }: State) => server.connectionHealth ?? HEALTHY_CONNECTION,
+  getConnectionHealth: ({ server }: State) => server.connectionHealth ?? HEALTHY_CONNECTION_HEALTH,
   getIsServerUnresponsive: ({ server }: State) => (server.connectionHealth?.missedPongs ?? 0) > 0,
   getUser: ({ server }: State) => server.user,
 

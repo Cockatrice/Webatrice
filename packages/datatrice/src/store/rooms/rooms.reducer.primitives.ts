@@ -4,6 +4,25 @@ import { ServerInfo_Room } from '@cockatrice/sockatrice/generated';
 
 import { RoomsState } from './rooms.interfaces';
 
+// Single source of truth for the two game mutations, shared by the per-game
+// case reducers and the batch reducer so their semantics can't drift.
+function upsertGame(state: RoomsState, roomId: number, gameId: number, game: Enriched.Game): void {
+  const room = state.rooms[roomId];
+  if (room) {
+    room.games[gameId] = game;
+  }
+}
+
+function removeGame(state: RoomsState, roomId: number, gameId: number): void {
+  const room = state.rooms[roomId];
+  if (room) {
+    delete room.games[gameId];
+  }
+  if (state.selectedGameIds[roomId] === gameId) {
+    state.selectedGameIds[roomId] = undefined;
+  }
+}
+
 export const primitiveReducers = {
   roomUpserted: ((state, action) => {
     const { roomId, info, gametypeMap, order, preserveGamesAndUsers } = action.payload;
@@ -31,11 +50,7 @@ export const primitiveReducers = {
 
   roomGameUpserted: ((state, action) => {
     const { roomId, gameId, game } = action.payload;
-    const room = state.rooms[roomId];
-    if (!room) {
-      return;
-    }
-    room.games[gameId] = game;
+    upsertGame(state, roomId, gameId, game);
   }) as CaseReducer<RoomsState, PayloadAction<{
     roomId: number;
     gameId: number;
@@ -44,13 +59,7 @@ export const primitiveReducers = {
 
   roomGameRemoved: ((state, action) => {
     const { roomId, gameId } = action.payload;
-    const room = state.rooms[roomId];
-    if (room) {
-      delete room.games[gameId];
-    }
-    if (state.selectedGameIds[roomId] === gameId) {
-      state.selectedGameIds[roomId] = undefined;
-    }
+    removeGame(state, roomId, gameId);
   }) as CaseReducer<RoomsState, PayloadAction<{
     roomId: number;
     gameId: number;
@@ -64,19 +73,11 @@ export const primitiveReducers = {
   // made the dev invariant middleware walks O(games²)).
   roomGamesBatchApplied: ((state, action) => {
     const { roomId, changes } = action.payload;
-    const room = state.rooms[roomId];
     for (const { gameId, game } of changes) {
       if (game) {
-        if (room) {
-          room.games[gameId] = game;
-        }
+        upsertGame(state, roomId, gameId, game);
       } else {
-        if (room) {
-          delete room.games[gameId];
-        }
-        if (state.selectedGameIds[roomId] === gameId) {
-          state.selectedGameIds[roomId] = undefined;
-        }
+        removeGame(state, roomId, gameId);
       }
     }
   }) as CaseReducer<RoomsState, PayloadAction<{

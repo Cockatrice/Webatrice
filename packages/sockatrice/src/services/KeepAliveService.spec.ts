@@ -213,6 +213,9 @@ describe('KeepAliveService', () => {
       mockWorker._listener!({ data: { type: 'tick' } } as MessageEvent);
 
       expect(workerOnHealthChange).not.toHaveBeenCalled();
+      // Only the first tick arms a ping; the drained ticks must not each fire
+      // one (that back-to-back burst could trip the server's flood counter).
+      expect(pingFn).toHaveBeenCalledTimes(1);
     });
 
     it('should report escalating degraded health but keep pinging through sustained silence', () => {

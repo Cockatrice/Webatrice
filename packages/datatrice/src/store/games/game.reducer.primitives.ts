@@ -13,6 +13,22 @@ import { GamesState } from './game.interfaces';
 import { pushEventMessage } from './game.reducer.helpers';
 import type { LogEntry } from './messageLog';
 
+const pingField = ServerInfo_PlayerPropertiesSchema.field.pingSeconds;
+
+// Fields a volatile ping tick may carry that never affect the player graph: the
+// clock itself, plus the redundant player_id the action already carries. An
+// update whose set fields are all in this set routes to state.pings and skips
+// the player-properties clone/merge, so the ~1/s tick stream flips no ref.
+const VOLATILE_PING_FIELDS = new Set([
+  pingField,
+  ServerInfo_PlayerPropertiesSchema.field.playerId,
+]);
+
+const isPingOnlyUpdate = (properties: ServerInfo_PlayerProperties): boolean =>
+  ServerInfo_PlayerPropertiesSchema.fields.every(
+    (field) => VOLATILE_PING_FIELDS.has(field) || !isFieldSet(properties, field),
+  );
+
 export const primitiveReducers = {
   gamePlayersReplaced: ((state, action) => {
     const { gameId, players, order } = action.payload;
@@ -25,13 +41,13 @@ export const primitiveReducers = {
     // fall back to the map's key order (numeric). Keep only ids that are present.
     const ids = order ?? Object.keys(players).map(Number);
     game.seatOrder = ids.filter((id) => players[id] != null);
-    // Reseed the live ping map from the snapshot — see Enriched.GameEntry.pings.
+    // Reseed the live ping map from the snapshot — see GamesState.pings.
     const pings: { [playerId: number]: number } = {};
     for (const idKey of Object.keys(players)) {
       const id = Number(idKey);
       pings[id] = players[id].properties.pingSeconds;
     }
-    game.pings = pings;
+    state.pings[gameId] = pings;
   }) as CaseReducer<GamesState, PayloadAction<{
     gameId: number;
     players: { [playerId: number]: Enriched.PlayerEntry };
@@ -268,21 +284,15 @@ export const primitiveReducers = {
       return;
     }
     // The ping clock is volatile (Servatrice broadcasts a ping-only
-    // Event_PlayerPropertiesChanged ~1/s per player) and lives in `game.pings`,
-    // NOT in the player graph — see Enriched.GameEntry.pings.
-    const pingField = ServerInfo_PlayerPropertiesSchema.field.pingSeconds;
+    // Event_PlayerPropertiesChanged ~1/s per player) and lives in the sibling
+    // state.pings map, NOT in the player graph — see GamesState.pings.
     if (isFieldSet(properties, pingField)) {
-      if (!game.pings) {
-        game.pings = {};
-      }
-      game.pings[playerId] = properties.pingSeconds;
+      state.pings[gameId][playerId] = properties.pingSeconds;
     }
     // Ping-only fast path: leave `player.properties` (and thus the player and
     // players refs) untouched so the tick stream invalidates no
     // players-subscribed selector or component.
-    const hasNonPingField = ServerInfo_PlayerPropertiesSchema.fields
-      .some((field) => field !== pingField && isFieldSet(properties, field));
-    if (!hasNonPingField) {
+    if (isPingOnlyUpdate(properties)) {
       return;
     }
     // Clone-and-reassign: mergeSetFields mutates its target, which Immer can't track on a

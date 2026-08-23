@@ -72,6 +72,21 @@ describe('integration: room lifecycle', () => {
     expect(rooms.Selectors.getRoom(state, 2)?.info.name).toBe('Secondary');
   });
 
+  it('updateRooms skips a no-op re-broadcast that still carries a gametypeList', () => {
+    const store = createStore();
+    const response = attachResponseHandlers(store);
+    response.room.joinRoom(makeRoom(1, 'Main'));
+
+    const before = rooms.Selectors.getRoom(store.getState(), 1);
+    // Servatrice re-broadcasts the full room (gametypeList included) every few
+    // seconds. normalizeGametypeMap allocates a fresh map each time, so a
+    // reference check would never match; the value compare must still see the
+    // merge as a no-op and leave the room ref untouched (no re-render churn).
+    response.room.updateRooms([makeRoom(1, 'Main')]);
+
+    expect(rooms.Selectors.getRoom(store.getState(), 1)).toBe(before);
+  });
+
   it('leaveRoom clears joined state and the room contents', () => {
     const store = createStore();
     const response = attachResponseHandlers(store);

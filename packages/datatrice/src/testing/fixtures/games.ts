@@ -153,7 +153,6 @@ export function makeGameEntry(overrides: Partial<Enriched.GameEntry> = {}): Enri
     players: {
       1: makePlayerEntry(),
     },
-    pings: {},
     messages: [],
     ...overrides,
     // Default seatOrder to the players' key order unless explicitly overridden,
@@ -164,10 +163,20 @@ export function makeGameEntry(overrides: Partial<Enriched.GameEntry> = {}): Enri
 }
 
 export function makeState(overrides: Partial<GamesState> = {}): GamesState {
+  const games = overrides.games ?? { 1: makeGameEntry() };
   return {
-    games: {
-      1: makeGameEntry(),
-    },
+    games,
+    // Keep the sibling ping map consistent with `games` so reducers that assume
+    // `pings[gameId]` exists (the gameJoined invariant) hold in fixture-built
+    // state too. Each game seeds its players' join-time ping snapshot.
+    pings: Object.fromEntries(
+      Object.entries(games).map(([id, game]) => [
+        Number(id),
+        Object.fromEntries(
+          Object.values(game.players).map((p) => [p.properties.playerId, p.properties.pingSeconds]),
+        ),
+      ]),
+    ),
     incomingReveal: null,
     ...overrides,
   };

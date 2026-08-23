@@ -72,7 +72,7 @@ export function makeRoom(overrides: MakeRoomOverrides = {}): Enriched.Room {
 }
 
 export function makeMessage(overrides: Partial<Omit<Enriched.Message, '$typeName' | '$unknown'>> = {}): Enriched.Message {
-  const { timeReceived = 0, ...protoOverrides } = overrides;
+  const { timeReceived = 0, id, ...protoOverrides } = overrides;
   return {
     ...create(Event_RoomSaySchema, {
       message: 'hello',
@@ -80,6 +80,7 @@ export function makeMessage(overrides: Partial<Omit<Enriched.Message, '$typeName
       ...protoOverrides,
     }),
     timeReceived,
+    id,
   };
 }
 

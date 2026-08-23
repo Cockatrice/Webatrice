@@ -18,6 +18,15 @@ export interface IncomingReveal {
 
 export interface GamesState {
   games: { [gameId: number]: Enriched.GameEntry };
+  // @critical Live ping clock per game, keyed [gameId][playerId]. AUTHORITATIVE
+  // over the stale `properties.pingSeconds` snapshot inside each player.
+  // Servatrice broadcasts Event_PlayerPropertiesChanged carrying only
+  // ping_seconds ~1/s per seated player+spectator; keeping that volatile value
+  // inside the game/player graph flipped the game, players, and player refs
+  // several times a second, re-rendering every subscriber. Held here as a
+  // sibling of `games` so ping-only ticks touch no game-graph reference — read
+  // via Selectors.getPings / getPlayerPing only.
+  pings: { [gameId: number]: { [playerId: number]: number } };
   /** Optional so pre-existing fixtures that only stub the `games` map
    *  don't have to be updated. `getIncomingReveal` selector treats
    *  undefined and null the same (no reveal). */

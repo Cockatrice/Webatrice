@@ -150,6 +150,49 @@ export default function GamesList({ room }: GamesListProps) {
 
   const sortOrder = sortBy.order.toLowerCase() === 'asc' ? 'asc' : 'desc';
 
+  // Stable row renderer so react-window skips unaffected rows on parent
+  // re-renders (filter typing, dialog toggles, join-pending). Only selection
+  // and the row handlers change what a row draws, so those are the deps.
+  const renderGameRow = useCallback((game: Game) => {
+    const { info, gameType } = game;
+    const isSelected = info.gameId === selectedGameId;
+    return (
+      <div
+        onClick={() => handleSelect(info.gameId)}
+        onDoubleClick={() => handleActivate(info.gameId)}
+        className={[
+          GRID_COLS,
+          'cursor-pointer transition-colors',
+          isSelected
+            ? 'bg-accent/20 hover:bg-accent/25'
+            : 'hover:bg-bg-elevated',
+        ].join(' ')}
+      >
+        <div className="px-3 py-2 border-b border-border-subtle/50 text-text-secondary tabular-nums whitespace-nowrap">
+          {info.startTime}
+        </div>
+        <div className="px-3 py-2 border-b border-border-subtle/50 text-text-primary overflow-hidden">
+          <div className="truncate" title={info.description}>{info.description}</div>
+        </div>
+        <div className="px-3 py-2 border-b border-border-subtle/50 text-text-secondary overflow-hidden">
+          <div className="truncate">{info.creatorInfo?.name ?? ''}</div>
+        </div>
+        <div className="px-3 py-2 border-b border-border-subtle/50 text-text-secondary whitespace-nowrap">
+          {gameType}
+        </div>
+        <div className="px-3 py-2 border-b border-border-subtle/50 text-text-secondary overflow-hidden">
+          <div className="truncate">{formatRestrictions(info)}</div>
+        </div>
+        <div className="px-3 py-2 border-b border-border-subtle/50 text-text-primary tabular-nums whitespace-nowrap">
+          {info.playerCount}/{info.maxPlayers}
+        </div>
+        <div className="px-3 py-2 border-b border-border-subtle/50 text-text-secondary overflow-hidden">
+          <div className="truncate">{formatSpectators(info)}</div>
+        </div>
+      </div>
+    );
+  }, [selectedGameId, handleSelect, handleActivate]);
+
   return (
     <section className="flex h-full flex-col bg-bg-surface border border-border-subtle rounded-lg overflow-hidden">
       {/* Header */}
@@ -163,8 +206,13 @@ export default function GamesList({ room }: GamesListProps) {
       </div>
 
       {/* Games grid — header fixed above a virtualized row window so a busy
-          server's thousands of games cost O(viewport) per delta frame. */}
-      <div className={`${GRID_COLS} shrink-0 bg-bg-elevated text-sm`}>
+          server's thousands of games cost O(viewport) per delta frame. The
+          header and the row scroller both reserve a stable scrollbar gutter so
+          their shared GRID_COLS tracks stay aligned once the body overflows
+          (the row pane's scrollbar would otherwise narrow the rows vs the
+          header). The gutter's track is transparent (thin-scrollbar.css), so
+          the header's reserved-but-unused gutter is invisible. */}
+      <div className={`${GRID_COLS} shrink-0 bg-bg-elevated text-sm overflow-auto [scrollbar-gutter:stable]`}>
         {COLUMNS.map(({ label, field }) => {
           const active = field === sortBy.field;
           return (
@@ -193,45 +241,8 @@ export default function GamesList({ room }: GamesListProps) {
           <VirtualRows
             items={gameList}
             rowHeight={GAME_ROW_HEIGHT}
-            renderRow={(game: Game) => {
-              const { info, gameType } = game;
-              const isSelected = info.gameId === selectedGameId;
-              return (
-                <div
-                  onClick={() => handleSelect(info.gameId)}
-                  onDoubleClick={() => handleActivate(info.gameId)}
-                  className={[
-                    GRID_COLS,
-                    'cursor-pointer transition-colors',
-                    isSelected
-                      ? 'bg-accent/20 hover:bg-accent/25'
-                      : 'hover:bg-bg-elevated',
-                  ].join(' ')}
-                >
-                  <div className="px-3 py-2 border-b border-border-subtle/50 text-text-secondary tabular-nums whitespace-nowrap">
-                    {info.startTime}
-                  </div>
-                  <div className="px-3 py-2 border-b border-border-subtle/50 text-text-primary overflow-hidden">
-                    <div className="truncate" title={info.description}>{info.description}</div>
-                  </div>
-                  <div className="px-3 py-2 border-b border-border-subtle/50 text-text-secondary overflow-hidden">
-                    <div className="truncate">{info.creatorInfo?.name ?? ''}</div>
-                  </div>
-                  <div className="px-3 py-2 border-b border-border-subtle/50 text-text-secondary whitespace-nowrap">
-                    {gameType}
-                  </div>
-                  <div className="px-3 py-2 border-b border-border-subtle/50 text-text-secondary overflow-hidden">
-                    <div className="truncate">{formatRestrictions(info)}</div>
-                  </div>
-                  <div className="px-3 py-2 border-b border-border-subtle/50 text-text-primary tabular-nums whitespace-nowrap">
-                    {info.playerCount}/{info.maxPlayers}
-                  </div>
-                  <div className="px-3 py-2 border-b border-border-subtle/50 text-text-secondary overflow-hidden">
-                    <div className="truncate">{formatSpectators(info)}</div>
-                  </div>
-                </div>
-              );
-            }}
+            className="[scrollbar-gutter:stable]"
+            renderRow={renderGameRow}
           />
         )}
       </div>

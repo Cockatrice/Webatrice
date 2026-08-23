@@ -126,18 +126,13 @@ export const Selectors = {
 
   /** Live ping clock per player. Authoritative over the stale
    *  `properties.pingSeconds` snapshot inside `players` — see
-   *  `Enriched.GameEntry.pings`. */
+   *  `GamesState.pings`. The `?.` guards preloaded/partial states that omit
+   *  the sibling map. */
   getPings: ({ games }: State, gameId: number): { [playerId: number]: number } =>
-    games.games[gameId]?.pings ?? EMPTY_PINGS,
+    games.pings?.[gameId] ?? EMPTY_PINGS,
 
-  getPlayerPing: ({ games }: State, gameId: number, playerId: number): number => {
-    const game = games.games[gameId];
-    // Fall back to the join-time snapshot for preloaded/partial states that
-    // predate the pings field (host-supplied fixtures).
-    return game?.pings?.[playerId]
-      ?? game?.players[playerId]?.properties.pingSeconds
-      ?? 0;
-  },
+  getPlayerPing: ({ games }: State, gameId: number, playerId: number): number =>
+    games.pings?.[gameId]?.[playerId] ?? 0,
 
   getSeatedPlayers: ({ games }: State, gameId: number): Enriched.PlayerEntry[] => {
     const game = games.games[gameId];

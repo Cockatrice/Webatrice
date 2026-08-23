@@ -8,6 +8,7 @@ export { default as Message } from './Message/Message';
 export { default as VirtualList } from './VirtualList/VirtualList';
 export { VirtualRows } from './VirtualList/VirtualList';
 export { default as UserDisplay } from './UserDisplay/UserDisplay';
+export { default as UserRows } from './UserRows/UserRows';
 export { default as UserActionsMenu } from './UserDisplay/UserActionsMenu';
 export { useUserDisplay } from './UserDisplay/useUserDisplay';
 export { UserBadges } from './UserBadges/UserBadges';

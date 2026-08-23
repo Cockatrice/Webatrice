@@ -44,7 +44,7 @@ function setup({
       ...extraPlayers,
     },
   });
-  const gamesState: GamesState = { games: { 1: { ...game, info: { ...game.info, gameId: 1 } } } };
+  const gamesState: GamesState = { games: { 1: { ...game, info: { ...game.info, gameId: 1 } } }, pings: {} };
 
   const { Wrapper, webClient } = makeReduxWebClientHookWrapper({
     reducer: combineReducers({ games: games.gamesReducer }),

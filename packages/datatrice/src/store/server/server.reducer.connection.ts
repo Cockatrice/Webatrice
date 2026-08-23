@@ -2,7 +2,16 @@ import { CaseReducer, PayloadAction } from '@reduxjs/toolkit';
 import { App } from '../../types';
 import { Event_ServerShutdown } from '@cockatrice/sockatrice/generated';
 import { WebsocketTypes } from '@cockatrice/sockatrice/types';
-import { ServerState, ServerStateStatus } from './server.interfaces';
+import { ServerConnectionHealth, ServerState, ServerStateStatus } from './server.interfaces';
+
+// Healthy baseline (no missed pongs) shared by initialState, the updateStatus
+// lifecycle reset, the getConnectionHealth selector fallback, and test fixtures
+// so the four never drift. Never mutated in place — reducers that change health
+// assign a fresh object (see connectionHealthChanged).
+export const HEALTHY_CONNECTION_HEALTH: ServerConnectionHealth = {
+  missedPongs: 0,
+  silentForMs: 0,
+};
 
 export const initialState: ServerState = {
   initialized: false,
@@ -15,10 +24,7 @@ export const initialState: ServerState = {
     state: WebsocketTypes.StatusEnum.DISCONNECTED,
     description: null
   },
-  connectionHealth: {
-    missedPongs: 0,
-    silentForMs: 0
-  },
+  connectionHealth: HEALTHY_CONNECTION_HEALTH,
   info: {
     message: null,
     name: null,
@@ -105,7 +111,7 @@ export const connectionReducers = {
     state.status.description = status.description;
     // Any status transition is a socket lifecycle change; stale degraded
     // health from the previous socket must not survive it.
-    state.connectionHealth = { missedPongs: 0, silentForMs: 0 };
+    state.connectionHealth = HEALTHY_CONNECTION_HEALTH;
 
     if (status.state === WebsocketTypes.StatusEnum.DISCONNECTED) {
       state.status.connectionAttemptMade = false;

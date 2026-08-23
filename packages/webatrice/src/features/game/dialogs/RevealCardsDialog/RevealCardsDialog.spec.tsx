@@ -13,6 +13,7 @@ import RevealCardsDialog from './RevealCardsDialog';
 // Two seated players; the reveal-target list is folded from the store.
 const PRELOADED_STATE = {
   games: {
+    pings: {},
     games: {
       1: makeGameEntry({
         localPlayerId: 1,
@@ -76,6 +77,7 @@ describe('RevealCardsDialog', () => {
   it('lists reveal targets in store seat order (not numeric)', () => {
     const stateSeatOrderBobFirst = {
       games: {
+        pings: {},
         games: {
           1: makeGameEntry({
             localPlayerId: 1,
@@ -106,6 +108,7 @@ describe('RevealCardsDialog', () => {
     renderWithProviders(<RevealCardsDialog />, {
       preloadedState: {
         games: {
+          pings: {},
           games: {
             1: makeGameEntry({
               localPlayerId: 1,

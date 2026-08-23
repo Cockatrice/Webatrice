@@ -1,6 +1,9 @@
 // See .github/instructions/sockatrice-transport.instructions.md#websocket-url-construction.
 
-const LOCAL_HOSTNAMES = new Set(['localhost', '127.0.0.1', '::1', '[::1]']);
+// IPv6 loopback is listed only in its bracketed URL form: a bare `::1` cannot be
+// interpolated into a valid ws:// URL (`ws://::1:4748` throws in the WebSocket
+// constructor), so callers must supply `[::1]`.
+const LOCAL_HOSTNAMES = new Set(['localhost', '127.0.0.1', '[::1]']);
 
 // ws:// only when the TARGET is a local cert-less servatrice. The page origin
 // is irrelevant: an http://localhost page may open wss:// (mixed-content rules

@@ -35,7 +35,6 @@ export class KeepAliveService {
   // reliably faked). Wall-clock jumps at worst cost one spurious miss.
   private lastPingSentAt: number | null = null;
   private lastPongAt: number | null = null;
-  private reportedDegraded = false;
 
   constructor(isOpen: () => boolean, onHealthChange: KeepAliveHealthChange) {
     this.isOpen = isOpen;
@@ -75,7 +74,6 @@ export class KeepAliveService {
     this.lastPingPending = false;
     this.currentPing = null;
     this.missedPongs = 0;
-    this.reportedDegraded = false;
     this.lastPongAt = null;
     this.lastPingSentAt = null;
   }
@@ -105,18 +103,18 @@ export class KeepAliveService {
   private tick(): void {
     if (this.lastPingPending) {
       const pingAgeMs = this.lastPingSentAt === null ? null : Date.now() - this.lastPingSentAt;
-      if (pingAgeMs !== null && pingAgeMs >= this.interval * MISS_MIN_AGE_FACTOR) {
-        this.missedPongs += 1;
-        if (this.missedPongs >= DEGRADED_AFTER_MISSES) {
-          const silentForMs = this.lastPongAt === null ? 0 : Date.now() - this.lastPongAt;
-          this.reportedDegraded = true;
-          this.onHealthChange(this.missedPongs, silentForMs);
-        }
+      // Burst-drained tick: ticks queue behind a stalled main thread and drain
+      // back-to-back. A pending ping younger than ~an interval never had a fair
+      // chance to be answered — don't count it as a miss, and don't pile on
+      // another ping (which would flood the server on drain).
+      if (pingAgeMs === null || pingAgeMs < this.interval * MISS_MIN_AGE_FACTOR) {
+        return;
       }
-      // Otherwise: burst-drained tick — the pending ping is younger than an
-      // interval, so it never had a fair chance to be answered. Not a miss.
-    } else {
-      this.missedPongs = 0;
+      this.missedPongs += 1;
+      if (this.missedPongs >= DEGRADED_AFTER_MISSES) {
+        const silentForMs = this.lastPongAt === null ? 0 : Date.now() - this.lastPongAt;
+        this.onHealthChange(this.missedPongs, silentForMs);
+      }
     }
 
     if (!this.isOpen()) {
@@ -131,11 +129,13 @@ export class KeepAliveService {
     this.lastPingPending = true;
     this.lastPingSentAt = Date.now();
     ping(() => {
+      // Recovery is reported exactly when we were degraded — derived from the
+      // pre-reset miss count, so no separate "reported" flag is needed.
+      const wasDegraded = this.missedPongs >= DEGRADED_AFTER_MISSES;
       this.lastPingPending = false;
       this.missedPongs = 0;
       this.lastPongAt = Date.now();
-      if (this.reportedDegraded) {
-        this.reportedDegraded = false;
+      if (wasDegraded) {
         this.onHealthChange(0, 0);
       }
     });

@@ -46,7 +46,7 @@ function stateWith({
     activePlayerId,
     players: { [localPlayerId]: player },
   });
-  return { games: { 1: game } };
+  return { games: { 1: game }, pings: {} };
 }
 
 function setup(opts: SetupOpts = {}) {

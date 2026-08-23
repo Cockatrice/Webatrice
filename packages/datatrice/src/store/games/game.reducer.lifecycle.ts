@@ -2,7 +2,7 @@ import { CaseReducer, PayloadAction } from '@reduxjs/toolkit';
 import { Event_GameJoined } from '@cockatrice/sockatrice/generated';
 import { GamesState } from './game.interfaces';
 
-const initialState: GamesState = { games: {} };
+const initialState: GamesState = { games: {}, pings: {} };
 
 export const lifecycleReducers = {
   clearStore: (() => initialState) as CaseReducer<GamesState>,
@@ -27,20 +27,23 @@ export const lifecycleReducers = {
       reversed: false,
       players: {},
       seatOrder: [],
-      pings: {},
       messages: [],
     };
+    state.pings[gameInfo.gameId] = {};
   }) as CaseReducer<GamesState, PayloadAction<{ data: Event_GameJoined }>>,
 
   gameLeft: ((state, action) => {
     delete state.games[action.payload.gameId];
+    delete state.pings[action.payload.gameId];
   }) as CaseReducer<GamesState, PayloadAction<{ gameId: number }>>,
 
   gameClosed: ((state, action) => {
     delete state.games[action.payload.gameId];
+    delete state.pings[action.payload.gameId];
   }) as CaseReducer<GamesState, PayloadAction<{ gameId: number }>>,
 
   kicked: ((state, action) => {
     delete state.games[action.payload.gameId];
+    delete state.pings[action.payload.gameId];
   }) as CaseReducer<GamesState, PayloadAction<{ gameId: number }>>,
 };

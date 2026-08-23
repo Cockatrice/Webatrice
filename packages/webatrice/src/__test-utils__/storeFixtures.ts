@@ -19,6 +19,7 @@ export const disconnectedState: Partial<RootState> = {
       state: WebsocketTypes.StatusEnum.DISCONNECTED,
       description: null,
     },
+    connectionHealth: { missedPongs: 0, silentForMs: 0 },
     info: { message: null, name: null, version: null },
     logs: { room: [], game: [], chat: [] },
     user: null,
@@ -53,7 +54,7 @@ export const disconnectedState: Partial<RootState> = {
     joinGamePending: false,
     joinGameError: null,
   },
-  games: { games: {} },
+  games: { games: {}, pings: {} },
   action: { type: null, payload: null, meta: null, error: false, count: 0 },
 };
 

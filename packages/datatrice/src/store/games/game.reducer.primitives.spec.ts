@@ -775,12 +775,12 @@ describe('zoneCardCountAdjusted', () => {
 });
 
 describe('playerPropertiesUpdated', () => {
-  it('ping-only update routes to game.pings and leaves the player graph untouched by reference', () => {
+  it('ping-only update routes to state.pings and leaves the player graph untouched by reference', () => {
     // The per-second ping tick — the desktop server sends
     // Event_PlayerPropertiesChanged with only ping_seconds populated.
-    // The volatile clock lands in game.pings; player/players refs MUST stay
+    // The volatile clock lands in state.pings; player/players refs MUST stay
     // identical so the ~1/s-per-player stream invalidates no players
-    // subscriber (see Enriched.GameEntry.pings).
+    // subscriber (see GamesState.pings).
     const existing = makePlayerProperties({
       playerId: 1,
       deckHash: 'abc123',
@@ -798,7 +798,7 @@ describe('playerPropertiesUpdated', () => {
     const result = gamesReducer(state, Actions.playerPropertiesUpdated({
       gameId: 1, playerId: 1, properties: pingOnly,
     }));
-    expect(result.games[1].pings[1]).toBe(42);
+    expect(result.pings[1][1]).toBe(42);
     expect(result.games[1].players).toBe(state.games[1].players);
     expect(result.games[1].players[1].properties).toBe(existing);
   });
@@ -827,7 +827,7 @@ describe('playerPropertiesUpdated', () => {
     expect(merged.readyStart).toBe(true);
     expect(merged.deckHash).toBe('abc123');
     expect(merged.sideboardLocked).toBe(true);
-    expect(result.games[1].pings[1]).toBe(42);
+    expect(result.pings[1][1]).toBe(42);
   });
 
   it('no-ops when player is missing', () => {

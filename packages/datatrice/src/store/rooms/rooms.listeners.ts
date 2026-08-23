@@ -1,5 +1,6 @@
 import type { ListenerMiddlewareInstance } from '@reduxjs/toolkit';
 import { clone, equals } from '@bufbuild/protobuf';
+import { dequal } from 'dequal';
 
 import { Enriched } from '../../types';
 import { ServerInfo_GameSchema, ServerInfo_RoomSchema } from '@cockatrice/sockatrice/generated';
@@ -32,8 +33,11 @@ export function registerRoomsListeners(mw: ListenerMiddlewareInstance<unknown>):
           // or not anything changed. When the merge is a no-op, skip the
           // dispatch entirely — otherwise the steady-state broadcast flips the
           // room ref and re-renders every rooms subscriber for nothing.
+          // gametypeMap is compared by value (dequal): normalizeGametypeMap
+          // allocates a fresh object whenever the broadcast carries a
+          // gametypeList, so a reference check would never fire the skip.
           if (
-            nextGametypeMap === existing.gametypeMap
+            dequal(nextGametypeMap, existing.gametypeMap)
             && existing.order === order
             && equals(ServerInfo_RoomSchema, nextInfo, existing.info)
           ) {

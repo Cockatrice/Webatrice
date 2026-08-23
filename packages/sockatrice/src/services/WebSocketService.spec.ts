@@ -77,7 +77,6 @@ describe('WebSocketService', () => {
       expect(mockInstance.close).not.toHaveBeenCalled();
       expect(mockOnStatusChange).not.toHaveBeenCalledWith(StatusEnum.DISCONNECTED, expect.anything());
       expect(onConnectionHealth).toHaveBeenLastCalledWith(10, expect.any(Number));
-      void service;
     });
   });
 
@@ -170,7 +169,6 @@ describe('WebSocketService', () => {
       mockInstance.onclose();
       expect(endSpy).toHaveBeenCalled();
     });
-
   });
 
   describe('socket event handlers (onerror)', () => {

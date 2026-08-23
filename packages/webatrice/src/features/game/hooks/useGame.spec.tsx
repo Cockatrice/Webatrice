@@ -80,7 +80,7 @@ function setup(opts: SetupOpts = {}) {
     ...game,
     info: { ...game.info, gameId: 1, spectatorsOmniscient },
   };
-  const gamesState: GamesState = { games: { 1: withInfo } };
+  const gamesState: GamesState = { games: { 1: withInfo }, pings: {} };
 
   const webClient = createMockWebClient();
   const reducer = combineReducers({ games: games.gamesReducer });

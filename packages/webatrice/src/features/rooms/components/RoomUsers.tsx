@@ -3,11 +3,8 @@ import { Users, UserRoundPlus } from 'lucide-react';
 
 import { server } from '@cockatrice/datatrice';
 import { useAppSelector } from '@app/store';
-import { UserDisplay, VirtualRows } from '@app/components';
+import { UserRows } from '@app/components';
 import type { ServerInfo_User } from '@cockatrice/sockatrice/generated';
-
-// px-3 py-1 text-sm rows: 8px padding + 20px line box.
-const USER_ROW_HEIGHT = 28;
 
 /**
  * Right-column user panel. Two sections:
@@ -75,21 +72,7 @@ function Panel({ icon, title, subtitle, empty, users }: PanelProps) {
         </h3>
         <span className="ml-auto text-[0.65rem] text-text-muted tabular-nums">{subtitle}</span>
       </div>
-      <div className="flex-1 min-h-0 py-1">
-        {users.length === 0 ? (
-          <div className="px-4 py-3 text-xs text-text-muted italic">{empty}</div>
-        ) : (
-          <VirtualRows
-            items={users}
-            rowHeight={USER_ROW_HEIGHT}
-            renderRow={(user) => (
-              <div className="px-3 py-1 text-sm text-text-primary hover:bg-bg-elevated transition-colors cursor-default">
-                <UserDisplay user={user} />
-              </div>
-            )}
-          />
-        )}
-      </div>
+      <UserRows users={users} empty={empty} />
     </div>
   );
 }

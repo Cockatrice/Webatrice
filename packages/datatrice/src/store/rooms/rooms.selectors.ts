@@ -138,6 +138,17 @@ export const Selectors = {
         return ZERO_COUNTS;
       }
       return { visible: filtered.length, total: sorted.length };
+    },
+    // Every game-list frame flips the sorted/filtered inputs, but the counts
+    // rarely change. Return the prior object when they match so the count-badge
+    // subscribers don't re-render on every broadcast.
+    {
+      memoizeOptions: {
+        resultEqualityCheck: (
+          a: { visible: number; total: number },
+          b: { visible: number; total: number },
+        ) => a.visible === b.visible && a.total === b.total,
+      },
     }
   ),
 }
