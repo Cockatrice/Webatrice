@@ -25,6 +25,7 @@ export const initialState: ServerState = {
     description: null
   },
   connectionHealth: HEALTHY_CONNECTION_HEALTH,
+  connectUnreachable: false,
   info: {
     message: null,
     name: null,
@@ -76,10 +77,16 @@ export const connectionReducers = {
 
   connectionAttempted: ((state) => {
     state.status.connectionAttemptMade = true;
+    state.connectUnreachable = false;
+  }) as CaseReducer<ServerState>,
+
+  connectUnreachable: ((state) => {
+    state.connectUnreachable = true;
   }) as CaseReducer<ServerState>,
 
   testConnectionStarted: ((state) => {
     state.testConnectionStatus = 'testing';
+    state.connectUnreachable = false;
   }) as CaseReducer<ServerState>,
 
   // `supportsHashedPassword` is typed on the action so `useReduxEffect`
@@ -94,16 +101,26 @@ export const connectionReducers = {
     state.testConnectionStatus = 'failed';
   }) as CaseReducer<ServerState>,
 
+  // testConnectionStatus is a login-screen probe result, independent of the
+  // live game socket — carry it through resets (like status/locale) so a
+  // disconnect neither disables the login button (LoginForm gates on 'success')
+  // nor triggers a re-probe that would count against Servatrice's per-IP
+  // connection cap (security/max_users_per_address, default 4).
   clearStore: ((state) => ({
     ...initialState,
     status: { ...state.status },
     locale: state.locale,
+    testConnectionStatus: state.testConnectionStatus,
   })) as CaseReducer<ServerState>,
 
   disconnected: ((state) => ({
     ...initialState,
     status: { ...state.status },
     locale: state.locale,
+    testConnectionStatus: state.testConnectionStatus,
+    // Load-bearing: the failure sets connectUnreachable just before the same-tick
+    // DISCONNECTED that triggers this rebuild, so carry it or it's wiped before render.
+    connectUnreachable: state.connectUnreachable,
   })) as CaseReducer<ServerState>,
 
   serverMessage: ((state, action) => {

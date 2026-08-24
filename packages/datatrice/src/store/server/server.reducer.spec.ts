@@ -90,6 +90,23 @@ describe('Locale', () => {
     const result = serverReducer(state, Actions.disconnected());
     expect(result.locale).toBe('nl');
   });
+
+  // testConnectionStatus is a login-screen probe result, independent of the
+  // live game socket. A connection reset must not wipe it: doing so both
+  // disables the login button (LoginForm gates on 'success') and — via the
+  // known-hosts recovery effect — used to re-fire a fresh probe WebSocket on
+  // every disconnect, which trips Servatrice's max_users_per_address cap.
+  it('preserves testConnectionStatus across DISCONNECTED', () => {
+    const state = makeServerState({ testConnectionStatus: 'success' });
+    const result = serverReducer(state, Actions.disconnected());
+    expect(result.testConnectionStatus).toBe('success');
+  });
+
+  it('preserves testConnectionStatus across CLEAR_STORE', () => {
+    const state = makeServerState({ testConnectionStatus: 'success' });
+    const result = serverReducer(state, Actions.clearStore());
+    expect(result.testConnectionStatus).toBe('success');
+  });
 });
 
 
@@ -102,6 +119,55 @@ describe('Account & Connection', () => {
     expect(result.status.connectionAttemptMade).toBe(true);
   });
 
+});
+
+
+describe('Connect Unreachable', () => {
+  it('CONNECT_UNREACHABLE → sets connectUnreachable to true', () => {
+    const state = makeServerState({ connectUnreachable: false });
+    const result = serverReducer(state, Actions.connectUnreachable());
+    expect(result.connectUnreachable).toBe(true);
+  });
+
+  it('CONNECTION_ATTEMPTED → clears a stale connectUnreachable from a prior attempt', () => {
+    const state = makeServerState({ connectUnreachable: true });
+    const result = serverReducer(state, Actions.connectionAttempted());
+    expect(result.connectUnreachable).toBe(false);
+  });
+
+  it('TEST_CONNECTION_STARTED → clears a stale connectUnreachable (probe is a fresh attempt)', () => {
+    const state = makeServerState({ connectUnreachable: true });
+    const result = serverReducer(state, Actions.testConnectionStarted());
+    expect(result.connectUnreachable).toBe(false);
+  });
+
+  // Load-bearing: connectUnreachable is set just before the socket close that
+  // triggers the DISCONNECTED rebuild (dispatched by the updateStatus listener).
+  // The rebuild must carry the flag through or the login screen never sees it.
+  // See server.reducer.connection disconnected().
+  it('preserves connectUnreachable across DISCONNECTED', () => {
+    const state = makeServerState({ connectUnreachable: true });
+    const result = serverReducer(state, Actions.disconnected());
+    expect(result.connectUnreachable).toBe(true);
+  });
+
+  it('DISCONNECTED with a clean prior attempt leaves connectUnreachable false', () => {
+    const state = makeServerState({ connectUnreachable: false });
+    const result = serverReducer(state, Actions.disconnected());
+    expect(result.connectUnreachable).toBe(false);
+  });
+
+  it('CLEAR_STORE → resets connectUnreachable to false', () => {
+    const state = makeServerState({ connectUnreachable: true });
+    const result = serverReducer(state, Actions.clearStore());
+    expect(result.connectUnreachable).toBe(false);
+  });
+
+  it('INITIALIZED → resets connectUnreachable to false', () => {
+    const state = makeServerState({ connectUnreachable: true });
+    const result = serverReducer(state, Actions.initialized());
+    expect(result.connectUnreachable).toBe(false);
+  });
 });
 
 

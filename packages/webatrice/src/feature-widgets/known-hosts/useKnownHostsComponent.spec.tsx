@@ -3,7 +3,7 @@ import { act, renderHook } from '@testing-library/react';
 import { combineReducers } from '@reduxjs/toolkit';
 import { Provider } from 'react-redux';
 
-import { createStore } from '@cockatrice/datatrice';
+import { createStore, server } from '@cockatrice/datatrice';
 import { WebClientContext } from '@cockatrice/datatrice/react';
 
 vi.mock('./useKnownHosts');
@@ -43,15 +43,19 @@ const reducer = combineReducers(rootReducerMap);
 function setup(args: {
   onChange?: (host: any) => void;
   knownHostsOverrides?: Partial<ReturnType<typeof makeKnownHostsHook>>;
+  serverOverrides?: Partial<RootState['server']>;
 } = {}) {
   const onChange = vi.fn(args.onChange);
   vi.mocked(useKnownHosts).mockReturnValue(
     makeKnownHostsHook(args.knownHostsOverrides),
   );
   const webClient = createMockWebClient();
+  const preloadedState = args.serverOverrides
+    ? { ...connectedState, server: { ...(connectedState.server as any), ...args.serverOverrides } }
+    : connectedState;
   const store = createStore<RootState>({
     reducer: reducer as never,
-    preloadedState: connectedState as never,
+    preloadedState: preloadedState as never,
   });
   function Wrapper({ children }: { children: ReactNode }) {
     return (
@@ -85,6 +89,36 @@ describe('useKnownHostsComponent', () => {
     expect(webClient.request.authentication.testConnection).toHaveBeenCalled();
   });
 
+  // Regression: a disconnect must not re-probe. Each probe is a full WebSocket
+  // that counts against Servatrice's per-IP connection cap (max_users_per_address,
+  // default 4), so re-probing on every disconnect trips "too many connections".
+  it('does not re-fire testConnection when the connection drops (disconnected)', () => {
+    const host = makeHost();
+    const { webClient, store } = setup({
+      knownHostsOverrides: { value: { hosts: [host], selectedHost: host } as any },
+    });
+
+    const testConnection = vi.mocked(webClient.request.authentication.testConnection);
+    const beforeDisconnect = testConnection.mock.calls.length;
+
+    act(() => {
+      store.dispatch(server.Actions.disconnected());
+    });
+
+    // A disconnect adds no new probe.
+    expect(testConnection).toHaveBeenCalledTimes(beforeDisconnect);
+  });
+
+  it('re-probes exactly once on a fresh mount even when a prior probe already succeeded', () => {
+    const host = makeHost();
+    const { webClient } = setup({
+      knownHostsOverrides: { value: { hosts: [host], selectedHost: host } as any },
+      serverOverrides: { testConnectionStatus: 'success' },
+    });
+
+    expect(webClient.request.authentication.testConnection).toHaveBeenCalledTimes(1);
+  });
+
   it('returns empty hosts when useKnownHosts is still loading', () => {
     const { result } = setup({
       knownHostsOverrides: { status: LoadingState.LOADING, value: undefined },
@@ -115,6 +149,35 @@ describe('useKnownHostsComponent', () => {
     expect(onChange).toHaveBeenCalledWith(b);
     expect(select).toHaveBeenCalledWith(2);
     expect(webClient.request.authentication.testConnection).toHaveBeenCalled();
+  });
+
+  it('refreshConnection re-tests the currently selected host', () => {
+    const host = makeHost();
+    const { result, webClient } = setup({
+      knownHostsOverrides: { value: { hosts: [host], selectedHost: host } as any },
+    });
+
+    vi.mocked(webClient.request.authentication.testConnection).mockClear();
+
+    act(() => {
+      result.current.refreshConnection();
+    });
+
+    expect(webClient.request.authentication.testConnection).toHaveBeenCalledTimes(1);
+  });
+
+  it('refreshConnection is a no-op when no host is selected', () => {
+    const { result, webClient } = setup({
+      knownHostsOverrides: { value: { hosts: [], selectedHost: undefined } as any },
+    });
+
+    vi.mocked(webClient.request.authentication.testConnection).mockClear();
+
+    act(() => {
+      result.current.refreshConnection();
+    });
+
+    expect(webClient.request.authentication.testConnection).not.toHaveBeenCalled();
   });
 
   it('openAddKnownHostDialog and closeKnownHostDialog toggle dialog state', () => {

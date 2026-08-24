@@ -26,6 +26,7 @@ export interface ServerState {
   // server is not answering pings (lagged or unreachable); 0 = healthy. The
   // transport never self-disconnects on silence — see sockatrice KeepAliveService.
   connectionHealth: ServerConnectionHealth;
+  connectUnreachable: boolean;
   logs: ServerStateLogs;
   user: ServerInfo_User | null;
   users: { [userName: string]: ServerInfo_User };

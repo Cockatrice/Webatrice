@@ -48,6 +48,10 @@ export class SessionResponseImpl implements WebsocketTypes.ISessionResponse {
     this.store.dispatch(ServerActions.connectionFailed());
   }
 
+  connectionUnreachable(): void {
+    this.store.dispatch(ServerActions.connectUnreachable());
+  }
+
   testConnectionSuccessful(supportsHashedPassword: boolean): void {
     this.store.dispatch(ServerActions.testConnectionSuccessful({ supportsHashedPassword }));
   }

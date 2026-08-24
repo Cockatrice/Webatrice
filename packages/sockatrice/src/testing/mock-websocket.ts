@@ -40,6 +40,7 @@ export function installMockWebSocketHarness() {
     instances.push(next);
     return next;
   }) as unknown as typeof WebSocket;
+  (MockWS as unknown as { CONNECTING: number }).CONNECTING = 0;
   (MockWS as unknown as { OPEN: number }).OPEN = 1;
   (MockWS as unknown as { CLOSED: number }).CLOSED = 3;
   (globalThis as { WebSocket: typeof WebSocket }).WebSocket = MockWS;

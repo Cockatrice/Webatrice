@@ -55,6 +55,16 @@ describe('Selectors', () => {
     expect(Selectors.getConnectionAttemptMade(rootState(state))).toBe(true);
   });
 
+  it('getConnectUnreachable → returns connectUnreachable flag', () => {
+    const state = makeServerState({ connectUnreachable: true });
+    expect(Selectors.getConnectUnreachable(rootState(state))).toBe(true);
+  });
+
+  it('getConnectUnreachable → falls back to false for a partial state missing the field', () => {
+    const state = { ...makeServerState(), connectUnreachable: undefined } as unknown as ServerState;
+    expect(Selectors.getConnectUnreachable(rootState(state))).toBe(false);
+  });
+
   it('getUser → returns user', () => {
     const user = makeUser({ name: 'Alice' });
     const state = makeServerState({ user });

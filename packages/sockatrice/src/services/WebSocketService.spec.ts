@@ -16,6 +16,7 @@ let mockInstance: ReturnType<typeof installMockWebSocketHarness>['mockInstance']
 let restoreWebSocket: ReturnType<typeof installMockWebSocketHarness>['restore'];
 let mockConfig: WebSocketServiceConfig;
 let mockOnConnectionFailed: Mock;
+let mockOnConnectionUnreachable: Mock;
 let mockOnStatusChange: Mock;
 let mockOnMessage: Mock;
 let locationRestores: Array<() => void>;
@@ -29,6 +30,7 @@ beforeEach(() => {
   restoreWebSocket = installed.restore;
 
   mockOnConnectionFailed = vi.fn();
+  mockOnConnectionUnreachable = vi.fn();
   mockOnStatusChange = vi.fn();
   mockOnMessage = vi.fn();
 
@@ -36,6 +38,7 @@ beforeEach(() => {
     keepAliveFn: vi.fn(),
     keepalive: 1000,
     onConnectionFailed: mockOnConnectionFailed,
+    onConnectionUnreachable: mockOnConnectionUnreachable,
     onStatusChange: mockOnStatusChange,
     onMessage: mockOnMessage,
   };
@@ -185,6 +188,63 @@ describe('WebSocketService', () => {
     });
   });
 
+  describe('connect unreachable (onConnectionUnreachable)', () => {
+    it('fires when a never-opened socket closes (fast fail: onclose before open)', () => {
+      createConnectedService();
+      mockInstance.onclose();
+      expect(mockOnConnectionUnreachable).toHaveBeenCalledTimes(1);
+    });
+
+    it('fires on the slow-hang path (connect-timer closes the stuck socket → onclose)', () => {
+      createConnectedService();
+      // The timer closes the still-CONNECTING socket; in a real socket that
+      // close drives onclose. Advance the timer, then drive onclose as the
+      // browser would.
+      vi.advanceTimersByTime(1000);
+      expect(mockInstance.close).toHaveBeenCalled();
+      mockInstance.onclose();
+      expect(mockOnConnectionUnreachable).toHaveBeenCalledTimes(1);
+    });
+
+    it('fires after a fast onerror → onclose sequence', () => {
+      createConnectedService();
+      mockInstance.onerror();
+      mockInstance.onclose();
+      expect(mockOnConnectionUnreachable).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not fire when the socket opened before closing (post-open drop)', () => {
+      createConnectedService();
+      mockInstance.onopen();
+      mockInstance.onclose();
+      expect(mockOnConnectionUnreachable).not.toHaveBeenCalled();
+    });
+
+    it('does not fire on an intentional disconnect before open', () => {
+      const service = createConnectedService();
+      service.disconnect();
+      mockInstance.onclose();
+      expect(mockOnConnectionUnreachable).not.toHaveBeenCalled();
+    });
+
+    it('does not fire for a retired socket whose onclose arrives after a new connect', () => {
+      const service = new WebSocketService(mockConfig);
+      service.connect({ host: 'h', port: '1' });
+      const firstSocket = mockInstance;
+      // A second connect installs a new active socket and resets hasEverOpened;
+      // the retired socket's late onclose must be ignored via socket identity.
+      service.connect({ host: 'h', port: '2' });
+      firstSocket.onclose?.();
+      expect(mockOnConnectionUnreachable).not.toHaveBeenCalled();
+    });
+
+    it('is optional — a config without onConnectionUnreachable still closes cleanly', () => {
+      const service = new WebSocketService({ ...mockConfig, onConnectionUnreachable: undefined });
+      service.connect({ host: 'h', port: '1' });
+      expect(() => mockInstance.onclose()).not.toThrow();
+    });
+  });
+
   describe('socket event handlers (onmessage)', () => {
     it('invokes the onMessage callback with the event', () => {
       createConnectedService();
@@ -254,11 +314,35 @@ describe('WebSocketService', () => {
   });
 
   describe('connect (re-entry)', () => {
-    it('closes the prior socket when connect is called twice', () => {
+    it('closes an already-open prior socket immediately when connect is called twice', () => {
       const service = new WebSocketService(mockConfig);
       service.connect({ host: 'h', port: '1' });
       const firstInstance = mockInstance;
+      firstInstance.readyState = WebSocket.OPEN;
       service.connect({ host: 'h', port: '2' });
+      expect(firstInstance.close).toHaveBeenCalled();
+      // OPEN path keeps onclose/onerror (async close-frame buffering invariant).
+      expect(firstInstance.onclose).not.toBeNull();
+    });
+
+    it('does not abort a still-CONNECTING prior socket — defers a clean close and silences its handlers', () => {
+      const service = new WebSocketService(mockConfig);
+      service.connect({ host: 'h', port: '1' });
+      const firstInstance = mockInstance;
+      firstInstance.readyState = WebSocket.CONNECTING;
+
+      service.connect({ host: 'h', port: '2' });
+
+      // Not aborted synchronously — an abrupt close of a CONNECTING socket
+      // strands a half-open upstream against Servatrice's per-IP cap.
+      expect(firstInstance.close).not.toHaveBeenCalled();
+      // Retired orphan: lifecycle handlers silenced so a late open→close can't
+      // emit CONNECTED/DISCONNECTED or schedule a reconnect...
+      expect(firstInstance.onclose).toBeNull();
+      expect(firstInstance.onerror).toBeNull();
+      // ...but a clean close is armed for when the handshake completes.
+      expect(typeof firstInstance.onopen).toBe('function');
+      firstInstance.onopen?.();
       expect(firstInstance.close).toHaveBeenCalled();
     });
   });

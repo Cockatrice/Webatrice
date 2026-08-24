@@ -182,4 +182,50 @@ describe('useLogin', () => {
     const { result } = setup(connectedState);
     expect(result.current.showDescription()).toBe(false);
   });
+
+  it('substitutes the reachability message when disconnected and the last connect never opened', () => {
+    const { result } = setup({
+      ...disconnectedState,
+      server: {
+        ...(disconnectedState.server as any),
+        connectUnreachable: true,
+        status: {
+          ...(disconnectedState.server as any).status,
+          description: 'Connection Closed',
+        },
+      },
+    });
+
+    expect(result.current.description).toBe('Login.status.serverUnreachable');
+    expect(result.current.showDescription()).toBe(true);
+  });
+
+  it('keeps the generic description when the last connect was reachable', () => {
+    const { result } = setup({
+      ...disconnectedState,
+      server: {
+        ...(disconnectedState.server as any),
+        connectUnreachable: false,
+        status: {
+          ...(disconnectedState.server as any).status,
+          description: 'Connection Failed',
+        },
+      },
+    });
+
+    expect(result.current.description).toBe('Connection Failed');
+  });
+
+  it('does not surface the reachability message once connected, even if the flag lingers', () => {
+    const { result } = setup({
+      ...connectedState,
+      server: {
+        ...(connectedState.server as any),
+        connectUnreachable: true,
+      },
+    });
+
+    expect(result.current.description).not.toBe('Login.status.serverUnreachable');
+    expect(result.current.showDescription()).toBe(false);
+  });
 });

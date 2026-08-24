@@ -25,6 +25,7 @@ import { StatusEnum } from './types/StatusEnum';
 import { ProtobufService } from './services/ProtobufService';
 import { WebSocketService } from './services/WebSocketService';
 import { buildWebSocketUrl } from './utils/buildWebSocketUrl';
+import { terminateSocket } from './utils/terminateSocket';
 import { passwordSaltSupported } from './utils/passwordHasher';
 import { PROTOCOL_VERSION } from './protocol';
 
@@ -83,6 +84,9 @@ export class WebClient {
       onConnectionFailed: () => {
         this.response.session.connectionFailed();
       },
+      onConnectionUnreachable: () => {
+        this.response.session.connectionUnreachable();
+      },
       onConnectionHealth: (missedPongs, silentForMs) => {
         this.response.session.updateConnectionHealth?.(missedPongs, silentForMs);
       },
@@ -115,9 +119,12 @@ export class WebClient {
   }
 
   public testConnect(target: ConnectTarget): void {
-    // Close any in-flight test socket eagerly. See .github/instructions/sockatrice-transport.instructions.md#webclient-lifecycle.
+    // Retire any in-flight test socket via the safe terminate (a superseded probe
+    // is usually still CONNECTING, and close() on a CONNECTING socket strands a
+    // half-open upstream against Servatrice's per-IP cap).
+    // See .github/instructions/sockatrice-transport.instructions.md#webclient-lifecycle.
     if (this.testSocket) {
-      this.testSocket.close();
+      terminateSocket(this.testSocket);
       this.testSocket = null;
     }
 
@@ -128,7 +135,7 @@ export class WebClient {
     // Wait for Event_ServerIdentification; resolve bitmask to a boolean.
     // See .github/instructions/sockatrice-transport.instructions.md#webclient-lifecycle.
     let resolved = false;
-    const resolve = (ok: boolean, supportsHashedPassword = false): void => {
+    const resolve = (ok: boolean, supportsHashedPassword = false, unreachable = false): void => {
       if (resolved) {
         return;
       }
@@ -141,13 +148,22 @@ export class WebClient {
           this.response.session.testConnectionSuccessful(supportsHashedPassword);
         } else {
           this.response.session.testConnectionFailed();
+          if (unreachable) {
+            this.response.session.connectionUnreachable();
+          }
         }
         this.testSocket = null;
       }
-      socket.close();
+      // Safe terminate: the keepalive-timeout path can resolve while the probe is
+      // still CONNECTING, and an abrupt close there strands a half-open upstream.
+      terminateSocket(socket);
     };
 
-    const timeout = setTimeout(() => resolve(false), this.clientOptions.keepalive);
+    // Transport failed before any ServerIdentification — the probe never reached
+    // the server (distinct from a protocol/decode failure, which did).
+    const resolveUnreachable = (): void => resolve(false, false, true);
+
+    const timeout = setTimeout(resolveUnreachable, this.clientOptions.keepalive);
 
     socket.onmessage = (event: MessageEvent) => {
       try {
@@ -170,8 +186,8 @@ export class WebClient {
       }
     };
 
-    socket.onerror = () => resolve(false);
-    socket.onclose = () => resolve(false);
+    socket.onerror = resolveUnreachable;
+    socket.onclose = resolveUnreachable;
   }
 
   public disconnect(): void {

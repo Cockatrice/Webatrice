@@ -9,6 +9,7 @@ import {
   Check,
   AlertCircle,
   Loader2,
+  RefreshCw,
 } from 'lucide-react';
 
 import { HostDTO } from '@app/services';
@@ -33,6 +34,7 @@ const KnownHosts = ({ onChange, error, touched, disabled }: KnownHostsProps) => 
     testConnectionStatus,
     dialogState,
     onPick,
+    refreshConnection,
     openAddKnownHostDialog,
     openEditKnownHostDialog,
     closeKnownHostDialog,
@@ -45,14 +47,18 @@ const KnownHosts = ({ onChange, error, touched, disabled }: KnownHostsProps) => 
 
   // Close the dropdown when the user clicks outside.
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      return;
+    }
     const onClick = (e: MouseEvent) => {
       if (rootRef.current && !rootRef.current.contains(e.target as Node)) {
         setOpen(false);
       }
     };
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setOpen(false);
+      if (e.key === 'Escape') {
+        setOpen(false);
+      }
     };
     document.addEventListener('mousedown', onClick);
     document.addEventListener('keydown', onKey);
@@ -76,30 +82,68 @@ const KnownHosts = ({ onChange, error, touched, disabled }: KnownHostsProps) => 
             </span>
           )}
         </span>
-        <button
-          type="button"
-          disabled={disabled}
-          onClick={() => setOpen((o) => !o)}
+        <div
           className={[
-            'w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm text-left bg-bg-elevated border transition-colors',
+            'w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm bg-bg-elevated border transition-colors',
             showError ? 'border-red-400/60' : 'border-border-subtle hover:border-border-strong',
-            'focus:outline-none focus:ring-1 focus:border-accent focus:ring-accent',
-            disabled ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer',
+            'focus-within:outline-none focus-within:ring-1 focus-within:border-accent focus-within:ring-accent',
+            disabled ? 'opacity-60' : '',
           ].join(' ')}
         >
-          {selectedHost ? (
-            <SelectedHost host={selectedHost} status={testConnectionStatus} />
-          ) : (
-            <span className="text-text-muted">—</span>
-          )}
-          <ChevronDown
-            size={14}
+          <button
+            type="button"
+            disabled={disabled}
+            onClick={() => setOpen((o) => !o)}
             className={[
-              'ml-auto text-text-muted transition-transform',
-              open ? 'rotate-180' : '',
+              'flex-1 min-w-0 flex items-center gap-2 text-left bg-transparent focus:outline-none',
+              disabled ? 'cursor-not-allowed' : 'cursor-pointer',
             ].join(' ')}
-          />
-        </button>
+          >
+            {selectedHost ? (
+              <SelectedHost host={selectedHost} status={testConnectionStatus} />
+            ) : (
+              <span className="text-text-muted">—</span>
+            )}
+          </button>
+          {selectedHost && (
+            <button
+              type="button"
+              disabled={disabled || testConnectionStatus === TestConnection.TESTING}
+              onClick={(e) => {
+                e.stopPropagation();
+                refreshConnection();
+              }}
+              className={[
+                'shrink-0 p-1 rounded text-text-muted transition-colors',
+                disabled || testConnectionStatus === TestConnection.TESTING
+                  ? 'cursor-not-allowed'
+                  : 'hover:text-text-primary hover:bg-border-subtle cursor-pointer',
+              ].join(' ')}
+              title={t('KnownHosts.refresh')}
+              aria-label={t('KnownHosts.refresh')}
+            >
+              <RefreshCw
+                size={13}
+                className={testConnectionStatus === TestConnection.TESTING ? 'animate-spin' : ''}
+              />
+            </button>
+          )}
+          <button
+            type="button"
+            disabled={disabled}
+            onClick={() => setOpen((o) => !o)}
+            aria-label={t('KnownHosts.toggle')}
+            className={[
+              'shrink-0 text-text-muted focus:outline-none',
+              disabled ? 'cursor-not-allowed' : 'cursor-pointer',
+            ].join(' ')}
+          >
+            <ChevronDown
+              size={14}
+              className={['transition-transform', open ? 'rotate-180' : ''].join(' ')}
+            />
+          </button>
+        </div>
       </label>
 
       {open && (
@@ -201,16 +245,16 @@ function SelectedHost({
     status === TestConnection.FAILED
       ? WifiOff
       : status === TestConnection.TESTING
-      ? Loader2
-      : Wifi;
+        ? Loader2
+        : Wifi;
   const statusColor =
     status === TestConnection.FAILED
       ? 'text-red-400'
       : status === TestConnection.SUCCESS
-      ? 'text-emerald-400'
-      : status === TestConnection.TESTING
-      ? 'text-yellow-400 animate-spin'
-      : 'text-text-muted';
+        ? 'text-emerald-400'
+        : status === TestConnection.TESTING
+          ? 'text-yellow-400 animate-spin'
+          : 'text-text-muted';
   return (
     <>
       <StatusIcon size={14} className={statusColor + ' shrink-0'} />

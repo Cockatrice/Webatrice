@@ -98,6 +98,12 @@ describe('SessionResponseImpl forwards', () => {
     expect(dispatch).toHaveBeenCalledWith(ServerActions.connectionFailed());
   });
 
+  it('connectionUnreachable', () => {
+    const { impl, dispatch } = setup();
+    impl.connectionUnreachable();
+    expect(dispatch).toHaveBeenCalledWith(ServerActions.connectUnreachable());
+  });
+
   it('testConnectionSuccessful', () => {
     const { impl, dispatch } = setup();
     impl.testConnectionSuccessful(true);

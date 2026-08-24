@@ -45,11 +45,17 @@ export interface Login {
 }
 
 export function useLogin(): Login {
-  const description = useAppSelector((s) => server.Selectors.getDescription(s));
+  const rawDescription = useAppSelector((s) => server.Selectors.getDescription(s));
   const isConnected = useAppSelector(server.Selectors.getIsConnected);
   const connectionAttemptMade = useAppSelector(server.Selectors.getConnectionAttemptMade);
+  const connectUnreachable = useAppSelector(server.Selectors.getConnectUnreachable);
   const webClient = useWebClient();
   const { t } = useTranslation();
+
+  // Show a reachability hint instead of the generic status when a connect never opened.
+  const description = !isConnected && connectUnreachable
+    ? t('Login.status.serverUnreachable')
+    : rawDescription;
 
   const [pendingActivationOptions, setPendingActivationOptions] =
     useState<WebsocketTypes.PendingActivationContext | null>(null);

@@ -17,6 +17,9 @@
     "toasts": {
       "passwordResetSuccessToast": "Password Reset Successfully",
       "accountActivationSuccess": "Account Activated Successfully"
+    },
+    "status": {
+      "serverUnreachable": "Trouble reaching the server. Wait a minute and try again."
     }
   }
 }

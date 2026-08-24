@@ -123,14 +123,20 @@ describe('test connection', () => {
     expect(getMockResponse().session.testConnectionSuccessful).toHaveBeenCalledWith(false);
   });
 
-  it('eagerly closes a prior probe socket when a new test starts', () => {
+  it('safely retires a prior CONNECTING probe socket when a new test starts', () => {
     AuthenticationCommands.testConnection(TARGET);
     const firstSocket = getMockWebSocket();
 
     AuthenticationCommands.testConnection(TARGET);
     const secondSocket = getMockWebSocket();
 
-    expect(firstSocket.close).toHaveBeenCalled();
     expect(secondSocket).not.toBe(firstSocket);
+    // The prior probe is still CONNECTING; aborting it (close() on a CONNECTING
+    // socket) would strand a half-open upstream against the per-IP cap, so
+    // terminateSocket defers a clean close to onopen instead of closing now.
+    expect(firstSocket.close).not.toHaveBeenCalled();
+    expect(typeof firstSocket.onopen).toBe('function');
+    firstSocket.onopen?.();
+    expect(firstSocket.close).toHaveBeenCalled();
   });
 });

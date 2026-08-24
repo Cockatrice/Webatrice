@@ -2,6 +2,8 @@
   "KnownHosts": {
     "label": "Host",
     "add": "Add new host",
+    "refresh": "Test connection",
+    "toggle": "Toggle host list",
     "toast": "Host successfully {mode, select, created {created} deleted {deleted} other {edited}}."
   }
 }

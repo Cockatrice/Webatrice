@@ -83,6 +83,7 @@ function makeMockResponse(): IWebClientResponse {
       initialized: vi.fn(),
       connectionAttempted: vi.fn(),
       connectionFailed: vi.fn(),
+      connectionUnreachable: vi.fn(),
       clearStore: vi.fn(),
       updateStatus: vi.fn(),
       testConnectionSuccessful: vi.fn(),
@@ -257,10 +258,47 @@ describe('WebClient', () => {
       expect(mockResponse.session.testConnectionSuccessful).not.toHaveBeenCalled();
     });
 
+    it('does not signal connectionUnreachable on a protocol-version mismatch (server was reached)', () => {
+      client.testConnect(target);
+      const data = buildServerIdentificationMessage({ protocolVersion: PROTOCOL_VERSION + 1 });
+      wsMockInstance.onmessage({ data: data.buffer });
+      expect(mockResponse.session.connectionUnreachable).not.toHaveBeenCalled();
+    });
+
+    it('does not signal connectionUnreachable on a decode failure (bytes were received)', () => {
+      client.testConnect(target);
+      wsMockInstance.onmessage({ data: new Uint8Array([0xff, 0xff, 0xff, 0xff]).buffer });
+      expect(mockResponse.session.testConnectionFailed).toHaveBeenCalled();
+      expect(mockResponse.session.connectionUnreachable).not.toHaveBeenCalled();
+    });
+
+    it('does not signal connectionUnreachable on a successful probe', () => {
+      client.testConnect(target);
+      const data = buildServerIdentificationMessage();
+      wsMockInstance.onmessage({ data: data.buffer });
+      expect(mockResponse.session.testConnectionSuccessful).toHaveBeenCalled();
+      expect(mockResponse.session.connectionUnreachable).not.toHaveBeenCalled();
+    });
+
     it('calls testConnectionFailed on error', () => {
       client.testConnect(target);
       wsMockInstance.onerror();
       expect(mockResponse.session.testConnectionFailed).toHaveBeenCalled();
+      // The probe socket must be released even on the error path — a leaked
+      // open socket counts against Servatrice's max_users_per_address cap.
+      expect(wsMockInstance.close).toHaveBeenCalled();
+    });
+
+    it('signals connectionUnreachable on a transport error (never reached the server)', () => {
+      client.testConnect(target);
+      wsMockInstance.onerror();
+      expect(mockResponse.session.connectionUnreachable).toHaveBeenCalled();
+    });
+
+    it('signals connectionUnreachable when the probe closes before identification', () => {
+      client.testConnect(target);
+      wsMockInstance.onclose();
+      expect(mockResponse.session.connectionUnreachable).toHaveBeenCalled();
     });
 
     it('fires testConnectionFailed when ServerIdentification never arrives before the keepalive timeout', () => {
@@ -270,15 +308,40 @@ describe('WebClient', () => {
       expect(mockResponse.session.testConnectionFailed).toHaveBeenCalled();
     });
 
-    it('closes the prior in-flight socket on rapid re-click', () => {
+    it('signals connectionUnreachable when the probe hits the keepalive timeout', () => {
+      client.testConnect(target);
+      vi.advanceTimersByTime(5000);
+      expect(mockResponse.session.connectionUnreachable).toHaveBeenCalled();
+    });
+
+    it('closes an already-open prior probe immediately on rapid re-click', () => {
       const { instances } = installMockWebSocketHarness();
       // The fresh installMockWebSocketHarness replaces the stub from beforeEach so
       // we observe the next two constructions in isolation.
       client.testConnect(target);
       const first = instances[instances.length - 1];
+      first.readyState = WebSocket.OPEN;
       expect(first.close).not.toHaveBeenCalled();
 
       client.testConnect(target);
+      expect(first.close).toHaveBeenCalled();
+    });
+
+    it('does not abort a still-CONNECTING prior probe — defers a clean close to onopen', () => {
+      // A superseded probe is usually still CONNECTING; close() on a CONNECTING
+      // socket fails the connection abnormally (1006, no clean FIN), and a proxy
+      // strands the half-open upstream against Servatrice's per-IP cap.
+      const { instances } = installMockWebSocketHarness();
+      client.testConnect(target);
+      const first = instances[instances.length - 1];
+      first.readyState = WebSocket.CONNECTING;
+
+      client.testConnect(target);
+      // Not aborted synchronously; a clean close is armed for when it opens.
+      expect(first.close).not.toHaveBeenCalled();
+      expect(typeof first.onopen).toBe('function');
+
+      first.onopen?.();
       expect(first.close).toHaveBeenCalled();
     });
 
@@ -357,6 +420,9 @@ describe('WebClient', () => {
       client.testConnect(target);
       wsMockInstance.onclose();
       expect(mockResponse.session.testConnectionFailed).toHaveBeenCalled();
+      // resolve() calls close() on every path (idempotent with the peer close)
+      // so the probe never lingers half-open on our side.
+      expect(wsMockInstance.close).toHaveBeenCalled();
     });
   });
 
@@ -411,6 +477,11 @@ describe('WebClient', () => {
     it('onConnectionFailed routes to response.session.connectionFailed', () => {
       captured.wsOptions!.onConnectionFailed();
       expect(mockResponse.session.connectionFailed).toHaveBeenCalled();
+    });
+
+    it('onConnectionUnreachable routes to response.session.connectionUnreachable', () => {
+      captured.wsOptions!.onConnectionUnreachable!();
+      expect(mockResponse.session.connectionUnreachable).toHaveBeenCalled();
     });
 
     it('send closure delegates to socket.send', () => {

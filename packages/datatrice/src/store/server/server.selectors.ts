@@ -29,6 +29,7 @@ export const Selectors = {
   // fixtures) may predate the connectionHealth field.
   getConnectionHealth: ({ server }: State) => server.connectionHealth ?? HEALTHY_CONNECTION_HEALTH,
   getIsServerUnresponsive: ({ server }: State) => (server.connectionHealth?.missedPongs ?? 0) > 0,
+  getConnectUnreachable: ({ server }: State) => server.connectUnreachable ?? false,
   getUser: ({ server }: State) => server.user,
 
   getIsConnected: createSelector(
