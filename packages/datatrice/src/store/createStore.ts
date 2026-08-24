@@ -6,6 +6,7 @@ import {
   type StoreEnhancer,
 } from '@reduxjs/toolkit';
 
+import { freezeMessagesMiddleware } from './freezeMessagesMiddleware';
 import { listenerMiddleware } from './listenerMiddleware';
 import { rootReducer, type RootState } from './rootReducer';
 import { registerServerListeners } from './server/server.listeners';
@@ -17,6 +18,9 @@ import { registerRoomsListeners } from './rooms/rooms.listeners';
 // state holds raw protobuf messages at server scale and the O(state)-per-dispatch
 // walks froze dev on busy servers — see
 // .github/instructions/datatrice.instructions.md#initialization-order.
+// The hazard those checks couldn't see anyway — in-place mutation of a stored
+// protobuf-es message, which Immer can't draft — is guarded instead by
+// freezeMessagesMiddleware (dev-only, O(changed path) via identity-skip).
 export const storeMiddlewareOptions = {
   immutableCheck: false as const,
   serializableCheck: false as const,
@@ -56,6 +60,6 @@ export function createStore<S = RootState>(
     preloadedState: preloadedState as Parameters<typeof configureStore>[0]['preloadedState'],
     middleware: (getDefaultMiddleware) => getDefaultMiddleware(storeMiddlewareOptions)
       .prepend(listenerMiddleware.middleware)
-      .concat(...additionalMiddleware),
+      .concat(freezeMessagesMiddleware, ...additionalMiddleware),
   }) as EnhancedStore<S>;
 }
