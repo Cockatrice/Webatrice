@@ -49,7 +49,7 @@ describe('UserRows', () => {
   let originalRo: typeof globalThis.ResizeObserver;
 
   beforeEach(() => {
-    mockWebClient.request.session.addToBuddyList.mockClear();
+    vi.mocked(mockWebClient.request.session.addToBuddyList).mockClear();
     originalRo = globalThis.ResizeObserver;
     observers = [];
     globalThis.ResizeObserver = class {

@@ -38,6 +38,56 @@ describe('Selectors', () => {
     expect(Selectors.getPlayers(rootState(state), 999)).toBeUndefined();
   });
 
+  it('getIncomingReveal → returns the pending reveal when set', () => {
+    const incomingReveal = { gameId: 1, sourceOwnerId: 2, zoneName: 'deck', cards: [makeCard()] };
+    const state = makeState({ incomingReveal });
+    expect(Selectors.getIncomingReveal(rootState(state))).toBe(incomingReveal);
+  });
+
+  it('getIncomingReveal → returns null when there is no reveal', () => {
+    const state = makeState({ incomingReveal: null });
+    expect(Selectors.getIncomingReveal(rootState(state))).toBeNull();
+  });
+
+  it('getIncomingReveal → returns null for a partial state missing the field', () => {
+    const state = { ...makeState(), incomingReveal: undefined } as GamesState;
+    expect(Selectors.getIncomingReveal(rootState(state))).toBeNull();
+  });
+
+  it('getPings → returns the ping map for a game', () => {
+    const state = makeState();
+    expect(Selectors.getPings(rootState(state), 1)).toBe(state.pings[1]);
+  });
+
+  it('getPings → returns the same empty sentinel for an unknown game', () => {
+    const state = makeState();
+    const a = Selectors.getPings(rootState(state), 999);
+    const b = Selectors.getPings(rootState(state), 998);
+    expect(a).toEqual({});
+    expect(a).toBe(b);
+  });
+
+  it('getPings → returns the empty sentinel when the pings map is absent', () => {
+    const state = { ...makeState(), pings: undefined } as unknown as GamesState;
+    expect(Selectors.getPings(rootState(state), 1)).toEqual({});
+  });
+
+  it('getPlayerPing → returns the stored ping for a player', () => {
+    const players = { 7: makePlayerEntry({ properties: makePlayerProperties({ playerId: 7, pingSeconds: 42 }) }) };
+    const state = makeState({ games: { 1: makeGameEntry({ players }) } });
+    expect(Selectors.getPlayerPing(rootState(state), 1, 7)).toBe(42);
+  });
+
+  it('getPlayerPing → returns 0 for an unknown player', () => {
+    const state = makeState();
+    expect(Selectors.getPlayerPing(rootState(state), 1, 999)).toBe(0);
+  });
+
+  it('getPlayerPing → returns 0 when the game has no ping map', () => {
+    const state = makeState();
+    expect(Selectors.getPlayerPing(rootState(state), 999, 1)).toBe(0);
+  });
+
   describe('seated players (seatOrder)', () => {
     function gameWith(specs: Array<{ id: number; spectator?: boolean; conceded?: boolean }>, seatOrder?: number[]) {
       const players: Record<number, ReturnType<typeof makePlayerEntry>> = {};

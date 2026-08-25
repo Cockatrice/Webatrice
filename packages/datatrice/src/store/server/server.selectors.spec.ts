@@ -1,13 +1,16 @@
 ﻿import { Selectors } from './server.selectors';
 import { ServerState } from './server.interfaces';
 import {
+  makeBanHistoryItem,
   makeDeckList,
   makeReplayMatch,
   makeServerState,
   makeUser,
+  makeWarnHistoryItem,
 } from '../../testing/fixtures/server';
 import { ServerInfo_User_UserLevelFlag } from '@cockatrice/sockatrice/generated';
 import { WebsocketTypes } from '@cockatrice/sockatrice/types';
+import { HEALTHY_CONNECTION_HEALTH } from './server.reducer.connection';
 
 function rootState(server: ServerState) {
   return { server };
@@ -63,6 +66,37 @@ describe('Selectors', () => {
   it('getConnectUnreachable → falls back to false for a partial state missing the field', () => {
     const state = { ...makeServerState(), connectUnreachable: undefined } as unknown as ServerState;
     expect(Selectors.getConnectUnreachable(rootState(state))).toBe(false);
+  });
+
+  it('getTestConnectionStatus → returns testConnectionStatus', () => {
+    const state = makeServerState({ testConnectionStatus: 'success' });
+    expect(Selectors.getTestConnectionStatus(rootState(state))).toBe('success');
+  });
+
+  it('getConnectionHealth → returns the stored health object', () => {
+    const connectionHealth = { missedPongs: 2, silentForMs: 15000 };
+    const state = makeServerState({ connectionHealth });
+    expect(Selectors.getConnectionHealth(rootState(state))).toBe(connectionHealth);
+  });
+
+  it('getConnectionHealth → falls back to the healthy baseline for a partial state missing the field', () => {
+    const state = { ...makeServerState(), connectionHealth: undefined } as unknown as ServerState;
+    expect(Selectors.getConnectionHealth(rootState(state))).toBe(HEALTHY_CONNECTION_HEALTH);
+  });
+
+  it('getIsServerUnresponsive → true when missedPongs > 0', () => {
+    const state = makeServerState({ connectionHealth: { missedPongs: 1, silentForMs: 5000 } });
+    expect(Selectors.getIsServerUnresponsive(rootState(state))).toBe(true);
+  });
+
+  it('getIsServerUnresponsive → false when missedPongs is 0', () => {
+    const state = makeServerState({ connectionHealth: { missedPongs: 0, silentForMs: 0 } });
+    expect(Selectors.getIsServerUnresponsive(rootState(state))).toBe(false);
+  });
+
+  it('getIsServerUnresponsive → false when connectionHealth is missing', () => {
+    const state = { ...makeServerState(), connectionHealth: undefined } as unknown as ServerState;
+    expect(Selectors.getIsServerUnresponsive(rootState(state))).toBe(false);
   });
 
   it('getUser → returns user', () => {
@@ -307,6 +341,28 @@ describe('Selectors', () => {
   it('getUserInfoByName → returns undefined for unknown name', () => {
     const state = makeServerState({ userInfo: {} });
     expect(Selectors.getUserInfoByName(rootState(state), 'Nobody')).toBeUndefined();
+  });
+
+  it('getBanHistoryByUser → returns the stored ban history for that user', () => {
+    const bans = [makeBanHistoryItem({ adminName: 'Mod' })];
+    const state = makeServerState({ banHistory: { Alice: bans } });
+    expect(Selectors.getBanHistoryByUser(rootState(state), 'Alice')).toBe(bans);
+  });
+
+  it('getBanHistoryByUser → returns undefined for a user with no history', () => {
+    const state = makeServerState({ banHistory: {} });
+    expect(Selectors.getBanHistoryByUser(rootState(state), 'Nobody')).toBeUndefined();
+  });
+
+  it('getWarnHistoryByUser → returns the stored warn history for that user', () => {
+    const warnings = [makeWarnHistoryItem({ reason: 'spam' })];
+    const state = makeServerState({ warnHistory: { Alice: warnings } });
+    expect(Selectors.getWarnHistoryByUser(rootState(state), 'Alice')).toBe(warnings);
+  });
+
+  it('getAdminNotesByUser → returns the stored admin note for that user', () => {
+    const state = makeServerState({ adminNotes: { Alice: 'watch this account' } });
+    expect(Selectors.getAdminNotesByUser(rootState(state), 'Alice')).toBe('watch this account');
   });
 
   it('getSortUsersBy → returns sortUsersBy', () => {
