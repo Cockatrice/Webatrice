@@ -36,11 +36,6 @@ export class WebSocketService {
   private lastTarget: ConnectTarget | null = null;
 
   private intentionalDisconnect = false;
-  /**
-   * True while `connect()` cycles a prior socket out.
-   * See .github/instructions/sockatrice-transport.instructions.md#websocket-lifecycle.
-   */
-  private retiringForReconnect = false;
   private reconnectAttempts = 0;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   /**
@@ -62,12 +57,8 @@ export class WebSocketService {
   }
 
   public connect(target: ConnectTarget): void {
-    // Retire prior socket; retiringForReconnect suppresses orphan reconnect+DISCONNECTED.
-    // See .github/instructions/sockatrice-transport.instructions.md#websocket-lifecycle.
-    this.retiringForReconnect = true;
     this.clearReconnectTimer();
-    this.closeActiveSocket();
-    this.retiringForReconnect = false;
+    this.closeActiveSocket(true);
 
     this.lastTarget = target;
     this.intentionalDisconnect = false;
@@ -82,7 +73,7 @@ export class WebSocketService {
   public disconnect(): void {
     this.intentionalDisconnect = true;
     this.clearReconnectTimer();
-    this.closeActiveSocket();
+    this.closeActiveSocket(false);
   }
 
   public checkReadyState(state: number): boolean {
@@ -167,9 +158,7 @@ export class WebSocketService {
     if (this.intentionalDisconnect) {
       return false;
     }
-    if (this.retiringForReconnect) {
-      return false;
-    }
+
     if (this.hasReportedError) {
       return false;
     }
@@ -211,7 +200,7 @@ export class WebSocketService {
     }
   }
 
-  private closeActiveSocket(): void {
+  private closeActiveSocket(retiringForReconnect: boolean): void {
     if (!this.socket) {
       return;
     }
@@ -220,25 +209,23 @@ export class WebSocketService {
 
     // Detach onmessage always — late buffered frames from a socket we no longer
     // own must not re-enter after teardown.
-    // See .github/instructions/sockatrice-transport.instructions.md#websocket-lifecycle.
     socket.onmessage = null;
 
     // A still-CONNECTING socket is retired via terminateSocket (defers a clean
     // close to onopen instead of aborting into a stranded half-open). But that
     // deferred open→close would otherwise fire this orphan's onopen (CONNECTED +
-    // ping loop) and onclose (DISCONNECTED / reconnect) after
-    // `retiringForReconnect` has reset — so silence its lifecycle handlers first.
-    // terminateSocket re-arms onopen to the clean close.
+    // ping loop) and onclose (DISCONNECTED / reconnect) — so silence its lifecycle
+    // handlers first. terminateSocket re-arms onopen to the clean close.
     if (socket.readyState === WebSocket.CONNECTING) {
       socket.onopen = null;
       socket.onclose = null;
       socket.onerror = null;
-    } else if (this.retiringForReconnect) {
+    } else if (retiringForReconnect) {
       // OPEN socket cycled out by a fresh connect(): detach its lifecycle handlers
       // so a late onclose/onerror can't tear down the replacement's keepalive,
       // emit DISCONNECTED, or corrupt hasReportedError against the live replacement.
-      // Not done on an intentional disconnect() (retiringForReconnect false), whose
-      // onclose must still emit DISCONNECTED. terminateSocket owns close timing only.
+      // Not done on an intentional disconnect(), whose onclose must still emit
+      // DISCONNECTED. terminateSocket owns close timing only.
       socket.onclose = null;
       socket.onerror = null;
     }
