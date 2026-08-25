@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ChevronDown,
@@ -44,6 +44,7 @@ const KnownHosts = ({ onChange, error, touched, disabled }: KnownHostsProps) => 
 
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
+  const hostLabelId = useId();
 
   // Close the dropdown when the user clicks outside.
   useEffect(() => {
@@ -72,9 +73,9 @@ const KnownHosts = ({ onChange, error, touched, disabled }: KnownHostsProps) => 
 
   return (
     <div ref={rootRef} className="relative">
-      <label className="block">
+      <div className="block">
         <span className="flex items-center justify-between text-xs font-medium text-text-muted mb-1">
-          <span>{t('KnownHosts.label')}</span>
+          <span id={hostLabelId}>{t('KnownHosts.label')}</span>
           {showError && (
             <span className="flex items-center gap-1 text-[0.7rem] text-red-400">
               <AlertCircle size={11} />
@@ -94,6 +95,7 @@ const KnownHosts = ({ onChange, error, touched, disabled }: KnownHostsProps) => 
             type="button"
             disabled={disabled}
             onClick={() => setOpen((o) => !o)}
+            aria-labelledby={hostLabelId}
             className={[
               'flex-1 min-w-0 flex items-center gap-2 text-left bg-transparent focus:outline-none',
               disabled ? 'cursor-not-allowed' : 'cursor-pointer',
@@ -144,7 +146,7 @@ const KnownHosts = ({ onChange, error, touched, disabled }: KnownHostsProps) => 
             />
           </button>
         </div>
-      </label>
+      </div>
 
       {open && (
         <div className="absolute z-30 mt-1 w-full max-h-72 overflow-y-auto rounded-md bg-bg-surface border border-border-subtle shadow-glow py-1">

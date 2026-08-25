@@ -134,13 +134,6 @@ export class WebSocketService {
         return;
       }
 
-      // Orphan socket retired by fresh connect(); skip status emission.
-      // See .github/instructions/sockatrice-transport.instructions.md#websocket-lifecycle.
-      if (this.retiringForReconnect) {
-        this.hasReportedError = false;
-        return;
-      }
-
       // Current socket closed without ever opening — never reached the server.
       // Identity-gated so a retired socket's late onclose can't fire this.
       if (this.socket === socket && !this.hasEverOpened) {
@@ -225,8 +218,8 @@ export class WebSocketService {
     const socket = this.socket;
     this.socket = null;
 
-    // Detach onmessage only; keep onopen/onclose/onerror for an OPEN socket
-    // (async close-frame buffering must not re-enter after teardown).
+    // Detach onmessage always — late buffered frames from a socket we no longer
+    // own must not re-enter after teardown.
     // See .github/instructions/sockatrice-transport.instructions.md#websocket-lifecycle.
     socket.onmessage = null;
 
@@ -238,6 +231,14 @@ export class WebSocketService {
     // terminateSocket re-arms onopen to the clean close.
     if (socket.readyState === WebSocket.CONNECTING) {
       socket.onopen = null;
+      socket.onclose = null;
+      socket.onerror = null;
+    } else if (this.retiringForReconnect) {
+      // OPEN socket cycled out by a fresh connect(): detach its lifecycle handlers
+      // so a late onclose/onerror can't tear down the replacement's keepalive,
+      // emit DISCONNECTED, or corrupt hasReportedError against the live replacement.
+      // Not done on an intentional disconnect() (retiringForReconnect false), whose
+      // onclose must still emit DISCONNECTED. terminateSocket owns close timing only.
       socket.onclose = null;
       socket.onerror = null;
     }

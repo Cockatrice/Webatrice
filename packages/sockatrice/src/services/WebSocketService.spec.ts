@@ -231,8 +231,8 @@ describe('WebSocketService', () => {
       const service = new WebSocketService(mockConfig);
       service.connect({ host: 'h', port: '1' });
       const firstSocket = mockInstance;
-      // A second connect installs a new active socket and resets hasEverOpened;
-      // the retired socket's late onclose must be ignored via socket identity.
+      // A second connect retires the prior socket and detaches its onclose, so a
+      // late onclose is a no-op (`?.`) and can't misfire onConnectionUnreachable.
       service.connect({ host: 'h', port: '2' });
       firstSocket.onclose?.();
       expect(mockOnConnectionUnreachable).not.toHaveBeenCalled();
@@ -321,8 +321,11 @@ describe('WebSocketService', () => {
       firstInstance.readyState = WebSocket.OPEN;
       service.connect({ host: 'h', port: '2' });
       expect(firstInstance.close).toHaveBeenCalled();
-      // OPEN path keeps onclose/onerror (async close-frame buffering invariant).
-      expect(firstInstance.onclose).not.toBeNull();
+      // OPEN socket retired for reconnect: onclose/onerror detached so a late
+      // close/error can't leak side effects onto the replacement (onmessage too).
+      expect(firstInstance.onclose).toBeNull();
+      expect(firstInstance.onerror).toBeNull();
+      expect(firstInstance.onmessage).toBeNull();
     });
 
     it('does not abort a still-CONNECTING prior socket — defers a clean close and silences its handlers', () => {
@@ -344,6 +347,42 @@ describe('WebSocketService', () => {
       expect(typeof firstInstance.onopen).toBe('function');
       firstInstance.onopen?.();
       expect(firstInstance.close).toHaveBeenCalled();
+    });
+
+    it('detaches a retired OPEN socket\'s onclose AND onerror so neither leaks onto the live replacement', () => {
+      // An OPEN socket retired by a fresh connect() must run no lifecycle side
+      // effects: a late onclose OR onerror would endPingLoop() (killing the
+      // replacement's shared keepalive), corrupt hasReportedError, and emit
+      // DISCONNECTED / Connection Failed against the live socket. closeActiveSocket
+      // detaches both handlers, mirroring the CONNECTING branch.
+      const { instances } = installMockWebSocketHarness();
+      const service = new WebSocketService(mockConfig);
+      const endSpy = vi.spyOn((service as WebSocketInternal).keepAliveService, 'endPingLoop');
+
+      service.connect({ host: 'h', port: '1' });
+      instances[0].onopen();
+      service.connect({ host: 'h', port: '2' });
+      instances[1].onopen();
+
+      // Orphan's side-effecting handlers detached (onopen won't re-fire on an OPEN socket).
+      expect(instances[0].onclose).toBeNull();
+      expect(instances[0].onerror).toBeNull();
+
+      endSpy.mockClear();
+      mockOnStatusChange.mockClear();
+
+      // Firing the orphan's (now absent) handlers is a no-op — no keepalive teardown,
+      // no DISCONNECTED / Connection Failed against the replacement.
+      instances[0].onclose?.();
+      instances[0].onerror?.();
+      expect(endSpy).not.toHaveBeenCalled();
+      expect(mockOnStatusChange).not.toHaveBeenCalled();
+
+      // The live replacement still tears down normally when IT closes.
+      instances[1].onclose();
+      expect(endSpy).toHaveBeenCalled();
+      expect(mockOnStatusChange).toHaveBeenCalledWith(StatusEnum.DISCONNECTED, 'Connection Closed');
+      void service;
     });
   });
 
@@ -427,14 +466,14 @@ describe('WebSocketService', () => {
     });
 
     it('orphan socket close during connect retire is suppressed (no DISCONNECTED)', () => {
-      // Simulate an environment where socket.close() synchronously fires
-      // onclose — that's the only window where retiringForReconnect is still
-      // true when the orphan's onclose handler reads it.
+      // Even if socket.close() synchronously fires onclose, the retire path has
+      // already detached the handler, so the `?.` invocation is a no-op and no
+      // DISCONNECTED leaks against the replacement.
       const service = new WebSocketService(mockConfig);
       service.connect({ host: 'h', port: '1' });
       mockInstance.onopen();
       const firstSocket = mockInstance;
-      firstSocket.close.mockImplementation(() => firstSocket.onclose());
+      firstSocket.close.mockImplementation(() => firstSocket.onclose?.());
       mockOnStatusChange.mockClear();
 
       service.connect({ host: 'h', port: '2' });
