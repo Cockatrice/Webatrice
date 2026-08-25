@@ -1,5 +1,116 @@
 # @cockatrice/webatrice
 
+## 5.3.0
+
+### Minor Changes
+
+- f2ac3f1: Sort user and game lists using the active UI language's collation instead of the OS/browser default.
+
+  **datatrice.** `SortUtil` now accepts an optional BCP-47 `locale` (per-locale `Intl.Collator` cache; `undefined` keeps the environment default). The server slice gains a `locale` field and a `setLocale` action (preserved across `initialized`/`clearStore`/`disconnected` resets so it survives a reconnect), and the memoized sorted selectors (`getSortedUsers`/`getSortedBuddyList`/`getSortedIgnoreList`, `getSortedRoomGamesBase`/`getSortedRoomUsers`) take `locale` as an input so a language change re-collates immediately rather than waiting for the next roster/sort change.
+
+  **webatrice.** A `useSyncLocaleToStore` hook mirrors the active i18next language (normalized via `toBcp47`) into `server.locale` on mount and on every language change. The app's `<Suspense>` boundary moved from inside `AppShell` up to `index.tsx` — below `DatatriceProvider`/`WebClientProvider` but above all of `AppShell` — so a translation-load suspension (a non-bundled language fetching its namespace) resolves to that fallback without tearing down and reconstructing the `WebClient` singleton. Loading UX is unchanged.
+
+  **ICU fallback.** When an ICU message fails to parse or format — e.g. a malformed Transifex translation such as a missing `select` comma or localized ICU keywords — the i18next-icu `parseErrorHandler` now re-renders it from the bundled, validated English source instead of emitting the raw `{…}` template to users. A failing English source (our own bug) is left visible rather than masked.
+
+- f2ac3f1: The TopBar connection dot now has a third state: amber for "Server not responding (Ns)".
+
+  Previously the dot was binary (green connected / red disconnected) and the transport killed quiet connections outright. With the transport now keeping silent connections open and reporting degraded health, the dot turns amber while pings go unanswered — with the silence duration in the accessible label — and recovers to green on the next pong. Players see honest degradation instead of a silent freeze followed by an unexplained bounce to login.
+
+- f2ac3f1: Virtualized lobby lists: the games table and user panels render only the visible window, so busy servers no longer cost a full re-render of thousands of rows per update.
+
+  **`VirtualRows`.** A render-prop variant of the existing `VirtualList` component — rows are built lazily for the visible window only (prebuilding `items: ReactNode[]` is itself O(N)), backed by react-window.
+
+  **Games list.** The room's games table (previously a full `<table>` re-rendering every game per list-update frame — thousands of rows on a busy server) is now a fixed-grid header above a `VirtualRows` body sharing one grid template. Sorting, selection, double-click join, filters, and the empty state are unchanged.
+
+  **User panels.** The server page's Players Online panel and the room page's Buddies + Players Online panels render through `VirtualRows` (28px rows) — a thousand-user server costs a viewport of rows per join/leave event instead of the full population.
+
+  **Room chat.** Chat rows wrap to variable heights and every message must stay reachable in scrollback (deliberately not windowed), so the per-append cost is bounded by memoizing rows instead: existing messages skip re-render on append.
+
+  **Code-review refinements.** Virtualized user rows are keyed by user name, so an open user context menu can no longer retarget to a different user when the roster reshuffles under it. Room-chat rows are keyed on a stable, ingestion-assigned message id that survives the 1000-message cap trim (the old array-index key broke exactly at steady state). The games table header and its virtualized body both reserve a stable scrollbar gutter, so columns stay aligned once the list overflows. `VirtualList` is expressed over `VirtualRows`, the two user panels share a `UserRows` component, and the games row renderer is memoized.
+
+### Patch Changes
+
+- f2ac3f1: Restore accessible table semantics to the games list and run the app e2e suite
+  across Firefox and WebKit (Safari), not just Chromium.
+
+  The move to the virtualized `VirtualRows` dropped the games list's native `<tr>`
+  row semantics, leaving it as a flattened `role="list"` — assistive tech could no
+  longer navigate it by row or column. `GamesList` now exposes proper grid roles
+  (`role="table"`/`rowgroup`/`row`/`gridcell`/`columnheader`, with `aria-sort` and
+  `aria-rowcount`). `VirtualRows` gained a single optional `role` override so a
+  tabular consumer can make react-window's `<List>` a `rowgroup` (react-window
+  hardcodes `role="list"`, an invalid parent for `role="row"`); roster and chat
+  panels keep the `list` default.
+
+  CI now fans the app e2e job out into a `chromium` / `firefox` / `webkit` browser
+  matrix, each on its own runner and Servatrice stack. Validated locally green
+  (6/6 specs) on all three engines.
+
+- f2ac3f1: Add a refresh button to the known-hosts selector that re-runs the connection
+  test for the currently selected host. It sits inline in the closed selector, to
+  the left of the dropdown chevron, and spins while a probe is in flight. Probes
+  otherwise only fire on host selection, so a host that was briefly unreachable
+  (e.g. a local server just started) previously required re-selecting the host to
+  re-test — this gives users a direct way to retry.
+
+  This also removes the now-dead known-hosts recovery effect that re-probed
+  whenever `testConnectionStatus` went `null`. That effect only existed to recover
+  from a disconnect wiping the probe result; with the result now carried through
+  the reset reducers, it produced redundant probes that counted against
+  Servatrice's per-IP connection cap. Probes now fire solely on genuine user
+  actions — host selection, pick, or the new refresh button.
+
+- f2ac3f1: Fix toasts silently failing after a language change. `useToast` captured its
+  `children` once at registration and `OPEN_TOAST` silently no-oped when the entry
+  was absent, so switching the UI language (which suspends and re-registers the
+  toast subtree) could leave host add/edit/delete showing no toast and no console
+  warning. `openToast` now accepts fire-time content and upserts the entry
+  (create-or-update, then open), so it can't silently drop; a new `updateToast`
+  keeps registered content current when the language changes; and an unregistered
+  no-arg open logs a DEV warning instead of vanishing. `KnownHosts` computes its
+  toast text at fire time, which also fixes edit/delete toasts previously
+  mislabeled as "created". Backward-compatible for existing no-arg `useToast`
+  callers.
+- f2ac3f1: Fix: adding a new host no longer auto-logs you in.
+
+  Dialogs portal to `document.body`, but React dispatches synthetic `submit` events along the React component tree, not the DOM tree. Because the Add-Host dialog (`KnownHostForm`) renders inside the Login form's React subtree, clicking **Add Host** bubbled its submit up to the Login form's `onSubmit`, which — with a saved-password host selected and the password field empty — injected the stored `hashedPassword` and logged the user in.
+
+  `DialogShell` now stops `submit` propagation at the portal root, containing every dialog form's submit at the modal boundary so it can never reach a form on the page behind it. Added a regression spec asserting an inner dialog-form submit does not fire an ancestor form's `onSubmit`.
+
+- f2ac3f1: Fix i18n breakage caused by underscore locale codes reaching JS `Intl` APIs, and repair language switching.
+
+  **ICU/`Intl` crash.** The active language could be a Cockatrice/Transifex-style underscore code (e.g. `pt_BR`, cached in `localStorage['i18nextLng']`), which is an invalid BCP-47 tag. `Intl.NumberFormat`/`Intl.PluralRules`/`Intl.Collator` reject it with `RangeError: Invalid language tag`, so every ICU format threw and i18next-icu silently returned the raw template — visibly, the account-age string rendered as `{years, plural, ...}` instead of `1 year, 1 day`. A new `toBcp47` helper normalizes underscore codes to hyphens only at the `Intl` boundaries: ICU's `parseLngForICU` and the `Intl.Collator` in `useLocaleSort`. The underscore form stays canonical everywhere else (the `Language` enum, `localStorage`, and the `public/locales/<code>` directories).
+
+  **Language switching.** The `I18nBackend.read` loader guarded on `language[Language]`, which always evaluated to `undefined`, so it never fetched any non-English locale file — selecting a different language did nothing. `read` now fetches `public/locales/<code>/<namespace>.json` by the raw code, with a 404 (e.g. bundled `en-US`) resolving to an empty resource.
+
+  **Diagnostics.** ICU's `parseErrorHandler` now logs format failures in dev instead of swallowing them silently.
+
+- f2ac3f1: Show a distinct, cautiously-worded hint on the login screen when a connection
+  attempt can't reach the server, instead of the same generic "Connection
+  Closed"/"Connection Failed" text used for every disconnect. `useLogin` reads the
+  `getConnectUnreachable` selector and, only while disconnected, substitutes
+  _"Trouble reaching the server. Wait a minute and try again."_ for the generic
+  status string (the wait matches how a per-IP rate-limit self-heals after a quiet
+  window). It appears both when the login connect fails and when the known-hosts
+  "refresh test connection" probe can't reach the host.
+
+  Detection and display only — no reconnect/backoff change, login screen only, and
+  the wording does not claim rate-limiting (a failed connect can equally be the
+  user's own network).
+
+- Updated dependencies [f2ac3f1]
+- Updated dependencies [f2ac3f1]
+- Updated dependencies [f2ac3f1]
+- Updated dependencies [f2ac3f1]
+- Updated dependencies [f2ac3f1]
+- Updated dependencies [f2ac3f1]
+- Updated dependencies [f2ac3f1]
+- Updated dependencies [f2ac3f1]
+- Updated dependencies [f2ac3f1]
+- Updated dependencies [f2ac3f1]
+  - @cockatrice/datatrice@4.5.0
+  - @cockatrice/sockatrice@4.3.0
+
 ## 5.2.0
 
 ### Minor Changes

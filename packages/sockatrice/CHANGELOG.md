@@ -1,5 +1,64 @@
 # @cockatrice/sockatrice
 
+## 4.3.0
+
+### Minor Changes
+
+- f2ac3f1: Keepalive no longer closes the connection — missed pongs report degraded connection health instead, fixing the silent 5-10-minute disconnects.
+
+  **Why connections were dropping.** The old keepalive tolerated exactly one missed pong per 5s tick and tore the socket down itself (`'Connection timeout'`), with the teardown flagged as intentional so the reconnect logic never engaged — one slow pong or main-thread stall became a permanent, unlogged bounce to the login page. Worse, worker ticks that queued up behind a stalled main thread drained back-to-back afterward, so the tick right after a ping was armed would declare it missed 1-2 milliseconds after it was sent (observed repeatedly in field captures).
+
+  **New policy: the keepalive never self-disconnects.** Without credential retention a self-inflicted disconnect is strictly destructive — a lagged server that recovers resumes the session intact, while a forced close guarantees a manual re-login. The client keeps pinging indefinitely (which both feeds the server's inactivity timer and forces TCP to discover a genuinely dead connection); real death arrives via the socket's own `close`/`error` events, where the existing reconnect handling applies. A tick only counts a miss if the pending ping is at least ~one interval old, neutralizing the burst-drain false positives.
+
+  **Connection health signal.** After two consecutive genuine misses (~10s of silence) the transport reports degraded health through a new optional `onConnectionHealth(missedPongs, silentForMs)` config callback, forwarded to the response layer via the new optional `ISessionResponse.updateConnectionHealth` (backward-compatible — existing consumers are unaffected). Any pong reports recovery.
+
+  **Honest reconnect dead-end.** After a transport-level reconnect the server's fresh identification finds no pending connect options (they are single-use and the app retains no credentials), so the session cannot resume; that path now reads "Connection lost — please log in again" instead of the internal 'Missing connection options'.
+
+  **Code-review refinements.** A main-thread stall queues one worker tick per interval; on drain they fired back-to-back and each armed a ping, so a long stall emitted a burst of `Command_Ping` frames that could trip the server's per-interval flood counter. `tick()` now returns early for a burst-drained tick (a pending ping younger than ~one interval), so only the first drained tick sends — genuine silence still pings every interval as the never-self-disconnect policy intends. The derivable `reportedDegraded` flag and its unreachable reset branch are gone (recovery is derived from the pre-reset miss count). `buildWebSocketUrl` no longer lists a bare `::1` as a local host, since only the bracketed `[::1]` form produces a valid `ws://` URL.
+
+### Patch Changes
+
+- f2ac3f1: Signal when a connection attempt never reaches the server, so the UI can tell a
+  reachability problem apart from a server refusal. Both connect paths now raise it:
+
+  - **Main game socket** (`WebSocketService`): a new optional `onConnectionUnreachable`
+    fires from `onclose` whenever the socket closes without ever having opened
+    (`!hasEverOpened`) — covering offline, DNS failure, refused, TLS reset, and the
+    slow ≥5s hang uniformly, since `onclose` is the one terminal event
+    (`onerror` always precedes it, and the connect-timer's close lands there too).
+    It is suppressed for intentional disconnects, retired/superseded sockets,
+    in-flight reconnects, and post-open drops.
+  - **Test-connection probe** (`WebClient.testConnect`): its transport-failure
+    resolutions (`onerror`, `onclose` before identification, keepalive timeout) also
+    raise it via `session.connectionUnreachable()`; a protocol-version mismatch or
+    decode failure does not (the server was reached, just incompatible).
+
+  Adds `connectionUnreachable()` to the session response interface
+  (`ISessionResponse`).
+
+- f2ac3f1: Never abort a still-`CONNECTING` WebSocket. Calling `close()` on a connecting
+  socket _fails_ the connection — the peer sees an abnormal 1006 with no clean close
+  frame / FIN — and a reverse proxy that byte-tunnels or terminates the upgraded
+  connection then holds the half-dead upstream open until its idle read timeout
+  (~60s). That stranded upstream counts against Servatrice's per-IP connection cap
+  (`security/max_users_per_address`), so a handful of aborted connects (rapid
+  connection tests, superseded probes, retried logins) gets the client refused with
+  `TOO_MANY_CONNECTIONS` until the sockets age out.
+
+  Introduces `terminateSocket(socket)` — the mandatory safe close: it defers a clean
+  `close()` to `onopen` when the socket is `CONNECTING`, closes immediately when
+  `OPEN`, and no-ops when already closing/closed. Routed through every close site
+  (the main connection's `closeActiveSocket`, and `WebClient.testConnect`'s
+  supersede and resolve paths), with the retired CONNECTING orphan's lifecycle
+  handlers detached so its deferred open→close can't emit stray status/reconnect
+  events. The connect-timeout keeps its raw abort on purpose (it fires only for a
+  socket that never opened, and its `onclose` drives reconnect).
+
+  Note: this stops the client from _leaking_ half-open sockets, but a proxy that
+  does not propagate even a clean close (holding every connection until a timeout)
+  is a server-side concern — set `server/web_socket_ip_header = X-Real-IP` so the
+  cap is per-real-client, and tune the proxy's read timeout.
+
 ## 4.2.0
 
 ### Minor Changes
