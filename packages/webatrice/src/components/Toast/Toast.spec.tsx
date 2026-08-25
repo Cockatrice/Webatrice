@@ -22,7 +22,7 @@ function ToastHarness({ messageKey, body }: { messageKey: string; body: string }
   const { openToast, closeToast } = useToast({ key: messageKey, children: body });
   return (
     <div>
-      <button type="button" onClick={openToast}>open-{messageKey}</button>
+      <button type="button" onClick={() => openToast()}>open-{messageKey}</button>
       <button type="button" onClick={closeToast}>close-{messageKey}</button>
     </div>
   );
@@ -197,6 +197,41 @@ describe('Toast reducer', () => {
     expect(opened.toasts.k.isOpen).toBe(true);
     const closed = reducer(opened, { type: ACTIONS.CLOSE_TOAST, payload: { key: 'k' } });
     expect(closed.toasts.k.isOpen).toBe(false);
+  });
+
+  it('OPEN_TOAST upserts a missing key instead of silently no-op', () => {
+    const state = reducer(initialState, {
+      type: ACTIONS.OPEN_TOAST,
+      payload: { key: 'k', children: 'hi' },
+    });
+    expect(state.toasts.k).toEqual({ isOpen: true, children: 'hi', refs: 1 });
+  });
+
+  it('OPEN_TOAST overrides content when children are passed at fire time', () => {
+    const seeded = reducer(initialState, { type: ACTIONS.ADD_TOAST, payload: { key: 'k', children: 'old' } });
+    const opened = reducer(seeded, { type: ACTIONS.OPEN_TOAST, payload: { key: 'k', children: 'new' } });
+    expect(opened.toasts.k.children).toBe('new');
+    expect(opened.toasts.k.isOpen).toBe(true);
+    expect(opened.toasts.k.refs).toBe(1);
+  });
+
+  it('UPDATE_TOAST no-ops on a missing key and returns the same state reference', () => {
+    const state = reducer(initialState, { type: ACTIONS.UPDATE_TOAST, payload: { key: 'k', children: 'x' } });
+    expect(state).toBe(initialState);
+  });
+
+  it('UPDATE_TOAST refreshes content on an existing key without touching isOpen or refs', () => {
+    const opened = reducer(initialState, { type: ACTIONS.OPEN_TOAST, payload: { key: 'k', children: 'en' } });
+    const updated = reducer(opened, { type: ACTIONS.UPDATE_TOAST, payload: { key: 'k', children: 'fr' } });
+    expect(updated.toasts.k.children).toBe('fr');
+    expect(updated.toasts.k.isOpen).toBe(true);
+    expect(updated.toasts.k.refs).toBe(1);
+  });
+
+  it('UPDATE_TOAST returns the same state reference when content is unchanged (churn guard)', () => {
+    const seeded = reducer(initialState, { type: ACTIONS.ADD_TOAST, payload: { key: 'k', children: 'same' } });
+    const updated = reducer(seeded, { type: ACTIONS.UPDATE_TOAST, payload: { key: 'k', children: 'same' } });
+    expect(updated).toBe(seeded);
   });
 
   it('REMOVE_TOAST decrements refs first and finally deletes the entry', () => {

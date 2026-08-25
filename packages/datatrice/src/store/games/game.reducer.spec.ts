@@ -65,13 +65,13 @@ describe('2A: Initialisation & lifecycle', () => {
     const result = gamesReducer(undefined, { type: '@@INIT' });
     // incomingReveal was added to the initial state so components can subscribe
     // to it without needing to fold a default in every selector.
-    expect(result).toEqual({ games: {}, incomingReveal: null });
+    expect(result).toEqual({ games: {}, pings: {}, incomingReveal: null });
   });
 
   it('CLEAR_STORE → resets to initialState', () => {
     const state = makeState();
     const result = gamesReducer(state, Actions.clearStore());
-    expect(result).toEqual({ games: {} });
+    expect(result).toEqual({ games: {}, pings: {} });
   });
 
   it('GAME_JOINED → inserts gameEntry keyed by gameId', () => {
@@ -83,7 +83,7 @@ describe('2A: Initialisation & lifecycle', () => {
       judge: false,
       resuming: false,
     });
-    const result = gamesReducer({ games: {} }, Actions.gameJoined({ data }));
+    const result = gamesReducer({ games: {}, pings: {} }, Actions.gameJoined({ data }));
     const entry = result.games[42];
     expect(entry).toBeDefined();
     expect(entry.info.gameId).toBe(42);
@@ -300,11 +300,12 @@ describe('2B: Game state & player management', () => {
     expect(result.games[1].players[1].properties.playerId).toBe(1);
   });
 
-  it('PLAYER_PROPERTIES_CHANGED → partial update (only pingSeconds) preserves deckHash', () => {
-    // Regression: the desktop server's per-second ping tick sends
-    // Event_PlayerPropertiesChanged with only ping_seconds set. A naive
-    // overwrite would wipe deck_hash and disable the Ready button in the
-    // deck-select dialog mid-lobby.
+  it('PLAYER_PROPERTIES_CHANGED → ping-only tick lands in state.pings, preserves deckHash, and skips the player graph', () => {
+    // Regression: the per-second ping tick sends Event_PlayerPropertiesChanged
+    // with only ping_seconds set. A naive overwrite would wipe deck_hash and
+    // disable the Ready button in the deck-select dialog mid-lobby; the clock is
+    // routed to state.pings instead so the player graph keeps its refs (see
+    // GamesState.pings).
     const existing = makePlayerProperties({
       playerId: 1,
       deckHash: 'abc123',
@@ -324,11 +325,12 @@ describe('2B: Game state & player management', () => {
       playerId: 1,
       properties: pingOnly,
     }));
-    const merged = result.games[1].players[1].properties;
-    expect(merged.pingSeconds).toBe(42);
-    expect(merged.deckHash).toBe('abc123');
-    expect(merged.readyStart).toBe(false);
-    expect(merged.sideboardLocked).toBe(true);
+    expect(result.pings[1][1]).toBe(42);
+    const untouched = result.games[1].players[1].properties;
+    expect(untouched).toBe(existing);
+    expect(untouched.deckHash).toBe('abc123');
+    expect(untouched.readyStart).toBe(false);
+    expect(untouched.sideboardLocked).toBe(true);
   });
 
   it('PLAYER_PROPERTIES_CHANGED → partial update (only readyStart) preserves deckHash', () => {

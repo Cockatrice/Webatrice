@@ -29,7 +29,7 @@ Four entry points (see [package.json](../../packages/datatrice/package.json) `ex
 
 **Listener-middleware singleton.** The `listenerMiddleware` exported from [src/store/listenerMiddleware.ts](../../packages/datatrice/src/store/listenerMiddleware.ts) is a module-scoped singleton, not a per-store instance. `createStore()` registers slice listeners against it via a `listenersRegistered` latch — without that guard, calling `createStore()` twice in the same process (test harnesses, hot reload) attaches every listener again and every matching action fires twice.
 
-**Protobuf-aware serializable check.** Protobuf-es v2 messages are plain JS objects decorated with `$typeName` / `$unknown` siblings; their `bytes` fields surface as `Uint8Array` and `int64`/`uint64` as `BigInt`. The RTK `serializableCheck` rejects all four by default. [src/store/isSerializable.ts](../../packages/datatrice/src/store/isSerializable.ts) widens the predicate to accept proto messages, `Uint8Array`, and `BigInt` so wire payloads can travel through actions and live in state without warnings. Used by `createStore()` and re-exported for test harnesses that build their own store.
+**Protobuf-aware serializable check.** Protobuf-es v2 messages are plain JS objects decorated with `$typeName` / `$unknown` siblings; their `bytes` fields surface as `Uint8Array` and `int64`/`uint64` as `BigInt`. The RTK `serializableCheck` rejects all four by default. [src/store/isSerializable.ts](../../packages/datatrice/src/store/isSerializable.ts) widens the predicate to accept proto messages, `Uint8Array`, and `BigInt`. `createStore()` ships with RTK's dev invariant middlewares (`serializableCheck` / `immutableCheck`) disabled — state and actions carry protobuf messages at server scale, and the O(state)-per-dispatch walks froze dev sessions on busy servers. `isSerializable` is no longer wired into the store; it remains exported for consumers that re-enable a scoped serializable check. The dev-mode guard the store does ship is [freezeMessagesMiddleware](../../packages/datatrice/src/store/freezeMessagesMiddleware.ts), which freezes protobuf messages at state entry so in-place mutation of a stored message throws instead of going stale — see [datatrice-store.instructions.md](datatrice-store.instructions.md#reducer-author-hazards).
 
 ## Layer boundaries
 
@@ -52,6 +52,10 @@ Other invariants:
 Servatrice protocol behaviors the data layer accommodates:
 
 - **System-injected user messages can omit the username** (ban notifications targeting the current user, server announcements). [src/common/normalizers.ts](../../packages/datatrice/src/common/normalizers.ts) `normalizeUserMessage` preserves the omission as a no-op so the store always holds a clean string regardless of whether the server attributes the message to a user.
+
+## Store performance invariants
+
+**The live ping clock lives in `GamesState.pings`, not the game graph.** Servatrice broadcasts `Event_PlayerPropertiesChanged` carrying only `ping_seconds` ~1/s per seated player and spectator. Held inside the player graph, that volatile value flipped the game, players, and player references several times a second and re-rendered every subscriber. It is instead held in a sibling map keyed `[gameId][playerId]`, authoritative over the stale `properties.pingSeconds` snapshot on each player. Read it only via `Selectors.getPings` / `getPlayerPing`. A player-properties update whose set fields are all volatile (the ping clock plus the redundant `player_id`) routes to `state.pings` and skips the player clone/merge, so the tick stream flips no ref. Reducers assume `pings[gameId]` exists after `gameJoined`, so fixtures and preloaded/partial state must seed it; selectors `?.`-guard the partial case.
 
 ## Build, test, release
 

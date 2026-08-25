@@ -4,21 +4,18 @@ export const DefaultHosts: Host[] = [
     name: 'Chickatrice',
     host: 'mtg.chickatrice.net',
     port: '443',
-    localPort: '4748',
     editable: false,
   },
   {
     name: 'Rooster',
     host: 'server.cockatrice.us/servatrice',
     port: '4748',
-    localHost: 'server.cockatrice.us',
     editable: false,
   },
   {
     name: 'Rooster Beta',
     host: 'beta.cockatrice.us/servatrice',
     port: '4748',
-    localHost: 'beta.cockatrice.us',
     editable: false,
   },
   {
@@ -30,8 +27,6 @@ export const DefaultHosts: Host[] = [
 ];
 
 export const getHostPort = (host: Host): { host: string, port: string } => {
-  const isLocal = window.location.hostname === 'localhost';
-
   if (!host) {
     return {
       host: '',
@@ -40,7 +35,7 @@ export const getHostPort = (host: Host): { host: string, port: string } => {
   }
 
   return {
-    host: !isLocal ? host.host : host.localHost || host.host,
-    port: !isLocal ? host.port : host.localPort || host.port,
+    host: host.host,
+    port: host.port,
   };
 };

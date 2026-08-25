@@ -9,6 +9,11 @@ import { DEFAULT_GAME_FILTERS } from './gameFilters';
 
 export const MAX_ROOM_MESSAGES = 1000;
 
+// Monotonic client id stamped on each stored room message so chat rows key on a
+// stable identity. Indexes shift when the head is trimmed at MAX_ROOM_MESSAGES;
+// this never does. Session-scoped and never persisted, so plain increment.
+let nextMessageId = 0;
+
 export const initialState: RoomsState = {
   rooms: {},
   joinedRoomIds: {},
@@ -84,7 +89,7 @@ export const addMessage: CaseReducer<
   if (msgs.length >= MAX_ROOM_MESSAGES) {
     state.messages[roomId] = msgs.slice(msgs.length - MAX_ROOM_MESSAGES + 1);
   }
-  state.messages[roomId].push(normalizeUserMessage(message));
+  state.messages[roomId].push({ ...normalizeUserMessage(message), id: nextMessageId++ });
 };
 
 export const updateGames: CaseReducer<

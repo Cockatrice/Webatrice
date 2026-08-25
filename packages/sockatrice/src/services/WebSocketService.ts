@@ -2,6 +2,7 @@ import { StatusEnum } from '../types/StatusEnum';
 import { KeepAliveService } from './KeepAliveService';
 import type { ConnectTarget } from '../types/WebClientConfig';
 import { buildWebSocketUrl } from '../utils/buildWebSocketUrl';
+import { terminateSocket } from '../utils/terminateSocket';
 
 export interface ReconnectConfig {
   maxAttempts: number;
@@ -14,7 +15,11 @@ export interface WebSocketServiceConfig {
   keepalive: number;
   onStatusChange: (status: StatusEnum, description: string) => void;
   onConnectionFailed: () => void;
+  onConnectionUnreachable?: () => void;
   onMessage: (message: MessageEvent) => void;
+  /** Keepalive health: missedPongs > 0 while pings go unanswered, 0 on recovery.
+   *  The keepalive never closes the connection — see KeepAliveService. */
+  onConnectionHealth?: (missedPongs: number, silentForMs: number) => void;
   /** Opt-in automatic reconnect on unexpected socket close. */
   reconnect?: ReconnectConfig;
 }
@@ -29,14 +34,8 @@ export class WebSocketService {
   private keepalive: number;
 
   private lastTarget: ConnectTarget | null = null;
-  private lastProtocol: string | null = null;
 
   private intentionalDisconnect = false;
-  /**
-   * True while `connect()` cycles a prior socket out.
-   * See .github/instructions/sockatrice-transport.instructions.md#websocket-lifecycle.
-   */
-  private retiringForReconnect = false;
   private reconnectAttempts = 0;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   /**
@@ -51,40 +50,30 @@ export class WebSocketService {
 
     this.keepAliveService = new KeepAliveService(
       () => this.checkReadyState(WebSocket.OPEN),
-      () => {
-        this.disconnect();
-        this.config.onStatusChange(StatusEnum.DISCONNECTED, 'Connection timeout');
+      (missedPongs, silentForMs) => {
+        this.config.onConnectionHealth?.(missedPongs, silentForMs);
       },
     );
   }
 
-  public connect(target: ConnectTarget, protocol: string = 'wss'): void {
-    if (window.location.hostname === 'localhost') {
-      protocol = 'ws';
-    }
-
-    // Retire prior socket; retiringForReconnect suppresses orphan reconnect+DISCONNECTED.
-    // See .github/instructions/sockatrice-transport.instructions.md#websocket-lifecycle.
-    this.retiringForReconnect = true;
+  public connect(target: ConnectTarget): void {
     this.clearReconnectTimer();
-    this.closeActiveSocket();
-    this.retiringForReconnect = false;
+    this.closeActiveSocket(true);
 
     this.lastTarget = target;
-    this.lastProtocol = protocol;
     this.intentionalDisconnect = false;
     this.reconnectAttempts = 0;
     this.hasEverOpened = false;
     this.keepalive = this.config.keepalive;
 
     const { host, port } = target;
-    this.socket = this.createWebSocket(buildWebSocketUrl(protocol as 'ws' | 'wss', host, port));
+    this.socket = this.createWebSocket(buildWebSocketUrl(host, port));
   }
 
   public disconnect(): void {
     this.intentionalDisconnect = true;
     this.clearReconnectTimer();
-    this.closeActiveSocket();
+    this.closeActiveSocket(false);
   }
 
   public checkReadyState(state: number): boolean {
@@ -107,6 +96,11 @@ export class WebSocketService {
     const socket = new WebSocket(url);
     socket.binaryType = 'arraybuffer';
 
+    // Raw close (not WebSocketService.terminate) on purpose: this fires only when
+    // the socket never opened within `keepalive` ms — a genuinely stuck/refused
+    // connect that established nothing to strand — and its onclose is what drives
+    // the DISCONNECTED / reconnect path. Deferring the close (terminate) would
+    // wait for an onopen that never comes and hang reconnect.
     const connectionTimer = setTimeout(() => socket.close(), this.keepalive);
     const clearConnectionTimer = (): void => clearTimeout(connectionTimer);
 
@@ -131,11 +125,10 @@ export class WebSocketService {
         return;
       }
 
-      // Orphan socket retired by fresh connect(); skip status emission.
-      // See .github/instructions/sockatrice-transport.instructions.md#websocket-lifecycle.
-      if (this.retiringForReconnect) {
-        this.hasReportedError = false;
-        return;
+      // Current socket closed without ever opening — never reached the server.
+      // Identity-gated so a retired socket's late onclose can't fire this.
+      if (this.socket === socket && !this.hasEverOpened) {
+        this.config.onConnectionUnreachable?.();
       }
 
       // @critical onerror + onclose both fire on failed connects; don't overwrite the richer error status.
@@ -165,9 +158,7 @@ export class WebSocketService {
     if (this.intentionalDisconnect) {
       return false;
     }
-    if (this.retiringForReconnect) {
-      return false;
-    }
+
     if (this.hasReportedError) {
       return false;
     }
@@ -194,13 +185,11 @@ export class WebSocketService {
 
     this.reconnectTimer = setTimeout(() => {
       this.reconnectTimer = null;
-      if (this.intentionalDisconnect || !this.lastTarget || !this.lastProtocol) {
+      if (this.intentionalDisconnect || !this.lastTarget) {
         return;
       }
       const { host, port } = this.lastTarget;
-      this.socket = this.createWebSocket(
-        buildWebSocketUrl(this.lastProtocol as 'ws' | 'wss', host, port),
-      );
+      this.socket = this.createWebSocket(buildWebSocketUrl(host, port));
     }, delay);
   }
 
@@ -211,14 +200,37 @@ export class WebSocketService {
     }
   }
 
-  private closeActiveSocket(): void {
-    if (this.socket) {
-      // Detach onmessage only; keep onopen/onclose/onerror.
-      // See .github/instructions/sockatrice-transport.instructions.md#websocket-lifecycle.
-      this.socket.onmessage = null;
-      this.socket.close();
-      this.socket = null;
+  private closeActiveSocket(retiringForReconnect: boolean): void {
+    if (!this.socket) {
+      return;
     }
+    const socket = this.socket;
+    this.socket = null;
+
+    // Detach onmessage always — late buffered frames from a socket we no longer
+    // own must not re-enter after teardown.
+    socket.onmessage = null;
+
+    // A still-CONNECTING socket is retired via terminateSocket (defers a clean
+    // close to onopen instead of aborting into a stranded half-open). But that
+    // deferred open→close would otherwise fire this orphan's onopen (CONNECTED +
+    // ping loop) and onclose (DISCONNECTED / reconnect) — so silence its lifecycle
+    // handlers first. terminateSocket re-arms onopen to the clean close.
+    if (socket.readyState === WebSocket.CONNECTING) {
+      socket.onopen = null;
+      socket.onclose = null;
+      socket.onerror = null;
+    } else if (retiringForReconnect) {
+      // OPEN socket cycled out by a fresh connect(): detach its lifecycle handlers
+      // so a late onclose/onerror can't tear down the replacement's keepalive,
+      // emit DISCONNECTED, or corrupt hasReportedError against the live replacement.
+      // Not done on an intentional disconnect(), whose onclose must still emit
+      // DISCONNECTED. terminateSocket owns close timing only.
+      socket.onclose = null;
+      socket.onerror = null;
+    }
+
+    terminateSocket(socket);
   }
 
 }

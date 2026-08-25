@@ -15,7 +15,7 @@ function setup(overrides: Partial<UseHandContextMenuArgs> = {}) {
   const onRequestMoveHandToDeck = vi.fn();
   const onRequestMoveHandToZone = vi.fn();
 
-  const gamesState: GamesState = { games: {} };
+  const gamesState: GamesState = { games: {}, pings: {} };
   const { Wrapper, webClient } = makeReduxWebClientHookWrapper({
     reducer: combineReducers({ games: games.gamesReducer }),
     preloadedState: { games: gamesState },

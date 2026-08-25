@@ -200,9 +200,15 @@ export function renderWithProviders(
     selectedCardKeys: cardVisualState?.selectedCardKeys ?? EMPTY_SELECTION,
     canActFor: cardVisualState?.canActFor ?? DENY_ALL,
   };
+  // Specs preload a partial games slice (DeepPartial) that omits the required
+  // `pings` sibling map; complete it here so a ping-touching reducer doesn't hit
+  // an undefined `state.pings`, mirroring the real initialState. See GamesState.pings.
+  const completedState = preloadedState?.games
+    ? { ...preloadedState, games: { pings: {}, ...preloadedState.games } }
+    : preloadedState;
   const store = externalStore ?? createStore<RootState>({
     reducer: combineReducers(rootReducerMap),
-    preloadedState,
+    preloadedState: completedState,
   });
 
   function Wrapper({ children }: { children: React.ReactNode }) {

@@ -1,6 +1,6 @@
 import { Users } from 'lucide-react';
 
-import { UserDisplay } from '@app/components';
+import { UserRows } from '@app/components';
 import type { ServerInfo_User } from '@cockatrice/sockatrice/generated';
 
 interface ServerUsersProps {
@@ -23,21 +23,7 @@ export default function ServerUsers({ users }: ServerUsersProps) {
           {users.length} connected
         </span>
       </div>
-      <div className="flex-1 min-h-0 overflow-y-auto py-1">
-        {users.length === 0 && (
-          <div className="px-4 py-3 text-xs text-text-muted italic">
-            No one connected.
-          </div>
-        )}
-        {users.map((user) => (
-          <div
-            key={user.name}
-            className="px-3 py-1 text-sm text-text-primary hover:bg-bg-elevated transition-colors cursor-default"
-          >
-            <UserDisplay user={user} />
-          </div>
-        ))}
-      </div>
+      <UserRows users={users} empty="No one connected." />
     </aside>
   );
 }

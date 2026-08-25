@@ -24,6 +24,7 @@ import type { MessageInitShape } from '@bufbuild/protobuf';
 
 import { create } from '@bufbuild/protobuf';
 import { ServerState } from '../../store/server/server.interfaces';
+import { HEALTHY_CONNECTION_HEALTH } from '../../store/server/server.reducer.connection';
 
 export function makeUser(
   overrides: MessageInitShape<typeof ServerInfo_UserSchema> = {}
@@ -168,6 +169,8 @@ export function makeServerState(overrides: Partial<ServerState> = {}): ServerSta
       state: WebsocketTypes.StatusEnum.DISCONNECTED,
       description: null,
     },
+    connectionHealth: HEALTHY_CONNECTION_HEALTH,
+    connectUnreachable: false,
     info: {
       message: null,
       name: null,
@@ -184,6 +187,7 @@ export function makeServerState(overrides: Partial<ServerState> = {}): ServerSta
       field: App.UserSortField.NAME,
       order: App.SortDirection.ASC,
     },
+    locale: undefined,
     messages: {},
     userInfo: {},
     notifications: [],

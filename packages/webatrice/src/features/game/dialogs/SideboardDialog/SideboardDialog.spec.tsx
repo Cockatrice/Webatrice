@@ -44,6 +44,7 @@ function render(
 ) {
   const preloadedState = {
     games: {
+      pings: {},
       games: {
         1: makeGameEntry({
           localPlayerId: 1,

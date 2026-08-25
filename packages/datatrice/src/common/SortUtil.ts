@@ -1,14 +1,32 @@
 import { App } from '../types';
 import { ServerInfo_User } from '@cockatrice/sockatrice/generated';
 
+// Per-locale collator cache: string sorts over busy-server collections
+// (thousands of users/games) run one comparator per O(N log N) comparison —
+// bare localeCompare re-resolves locale data per call, while a prebuilt
+// collator's compare is a plain function. Callers pass an already-normalized
+// BCP-47 locale (webatrice owns the underscore->hyphen `toBcp47` conversion);
+// undefined falls back to the environment default. A new locale is built once
+// and reused, so switching languages doesn't re-pay collator construction.
+const collators = new Map<string, Intl.Collator>();
+function getCollator(locale?: string): Intl.Collator {
+  const key = locale ?? '';
+  let collator = collators.get(key);
+  if (!collator) {
+    collator = new Intl.Collator(locale || undefined);
+    collators.set(key, collator);
+  }
+  return collator;
+}
+
 export default class SortUtil {
-  static sortByField<T extends object>(arr: T[], sortBy: App.SortBy): void {
+  static sortByField<T extends object>(arr: T[], sortBy: App.SortBy, locale?: string): void {
     if (arr.length) {
       const field = SortUtil.resolveFieldChain(arr[0], sortBy.field);
       const fieldType = typeof field;
 
       if (fieldType === 'string') {
-        SortUtil.sortByString(arr, sortBy);
+        SortUtil.sortByString(arr, sortBy, locale);
         return;
       }
 
@@ -21,7 +39,7 @@ export default class SortUtil {
     }
   }
 
-  static sortByFields<T extends object>(arr: T[], sorts: App.SortBy[]) {
+  static sortByFields<T extends object>(arr: T[], sorts: App.SortBy[], locale?: string) {
     if (arr.length) {
       const fieldTypes = sorts.map(s => typeof SortUtil.resolveFieldChain(arr[0], s.field));
 
@@ -31,7 +49,7 @@ export default class SortUtil {
           const fieldType = fieldTypes[i];
 
           if (fieldType === 'string') {
-            const result = SortUtil.stringComparator(a, b, sortBy);
+            const result = SortUtil.stringComparator(a, b, sortBy, locale);
 
             if (result) {
               return result;
@@ -52,21 +70,25 @@ export default class SortUtil {
     }
   }
 
-  static sortUsersByField(users: ServerInfo_User[], sortBy: App.SortBy) {
+  static sortUsersByField(users: ServerInfo_User[], sortBy: App.SortBy, locale?: string) {
     if (users.length) {
-      users.sort((a, b) => SortUtil.userComparator(a, b, sortBy));
+      users.sort((a, b) => SortUtil.userComparator(a, b, sortBy, locale));
     }
   }
 
-  static sortedByField<T extends object>(arr: readonly T[], sortBy: App.SortBy): T[] {
+  static sortedByField<T extends object>(arr: readonly T[], sortBy: App.SortBy, locale?: string): T[] {
     const copy = [...arr];
-    SortUtil.sortByField(copy, sortBy);
+    SortUtil.sortByField(copy, sortBy, locale);
     return copy;
   }
 
-  static sortedUsersByField(users: readonly ServerInfo_User[], sortBy: App.SortBy): ServerInfo_User[] {
+  static sortedUsersByField(
+    users: readonly ServerInfo_User[],
+    sortBy: App.SortBy,
+    locale?: string,
+  ): ServerInfo_User[] {
     const copy = [...users];
-    SortUtil.sortUsersByField(copy, sortBy);
+    SortUtil.sortUsersByField(copy, sortBy, locale);
     return copy;
   }
 
@@ -84,11 +106,11 @@ export default class SortUtil {
     arr.sort((a, b) => SortUtil.numberComparator(a, b, sortBy));
   }
 
-  private static sortByString<T extends object>(arr: T[], sortBy: App.SortBy): void {
-    arr.sort((a, b) => SortUtil.stringComparator(a, b, sortBy));
+  private static sortByString<T extends object>(arr: T[], sortBy: App.SortBy, locale?: string): void {
+    arr.sort((a, b) => SortUtil.stringComparator(a, b, sortBy, locale));
   }
 
-  private static userComparator(a: ServerInfo_User, b: ServerInfo_User, sortBy: App.SortBy) {
+  private static userComparator(a: ServerInfo_User, b: ServerInfo_User, sortBy: App.SortBy, locale?: string) {
     const adminSortBy = {
       field: 'userLevel',
       order: App.SortDirection.DESC
@@ -100,7 +122,7 @@ export default class SortUtil {
       return adminSorted;
     }
 
-    const sorted = SortUtil.stringComparator(a, b, sortBy);
+    const sorted = SortUtil.stringComparator(a, b, sortBy, locale);
 
     if (sorted) {
       return sorted;
@@ -120,7 +142,7 @@ export default class SortUtil {
     }
   }
 
-  private static stringComparator<T extends object>(a: T, b: T, { field, order }: App.SortBy) {
+  private static stringComparator<T extends object>(a: T, b: T, { field, order }: App.SortBy, locale?: string) {
     const aResolved = SortUtil.resolveFieldChain(a, field);
     const bResolved = SortUtil.resolveFieldChain(b, field);
 
@@ -135,10 +157,11 @@ export default class SortUtil {
       return -1;
     }
 
+    const collator = getCollator(locale);
     if (order === App.SortDirection.ASC) {
-      return aResolved.localeCompare(bResolved);
+      return collator.compare(aResolved, bResolved);
     } else {
-      return bResolved.localeCompare(aResolved);
+      return collator.compare(bResolved, aResolved);
     }
   }
 

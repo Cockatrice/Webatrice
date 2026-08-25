@@ -72,6 +72,13 @@ Dexie (IndexedDB) holds cards, sets, tokens, known hosts, and settings; separate
 
 Route-level UI in `src/features/<slice>/` (one per route — account, decks, game, login, logs, player, rooms, server, settings, shell). Page chrome (Layout, LeftNav) in `src/feature-wrappers/layout/`. Root orchestration at [src/AppShell.tsx](../../packages/webatrice/src/AppShell.tsx) with route registration in [src/AppShellRoutes.tsx](../../packages/webatrice/src/AppShellRoutes.tsx). Load-bearing hooks: **`useWebClient`** (the only way UI reaches the server; see the layering invariant) and **`useAutoLogin`** (owns the once-per-session gate). Datatrice's `WebClientContext` is consumed directly from `@cockatrice/datatrice/react` so integration tests and per-test `renderHook` wrappers can inject a pre-built `WebClient`. **Don't double-portal MUI components.** MUI's Snackbar/Tooltip/Popover already portal themselves; wrapping them in our own `createPortal` leaks DOM nodes under React 18 StrictMode (effects fire twice; the inner portal's mount runs before the outer's cleanup). UI kit: MUI v9 + `@emotion`; i18n via `react-i18next` + ICU (Transifex).
 
+### Virtualized lists
+
+Large live collections (a busy server's thousands of games/users) render through `VirtualList` / `VirtualRows` ([src/components/VirtualList/](../../packages/webatrice/src/components/VirtualList/)), which wrap `react-window`. Rows are built lazily for the visible window only, so each delta frame costs O(viewport) instead of O(collection) — prefer this over prebuilding an `items: ReactNode[]` array (itself O(N)) for large live collections. Two hard rules:
+
+- **Pass a referentially stable `renderRow`** (a module-level function or a `useCallback` whose deps are only what changes a row's drawing) so `react-window`'s row memoization holds across parent re-renders. Handing it a fresh closure each render defeats the memoization.
+- **Key rows by stable domain identity, not slot index.** `react-window` recycles row slots by index; keying by index lets an open action menu (e.g. `UserDisplay`) silently rebind to whoever slides into that slot when the roster reshuffles. Keying by e.g. `user.name` remounts the row instead, tearing the menu down cleanly. Variable-height rows (chat) can't use fixed-height virtualization — memoize rows instead and keep every entry reachable in scrollback.
+
 ### Forms (react-hook-form + Zod)
 
 All forms use `useForm` + `zodResolver` + `<Controller>`. Patterns enforced across the forms surface:

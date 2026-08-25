@@ -31,6 +31,10 @@ export interface Game {
 
 export type Message = Event_RoomSay & {
   timeReceived: number;
+  // Stable, monotonic client id assigned at store ingestion; absent on the
+  // wire-derived message before it's stored. See rooms.reducer.inline.ts for the
+  // rationale (chat rows key on it, not the array index).
+  id?: number;
 };
 
 // @critical `info` = wire snapshot at join time; top-level twins hold live values updated by game events.
@@ -56,6 +60,8 @@ export interface GameEntry {
   // order the server sent (full-state syncs) and append-on-join, for board seating
   // and reveal-target lists. See seatedPlayersOf / Selectors.getSeatedPlayers.
   seatOrder: number[];
+  // No ping field here by design: the live ping clock lives out of the game
+  // graph in GamesState.pings — read it via Selectors.getPings / getPlayerPing.
   messages: GameMessage[];
 }
 

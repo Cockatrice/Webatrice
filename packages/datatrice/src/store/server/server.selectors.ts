@@ -8,6 +8,7 @@ import {
 import { WebsocketTypes } from '@cockatrice/sockatrice/types';
 import { SortUtil } from '../../common';
 import { ServerState } from './server.interfaces';
+import { HEALTHY_CONNECTION_HEALTH } from './server.reducer.connection';
 
 type State = { server: ServerState };
 
@@ -24,6 +25,11 @@ export const Selectors = {
   getState: ({ server }: State) => server.status.state,
   getConnectionAttemptMade: ({ server }: State) => server.status.connectionAttemptMade,
   getTestConnectionStatus: ({ server }: State) => server.testConnectionStatus,
+  // Stable fallback: preloaded/partial states (host-supplied or test
+  // fixtures) may predate the connectionHealth field.
+  getConnectionHealth: ({ server }: State) => server.connectionHealth ?? HEALTHY_CONNECTION_HEALTH,
+  getIsServerUnresponsive: ({ server }: State) => (server.connectionHealth?.missedPongs ?? 0) > 0,
+  getConnectUnreachable: ({ server }: State) => server.connectUnreachable ?? false,
   getUser: ({ server }: State) => server.user,
 
   getIsConnected: createSelector(
@@ -115,32 +121,44 @@ export const Selectors = {
   getReplays: ({ server }: State) => server.replays,
 
   getSortedUsers: createSelector(
-    [(state: State) => state.server.users, (state: State) => state.server.sortUsersBy],
-    (users, sortBy): ServerInfo_User[] => {
+    [
+      (state: State) => state.server.users,
+      (state: State) => state.server.sortUsersBy,
+      (state: State) => state.server.locale,
+    ],
+    (users, sortBy, locale): ServerInfo_User[] => {
       if (!users || Object.keys(users).length === 0) {
         return EMPTY_USERS;
       }
-      return SortUtil.sortedUsersByField(Object.values(users), sortBy);
+      return SortUtil.sortedUsersByField(Object.values(users), sortBy, locale);
     }
   ),
 
   getSortedBuddyList: createSelector(
-    [(state: State) => state.server.buddyList, (state: State) => state.server.sortUsersBy],
-    (buddyList, sortBy): ServerInfo_User[] => {
+    [
+      (state: State) => state.server.buddyList,
+      (state: State) => state.server.sortUsersBy,
+      (state: State) => state.server.locale,
+    ],
+    (buddyList, sortBy, locale): ServerInfo_User[] => {
       if (!buddyList || Object.keys(buddyList).length === 0) {
         return EMPTY_USERS;
       }
-      return SortUtil.sortedUsersByField(Object.values(buddyList), sortBy);
+      return SortUtil.sortedUsersByField(Object.values(buddyList), sortBy, locale);
     }
   ),
 
   getSortedIgnoreList: createSelector(
-    [(state: State) => state.server.ignoreList, (state: State) => state.server.sortUsersBy],
-    (ignoreList, sortBy): ServerInfo_User[] => {
+    [
+      (state: State) => state.server.ignoreList,
+      (state: State) => state.server.sortUsersBy,
+      (state: State) => state.server.locale,
+    ],
+    (ignoreList, sortBy, locale): ServerInfo_User[] => {
       if (!ignoreList || Object.keys(ignoreList).length === 0) {
         return EMPTY_USERS;
       }
-      return SortUtil.sortedUsersByField(Object.values(ignoreList), sortBy);
+      return SortUtil.sortedUsersByField(Object.values(ignoreList), sortBy, locale);
     }
   ),
 

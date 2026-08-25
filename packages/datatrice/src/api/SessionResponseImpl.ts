@@ -48,6 +48,10 @@ export class SessionResponseImpl implements WebsocketTypes.ISessionResponse {
     this.store.dispatch(ServerActions.connectionFailed());
   }
 
+  connectionUnreachable(): void {
+    this.store.dispatch(ServerActions.connectUnreachable());
+  }
+
   testConnectionSuccessful(supportsHashedPassword: boolean): void {
     this.store.dispatch(ServerActions.testConnectionSuccessful({ supportsHashedPassword }));
   }
@@ -86,6 +90,10 @@ export class SessionResponseImpl implements WebsocketTypes.ISessionResponse {
 
   updateStatus(state: WebsocketTypes.StatusEnum, description: string): void {
     this.store.dispatch(ServerActions.updateStatus({ status: { state, description } }));
+  }
+
+  updateConnectionHealth(missedPongs: number, silentForMs: number): void {
+    this.store.dispatch(ServerActions.connectionHealthChanged({ missedPongs, silentForMs }));
   }
 
   updateUser(user: ServerInfo_User): void {

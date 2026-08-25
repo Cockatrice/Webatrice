@@ -353,9 +353,9 @@ describe('serverIdentification', () => {
     expect(WebClient.instance.response.session.updateInfo).not.toHaveBeenCalled();
   });
 
-  it('disconnects when pending options are missing', () => {
+  it('disconnects with a user-facing message when pending options are missing (reconnect path)', () => {
     serverIdentification(makeInfo());
-    expect(SessionCmds.updateStatus).toHaveBeenCalledWith(StatusEnum.DISCONNECTED, 'Missing connection options');
+    expect(SessionCmds.updateStatus).toHaveBeenCalledWith(StatusEnum.DISCONNECTED, 'Connection lost — please log in again');
     expect(SessionCmds.disconnect).toHaveBeenCalled();
     expect(WebClient.instance.response.session.updateInfo).not.toHaveBeenCalled();
   });

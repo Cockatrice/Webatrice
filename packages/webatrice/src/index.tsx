@@ -1,7 +1,7 @@
 // @critical Must be the first import. See .github/instructions/webatrice.instructions.md#initialization-order.
 import './polyfills';
 
-import { StrictMode } from 'react';
+import { StrictMode, Suspense } from 'react';
 import { createRoot } from 'react-dom/client';
 import { StyledEngineProvider } from '@mui/material';
 
@@ -28,7 +28,9 @@ const App = () => (
     <WebClientProvider config={CLIENT_CONFIG} options={CLIENT_OPTIONS}>
       <StrictMode>
         <StyledEngineProvider injectFirst>
-          <AppShell />
+          <Suspense fallback="loading">
+            <AppShell />
+          </Suspense>
         </StyledEngineProvider>
       </StrictMode>
     </WebClientProvider>

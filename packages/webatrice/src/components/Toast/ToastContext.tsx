@@ -15,7 +15,8 @@ export interface PushToastOptions {
 interface ToastContextValue {
   toasts: Record<string, ToastEntry>;
   addToast: (key: string, children: ReactNode) => void;
-  openToast: (key: string) => void;
+  updateToast: (key: string, children: ReactNode) => void;
+  openToast: (key: string, children?: ReactNode) => void;
   closeToast: (key: string) => void;
   removeToast: (key: string) => void;
   // Imperative "fire-and-forget" toast for one-off notifications (e.g.
@@ -30,6 +31,7 @@ interface ToastContextValue {
 const ToastContext = createContext<ToastContextValue>({
   toasts: {},
   addToast: () => {},
+  updateToast: () => {},
   openToast: () => {},
   closeToast: () => {},
   removeToast: () => {},
@@ -61,7 +63,13 @@ export const ToastProvider: FC<PropsWithChildren> = ({ children }) => {
   const providerState: ToastContextValue = {
     toasts: state.toasts,
     addToast: (key, toastChildren) => dispatch({ type: ACTIONS.ADD_TOAST, payload: { key, children: toastChildren } }),
-    openToast: (key) => dispatch({ type: ACTIONS.OPEN_TOAST, payload: { key } }),
+    updateToast: (key, toastChildren) => dispatch({ type: ACTIONS.UPDATE_TOAST, payload: { key, children: toastChildren } }),
+    openToast: (key, toastChildren) => {
+      if (import.meta.env.DEV && toastChildren === undefined && !state.toasts[key]) {
+        console.warn(`[toast] openToast("${key}") before registration — nothing to show`);
+      }
+      dispatch({ type: ACTIONS.OPEN_TOAST, payload: { key, children: toastChildren } });
+    },
     closeToast: (key) => dispatch({ type: ACTIONS.CLOSE_TOAST, payload: { key } }),
     removeToast: (key) => dispatch({ type: ACTIONS.REMOVE_TOAST, payload: { key } }),
     pushToast,
@@ -98,20 +106,25 @@ export const ToastProvider: FC<PropsWithChildren> = ({ children }) => {
 
 export interface ToastHookOptions {
   key: string;
-  children: ReactNode;
+  // Optional: fire-time-only callers (e.g. KnownHosts) omit this and pass the
+  // content to `openToast(children)` instead, so the toast always shows the
+  // current-language text rather than whatever was rendered at mount.
+  children?: ReactNode;
 }
 
 export interface ToastHandle {
-  openToast: () => void;
+  openToast: (children?: ReactNode) => void;
   closeToast: () => void;
   removeToast: () => void;
 }
 
 export function useToast({ key, children }: ToastHookOptions): ToastHandle {
-  const { addToast, openToast, closeToast, removeToast } = useContext(ToastContext);
+  const { addToast, updateToast, openToast, closeToast, removeToast } = useContext(ToastContext);
 
-  // Toast children are captured at registration; re-registering every render
-  // would churn provider state. Intentional mount/unmount-only effect keyed on `key`.
+  // Reserve the key for this component's lifetime: create the entry on mount,
+  // remove it on unmount. Keyed on `key` only so remount churn stays minimal.
+  // `children` is intentionally excluded: registration is a mount/unmount
+  // lifecycle keyed on `key`. Content is refreshed by the effect below.
   useEffect(() => {
     addToast(key, children);
     return () => {
@@ -119,8 +132,16 @@ export function useToast({ key, children }: ToastHookOptions): ToastHandle {
     };
   }, [key]);
 
+  // Keep the registered content current: a language change re-renders with a new
+  // `t()` string, so refresh the stored children (the reducer skips no-op
+  // updates, so a stable string never churns provider state). Callers that pass
+  // content at fire time via `openToast(children)` don't rely on this.
+  useEffect(() => {
+    updateToast(key, children);
+  }, [key, children]);
+
   return {
-    openToast: () => openToast(key),
+    openToast: (toastChildren) => openToast(key, toastChildren),
     closeToast: () => closeToast(key),
     removeToast: () => removeToast(key),
   };

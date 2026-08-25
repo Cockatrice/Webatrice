@@ -83,6 +83,23 @@ describe('integration: session connection lifecycle', () => {
     expect(server.Selectors.getIsConnected(store.getState())).toBe(false);
   });
 
+  it('updateConnectionHealth surfaces degraded health, and a status change clears it', () => {
+    const store = createStore();
+    const response = attachResponseHandlers(store);
+
+    // `updateConnectionHealth` is optional on ISessionResponse (hence the `!`);
+    // the concrete SessionResponseImpl always implements it.
+    response.session.updateConnectionHealth!(2, 10000);
+    expect(server.Selectors.getConnectionHealth(store.getState())).toEqual({ missedPongs: 2, silentForMs: 10000 });
+    expect(server.Selectors.getIsServerUnresponsive(store.getState())).toBe(true);
+
+    // Any socket lifecycle transition is a fresh start; stale degraded health
+    // must not survive it.
+    response.session.updateStatus(WebsocketTypes.StatusEnum.CONNECTED, 'reconnected');
+    expect(server.Selectors.getIsServerUnresponsive(store.getState())).toBe(false);
+    expect(server.Selectors.getConnectionHealth(store.getState())).toEqual({ missedPongs: 0, silentForMs: 0 });
+  });
+
   it('signal-only auth events flow through the bridge without error', () => {
     const store = createStore();
     const response = attachResponseHandlers(store);

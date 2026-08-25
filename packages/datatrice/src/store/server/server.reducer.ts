@@ -8,7 +8,7 @@ import { moderationReducers } from './server.reducer.moderation';
 import { replayReducers } from './server.reducer.replays';
 import { userReducers } from './server.reducer.users';
 
-export { MAX_USER_MESSAGES } from './server.reducer.users';
+export { MAX_USER_MESSAGES, MAX_NOTIFICATIONS } from './server.reducer.users';
 
 export const serverSlice = createSlice({
   name: 'server',

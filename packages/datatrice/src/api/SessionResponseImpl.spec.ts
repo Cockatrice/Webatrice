@@ -98,6 +98,12 @@ describe('SessionResponseImpl forwards', () => {
     expect(dispatch).toHaveBeenCalledWith(ServerActions.connectionFailed());
   });
 
+  it('connectionUnreachable', () => {
+    const { impl, dispatch } = setup();
+    impl.connectionUnreachable();
+    expect(dispatch).toHaveBeenCalledWith(ServerActions.connectUnreachable());
+  });
+
   it('testConnectionSuccessful', () => {
     const { impl, dispatch } = setup();
     impl.testConnectionSuccessful(true);
@@ -161,6 +167,12 @@ describe('SessionResponseImpl forwards', () => {
     const user = create(ServerInfo_UserSchema, { name: 'alice' });
     impl.updateUser(user);
     expect(dispatch).toHaveBeenCalledWith(ServerActions.updateUser({ user }));
+  });
+
+  it('updateConnectionHealth', () => {
+    const { impl, dispatch } = setup();
+    impl.updateConnectionHealth(2, 10000);
+    expect(dispatch).toHaveBeenCalledWith(ServerActions.connectionHealthChanged({ missedPongs: 2, silentForMs: 10000 }));
   });
 
   it('updateUsers', () => {

@@ -2,10 +2,16 @@
 import { RoomsState } from './rooms.interfaces';
 import { DEFAULT_GAME_FILTERS } from './gameFilters';
 import { makeGame, makeMessage, makeRoom, makeRoomsState, makeUser } from '../../testing/fixtures/rooms';
+import { makeServerState } from '../../testing/fixtures/server';
+import { ServerState } from '../server/server.interfaces';
 import { App } from '../../types';
 
 function rootState(rooms: RoomsState) {
   return { rooms };
+}
+
+function rootStateWithServer(rooms: RoomsState, server: ServerState) {
+  return { rooms, server };
 }
 
 describe('Selectors', () => {
@@ -249,6 +255,47 @@ describe('Selectors', () => {
     it('returns EMPTY_GAMES for unknown roomId', () => {
       const state = makeRoomsState({ rooms: {} });
       expect(Selectors.getFilteredRoomGames(rootState(state), 999)).toHaveLength(0);
+    });
+
+    it('hides a game whose creator is not a buddy when hideNotBuddyCreatedGames is set', () => {
+      const game = makeGame({ gameId: 1, maxPlayers: 4, creatorInfo: { name: 'stranger' } });
+      const room = makeRoom({ roomId: 1, games: { 1: game } });
+      const rooms = makeRoomsState({
+        rooms: { 1: room },
+        gameFilters: { 1: { ...DEFAULT_GAME_FILTERS, hideNotBuddyCreatedGames: true } },
+      });
+      const server = makeServerState({ buddyList: { pal: makeUser({ name: 'pal' }) } });
+      expect(Selectors.getFilteredRoomGames(rootStateWithServer(rooms, server), 1)).toHaveLength(0);
+    });
+
+    it('keeps a game whose creator is a buddy when hideNotBuddyCreatedGames is set', () => {
+      const game = makeGame({ gameId: 1, maxPlayers: 4, creatorInfo: { name: 'pal' } });
+      const room = makeRoom({ roomId: 1, games: { 1: game } });
+      const rooms = makeRoomsState({
+        rooms: { 1: room },
+        gameFilters: { 1: { ...DEFAULT_GAME_FILTERS, hideNotBuddyCreatedGames: true } },
+      });
+      const server = makeServerState({ buddyList: { pal: makeUser({ name: 'pal' }) } });
+      const result = Selectors.getFilteredRoomGames(rootStateWithServer(rooms, server), 1);
+      expect(result).toHaveLength(1);
+      expect(result[0].info.gameId).toBe(1);
+    });
+
+    it('hides a game whose creator is ignored when hideIgnoredUserGames is set', () => {
+      const game = makeGame({ gameId: 1, maxPlayers: 4, creatorInfo: { name: 'troll' } });
+      const room = makeRoom({ roomId: 1, games: { 1: game } });
+      const rooms = makeRoomsState({
+        rooms: { 1: room },
+        gameFilters: { 1: { ...DEFAULT_GAME_FILTERS, hideIgnoredUserGames: true } },
+      });
+      const server = makeServerState({ ignoreList: { troll: makeUser({ name: 'troll' }) } });
+      expect(Selectors.getFilteredRoomGames(rootStateWithServer(rooms, server), 1)).toHaveLength(0);
+    });
+
+    it('shares the sorted base array with getSortedRoomGames when filters are at defaults (layered — no duplicate sort)', () => {
+      const room = makeRoom({ roomId: 1, games: { 1: makeGame({ gameId: 1 }), 2: makeGame({ gameId: 2 }) } });
+      const root = rootState(makeRoomsState({ rooms: { 1: room } }));
+      expect(Selectors.getFilteredRoomGames(root, 1)).toBe(Selectors.getSortedRoomGames(root, 1));
     });
   });
 

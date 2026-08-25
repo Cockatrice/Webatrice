@@ -59,6 +59,17 @@ describe('useLocaleSort', () => {
     expect(result.current).toEqual(['a', 'b', 'z']);
   });
 
+  test('sorts without throwing for underscore locale codes (pt_BR)', () => {
+    // i18n.language carries Cockatrice/Transifex underscore codes; a raw
+    // `new Intl.Collator('pt_BR')` throws RangeError, so the hook must
+    // normalize to BCP-47 before constructing the collator.
+    mockLanguage = 'pt_BR';
+    const arr = ['c', 'a', 'b'];
+    const { result } = renderHook(() => useLocaleSort(arr, (v) => v));
+
+    expect(result.current).toEqual(['a', 'b', 'c']);
+  });
+
   test('re-sorts when language changes', () => {
     // Swedish sorts ä after z; English sorts ä near a
     const arr = ['ä', 'b', 'z'];

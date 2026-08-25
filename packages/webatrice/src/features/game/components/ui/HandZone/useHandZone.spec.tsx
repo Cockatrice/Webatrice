@@ -28,7 +28,7 @@ function stateWithHand(cards: ReturnType<typeof makeCard>[]): GamesState {
   });
   const player = makePlayerEntry({ zones: { [ZoneName.HAND]: hand } });
   const game = makeGameEntry({ localPlayerId: 1, players: { 1: player } });
-  return { games: { 1: game } };
+  return { games: { 1: game }, pings: {} };
 }
 
 function setup(

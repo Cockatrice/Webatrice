@@ -42,14 +42,13 @@ describe('connection-stability', () => {
       // sleep-then-check — catches a transient RECONNECTING blip that would
       // self-heal before a final check.
       //
-      // Keep-alive is asserted *indirectly*: KeepAliveService calls
-      // onDisconnected() — flipping status away from LOGGED_IN — the moment
-      // two keep-alive ticks pass with no intervening pong. At the e2e
-      // keepalive of 5s, a 60s hold spans ~12 ping/pong cycles, so "stayed
-      // LOGGED_IN for the whole window" is itself proof that pongs kept
-      // flowing. (Protocol-level keep-alive correctness is owned by the unit
-      // and integration suites; this spec only proves it holds against a real
-      // Servatrice over a sustained connection.)
+      // Keep-alive is asserted *indirectly*: if the client stopped sending
+      // pings, Servatrice's max_player_inactivity_time (~15s) would close the
+      // connection and flip status away from LOGGED_IN. At the e2e keepalive
+      // of 5s, a 60s hold spans ~12 ping/pong cycles, so "stayed LOGGED_IN
+      // for the whole window" is itself proof that pings kept flowing.
+      // (Protocol-level keep-alive correctness is owned by the unit and
+      // integration suites; the client never closes on missed pongs.)
       const samples: WebsocketTypes.StatusEnum[] = [];
       const deadline = Date.now() + SOAK_DURATION_MS;
       while (Date.now() < deadline) {

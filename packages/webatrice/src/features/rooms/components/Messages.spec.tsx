@@ -13,8 +13,8 @@ describe('Messages', () => {
 
   it('renders one wrapper per message', () => {
     const messages = [
-      { message: 'first', timeReceived: 1 },
-      { message: 'second', timeReceived: 2 },
+      { message: 'first', timeReceived: 1, id: 1 },
+      { message: 'second', timeReceived: 2, id: 2 },
     ] as never;
 
     const { container } = renderWithProviders(<Messages messages={messages} />);

@@ -65,6 +65,7 @@ function setup(opts: SetupOpts = {}) {
   });
   const gamesState: GamesState = {
     games: { 1: { ...game, info: { ...game.info, gameId: 1 } } },
+    pings: {},
   };
 
   const { Wrapper, webClient } = makeReduxWebClientHookWrapper({

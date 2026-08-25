@@ -72,6 +72,20 @@ describe('integration: room lifecycle', () => {
     expect(rooms.Selectors.getRoom(state, 2)?.info.name).toBe('Secondary');
   });
 
+  it('updateRooms skips a no-op re-broadcast that still carries a gametypeList', () => {
+    const store = createStore();
+    const response = attachResponseHandlers(store);
+    response.room.joinRoom(makeRoom(1, 'Main'));
+
+    const before = rooms.Selectors.getRoom(store.getState(), 1);
+    // A full-room re-broadcast must value-compare as a no-op (normalizeGametypeMap
+    // allocates a fresh map, so a reference check never matches) and leave the
+    // room ref untouched — see datatrice-store.instructions.md § UPDATE_ROOMS.
+    response.room.updateRooms([makeRoom(1, 'Main')]);
+
+    expect(rooms.Selectors.getRoom(store.getState(), 1)).toBe(before);
+  });
+
   it('leaveRoom clears joined state and the room contents', () => {
     const store = createStore();
     const response = attachResponseHandlers(store);

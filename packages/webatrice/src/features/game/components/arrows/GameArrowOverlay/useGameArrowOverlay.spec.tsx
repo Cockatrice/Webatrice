@@ -55,17 +55,17 @@ function makeCardElement(boundingRect: DOMRect): HTMLElement {
 
 interface SetupOpts {
   registry?: ReturnType<typeof createCardRegistry>;
-  gamesState?: GamesState;
+  gamesState?: Pick<GamesState, 'games'>;
   gameId?: number | undefined;
 }
 
 function setup(opts: SetupOpts = {}) {
   const registry = opts.registry ?? createCardRegistry();
-  const gamesState: GamesState = opts.gamesState ?? { games: {} };
+  const gamesState: Pick<GamesState, 'games'> = opts.gamesState ?? { games: {} };
   const gameId: number | undefined = 'gameId' in opts ? opts.gameId : 1;
   const store = configureStore({
     reducer: combineReducers({ games: games.gamesReducer }),
-    preloadedState: { games: gamesState },
+    preloadedState: { games: { ...gamesState, pings: {} } },
     middleware: (getDefault) => getDefault(storeMiddlewareOptions),
   });
   const webClient = createMockWebClient();
@@ -107,7 +107,7 @@ function stateWithArrow(): GamesState {
     arrows: { 1: arrow },
   });
   const game = makeGameEntry({ players: { 1: player } });
-  return { games: { 1: game } };
+  return { games: { 1: game }, pings: {} };
 }
 
 function stateWithCockatriceArrow(): GamesState {
@@ -129,7 +129,7 @@ function stateWithCockatriceArrow(): GamesState {
     arrows: { 3: arrow },
   });
   const game = makeGameEntry({ players: { 1: player } });
-  return { games: { 1: game } };
+  return { games: { 1: game }, pings: {} };
 }
 
 function stateWithPlayerArrow(): GamesState {
@@ -150,7 +150,7 @@ function stateWithPlayerArrow(): GamesState {
     arrows: { 2: arrow },
   });
   const game = makeGameEntry({ players: { 1: player } });
-  return { games: { 1: game } };
+  return { games: { 1: game }, pings: {} };
 }
 
 describe('useGameArrowOverlay', () => {

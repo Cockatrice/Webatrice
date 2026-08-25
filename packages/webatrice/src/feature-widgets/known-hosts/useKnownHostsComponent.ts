@@ -24,6 +24,7 @@ export interface KnownHostsComponent {
   testConnectionStatus: TestConnection | null;
   dialogState: { open: boolean; edit: HostDTO | null };
   onPick: (id: number) => Promise<void>;
+  refreshConnection: () => void;
   openAddKnownHostDialog: () => void;
   openEditKnownHostDialog: (host: HostDTO) => void;
   closeKnownHostDialog: () => void;
@@ -50,11 +51,7 @@ export function useKnownHostsComponent({
   const { t } = useTranslation();
   const dispatch = useAppDispatch();
 
-  const [toastMode, setToastMode] = useState<ToastMode>('created');
-  const knownHostToast = useToast({
-    key: 'known-hosts-action',
-    children: t('KnownHosts.toast', { mode: toastMode }),
-  });
+  const knownHostToast = useToast({ key: 'known-hosts-action' });
 
   const [dialogState, setDialogState] = useState<{ open: boolean; edit: HostDTO | null }>({
     open: false,
@@ -76,6 +73,13 @@ export function useKnownHostsComponent({
     webClient.request.authentication.testConnection({ ...getHostPort(host) });
   };
 
+  const refreshConnection = () => {
+    if (!selectedHost) {
+      return;
+    }
+    testConnection(selectedHost);
+  };
+
   useEffect(() => {
     if (!selectedHost) {
       return;
@@ -83,13 +87,6 @@ export function useKnownHostsComponent({
     onChange(selectedHost);
     testConnection(selectedHost);
   }, [selectedHost]);
-
-  // Recover from serverSlice.actions.disconnected() wiping status to null mid-flight.
-  useEffect(() => {
-    if (selectedHost && testConnectionStatus === null) {
-      testConnection(selectedHost);
-    }
-  }, [testConnectionStatus]);
 
   useReduxEffect<{ supportsHashedPassword: boolean }>(({ payload: { supportsHashedPassword } }) => {
     const host = pendingTestRef.current;
@@ -107,9 +104,10 @@ export function useKnownHostsComponent({
     pendingTestRef.current = null;
   }, server.Types.TEST_CONNECTION_FAILED, []);
 
+  // Compute the toast text at fire time so it reflects the current mode and the
+  // current UI language — not whatever was rendered when the hook mounted.
   const fireToast = (mode: ToastMode) => {
-    setToastMode(mode);
-    knownHostToast.openToast();
+    knownHostToast.openToast(t('KnownHosts.toast', { mode }));
   };
 
   const onPick = async (id: number) => {
@@ -179,6 +177,7 @@ export function useKnownHostsComponent({
     testConnectionStatus,
     dialogState,
     onPick,
+    refreshConnection,
     openAddKnownHostDialog,
     openEditKnownHostDialog,
     closeKnownHostDialog,

@@ -29,7 +29,7 @@ function stateWith({
     messages,
     secondsElapsed,
   });
-  return { games: { 1: game } };
+  return { games: { 1: game }, pings: {} };
 }
 
 interface SetupOpts {

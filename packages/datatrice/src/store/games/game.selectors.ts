@@ -9,6 +9,7 @@ type State = { games: GamesState };
 
 const EMPTY_ARRAY: ServerInfo_Card[] = [];
 const EMPTY_OBJECT = {} as Record<string, never>;
+const EMPTY_PINGS: { [playerId: number]: number } = {};
 const EMPTY_ATTACHMENTS: ReadonlyMap<number, AttachedChild[]> = new Map();
 const EMPTY_PLAYERS: Enriched.PlayerEntry[] = [];
 
@@ -122,6 +123,16 @@ export const Selectors = {
 
   getPlayers: ({ games }: State, gameId: number): { [playerId: number]: Enriched.PlayerEntry } | undefined =>
     games.games[gameId]?.players,
+
+  /** Live ping clock per player. Authoritative over the stale
+   *  `properties.pingSeconds` snapshot inside `players` — see
+   *  `GamesState.pings`. The `?.` guards preloaded/partial states that omit
+   *  the sibling map. */
+  getPings: ({ games }: State, gameId: number): { [playerId: number]: number } =>
+    games.pings?.[gameId] ?? EMPTY_PINGS,
+
+  getPlayerPing: ({ games }: State, gameId: number, playerId: number): number =>
+    games.pings?.[gameId]?.[playerId] ?? 0,
 
   getSeatedPlayers: ({ games }: State, gameId: number): Enriched.PlayerEntry[] => {
     const game = games.games[gameId];

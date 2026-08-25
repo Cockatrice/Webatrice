@@ -23,6 +23,48 @@ const EMPTY_USERS_MAP: { [name: string]: ServerInfo_User } = {};
 
 const ZERO_COUNTS = { visible: 0, total: 0 };
 
+// Layered game selectors: one delta frame used to materialize + sort the same
+// games map up to 3× (sorted list, filtered list, counts). The base selector
+// sorts once; the filtered list and counts derive from it.
+const getSortedRoomGamesBase = createSelector(
+  [
+    (state: State, roomId: number) => state.rooms.rooms[roomId]?.games,
+    (state: State) => state.rooms.sortGamesBy,
+    (state: State) => state.server?.locale,
+  ],
+  (games, sortBy, locale): Enriched.Game[] => {
+    if (!games) {
+      return EMPTY_GAMES;
+    }
+    return SortUtil.sortedByField(Object.values(games), sortBy, locale);
+  }
+);
+
+const getFilteredRoomGamesBase = createSelector(
+  [
+    getSortedRoomGamesBase,
+    (state: State, roomId: number) => state.rooms.gameFilters?.[roomId],
+    (state: State) => state.server?.user,
+    (state: State) => state.server?.buddyList,
+    (state: State) => state.server?.ignoreList,
+  ],
+  (sorted, filters, user, buddyList, ignoreList): Enriched.Game[] => {
+    if (!filters || isGameFiltersAtDefaults(filters)) {
+      return sorted;
+    }
+    const ctx: GameFilterContext = {
+      isOwnUserRegistered: user
+        ? (user.userLevel & ServerInfo_User_UserLevelFlag.IsRegistered) ===
+          ServerInfo_User_UserLevelFlag.IsRegistered
+        : false,
+      isUserBuddy: (name) => Boolean(buddyList?.[name]),
+      isUserIgnored: (name) => Boolean(ignoreList?.[name]),
+      nowSeconds: Math.floor(Date.now() / 1000),
+    };
+    return sorted.filter((game) => gameMatchesFilters(game, filters, ctx));
+  }
+);
+
 export const Selectors = {
   getRooms: ({ rooms }: State) => rooms.rooms,
   getRoom: ({ rooms }: State, id: number) => rooms.rooms[id],
@@ -56,29 +98,19 @@ export const Selectors = {
 
   getRoomUsers: (state: State, roomId: number) => state.rooms.rooms[roomId]?.users ?? EMPTY_USERS_MAP,
 
-  getSortedRoomGames: createSelector(
-    [
-      (state: State, roomId: number) => state.rooms.rooms[roomId]?.games,
-      (state: State) => state.rooms.sortGamesBy,
-    ],
-    (games, sortBy): Enriched.Game[] => {
-      if (!games) {
-        return EMPTY_GAMES;
-      }
-      return SortUtil.sortedByField(Object.values(games), sortBy);
-    }
-  ),
+  getSortedRoomGames: getSortedRoomGamesBase,
 
   getSortedRoomUsers: createSelector(
     [
       (state: State, roomId: number) => state.rooms.rooms[roomId]?.users,
       (state: State) => state.rooms.sortUsersBy,
+      (state: State) => state.server?.locale,
     ],
-    (users, sortBy): ServerInfo_User[] => {
+    (users, sortBy, locale): ServerInfo_User[] => {
       if (!users) {
         return EMPTY_USERS;
       }
-      return SortUtil.sortedUsersByField(Object.values(users), sortBy);
+      return SortUtil.sortedUsersByField(Object.values(users), sortBy, locale);
     }
   ),
 
@@ -99,64 +131,26 @@ export const Selectors = {
   getJoinGamePending: ({ rooms }: State) => rooms.joinGamePending,
   getJoinGameError: ({ rooms }: State) => rooms.joinGameError,
 
-  getFilteredRoomGames: createSelector(
-    [
-      (state: State, roomId: number) => state.rooms.rooms[roomId]?.games,
-      (state: State) => state.rooms.sortGamesBy,
-      (state: State, roomId: number) => state.rooms.gameFilters?.[roomId],
-      (state: State) => state.server?.user,
-      (state: State) => state.server?.buddyList,
-      (state: State) => state.server?.ignoreList,
-    ],
-    (games, sortBy, filters, user, buddyList, ignoreList): Enriched.Game[] => {
-      if (!games) {
-        return EMPTY_GAMES;
-      }
-      const sorted = SortUtil.sortedByField(Object.values(games), sortBy);
-      if (!filters || isGameFiltersAtDefaults(filters)) {
-        return sorted;
-      }
-      const ctx: GameFilterContext = {
-        isOwnUserRegistered: user
-          ? (user.userLevel & ServerInfo_User_UserLevelFlag.IsRegistered) ===
-            ServerInfo_User_UserLevelFlag.IsRegistered
-          : false,
-        isUserBuddy: (name) => Boolean(buddyList?.[name]),
-        isUserIgnored: (name) => Boolean(ignoreList?.[name]),
-        nowSeconds: Math.floor(Date.now() / 1000),
-      };
-      return sorted.filter((game) => gameMatchesFilters(game, filters, ctx));
-    }
-  ),
+  getFilteredRoomGames: getFilteredRoomGamesBase,
 
   getRoomGameCounts: createSelector(
-    [
-      (state: State, roomId: number) => state.rooms.rooms[roomId]?.games,
-      (state: State, roomId: number) => state.rooms.gameFilters?.[roomId],
-      (state: State) => state.server?.user,
-      (state: State) => state.server?.buddyList,
-      (state: State) => state.server?.ignoreList,
-    ],
-    (games, filters, user, buddyList, ignoreList): { visible: number; total: number } => {
-      if (!games) {
+    [getSortedRoomGamesBase, getFilteredRoomGamesBase],
+    (sorted, filtered): { visible: number; total: number } => {
+      if (sorted.length === 0) {
         return ZERO_COUNTS;
       }
-      const all = Object.values(games);
-      const total = all.length;
-      if (!filters || isGameFiltersAtDefaults(filters)) {
-        return { visible: total, total };
-      }
-      const ctx: GameFilterContext = {
-        isOwnUserRegistered: user
-          ? (user.userLevel & ServerInfo_User_UserLevelFlag.IsRegistered) ===
-            ServerInfo_User_UserLevelFlag.IsRegistered
-          : false,
-        isUserBuddy: (name) => Boolean(buddyList?.[name]),
-        isUserIgnored: (name) => Boolean(ignoreList?.[name]),
-        nowSeconds: Math.floor(Date.now() / 1000),
-      };
-      const visible = all.reduce((n, game) => (gameMatchesFilters(game, filters, ctx) ? n + 1 : n), 0);
-      return { visible, total };
+      return { visible: filtered.length, total: sorted.length };
+    },
+    // Every game-list frame flips the sorted/filtered inputs, but the counts
+    // rarely change. Return the prior object when they match so the count-badge
+    // subscribers don't re-render on every broadcast.
+    {
+      memoizeOptions: {
+        resultEqualityCheck: (
+          a: { visible: number; total: number },
+          b: { visible: number; total: number },
+        ) => a.visible === b.visible && a.total === b.total,
+      },
     }
   ),
 }

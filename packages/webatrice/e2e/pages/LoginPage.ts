@@ -3,9 +3,11 @@ import { expect, type Locator, type Page } from '@playwright/test';
 // Page object for the Login screen (`/login`).
 //
 // The Tailwind rewrite replaced the MUI Select KnownHosts picker with a
-// custom dropdown built on a plain `<button>` inside a `<label>`
-// wrapping the "Host" text (KnownHosts.tsx). No `role="combobox"`, no
-// `role="option"` — options are plain `<div>` rows with click handlers.
+// custom dropdown built from a trigger `<button>` (accessible-named via
+// aria-labelledby against the visible "Host" caption) plus refresh and
+// chevron buttons in a non-label wrapper (KnownHosts.tsx). No
+// `role="combobox"`, no `role="option"` — options are plain `<div>` rows
+// with click handlers.
 //
 // Login button + Register button both still resolve by role/name. The
 // login button remains disabled until the test-connection probe reports
@@ -25,13 +27,10 @@ export class LoginPage {
     await expect(this.hostPicker).toBeVisible();
   }
 
-  // The KnownHosts trigger is a plain <button> inside a wrapping
-  // <label class="block"> whose leading <span> renders the "Host" text
-  // from i18n. `<label>` doesn't associate with `<button>` per HTML
-  // spec, so we don't trust Chromium's accessible-name derivation —
-  // locate the label by its exact "Host" caption text, then descend to
-  // the button. `:text-is("Host")` guards against "Host Name" / "Host
-  // Address" in KnownHostDialog's own field labels.
+  // The KnownHosts trigger is a <button> whose accessible name is the
+  // visible "Host" caption (wired via aria-labelledby in KnownHosts.tsx),
+  // so we can locate it by role + exact name. `exact` guards against
+  // "Host Name" / "Host Address" field labels in KnownHostDialog.
   get hostPicker(): Locator {
     return this.hostPickerIn(this.page);
   }
@@ -39,7 +38,7 @@ export class LoginPage {
   // Same lookup, but scoped to a specific dialog (registration form has
   // its OWN independent KnownHosts picker per RegisterForm.tsx).
   private hostPickerIn(scope: Page | Locator): Locator {
-    return scope.locator('label:has(span:text-is("Host")) button').first();
+    return scope.getByRole('button', { name: 'Host', exact: true }).first();
   }
 
   get loginButton(): Locator {

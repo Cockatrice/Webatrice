@@ -74,6 +74,8 @@ export default function TopBar() {
   const user = useAppSelector(server.Selectors.getUser);
   const serverName = useAppSelector(server.Selectors.getName);
   const isConnected = useAppSelector(server.Selectors.getIsConnected);
+  const connectionHealth = useAppSelector(server.Selectors.getConnectionHealth);
+  const isServerUnresponsive = useAppSelector(server.Selectors.getIsServerUnresponsive);
   const joinedRooms = useAppSelector(rooms.Selectors.getJoinedRooms);
   const activeGames = useAppSelector(games.Selectors.getActiveGames);
   const backendDecks = useAppSelector(server.Selectors.getBackendDecks);
@@ -297,13 +299,23 @@ export default function TopBar() {
           <div className="relative">
             <img src={Images.Logo} alt="Webatrice" className="h-8 w-8 rounded-md shadow-glow" />
             <Circle
-              size={8}
+              size={12}
               strokeWidth={3}
               className={[
                 'absolute -bottom-0.5 -right-0.5 stroke-bg-surface',
-                isConnected ? 'text-emerald-400 fill-emerald-400' : 'text-red-400 fill-red-400',
+                !isConnected
+                  ? 'text-red-400 fill-red-400'
+                  : isServerUnresponsive
+                    ? 'text-amber-400 fill-amber-400'
+                    : 'text-emerald-400 fill-emerald-400',
               ].join(' ')}
-              aria-label={isConnected ? 'Connected' : 'Disconnected'}
+              aria-label={
+                !isConnected
+                  ? 'Disconnected'
+                  : isServerUnresponsive
+                    ? `Server not responding (${Math.round(connectionHealth.silentForMs / 1000)}s)`
+                    : 'Connected'
+              }
             />
           </div>
           <span className="font-modern text-lg font-bold tracking-wide text-text-primary">

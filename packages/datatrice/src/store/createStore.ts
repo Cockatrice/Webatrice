@@ -6,19 +6,25 @@ import {
   type StoreEnhancer,
 } from '@reduxjs/toolkit';
 
+import { freezeMessagesMiddleware } from './freezeMessagesMiddleware';
 import { listenerMiddleware } from './listenerMiddleware';
-import { isSerializable } from './isSerializable';
 import { rootReducer, type RootState } from './rootReducer';
 import { registerServerListeners } from './server/server.listeners';
 import { registerGameListeners } from './games/game.listeners';
 import { registerRoomsListeners } from './rooms/rooms.listeners';
 
-// Shared with the renderWithProviders-style test harness so test stores
-// tolerate the same proto-shaped actions as the production store.
+// Shared with the renderWithProviders-style test harness so test stores behave
+// like the production store. Both dev-only invariant checks are OFF because
+// state holds raw protobuf messages at server scale and the O(state)-per-dispatch
+// walks froze dev on busy servers — see
+// .github/instructions/datatrice.instructions.md#initialization-order.
+// The hazard those checks couldn't see anyway — in-place mutation of a stored
+// protobuf-es message, which Immer can't draft — is guarded instead by
+// freezeMessagesMiddleware (dev-only, O(changed path) via identity-skip).
 export const storeMiddlewareOptions = {
-  immutableCheck: { warnAfter: 128 },
-  serializableCheck: { isSerializable, warnAfter: 128 },
-} as const;
+  immutableCheck: false as const,
+  serializableCheck: false as const,
+};
 
 let listenersRegistered = false;
 function ensureListenersRegistered(): void {
@@ -54,6 +60,6 @@ export function createStore<S = RootState>(
     preloadedState: preloadedState as Parameters<typeof configureStore>[0]['preloadedState'],
     middleware: (getDefaultMiddleware) => getDefaultMiddleware(storeMiddlewareOptions)
       .prepend(listenerMiddleware.middleware)
-      .concat(...additionalMiddleware),
+      .concat(freezeMessagesMiddleware, ...additionalMiddleware),
   }) as EnhancedStore<S>;
 }

@@ -13,10 +13,10 @@ import { useGameAccess } from './useGameAccess';
 // `preloadedState` on configureStore is typed as `PreloadedState<S>` which
 // narrows collection fields past GamesState; a single precise cast keeps
 // the spec strict while avoiding the broader `as any`.
-function makeWrapper(gamesState: GamesState) {
+function makeWrapper(gamesState: Pick<GamesState, 'games'>) {
   const store = configureStore({
     reducer: { games: games.gamesReducer },
-    preloadedState: { games: gamesState } as { games: GamesState },
+    preloadedState: { games: { ...gamesState, pings: {} } } as { games: GamesState },
   });
   return function Wrapper({ children }: { children: ReactNode }) {
     return <Provider store={store}>{children}</Provider>;

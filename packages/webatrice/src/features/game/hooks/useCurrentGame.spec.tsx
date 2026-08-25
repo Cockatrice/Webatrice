@@ -9,10 +9,10 @@ import { games, type GamesState } from '@cockatrice/datatrice';
 import { makeGameEntry, makePlayerEntry, makePlayerProperties } from '@cockatrice/datatrice/testing';
 import { useCurrentGame } from './useCurrentGame';
 
-function makeWrapper(gamesState: GamesState) {
+function makeWrapper(gamesState: Pick<GamesState, 'games'>) {
   const store = configureStore({
     reducer: { games: games.gamesReducer },
-    preloadedState: { games: gamesState } as { games: GamesState },
+    preloadedState: { games: { ...gamesState, pings: {} } } as { games: GamesState },
   });
   return function Wrapper({ children }: { children: ReactNode }) {
     return <Provider store={store}>{children}</Provider>;

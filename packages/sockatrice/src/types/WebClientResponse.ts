@@ -56,6 +56,7 @@ export interface ISessionResponse {
   loginSuccessful(options: LoginSuccessContext): void;
   loginFailed(): void;
   connectionFailed(): void;
+  connectionUnreachable(): void;
   testConnectionSuccessful(supportsHashedPassword: boolean): void;
   testConnectionFailed(): void;
   updateBuddyList(buddyList: ServerInfo_User[]): void;
@@ -66,6 +67,9 @@ export interface ISessionResponse {
   removeFromIgnoreList(userName: string): void;
   updateInfo(name: string, version: string): void;
   updateStatus(state: StatusEnum, description: string): void;
+  /** Keepalive health: missedPongs > 0 while pings go unanswered, 0 on recovery.
+   *  Optional for backward compatibility with existing consumers. */
+  updateConnectionHealth?(missedPongs: number, silentForMs: number): void;
   updateUser(user: ServerInfo_User): void;
   updateUsers(users: ServerInfo_User[]): void;
   userJoined(user: ServerInfo_User): void;

@@ -30,7 +30,7 @@ function setup(zoneArgs: Parameters<typeof makeZoneEntry>[0]) {
       }),
     },
   });
-  const gamesState: GamesState = { games: { 1: { ...game, info: { ...game.info, gameId: 1 } } } };
+  const gamesState: GamesState = { games: { 1: { ...game, info: { ...game.info, gameId: 1 } } }, pings: {} };
 
   return makeReduxHookWrapper(
     combineReducers({ games: games.gamesReducer }),

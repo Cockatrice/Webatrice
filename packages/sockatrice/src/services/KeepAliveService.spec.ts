@@ -9,15 +9,15 @@ type KeepAliveInternal = KeepAliveService & {
 describe('KeepAliveService', () => {
   let service: KeepAliveService;
   let mockIsOpen: ReturnType<typeof vi.fn>;
-  let mockOnDisconnected: ReturnType<typeof vi.fn>;
+  let mockOnHealthChange: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     vi.useFakeTimers();
     vi.stubGlobal('Worker', undefined);
 
     mockIsOpen = vi.fn().mockReturnValue(true);
-    mockOnDisconnected = vi.fn();
-    service = new KeepAliveService(mockIsOpen, mockOnDisconnected);
+    mockOnHealthChange = vi.fn();
+    service = new KeepAliveService(mockIsOpen, mockOnHealthChange);
   });
 
   it('should create', () => {
@@ -53,10 +53,29 @@ describe('KeepAliveService', () => {
       });
     });
 
-    it('should fire onDisconnected if lastPingPending is still true', () => {
+    it('should not report degraded health on the first missed pong', () => {
       vi.advanceTimersByTime(interval);
 
-      expect(mockOnDisconnected).toHaveBeenCalled();
+      expect(mockOnHealthChange).not.toHaveBeenCalled();
+    });
+
+    it('should report degraded health from the second consecutive miss onward', () => {
+      vi.advanceTimersByTime(interval * 2);
+      expect(mockOnHealthChange).toHaveBeenCalledWith(2, expect.any(Number));
+
+      vi.advanceTimersByTime(interval);
+      expect(mockOnHealthChange).toHaveBeenCalledWith(3, expect.any(Number));
+    });
+
+    it('should NEVER close the connection, no matter how many pongs are missed', () => {
+      // The keepalive never tears the connection down — see
+      // sockatrice-transport.instructions.md § keep-alive worker.
+      const timersBefore = vi.getTimerCount();
+      vi.advanceTimersByTime(interval * 20);
+
+      expect(vi.getTimerCount()).toBe(timersBefore);
+      expect(mockOnHealthChange).toHaveBeenLastCalledWith(20, expect.any(Number));
+      expect((service as KeepAliveInternal).fallbackTimer).not.toBeNull();
     });
 
     it('should endPingLoop if socket is not open', () => {
@@ -115,7 +134,7 @@ describe('KeepAliveService', () => {
     let constructorArgs: { url: unknown; options: unknown }[];
     let workerService: KeepAliveService;
     let workerIsOpen: ReturnType<typeof vi.fn>;
-    let workerOnDisconnected: ReturnType<typeof vi.fn>;
+    let workerOnHealthChange: ReturnType<typeof vi.fn>;
     let pingFn: ReturnType<typeof vi.fn>;
 
     beforeEach(() => {
@@ -141,8 +160,8 @@ describe('KeepAliveService', () => {
       vi.stubGlobal('Worker', workerCtor);
 
       workerIsOpen = vi.fn().mockReturnValue(true);
-      workerOnDisconnected = vi.fn();
-      workerService = new KeepAliveService(workerIsOpen, workerOnDisconnected);
+      workerOnHealthChange = vi.fn();
+      workerService = new KeepAliveService(workerIsOpen, workerOnHealthChange);
       pingFn = vi.fn();
     });
 
@@ -181,13 +200,61 @@ describe('KeepAliveService', () => {
       expect(pingFn).not.toHaveBeenCalled();
     });
 
-    it('should fire onDisconnected when a tick arrives with a ping still pending', () => {
+    it('should ignore burst-drained ticks (pending ping younger than an interval)', () => {
+      // Field-captured failure mode: ticks queue behind a stalled main thread
+      // and drain back-to-back; the tick right after a ping is armed must not
+      // count it as missed.
       workerService.startPingLoop(5000, pingFn);
 
       mockWorker._listener!({ data: { type: 'tick' } } as MessageEvent);
       mockWorker._listener!({ data: { type: 'tick' } } as MessageEvent);
+      mockWorker._listener!({ data: { type: 'tick' } } as MessageEvent);
+      mockWorker._listener!({ data: { type: 'tick' } } as MessageEvent);
 
-      expect(workerOnDisconnected).toHaveBeenCalledTimes(1);
+      expect(workerOnHealthChange).not.toHaveBeenCalled();
+      // Only the first tick arms a ping; the drained ticks must not each fire
+      // one (that back-to-back burst could trip the server's flood counter).
+      expect(pingFn).toHaveBeenCalledTimes(1);
+    });
+
+    it('should report escalating degraded health but keep pinging through sustained silence', () => {
+      workerService.startPingLoop(5000, pingFn);
+
+      mockWorker._listener!({ data: { type: 'tick' } } as MessageEvent);
+      for (let i = 0; i < 3; i += 1) {
+        vi.advanceTimersByTime(5000);
+        mockWorker._listener!({ data: { type: 'tick' } } as MessageEvent);
+      }
+
+      expect(workerOnHealthChange).toHaveBeenCalledWith(2, expect.any(Number));
+      expect(workerOnHealthChange).toHaveBeenLastCalledWith(3, expect.any(Number));
+      expect(pingFn).toHaveBeenCalledTimes(4);
+      expect(mockWorker.postMessage).not.toHaveBeenCalledWith({ type: 'stop' });
+    });
+
+    it('should report recovery when a pong arrives after degradation', () => {
+      workerService.startPingLoop(5000, pingFn);
+
+      mockWorker._listener!({ data: { type: 'tick' } } as MessageEvent);
+      vi.advanceTimersByTime(5000);
+      mockWorker._listener!({ data: { type: 'tick' } } as MessageEvent);
+      vi.advanceTimersByTime(5000);
+      mockWorker._listener!({ data: { type: 'tick' } } as MessageEvent);
+      expect(workerOnHealthChange).toHaveBeenLastCalledWith(2, expect.any(Number));
+
+      const onPong = pingFn.mock.calls.at(-1)![0] as () => void;
+      onPong();
+      expect(workerOnHealthChange).toHaveBeenLastCalledWith(0, 0);
+
+      workerOnHealthChange.mockClear();
+      vi.advanceTimersByTime(5000);
+      mockWorker._listener!({ data: { type: 'tick' } } as MessageEvent);
+      vi.advanceTimersByTime(5000);
+      mockWorker._listener!({ data: { type: 'tick' } } as MessageEvent);
+      vi.advanceTimersByTime(5000);
+      mockWorker._listener!({ data: { type: 'tick' } } as MessageEvent);
+      expect(workerOnHealthChange).toHaveBeenCalledTimes(1);
+      expect(workerOnHealthChange).toHaveBeenCalledWith(2, expect.any(Number));
     });
 
     it('should post stop and detach listener on endPingLoop', () => {

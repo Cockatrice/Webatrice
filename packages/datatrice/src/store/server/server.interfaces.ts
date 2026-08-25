@@ -22,10 +22,20 @@ export interface ServerState {
   ignoreList: { [userName: string]: ServerInfo_User };
   info: ServerStateInfo;
   status: ServerStateStatus;
+  // Keepalive health while the socket stays open: missedPongs > 0 means the
+  // server is not answering pings (lagged or unreachable); 0 = healthy. The
+  // transport never self-disconnects on silence — see sockatrice KeepAliveService.
+  connectionHealth: ServerConnectionHealth;
+  connectUnreachable: boolean;
   logs: ServerStateLogs;
   user: ServerInfo_User | null;
   users: { [userName: string]: ServerInfo_User };
   sortUsersBy: ServerStateSortUsersBy;
+  // Active UI locale as a BCP-47 tag (webatrice normalizes the underscore
+  // Cockatrice code via toBcp47 before dispatching setLocale). Feeds the
+  // locale-aware string collation in the sorted-user/game selectors; undefined
+  // means "use the environment default". Preserved across connection resets.
+  locale: string | undefined;
   messages: {
     [userName: string]: Event_UserMessage[];
   };
@@ -56,6 +66,11 @@ export interface ServerStateStatus {
   connectionAttemptMade: boolean;
   description: string | null;
   state: WebsocketTypes.StatusEnum;
+}
+
+export interface ServerConnectionHealth {
+  missedPongs: number;
+  silentForMs: number;
 }
 
 export interface ServerStateInfo {

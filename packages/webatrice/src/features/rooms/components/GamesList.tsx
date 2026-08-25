@@ -4,6 +4,7 @@ import { Filter, FilterX, Plus, LogIn, Eye, Gavel, ArrowUp, ArrowDown } from 'lu
 
 import { server, rooms, games, type GameFilters, type Room, type Game } from '@cockatrice/datatrice';
 import { useAppDispatch, useAppSelector } from '@app/store';
+import { VirtualRows } from '@app/components';
 import { useReduxEffect } from '@app/hooks';
 import { useWebClient } from '@cockatrice/datatrice/react';
 import type { CreateGameParams, Event_GameJoined, JoinGameParams, ServerInfo_Game } from '@cockatrice/sockatrice/generated';
@@ -24,33 +25,55 @@ interface PendingPasswordJoin {
   asJudge: boolean;
 }
 
-// Column definitions kept next to the table so header labels + sort
-// fields stay in sync with what the row cells render.
-const COLUMNS: Array<{ label: string; field?: string; className?: string }> = [
-  { label: 'Age', field: 'info.startTime', className: 'w-24' },
+// Column definitions kept next to the grid so header labels + sort
+// fields stay in sync with what the row cells render. Column widths live in
+// GRID_COLS (shared by header and rows) — the body is virtualized with
+// react-window, so table layout is replaced by a fixed grid template.
+const COLUMNS: Array<{ label: string; field?: string }> = [
+  { label: 'Age', field: 'info.startTime' },
   { label: 'Description', field: 'info.description' },
-  { label: 'Creator', field: 'info.creatorInfo.name', className: 'w-40' },
-  { label: 'Type', field: 'gameType', className: 'w-32' },
-  { label: 'Restrictions', className: 'w-56' },
-  { label: 'Players', className: 'w-20' },
-  { label: 'Spectators', field: 'info.spectatorsCount', className: 'w-32' },
+  { label: 'Creator', field: 'info.creatorInfo.name' },
+  { label: 'Type', field: 'gameType' },
+  { label: 'Restrictions' },
+  { label: 'Players' },
+  { label: 'Spectators', field: 'info.spectatorsCount' },
 ];
+
+const GRID_COLS = 'grid grid-cols-[6rem_minmax(0,1fr)_10rem_8rem_14rem_5rem_8rem]';
+// px-3 py-2 text-sm cells: 16px padding + 20px line box + 1px bottom border.
+const GAME_ROW_HEIGHT = 37;
 
 function formatRestrictions(info: ServerInfo_Game): string {
   const parts: string[] = [];
-  if (info.withPassword) parts.push('password');
-  if (info.onlyBuddies) parts.push('buddies only');
-  if (info.onlyRegistered) parts.push('reg. users only');
-  if (info.shareDecklistsOnLoad) parts.push('open decklists');
+  if (info.withPassword) {
+    parts.push('password');
+  }
+  if (info.onlyBuddies) {
+    parts.push('buddies only');
+  }
+  if (info.onlyRegistered) {
+    parts.push('reg. users only');
+  }
+  if (info.shareDecklistsOnLoad) {
+    parts.push('open decklists');
+  }
   return parts.join(', ');
 }
 
 function formatSpectators(info: ServerInfo_Game): string {
-  if (!info.spectatorsAllowed) return 'not allowed';
+  if (!info.spectatorsAllowed) {
+    return 'not allowed';
+  }
   const flags: string[] = [];
-  if (info.spectatorsCanChat) flags.push('can chat');
-  if (info.spectatorsOmniscient) flags.push('see hands');
-  if (flags.length === 0) return String(info.spectatorsCount);
+  if (info.spectatorsCanChat) {
+    flags.push('can chat');
+  }
+  if (info.spectatorsOmniscient) {
+    flags.push('see hands');
+  }
+  if (flags.length === 0) {
+    return String(info.spectatorsCount);
+  }
   return `${info.spectatorsCount} (${flags.join(' & ')})`;
 }
 
@@ -81,7 +104,9 @@ export default function GamesList({ room }: GamesListProps) {
 
   useReduxEffect<{ data: Event_GameJoined }>((action) => {
     const gameId = action.payload.data.gameInfo?.gameId;
-    if (gameId == null) return;
+    if (gameId == null) {
+      return;
+    }
     navigate(generatePath(RouteEnum.GAME, { gameId: gameId.toString() }));
   }, games.Types.GAME_JOINED, [navigate]);
 
@@ -109,7 +134,9 @@ export default function GamesList({ room }: GamesListProps) {
 
   function beginJoin(asSpectator: boolean, asJudge: boolean) {
     const game = selectedGame;
-    if (!game) return;
+    if (!game) {
+      return;
+    }
     const info = game.info;
     const effectiveSpectator = asSpectator || info.playerCount >= info.maxPlayers;
     const needsPassword =
@@ -136,12 +163,58 @@ export default function GamesList({ room }: GamesListProps) {
   };
 
   const handlePasswordSubmit = (password: string) => {
-    if (!pendingPasswordJoin) return;
+    if (!pendingPasswordJoin) {
+      return;
+    }
     sendJoin(pendingPasswordJoin.gameId, pendingPasswordJoin.asSpectator, pendingPasswordJoin.asJudge, password);
     setPendingPasswordJoin(null);
   };
 
   const sortOrder = sortBy.order.toLowerCase() === 'asc' ? 'asc' : 'desc';
+
+  // Stable renderRow identity (deps are only what changes a row's drawing:
+  // selection + the row handlers) so react-window's row memoization holds — see
+  // webatrice.instructions.md § Virtualized lists.
+  const renderGameRow = useCallback((game: Game) => {
+    const { info, gameType } = game;
+    const isSelected = info.gameId === selectedGameId;
+    return (
+      <div
+        role="row"
+        onClick={() => handleSelect(info.gameId)}
+        onDoubleClick={() => handleActivate(info.gameId)}
+        className={[
+          GRID_COLS,
+          'cursor-pointer transition-colors',
+          isSelected
+            ? 'bg-accent/20 hover:bg-accent/25'
+            : 'hover:bg-bg-elevated',
+        ].join(' ')}
+      >
+        <div role="gridcell" className="px-3 py-2 border-b border-border-subtle/50 text-text-secondary tabular-nums whitespace-nowrap">
+          {info.startTime}
+        </div>
+        <div role="gridcell" className="px-3 py-2 border-b border-border-subtle/50 text-text-primary overflow-hidden">
+          <div className="truncate" title={info.description}>{info.description}</div>
+        </div>
+        <div role="gridcell" className="px-3 py-2 border-b border-border-subtle/50 text-text-secondary overflow-hidden">
+          <div className="truncate">{info.creatorInfo?.name ?? ''}</div>
+        </div>
+        <div role="gridcell" className="px-3 py-2 border-b border-border-subtle/50 text-text-secondary whitespace-nowrap">
+          {gameType}
+        </div>
+        <div role="gridcell" className="px-3 py-2 border-b border-border-subtle/50 text-text-secondary overflow-hidden">
+          <div className="truncate">{formatRestrictions(info)}</div>
+        </div>
+        <div role="gridcell" className="px-3 py-2 border-b border-border-subtle/50 text-text-primary tabular-nums whitespace-nowrap">
+          {info.playerCount}/{info.maxPlayers}
+        </div>
+        <div role="gridcell" className="px-3 py-2 border-b border-border-subtle/50 text-text-secondary overflow-hidden">
+          <div className="truncate">{formatSpectators(info)}</div>
+        </div>
+      </div>
+    );
+  }, [selectedGameId, handleSelect, handleActivate]);
 
   return (
     <section className="flex h-full flex-col bg-bg-surface border border-border-subtle rounded-lg overflow-hidden">
@@ -155,81 +228,58 @@ export default function GamesList({ room }: GamesListProps) {
         </div>
       </div>
 
-      {/* Table */}
-      <div className="flex-1 min-h-0 overflow-y-auto">
-        <table className="w-full text-sm border-separate" style={{ borderSpacing: 0 }}>
-          <thead className="sticky top-0 z-10 bg-bg-elevated">
-            <tr>
-              {COLUMNS.map(({ label, field, className }) => {
-                const active = field === sortBy.field;
-                return (
-                  <th
-                    key={label}
-                    className={[
-                      'text-left px-3 py-2 text-xs font-semibold uppercase tracking-wider text-text-muted border-b border-border-subtle select-none',
-                      field ? 'cursor-pointer hover:text-text-primary' : '',
-                      className ?? '',
-                    ].join(' ')}
-                    onClick={() => field && handleSort(field)}
-                  >
-                    <span className="inline-flex items-center gap-1">
-                      {label}
-                      {active && (sortOrder === 'asc' ? <ArrowUp size={11} /> : <ArrowDown size={11} />)}
-                    </span>
-                  </th>
-                );
-              })}
-            </tr>
-          </thead>
-          <tbody>
-            {gameList.length === 0 && (
-              <tr>
-                <td colSpan={COLUMNS.length} className="px-4 py-8 text-center text-sm text-text-muted">
-                  No games open right now — click <span className="text-text-primary">Create</span> to start one.
-                </td>
-              </tr>
-            )}
-            {gameList.map((game: Game) => {
-              const { info, gameType } = game;
-              const isSelected = info.gameId === selectedGameId;
+      {/* Games grid — header fixed above a virtualized row window so a busy
+          server's thousands of games cost O(viewport) per delta frame. The
+          header and the row scroller both reserve a stable scrollbar gutter so
+          their shared GRID_COLS tracks stay aligned once the body overflows
+          (the row pane's scrollbar would otherwise narrow the rows vs the
+          header). The gutter's track is transparent (thin-scrollbar.css), so
+          the header's reserved-but-unused gutter is invisible. */}
+      <div
+        role="table"
+        aria-label={`Games in ${room.info.name}`}
+        aria-rowcount={counts.total}
+        className="flex-1 min-h-0 flex flex-col overflow-hidden"
+      >
+        <div role="rowgroup" className="shrink-0">
+          <div role="row" className={`${GRID_COLS} bg-bg-elevated text-sm overflow-auto [scrollbar-gutter:stable]`}>
+            {COLUMNS.map(({ label, field }) => {
+              const active = field === sortBy.field;
               return (
-                <tr
-                  key={info.gameId}
-                  onClick={() => handleSelect(info.gameId)}
-                  onDoubleClick={() => handleActivate(info.gameId)}
+                <div
+                  role="columnheader"
+                  key={label}
+                  aria-sort={active ? (sortOrder === 'asc' ? 'ascending' : 'descending') : undefined}
                   className={[
-                    'cursor-pointer transition-colors',
-                    isSelected
-                      ? 'bg-accent/20 hover:bg-accent/25'
-                      : 'hover:bg-bg-elevated',
+                    'text-left px-3 py-2 text-xs font-semibold uppercase tracking-wider text-text-muted border-b border-border-subtle select-none',
+                    field ? 'cursor-pointer hover:text-text-primary' : '',
                   ].join(' ')}
+                  onClick={() => field && handleSort(field)}
                 >
-                  <td className="px-3 py-2 border-b border-border-subtle/50 text-text-secondary tabular-nums whitespace-nowrap">
-                    {info.startTime}
-                  </td>
-                  <td className="px-3 py-2 border-b border-border-subtle/50 text-text-primary truncate max-w-0">
-                    <div className="truncate" title={info.description}>{info.description}</div>
-                  </td>
-                  <td className="px-3 py-2 border-b border-border-subtle/50 text-text-secondary truncate max-w-0">
-                    <div className="truncate">{info.creatorInfo?.name ?? ''}</div>
-                  </td>
-                  <td className="px-3 py-2 border-b border-border-subtle/50 text-text-secondary whitespace-nowrap">
-                    {gameType}
-                  </td>
-                  <td className="px-3 py-2 border-b border-border-subtle/50 text-text-secondary truncate max-w-0">
-                    <div className="truncate">{formatRestrictions(info)}</div>
-                  </td>
-                  <td className="px-3 py-2 border-b border-border-subtle/50 text-text-primary tabular-nums whitespace-nowrap">
-                    {info.playerCount}/{info.maxPlayers}
-                  </td>
-                  <td className="px-3 py-2 border-b border-border-subtle/50 text-text-secondary truncate max-w-0">
-                    <div className="truncate">{formatSpectators(info)}</div>
-                  </td>
-                </tr>
+                  <span className="inline-flex items-center gap-1">
+                    {label}
+                    {active && (sortOrder === 'asc' ? <ArrowUp size={11} /> : <ArrowDown size={11} />)}
+                  </span>
+                </div>
               );
             })}
-          </tbody>
-        </table>
+          </div>
+        </div>
+        {gameList.length === 0 ? (
+          <div className="flex-1 min-h-0 px-4 py-8 text-center text-sm text-text-muted">
+            No games open right now — click <span className="text-text-primary">Create</span> to start one.
+          </div>
+        ) : (
+          <div className="flex-1 min-h-0 text-sm">
+            <VirtualRows
+              items={gameList}
+              rowHeight={GAME_ROW_HEIGHT}
+              role="rowgroup"
+              className="[scrollbar-gutter:stable]"
+              renderRow={renderGameRow}
+            />
+          </div>
+        )}
       </div>
 
       {/* Toolbar */}

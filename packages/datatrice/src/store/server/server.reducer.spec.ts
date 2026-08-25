@@ -14,7 +14,7 @@
 } from '@cockatrice/sockatrice/generated';
 import { WebsocketTypes } from '@cockatrice/sockatrice/types';
 import { create } from '@bufbuild/protobuf';
-import { serverReducer, MAX_USER_MESSAGES } from './server.reducer';
+import { serverReducer, MAX_USER_MESSAGES, MAX_NOTIFICATIONS } from './server.reducer';
 import { Actions } from './server.actions';
 import {
   makeBanHistoryItem,
@@ -65,6 +65,51 @@ describe('Initialisation', () => {
 });
 
 
+describe('Locale', () => {
+  it('SET_LOCALE → stores the BCP-47 locale tag', () => {
+    const state = makeServerState({ locale: undefined });
+    const result = serverReducer(state, Actions.setLocale('pt-BR'));
+    expect(result.locale).toBe('pt-BR');
+  });
+
+  it('preserves locale across INITIALIZED', () => {
+    const state = makeServerState({ locale: 'pt-BR', initialized: false });
+    const result = serverReducer(state, Actions.initialized());
+    expect(result.initialized).toBe(true);
+    expect(result.locale).toBe('pt-BR');
+  });
+
+  it('preserves locale across CLEAR_STORE', () => {
+    const state = makeServerState({ locale: 'fr' });
+    const result = serverReducer(state, Actions.clearStore());
+    expect(result.locale).toBe('fr');
+  });
+
+  it('preserves locale across DISCONNECTED', () => {
+    const state = makeServerState({ locale: 'nl' });
+    const result = serverReducer(state, Actions.disconnected());
+    expect(result.locale).toBe('nl');
+  });
+
+  // testConnectionStatus is a login-screen probe result, independent of the
+  // live game socket. A connection reset must not wipe it: doing so both
+  // disables the login button (LoginForm gates on 'success') and — via the
+  // known-hosts recovery effect — used to re-fire a fresh probe WebSocket on
+  // every disconnect, which trips Servatrice's max_users_per_address cap.
+  it('preserves testConnectionStatus across DISCONNECTED', () => {
+    const state = makeServerState({ testConnectionStatus: 'success' });
+    const result = serverReducer(state, Actions.disconnected());
+    expect(result.testConnectionStatus).toBe('success');
+  });
+
+  it('preserves testConnectionStatus across CLEAR_STORE', () => {
+    const state = makeServerState({ testConnectionStatus: 'success' });
+    const result = serverReducer(state, Actions.clearStore());
+    expect(result.testConnectionStatus).toBe('success');
+  });
+});
+
+
 describe('Account & Connection', () => {
   it('CONNECTION_ATTEMPTED → sets connectionAttemptMade to true', () => {
     const state = makeServerState({
@@ -74,6 +119,55 @@ describe('Account & Connection', () => {
     expect(result.status.connectionAttemptMade).toBe(true);
   });
 
+});
+
+
+describe('Connect Unreachable', () => {
+  it('CONNECT_UNREACHABLE → sets connectUnreachable to true', () => {
+    const state = makeServerState({ connectUnreachable: false });
+    const result = serverReducer(state, Actions.connectUnreachable());
+    expect(result.connectUnreachable).toBe(true);
+  });
+
+  it('CONNECTION_ATTEMPTED → clears a stale connectUnreachable from a prior attempt', () => {
+    const state = makeServerState({ connectUnreachable: true });
+    const result = serverReducer(state, Actions.connectionAttempted());
+    expect(result.connectUnreachable).toBe(false);
+  });
+
+  it('TEST_CONNECTION_STARTED → clears a stale connectUnreachable (probe is a fresh attempt)', () => {
+    const state = makeServerState({ connectUnreachable: true });
+    const result = serverReducer(state, Actions.testConnectionStarted());
+    expect(result.connectUnreachable).toBe(false);
+  });
+
+  // Load-bearing: connectUnreachable is set just before the socket close that
+  // triggers the DISCONNECTED rebuild (dispatched by the updateStatus listener).
+  // The rebuild must carry the flag through or the login screen never sees it.
+  // See server.reducer.connection disconnected().
+  it('preserves connectUnreachable across DISCONNECTED', () => {
+    const state = makeServerState({ connectUnreachable: true });
+    const result = serverReducer(state, Actions.disconnected());
+    expect(result.connectUnreachable).toBe(true);
+  });
+
+  it('DISCONNECTED with a clean prior attempt leaves connectUnreachable false', () => {
+    const state = makeServerState({ connectUnreachable: false });
+    const result = serverReducer(state, Actions.disconnected());
+    expect(result.connectUnreachable).toBe(false);
+  });
+
+  it('CLEAR_STORE → resets connectUnreachable to false', () => {
+    const state = makeServerState({ connectUnreachable: true });
+    const result = serverReducer(state, Actions.clearStore());
+    expect(result.connectUnreachable).toBe(false);
+  });
+
+  it('INITIALIZED → resets connectUnreachable to false', () => {
+    const state = makeServerState({ connectUnreachable: true });
+    const result = serverReducer(state, Actions.initialized());
+    expect(result.connectUnreachable).toBe(false);
+  });
 });
 
 
@@ -160,6 +254,29 @@ describe('User', () => {
     const result = serverReducer(state, Actions.updateUser({ user }));
     expect(result.user).toBe(user);
     expect(result.user.name).toBe('Alice');
+  });
+});
+
+
+describe('Connection Health', () => {
+  it('connectionHealthChanged → stores degraded health', () => {
+    const state = makeServerState();
+    const result = serverReducer(state, Actions.connectionHealthChanged({ missedPongs: 3, silentForMs: 15000 }));
+    expect(result.connectionHealth).toEqual({ missedPongs: 3, silentForMs: 15000 });
+  });
+
+  it('connectionHealthChanged → 0 clears degraded health', () => {
+    const state = makeServerState({ connectionHealth: { missedPongs: 4, silentForMs: 20000 } });
+    const result = serverReducer(state, Actions.connectionHealthChanged({ missedPongs: 0, silentForMs: 0 }));
+    expect(result.connectionHealth).toEqual({ missedPongs: 0, silentForMs: 0 });
+  });
+
+  it('updateStatus → resets stale health from the previous socket', () => {
+    const state = makeServerState({ connectionHealth: { missedPongs: 4, silentForMs: 20000 } });
+    const result = serverReducer(state, Actions.updateStatus({
+      status: { state: WebsocketTypes.StatusEnum.CONNECTED, description: 'Connected' },
+    }));
+    expect(result.connectionHealth).toEqual({ missedPongs: 0, silentForMs: 0 });
   });
 });
 
@@ -403,6 +520,17 @@ describe('User Info & Notifications', () => {
     const result = serverReducer(state, Actions.notifyUser({ notification }));
     expect(result.notifications).toHaveLength(1);
     expect(result.notifications[0]).toEqual(notification);
+  });
+
+  it(`NOTIFY_USER → caps notifications at MAX_NOTIFICATIONS (${MAX_NOTIFICATIONS})`, () => {
+    const filler = Array.from({ length: MAX_NOTIFICATIONS }, (_, i) =>
+      ({ type: 1, warningReason: `old-${i}`, customTitle: '', customContent: '' }) as unknown as Event_NotifyUser);
+    const state = makeServerState({ notifications: filler });
+    const newest = { type: 1, warningReason: 'newest', customTitle: '', customContent: '' } as unknown as Event_NotifyUser;
+    const result = serverReducer(state, Actions.notifyUser({ notification: newest }));
+    expect(result.notifications).toHaveLength(MAX_NOTIFICATIONS);
+    expect(result.notifications[MAX_NOTIFICATIONS - 1]).toEqual(newest);
+    expect(result.notifications[0]).toEqual(filler[1]);
   });
 
   it('SERVER_SHUTDOWN → sets serverShutdown to action.payload.data', () => {

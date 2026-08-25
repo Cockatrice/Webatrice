@@ -24,6 +24,7 @@ const session = {
   loginSuccessful: vi.fn(),
   loginFailed: vi.fn(),
   connectionFailed: vi.fn(),
+  connectionUnreachable: vi.fn(),
   testConnectionSuccessful: vi.fn(),
   testConnectionFailed: vi.fn(),
   updateBuddyList: vi.fn(),
