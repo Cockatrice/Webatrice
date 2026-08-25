@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import { AriaRole, ReactNode } from 'react';
 import { List, RowComponentProps } from 'react-window';
 
 import './VirtualList.css';
@@ -13,6 +13,7 @@ interface VirtualRowsProps<T> {
   rowHeight: number;
   className?: string;
   renderRow: (item: T, index: number) => ReactNode;
+  role?: AriaRole;
 }
 
 function RowsRow<T>({ index, style, items, renderRow }: RowComponentProps<VirtualRowsData<T>>) {
@@ -24,11 +25,14 @@ function RowsRow<T>({ index, style, items, renderRow }: RowComponentProps<Virtua
  * window only. Pass a referentially stable `renderRow`. See
  * webatrice.instructions.md § Virtualized lists for when to prefer this and why.
  */
-export function VirtualRows<T>({ items, rowHeight, className = '', renderRow }: VirtualRowsProps<T>) {
+export function VirtualRows<T>({ items, rowHeight, className = '', renderRow, role }: VirtualRowsProps<T>) {
   return (
     <div className="virtual-list">
       <List<VirtualRowsData<T>>
         className={`virtual-list__list ${className}`}
+        // Only override when set — passing role={undefined} would spread over
+        // react-window's built-in role="list" and strip it from plain lists.
+        {...(role ? { role } : {})}
         rowCount={items.length}
         rowHeight={rowHeight}
         rowComponent={RowsRow}

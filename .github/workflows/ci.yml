@@ -259,11 +259,15 @@ jobs:
         run: npm run -w @cockatrice/sockatrice test:e2e:down
 
   app-e2e:
-    name: App e2e (Playwright + Servatrice)
+    name: App e2e (${{ matrix.browser }})
     needs: [changes]
     if: needs.changes.outputs.documentation_only == 'false'
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox, webkit]
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
@@ -285,10 +289,10 @@ jobs:
         uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5.0.5
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          key: playwright-${{ runner.os }}-${{ matrix.browser }}-${{ hashFiles('package-lock.json') }}
 
       - name: Install Playwright browsers
-        run: npm run -w @cockatrice/webatrice test:e2e:install-browsers:linux
+        run: npm run -w @cockatrice/webatrice test:e2e:install-browsers:linux -- ${{ matrix.browser }}
 
       - name: Build libraries
         uses: ./.github/actions/build-libraries
@@ -300,7 +304,7 @@ jobs:
         run: npm run -w @cockatrice/webatrice test:e2e:up
 
       - name: Run Playwright tests
-        run: npm run -w @cockatrice/webatrice test:e2e:run
+        run: npm run -w @cockatrice/webatrice test:e2e:run -- --project=${{ matrix.browser }}
 
 
       - name: Dump container logs on failure
@@ -321,7 +325,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
         with:
-          name: playwright-report
+          name: playwright-report-${{ matrix.browser }}
           path: |
             packages/webatrice/playwright-report/
             packages/webatrice/test-results/

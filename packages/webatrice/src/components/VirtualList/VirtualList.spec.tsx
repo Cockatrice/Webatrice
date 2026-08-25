@@ -1,6 +1,6 @@
 import { fireEvent, render } from '@testing-library/react';
 import { act } from 'react';
-import VirtualList from './VirtualList';
+import VirtualList, { VirtualRows } from './VirtualList';
 
 type RoCallback = (entries: { contentRect: { height: number; width: number }; target: Element }[]) => void;
 
@@ -140,5 +140,19 @@ describe('VirtualList', () => {
     const { container } = render(<VirtualList items={[]} />);
     const list = container.querySelector('.virtual-list__list');
     expect(list?.className).not.toContain('[object Object]');
+  });
+
+  it('defaults the scroll container to react-window\'s list role', () => {
+    const { container } = render(
+      <VirtualRows items={[1, 2, 3]} rowHeight={20} renderRow={(n) => <span>{n}</span>} />,
+    );
+    expect(container.querySelector('.virtual-list__list')).toHaveAttribute('role', 'list');
+  });
+
+  it('overrides the scroll container role when a consumer needs a table body', () => {
+    const { container } = render(
+      <VirtualRows items={[1]} rowHeight={20} role="rowgroup" renderRow={(n) => <span>{n}</span>} />,
+    );
+    expect(container.querySelector('.virtual-list__list')).toHaveAttribute('role', 'rowgroup');
   });
 });

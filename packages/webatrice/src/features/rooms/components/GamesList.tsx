@@ -180,6 +180,7 @@ export default function GamesList({ room }: GamesListProps) {
     const isSelected = info.gameId === selectedGameId;
     return (
       <div
+        role="row"
         onClick={() => handleSelect(info.gameId)}
         onDoubleClick={() => handleActivate(info.gameId)}
         className={[
@@ -190,25 +191,25 @@ export default function GamesList({ room }: GamesListProps) {
             : 'hover:bg-bg-elevated',
         ].join(' ')}
       >
-        <div className="px-3 py-2 border-b border-border-subtle/50 text-text-secondary tabular-nums whitespace-nowrap">
+        <div role="gridcell" className="px-3 py-2 border-b border-border-subtle/50 text-text-secondary tabular-nums whitespace-nowrap">
           {info.startTime}
         </div>
-        <div className="px-3 py-2 border-b border-border-subtle/50 text-text-primary overflow-hidden">
+        <div role="gridcell" className="px-3 py-2 border-b border-border-subtle/50 text-text-primary overflow-hidden">
           <div className="truncate" title={info.description}>{info.description}</div>
         </div>
-        <div className="px-3 py-2 border-b border-border-subtle/50 text-text-secondary overflow-hidden">
+        <div role="gridcell" className="px-3 py-2 border-b border-border-subtle/50 text-text-secondary overflow-hidden">
           <div className="truncate">{info.creatorInfo?.name ?? ''}</div>
         </div>
-        <div className="px-3 py-2 border-b border-border-subtle/50 text-text-secondary whitespace-nowrap">
+        <div role="gridcell" className="px-3 py-2 border-b border-border-subtle/50 text-text-secondary whitespace-nowrap">
           {gameType}
         </div>
-        <div className="px-3 py-2 border-b border-border-subtle/50 text-text-secondary overflow-hidden">
+        <div role="gridcell" className="px-3 py-2 border-b border-border-subtle/50 text-text-secondary overflow-hidden">
           <div className="truncate">{formatRestrictions(info)}</div>
         </div>
-        <div className="px-3 py-2 border-b border-border-subtle/50 text-text-primary tabular-nums whitespace-nowrap">
+        <div role="gridcell" className="px-3 py-2 border-b border-border-subtle/50 text-text-primary tabular-nums whitespace-nowrap">
           {info.playerCount}/{info.maxPlayers}
         </div>
-        <div className="px-3 py-2 border-b border-border-subtle/50 text-text-secondary overflow-hidden">
+        <div role="gridcell" className="px-3 py-2 border-b border-border-subtle/50 text-text-secondary overflow-hidden">
           <div className="truncate">{formatSpectators(info)}</div>
         </div>
       </div>
@@ -234,38 +235,50 @@ export default function GamesList({ room }: GamesListProps) {
           (the row pane's scrollbar would otherwise narrow the rows vs the
           header). The gutter's track is transparent (thin-scrollbar.css), so
           the header's reserved-but-unused gutter is invisible. */}
-      <div className={`${GRID_COLS} shrink-0 bg-bg-elevated text-sm overflow-auto [scrollbar-gutter:stable]`}>
-        {COLUMNS.map(({ label, field }) => {
-          const active = field === sortBy.field;
-          return (
-            <div
-              key={label}
-              className={[
-                'text-left px-3 py-2 text-xs font-semibold uppercase tracking-wider text-text-muted border-b border-border-subtle select-none',
-                field ? 'cursor-pointer hover:text-text-primary' : '',
-              ].join(' ')}
-              onClick={() => field && handleSort(field)}
-            >
-              <span className="inline-flex items-center gap-1">
-                {label}
-                {active && (sortOrder === 'asc' ? <ArrowUp size={11} /> : <ArrowDown size={11} />)}
-              </span>
-            </div>
-          );
-        })}
-      </div>
-      <div className="flex-1 min-h-0 text-sm">
+      <div
+        role="table"
+        aria-label={`Games in ${room.info.name}`}
+        aria-rowcount={counts.total}
+        className="flex-1 min-h-0 flex flex-col overflow-hidden"
+      >
+        <div role="rowgroup" className="shrink-0">
+          <div role="row" className={`${GRID_COLS} bg-bg-elevated text-sm overflow-auto [scrollbar-gutter:stable]`}>
+            {COLUMNS.map(({ label, field }) => {
+              const active = field === sortBy.field;
+              return (
+                <div
+                  role="columnheader"
+                  key={label}
+                  aria-sort={active ? (sortOrder === 'asc' ? 'ascending' : 'descending') : undefined}
+                  className={[
+                    'text-left px-3 py-2 text-xs font-semibold uppercase tracking-wider text-text-muted border-b border-border-subtle select-none',
+                    field ? 'cursor-pointer hover:text-text-primary' : '',
+                  ].join(' ')}
+                  onClick={() => field && handleSort(field)}
+                >
+                  <span className="inline-flex items-center gap-1">
+                    {label}
+                    {active && (sortOrder === 'asc' ? <ArrowUp size={11} /> : <ArrowDown size={11} />)}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
         {gameList.length === 0 ? (
-          <div className="px-4 py-8 text-center text-sm text-text-muted">
+          <div className="flex-1 min-h-0 px-4 py-8 text-center text-sm text-text-muted">
             No games open right now — click <span className="text-text-primary">Create</span> to start one.
           </div>
         ) : (
-          <VirtualRows
-            items={gameList}
-            rowHeight={GAME_ROW_HEIGHT}
-            className="[scrollbar-gutter:stable]"
-            renderRow={renderGameRow}
-          />
+          <div className="flex-1 min-h-0 text-sm">
+            <VirtualRows
+              items={gameList}
+              rowHeight={GAME_ROW_HEIGHT}
+              role="rowgroup"
+              className="[scrollbar-gutter:stable]"
+              renderRow={renderGameRow}
+            />
+          </div>
         )}
       </div>
 
