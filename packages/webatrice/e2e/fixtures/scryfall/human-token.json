@@ -1,0 +1,20 @@
+{
+  "object": "card",
+  "id": "00000000-0000-4000-8000-0000000e2e03",
+  "name": "Human",
+  "layout": "token",
+  "mana_cost": "",
+  "cmc": 0,
+  "type_line": "Token Creature — Human",
+  "power": "1",
+  "toughness": "1",
+  "colors": ["W"],
+  "color_identity": ["W"],
+  "set": "e2e",
+  "collector_number": "3",
+  "image_uris": {
+    "small": "https://cards.scryfall.io/small/front/e2e/human.jpg",
+    "normal": "https://cards.scryfall.io/normal/front/e2e/human.jpg",
+    "large": "https://cards.scryfall.io/large/front/e2e/human.jpg"
+  }
+}

@@ -4,6 +4,7 @@ import {
   CardAttribute,
   Event_ChangeZonePropertiesSchema,
   Event_GameJoinedSchema,
+  Event_GameLogNotice_NoticeType,
   Event_GameStateChangedSchema,
   Event_MoveCard,
   Event_SetCardAttrSchema,
@@ -59,7 +60,6 @@ function dispatchCardMoved(
   return dispatchThroughStore(state, action);
 }
 
-
 describe('2A: Initialisation & lifecycle', () => {
   it('returns initialState (games map + null incomingReveal) when called with undefined state', () => {
     const result = gamesReducer(undefined, { type: '@@INIT' });
@@ -109,6 +109,28 @@ describe('2A: Initialisation & lifecycle', () => {
     expect(result.games[1]).toBeUndefined();
   });
 
+  it('DECK_SELECTED → stores the server deck list on the local player only', () => {
+    const state = makeState({
+      games: {
+        1: makeGameEntry({
+          localPlayerId: 1,
+          players: {
+            1: makePlayerEntry({ properties: makePlayerProperties({ playerId: 1 }) }),
+            2: makePlayerEntry({ properties: makePlayerProperties({ playerId: 2 }) }),
+          },
+        }),
+      },
+    });
+    const result = gamesReducer(state, Actions.deckSelected({ gameId: 1, deckList: '<cockatrice_deck/>' }));
+    expect(result.games[1].players[1].deckList).toBe('<cockatrice_deck/>');
+    expect(result.games[1].players[2].deckList).toBe('');
+  });
+
+  it('DECK_SELECTED → no-op for an unknown game', () => {
+    const state = makeState();
+    expect(gamesReducer(state, Actions.deckSelected({ gameId: 99, deckList: 'x' }))).toBe(state);
+  });
+
   it('GAME_HOST_CHANGED → updates hostId on existing game', () => {
     const state = makeState();
     const result = gamesReducer(state, Actions.gameHostChanged({ gameId: 1, hostId: 99 }));
@@ -116,7 +138,6 @@ describe('2A: Initialisation & lifecycle', () => {
     expect(result).not.toBe(state);
   });
 });
-
 
 describe('2B: Game state & player management', () => {
   it('GAME_STATE_CHANGED with playerList → replaces players via normalizePlayers', () => {
@@ -267,8 +288,6 @@ describe('2B: Game state & player management', () => {
     expect(msgs.length).toBe(before + 1);
     const added = msgs[msgs.length - 1];
     expect(added.playerId).toBe(1);
-    // The listener stamps via `eventTimestamp()` (matching every other
-    // event-log entry); the payload's `timeReceived` is informational only.
     expect(added.timeReceived).toEqual(expect.any(Number));
     expect(added.message).toBe('Alice has left the game (kicked by game host or moderator).');
   });
@@ -301,11 +320,6 @@ describe('2B: Game state & player management', () => {
   });
 
   it('PLAYER_PROPERTIES_CHANGED → ping-only tick lands in state.pings, preserves deckHash, and skips the player graph', () => {
-    // Regression: the per-second ping tick sends Event_PlayerPropertiesChanged
-    // with only ping_seconds set. A naive overwrite would wipe deck_hash and
-    // disable the Ready button in the deck-select dialog mid-lobby; the clock is
-    // routed to state.pings instead so the player graph keeps its refs (see
-    // GamesState.pings).
     const existing = makePlayerProperties({
       playerId: 1,
       deckHash: 'abc123',
@@ -355,7 +369,6 @@ describe('2B: Game state & player management', () => {
     expect(merged.deckHash).toBe('abc123');
   });
 });
-
 
 describe('2C: CARD_MOVED', () => {
   function stateWithCard(cardOverrides: Parameters<typeof makeCard>[0] = {}) {
@@ -1225,7 +1238,6 @@ describe('2C: CARD_MOVED', () => {
   });
 });
 
-
 describe('2D: Card mutations', () => {
   function stateWithCardInZone(zoneName: string) {
     const card = makeCard({ id: 5, name: 'Old', providerId: 'old', faceDown: false });
@@ -1483,7 +1495,6 @@ describe('2D: Card mutations', () => {
   });
 });
 
-
 describe('2E: CARD_ATTR_CHANGED', () => {
   function stateWithCard() {
     const card = makeCard({
@@ -1695,7 +1706,6 @@ describe('2E: CARD_ATTR_CHANGED', () => {
   });
 });
 
-
 describe('2F: CARD_COUNTER_CHANGED', () => {
   function stateWithCard(existingCounters: any[] = []) {
     const card = makeCard({ id: 4, counterList: existingCounters });
@@ -1745,7 +1755,6 @@ describe('2F: CARD_COUNTER_CHANGED', () => {
   });
 });
 
-
 describe('2G: Arrows', () => {
   it('ARROW_CREATED → inserts arrowInfo into player.arrows keyed by id', () => {
     const state = makeState();
@@ -1777,7 +1786,6 @@ describe('2G: Arrows', () => {
     expect(result.games[1].players[1].arrows[9]).toBeUndefined();
   });
 });
-
 
 describe('2H: Player counters', () => {
   it('COUNTER_CREATED → inserts counterInfo into player.counters keyed by id', () => {
@@ -1840,7 +1848,6 @@ describe('2H: Player counters', () => {
     expect(result.games[1].players[1].counters[5]).toBeUndefined();
   });
 });
-
 
 describe('2I: Zone operations', () => {
   it('CARDS_DRAWN → decrements deck.cardCount, appends cards to hand, increments hand.cardCount', () => {
@@ -2391,7 +2398,6 @@ describe('2I: Zone operations', () => {
   });
 });
 
-
 describe('2J: Turn, phase, and chat', () => {
   it('ACTIVE_PLAYER_SET → sets game.activePlayerId', () => {
     const state = makeState();
@@ -2411,6 +2417,34 @@ describe('2J: Turn, phase, and chat', () => {
     expect(result.games[1].reversed).toBe(true);
   });
 
+  describe('TURN_REVERSED log line', () => {
+    const twoSeats = () => makeState({
+      games: {
+        1: makeGameEntry({
+          activePlayerId: 1,
+          players: {
+            1: makePlayerEntry({ properties: makePlayerProperties({ playerId: 1, userInfo: { name: 'Alice' } }) }),
+            2: makePlayerEntry({ properties: makePlayerProperties({ playerId: 2, userInfo: { name: 'Bob' } }) }),
+          },
+        }),
+      },
+    });
+    const lastLine = (result: GamesState) => result.games[1].messages.at(-1);
+
+    it('names the player who reversed the order, not the active player', () => {
+      const result = dispatchThroughStore(twoSeats(), Actions.turnReversed({ gameId: 1, reversed: true, playerId: 2 }));
+      expect(lastLine(result)).toMatchObject({ playerId: 2, message: 'Bob reversed turn order, now it\'s reversed.' });
+    });
+
+    it.each([undefined, -1, 9])('logs nothing when the actor is %s, like desktop', (playerId) => {
+      const state = twoSeats();
+      const before = state.games[1].messages.length;
+      const result = dispatchThroughStore(state, Actions.turnReversed({ gameId: 1, reversed: true, playerId }));
+      expect(result.games[1].reversed).toBe(true);
+      expect(result.games[1].messages).toHaveLength(before);
+    });
+  });
+
   it('GAME_SAY → appends message with timeReceived from payload', () => {
     const state = makeState();
     const result = gamesReducer(state, Actions.gameSay({
@@ -2422,8 +2456,55 @@ describe('2J: Turn, phase, and chat', () => {
 
     expect(result.games[1].messages).toHaveLength(1);
     expect(result.games[1].messages[0]).toEqual({
-      playerId: 2, message: 'gg', timeReceived: 123456789, kind: 'chat',
+      playerId: 2, message: 'gg', timeReceived: 123456789, gameSeconds: 0, kind: 'chat',
     });
+  });
+
+  it('GAME_SAY → stamps the game time: the server\'s last count plus the whole seconds since', () => {
+    const state = makeState();
+    state.games[1].secondsElapsed = 600;
+    state.games[1].secondsElapsedAt = 1_000_000;
+    const result = gamesReducer(state, Actions.gameSay({ gameId: 1, playerId: 2, message: 'gg', timeReceived: 1_065_900 }));
+    expect(result.games[1].messages[0].gameSeconds).toBe(665);
+  });
+
+  describe('game clock', () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it('GAME_INFO_UPDATED → restarts the game clock from the server\'s count', () => {
+      vi.spyOn(Date, 'now').mockReturnValue(5_000);
+      const result = gamesReducer(makeState(), Actions.gameInfoUpdated({ gameId: 1, secondsElapsed: 42 }));
+      expect(result.games[1]).toMatchObject({ secondsElapsed: 42, secondsElapsedAt: 5_000 });
+    });
+
+    it('GAME_TIME_SYNCED → sets a replay\'s game time to the recorded container\'s', () => {
+      vi.spyOn(Date, 'now').mockReturnValue(9_000);
+      let result = gamesReducer(makeState(), Actions.gameTimeSynced({ gameId: 1, secondsElapsed: 125 }));
+      expect(result.games[1]).toMatchObject({ secondsElapsed: 125, secondsElapsedAt: 9_000 });
+      result = gamesReducer(result, Actions.gameSay({ gameId: 1, playerId: 2, message: 'gg', timeReceived: 9_000 }));
+      expect(result.games[1].messages[0].gameSeconds).toBe(125);
+    });
+
+    it('GAME_INFO_UPDATED → leaves a replay\'s game clock on its recorded containers\' time base', () => {
+      vi.spyOn(Date, 'now').mockReturnValue(9_000);
+      const state = makeState();
+      state.games[1].replay = true;
+      let result = gamesReducer(state, Actions.gameTimeSynced({ gameId: 1, secondsElapsed: 125 }));
+      result = gamesReducer(result, Actions.gameInfoUpdated({ gameId: 1, secondsElapsed: 4_000, activePhase: 3 }));
+      expect(result.games[1]).toMatchObject({ secondsElapsed: 125, secondsElapsedAt: 9_000, activePhase: 3 });
+    });
+  });
+
+  it('GAME_SAY → keeps the sender name after the player leaves', () => {
+    const state = makeState();
+    state.games[1].players[1].properties = makePlayerProperties({ playerId: 1, userInfo: { name: 'Alice' } });
+    let result = gamesReducer(state, Actions.gameSay({ gameId: 1, playerId: 1, message: 'gg', timeReceived: 1 }));
+    result = gamesReducer(result, Actions.playerLeft({ gameId: 1, playerId: 1, reason: 3, timeReceived: 2 }));
+
+    expect(result.games[1].players[1]).toBeUndefined();
+    expect(result.games[1].messages.find((m) => m.kind === 'chat')).toMatchObject({ playerId: 1, senderName: 'Alice' });
   });
 
   it(`GAME_SAY → caps messages at MAX_GAME_MESSAGES (${MAX_GAME_MESSAGES}) and evicts oldest`, () => {
@@ -2440,7 +2521,6 @@ describe('2J: Turn, phase, and chat', () => {
     expect(result.games[1].messages[0].message).not.toBe('msg-0');
   });
 });
-
 
 describe('2K: Log-only actions', () => {
   it('ZONE_SHUFFLED → appends an event-log message', () => {
@@ -2475,6 +2555,34 @@ describe('2K: Log-only actions', () => {
     expect(msgs[0].kind).toBe('event');
     expect(msgs[0].message).toContain('17');
     expect(msgs[0].message).toContain('20');
+  });
+
+  it('GAME_LOG_NOTICE UNDO_DRAW_FAILED → appends the failed-undo line for the acting player', () => {
+    const state = makeState();
+    const result = gamesReducer(state, Actions.gameLogNotice({
+      gameId: 1, playerId: 1, noticeType: Event_GameLogNotice_NoticeType.UNDO_DRAW_FAILED,
+    }));
+    const msgs = result.games[1].messages;
+    expect(msgs.length).toBe(1);
+    expect(msgs[0].kind).toBe('event');
+    expect(msgs[0].playerId).toBe(1);
+    expect(msgs[0].message).toMatch(/ failed to undo their last draw\.$/);
+  });
+
+  it('GAME_LOG_NOTICE with a notice type this client does not know → dropped', () => {
+    const state = makeState();
+    const result = gamesReducer(state, Actions.gameLogNotice({
+      gameId: 1, playerId: 1, noticeType: 99 as Event_GameLogNotice_NoticeType,
+    }));
+    expect(result.games[1].messages).toEqual(state.games[1].messages);
+  });
+
+  it('GAME_LOG_NOTICE with unknown gameId → state unchanged', () => {
+    const state = makeState();
+    const result = gamesReducer(state, Actions.gameLogNotice({
+      gameId: 999, playerId: 1, noticeType: Event_GameLogNotice_NoticeType.UNDO_DRAW_FAILED,
+    }));
+    expect(result).toBe(state);
   });
 
   it('ZONE_SHUFFLED with unknown gameId → state unchanged', () => {
@@ -2938,7 +3046,6 @@ describe('2L: Null-guard / missing entity early-returns', () => {
     expect(gamesReducer(state, Actions.gameSay({ gameId: UNKNOWN_GAME, playerId: 1, message: 'hi', timeReceived: 0 }))).toBe(state);
   });
 });
-
 
 describe('malformed input', () => {
   it('CARDS_REVEALED with empty cards array → leaves zone unchanged', () => {

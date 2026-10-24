@@ -1,3 +1,4 @@
+import { withEventTime, type EventTime } from './game.actionTime';
 import { CaseReducer, PayloadAction } from '@reduxjs/toolkit';
 import { clone, isFieldSet } from '@bufbuild/protobuf';
 import {
@@ -15,6 +16,7 @@ import {
   ServerInfo_Card,
   ServerInfo_CardSchema,
 } from '@cockatrice/sockatrice/generated';
+import type { WebsocketTypes } from '@cockatrice/sockatrice/types';
 import { cloneWith } from '../../common';
 import { GamesState, IncomingReveal } from './game.interfaces';
 import { pushEventMessage } from './game.reducer.helpers';
@@ -150,7 +152,12 @@ export const cardReducers = {
     if (isAutoTopReveal) {
       zone.topRevealedCard = clone(ServerInfo_CardSchema, cards[0]);
     }
-  }) as CaseReducer<GamesState, PayloadAction<{ gameId: number; playerId: number; data: Event_RevealCards }>>,
+  }) as CaseReducer<GamesState, PayloadAction<{
+    gameId: number;
+    playerId: number;
+    data: Event_RevealCards;
+    replayOptions?: WebsocketTypes.ReplayEventOptions;
+  }>>,
 
   zoneViewRevealed: ((state, action) => {
     const { gameId, playerId, zoneName, cards, isReversed } = action.payload;
@@ -299,7 +306,7 @@ export const cardReducers = {
     PayloadAction<{ gameId: number; playerId: number; zoneName: string; fromPosition: number; toPosition: number }>
   >,
 
-  zonePropertiesChanged: ((state, action) => {
+  zonePropertiesChanged: withEventTime(((state, action) => {
     const { gameId, playerId, data } = action.payload;
     const game = state.games[gameId];
     const zone = game?.players[playerId]?.zones[data.zoneName];
@@ -317,8 +324,8 @@ export const cardReducers = {
     // until the top actually changes (draw / shuffle / move-from-deck)
     // — a top-change listener elsewhere clears it. Toggling off just
     // stops FUTURE auto-reveals; what was already known stays known.
-    pushEventMessage(game, playerId, formatZonePropertiesChanged(game, playerId, data));
-  }) as CaseReducer<GamesState, PayloadAction<{ gameId: number; playerId: number; data: Event_ChangeZoneProperties }>>,
+    pushEventMessage(game, playerId, formatZonePropertiesChanged(game, playerId, data), action.payload.timeReceived);
+  }) as CaseReducer<GamesState, PayloadAction<{ gameId: number; playerId: number; data: Event_ChangeZoneProperties } & EventTime>>),
 
   // Clear the persistent top-card face on a zone when the top
   // position might have changed. Dispatched by top-change listeners

@@ -15,6 +15,8 @@ export const E2E_HOST = { host: 'localhost', port: 4748 } as const;
 // Pre-seeded judge account (docker/servatrice/judge-seed.sql, admin = 4 → IsJudge).
 // Used by the judge-card-actions e2e to log in as a judge.
 export const E2E_JUDGE = { username: 'e2e_judge', password: 'password123' } as const;
+export const E2E_MODERATOR = { username: 'e2e_moderator', password: 'password123' } as const;
+export const E2E_ADMIN = { username: 'e2e_superuser', password: 'password123' } as const;
 
 export interface RegisteredSession {
   login: LoginPage;
@@ -30,20 +32,16 @@ async function reachHost(login: LoginPage): Promise<void> {
 }
 
 // Click the first joinable room (server seeds at least one). Picking the first
-// row rather than naming the room avoids coupling to servatrice seed drift; two
+// room rather than naming it avoids coupling to servatrice seed drift; two
 // sessions both calling this land in the same room.
 //
-// RoomsList.tsx renders each row as a plain <tr> with a single per-row
-// button labelled "Join" (not-yet-joined) or "Open" (already joined).
-// The pre-redo `.rooms` container class is gone; the rooms table is
-// the one <table> under the "Name" column header on /server, so we
-// anchor the button lookup to the table's <tbody>.
-async function joinFirstRoom(page: Page, rooms: RoomsPage): Promise<void> {
-  const roomsTable = page.getByRole('table').filter({
-    has: page.getByRole('columnheader', { name: /^name$/i }),
-  });
-  const firstJoinable = roomsTable
-    .getByRole('button', { name: /^(join|open)$/i })
+// The e2e Servatrice auto-joins its one room on login. Like desktop
+// (setCurrent = false), the auto-join opens the room without leaving Home,
+// so the Rooms panel's button reads "Join <room>" or "Open <room>" and the
+// click is what enters the room — the manual path is exercised on every run.
+export async function joinFirstRoom(page: Page, rooms: RoomsPage): Promise<void> {
+  const firstJoinable = rooms.roomsPanel
+    .getByRole('button', { name: /^(join|open) /i })
     .first();
   await expect(firstJoinable).toBeVisible({ timeout: 15_000 });
   await firstJoinable.click();
@@ -62,7 +60,7 @@ export async function registerAndReachRooms(page: Page): Promise<RegisteredSessi
   // Register against the e2e docker host — the RegisterForm mounts its
   // own KnownHosts and defaults `selectedHost` to undefined, so without
   // passing this label the dialog would pick the first entry
-  // (Chickatrice, seeded by the app) and register against the public
+  // (Rooster, seeded by the app) and register against the public
   // server instead of our local Servatrice.
   await login.register(user.username, user.password, { hostLabel: E2E_HOST_LABEL });
   await rooms.waitForRoomList();
@@ -93,7 +91,14 @@ export async function registerAndJoinFirstRoom(page: Page): Promise<RegisteredSe
   return session;
 }
 
-// Log in as an existing account and join the first room (for the seeded judge).
+export async function openAdministrationUnlocked(page: Page, userName: string): Promise<void> {
+  await page.getByRole('button', { name: userName, exact: true }).click();
+  await page.getByRole('menuitem', { name: 'Administration', exact: true }).click();
+  await expect(page.getByRole('main').getByRole('button', { name: 'Lock functions' }).first()).toBeVisible();
+}
+
+// Log in as an existing account and join the first room (for the seeded
+// judge and staff).
 export async function joinFirstRoomAs(
   page: Page,
   credentials: { username: string; password: string },

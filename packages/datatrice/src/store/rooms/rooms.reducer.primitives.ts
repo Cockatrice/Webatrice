@@ -4,8 +4,6 @@ import { ServerInfo_Room } from '@cockatrice/sockatrice/generated';
 
 import { RoomsState } from './rooms.interfaces';
 
-// Single source of truth for the two game mutations, shared by the per-game
-// case reducers and the batch reducer so their semantics can't drift.
 function upsertGame(state: RoomsState, roomId: number, gameId: number, game: Enriched.Game): void {
   const room = state.rooms[roomId];
   if (room) {
@@ -65,12 +63,6 @@ export const primitiveReducers = {
     gameId: number;
   }>>,
 
-  // One Event_ListGames frame = one dispatch. Changes apply in event order
-  // (game: null = removal) so a close-then-recreate of the same gameId within
-  // a frame resolves identically to the former per-game dispatch sequence.
-  // Batching exists because a busy server's join snapshot carries thousands of
-  // games; per-game dispatches invalidated selectors N times per frame (and
-  // made the dev invariant middleware walks O(games²)).
   roomGamesBatchApplied: ((state, action) => {
     const { roomId, changes } = action.payload;
     for (const { gameId, game } of changes) {

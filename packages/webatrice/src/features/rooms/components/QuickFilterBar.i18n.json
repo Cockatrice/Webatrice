@@ -1,0 +1,54 @@
+{
+  "QuickFilterBar": {
+    "search": "Search game descriptions",
+    "format": {
+      "label": "Format",
+      "all": "All",
+      "many": "{count} formats"
+    },
+    "players": {
+      "label": "Players",
+      "any": "Any",
+      "exactly": "{count}",
+      "atLeast": "{count}+",
+      "atMost": "Up to {count}",
+      "between": "{min}–{max}",
+      "presets": "Common sizes",
+      "preset": {
+        "any": "Any",
+        "two": "2 players",
+        "threeFour": "3–4 players",
+        "fivePlus": "5+ players"
+      },
+      "min": "At least",
+      "max": "At most",
+      "hint": "Counts the seats a game has, not who has joined."
+    },
+    "hideFullAndStarted": "Hide full & started",
+    "hidePassword": "Hide password",
+    "more": "More filters",
+    "moreActive": "{count, plural, one {# filter on} other {# filters on}}",
+    "count": "<b>{visible}</b> of {total, plural, one {# game} other {# games}}",
+    "clearAll": "Clear all",
+    "removeChip": "Remove filter: {filter}",
+    "chip": {
+      "creators": "Created by {names}",
+      "maxAge": "Created: {age}",
+      "hidePassword": "Hide password",
+      "hideBuddiesOnly": "Hide buddies-only games",
+      "hideIgnored": "Hide games by ignored users",
+      "hideNotBuddy": "Only games by buddies",
+      "hideOpenDecklist": "Hide open-decklist games",
+      "spectators": "Spectators can watch"
+    },
+    "sort": {
+      "label": "Sort: {sort}",
+      "menu": "Sort games",
+      "newest": "Newest first",
+      "oldest": "Oldest first",
+      "description": "Description A–Z",
+      "host": "Host A–Z",
+      "custom": "Custom order"
+    }
+  }
+}

@@ -1,4 +1,5 @@
 import { Gavel, Shield, ShieldCheck } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { ServerInfo_User_UserLevelFlag } from '@cockatrice/sockatrice/generated';
 
 /**
@@ -30,6 +31,7 @@ export function UserBadges({
   size?: number;
   className?: string;
 }) {
+  const { t } = useTranslation();
   const isAdmin =
     (userLevel & ServerInfo_User_UserLevelFlag.IsAdmin)
       === ServerInfo_User_UserLevelFlag.IsAdmin;
@@ -40,23 +42,25 @@ export function UserBadges({
     (userLevel & ServerInfo_User_UserLevelFlag.IsJudge)
       === ServerInfo_User_UserLevelFlag.IsJudge;
 
-  if (!isAdmin && !isModerator && !isJudge) return null;
+  if (!isAdmin && !isModerator && !isJudge) {
+    return null;
+  }
 
   return (
     <span className={`inline-flex items-center gap-0.5 shrink-0 ${className}`}>
       {isAdmin && (
-        <span title="Admin" className="inline-flex">
-          <ShieldCheck size={size} className="text-red-400" aria-label="Admin" />
+        <span title={t('UserBadges.admin')} className="inline-flex">
+          <ShieldCheck size={size} className="text-danger" aria-label={t('UserBadges.admin')} />
         </span>
       )}
       {!isAdmin && isModerator && (
-        <span title="Moderator" className="inline-flex">
-          <Shield size={size} className="text-blue-400" aria-label="Moderator" />
+        <span title={t('UserBadges.moderator')} className="inline-flex">
+          <Shield size={size} className="text-blue-400 light:text-blue-700" aria-label={t('UserBadges.moderator')} />
         </span>
       )}
       {isJudge && (
-        <span title="Judge" className="inline-flex">
-          <Gavel size={size} className="text-amber-400" aria-label="Judge" />
+        <span title={t('UserBadges.judge')} className="inline-flex">
+          <Gavel size={size} className="text-warning" aria-label={t('UserBadges.judge')} />
         </span>
       )}
     </span>

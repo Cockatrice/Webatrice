@@ -45,7 +45,7 @@ describe('admin commands', () => {
       responseCode: Data.Response_ResponseCode.RespOk,
     })));
 
-    expect(getMockResponse().admin.adjustMod).toHaveBeenCalledWith('bob', true, false);
+    expect(getMockResponse().admin.adjustMod).toHaveBeenCalledWith('bob', true, false, undefined);
   });
 
   it('shutdownServer sends command and dispatches on success', () => {

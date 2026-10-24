@@ -7,8 +7,9 @@ import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
 
 import { InputField } from '@app/components';
-import { useReduxEffect } from '@app/hooks';
+import { useCommandFailureMessage, useReduxEffect } from '@app/hooks';
 import { server } from '@cockatrice/datatrice';
+import type { WebsocketTypes } from '@cockatrice/sockatrice/types';
 
 import {
   buildAccountActivationFormSchema,
@@ -23,12 +24,13 @@ interface AccountActivationFormProps {
 }
 
 const AccountActivationForm = ({ onSubmit }: AccountActivationFormProps) => {
-  const [errorMessage, setErrorMessage] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const { t } = useTranslation();
+  const failureMessage = useCommandFailureMessage();
 
-  useReduxEffect(() => {
-    setErrorMessage(true);
-  }, server.Types.ACCOUNT_ACTIVATION_FAILED, []);
+  useReduxEffect<{ failure: WebsocketTypes.CommandFailure } | undefined>(({ payload }) => {
+    setErrorMessage(failureMessage(payload?.failure, t('AccountActivationForm.error.failed')));
+  }, server.Types.ACCOUNT_ACTIVATION_FAILED, [failureMessage, t]);
 
   const { control, handleSubmit } = useForm<AccountActivationFormValues>({
     defaultValues: { token: '' },
@@ -36,7 +38,7 @@ const AccountActivationForm = ({ onSubmit }: AccountActivationFormProps) => {
   });
 
   const submit = handleSubmit((values) => {
-    setErrorMessage(false);
+    setErrorMessage(null);
     onSubmit(values);
   });
 
@@ -59,7 +61,7 @@ const AccountActivationForm = ({ onSubmit }: AccountActivationFormProps) => {
 
       {errorMessage && (
         <div className="AccountActivationForm-error">
-          <Typography color="error">{t('AccountActivationForm.error.failed')}</Typography>
+          <Typography color="error">{errorMessage}</Typography>
         </div>
       )}
 

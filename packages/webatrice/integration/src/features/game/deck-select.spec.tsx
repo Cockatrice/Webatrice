@@ -2,13 +2,19 @@ import { act, waitFor, screen } from '@testing-library/react';
 import { create } from '@bufbuild/protobuf';
 import { describe, expect, it } from 'vitest';
 
-import { Event_GameStateChangedSchema, ServerInfo_PlayerPropertiesSchema, ServerInfo_PlayerSchema, ServerInfo_UserSchema } from '@cockatrice/sockatrice/generated';
+import {
+  Event_GameStateChangedSchema,
+  ServerInfo_PlayerPropertiesSchema,
+  ServerInfo_PlayerSchema,
+  ServerInfo_UserSchema,
+} from '@cockatrice/sockatrice/generated';
 import { store } from '../../helpers/setup';
 import { games } from '@cockatrice/datatrice';
 
 import { Game } from '@app/features/game';
 import { renderFeatureScreen } from '../helpers';
 import { buildEventGameJoined, registerGameBoardHooks } from './helpers';
+import { testI18n } from '../../../../src/__test-utils__/renderWithProviders';
 
 registerGameBoardHooks();
 
@@ -38,7 +44,7 @@ describe('Game deck select', () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByLabelText('deck list')).toBeInTheDocument();
+      expect(screen.getByRole('textbox', { name: testI18n.t('DeckSelectDialog.deckList') })).toBeInTheDocument();
     });
   });
 });

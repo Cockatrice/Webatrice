@@ -1,4 +1,5 @@
 import { create } from '@bufbuild/protobuf';
+import { WebsocketTypes } from '@cockatrice/sockatrice/types';
 
 import { createStore } from '../store/createStore';
 import {
@@ -12,6 +13,7 @@ import {
   Event_DestroyCardSchema,
   Event_DrawCardsSchema,
   Event_DumpZoneSchema,
+  Event_GameLogNotice_NoticeType,
   Event_FlipCardSchema,
   Event_GameStateChangedSchema,
   Event_MoveCardSchema,
@@ -22,6 +24,7 @@ import {
   Event_SetCounterSchema,
   Event_ShuffleSchema,
   ServerInfo_CardSchema,
+  ServerInfo_GameSchema,
   ServerInfo_PlayerPropertiesSchema,
 } from '@cockatrice/sockatrice/generated';
 import { Actions as GameActions } from '../store/games/game.actions';
@@ -34,6 +37,14 @@ function setup() {
 }
 
 describe('GameResponseImpl', () => {
+  beforeEach(() => {
+    vi.spyOn(Date, 'now').mockReturnValue(123456789);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it('clearStore dispatches the clearStore action', () => {
     const { impl, dispatch } = setup();
     impl.clearStore();
@@ -83,6 +94,22 @@ describe('GameResponseImpl', () => {
     const { impl, dispatch } = setup();
     impl.gameClosed(7);
     expect(dispatch).toHaveBeenCalledWith(GameActions.gameClosed({ gameId: 7 }));
+  });
+
+  it('preserves explicit deck selections separately from ordinary properties announcements', () => {
+    const { impl, dispatch } = setup();
+    const properties = create(ServerInfo_PlayerPropertiesSchema, {
+      playerId: 3, deckHash: 'same-deck', playmatParams: { cardName: 'Forest' },
+    });
+    impl.playerPropertiesChanged(7, 3, properties, true);
+    impl.playerPropertiesChanged(7, 3, properties, true);
+    impl.playerPropertiesChanged(7, 3, properties, false);
+    expect(dispatch).toHaveBeenNthCalledWith(1,
+      GameActions.playerPropertiesChanged({ gameId: 7, playerId: 3, properties, isDeckSelect: true }));
+    expect(dispatch).toHaveBeenNthCalledWith(2,
+      GameActions.playerPropertiesChanged({ gameId: 7, playerId: 3, properties, isDeckSelect: true }));
+    expect(dispatch).toHaveBeenNthCalledWith(3,
+      GameActions.playerPropertiesChanged({ gameId: 7, playerId: 3, properties, isDeckSelect: false }));
   });
 
   it('gameHostChanged dispatches the gameHostChanged action', () => {
@@ -196,11 +223,21 @@ describe('GameResponseImpl', () => {
     expect(dispatch).toHaveBeenCalledWith(GameActions.cardsDrawn({ gameId: 7, playerId: 3, data }));
   });
 
+  it.each([true, false])('cardsRevealed forwards skipRevealWindow=%s to the store', (skipRevealWindow) => {
+    const { impl, dispatch } = setup();
+    const data = create(Event_RevealCardsSchema, { zoneName: 'hand' });
+    const replayOptions = { skipRevealWindow };
+
+    impl.cardsRevealed(7, 3, data, replayOptions);
+
+    expect(dispatch).toHaveBeenCalledWith(GameActions.cardsRevealed({ gameId: 7, playerId: 3, data, replayOptions }));
+  });
+
   it('cardsRevealed dispatches the cardsRevealed action', () => {
     const { impl, dispatch } = setup();
     const data = create(Event_RevealCardsSchema, {});
     impl.cardsRevealed(7, 3, data);
-    expect(dispatch).toHaveBeenCalledWith(GameActions.cardsRevealed({ gameId: 7, playerId: 3, data }));
+    expect(dispatch).toHaveBeenCalledWith(GameActions.cardsRevealed({ gameId: 7, playerId: 3, data, replayOptions: undefined }));
   });
 
   it('zoneViewRevealed dispatches the zoneViewRevealed action', () => {
@@ -240,8 +277,8 @@ describe('GameResponseImpl', () => {
 
   it('turnReversed dispatches the turnReversed action', () => {
     const { impl, dispatch } = setup();
-    impl.turnReversed(7, true);
-    expect(dispatch).toHaveBeenCalledWith(GameActions.turnReversed({ gameId: 7, reversed: true }));
+    impl.turnReversed(7, true, 2);
+    expect(dispatch).toHaveBeenCalledWith(GameActions.turnReversed({ gameId: 7, reversed: true, playerId: 2 }));
   });
 
   it('zoneDumped dispatches the zoneDumped action', () => {
@@ -251,10 +288,51 @@ describe('GameResponseImpl', () => {
     expect(dispatch).toHaveBeenCalledWith(GameActions.zoneDumped({ gameId: 7, playerId: 3, data }));
   });
 
+  it('deckSelected dispatches the deckSelected action', () => {
+    const { impl, dispatch } = setup();
+    impl.deckSelected(7, '<cockatrice_deck/>');
+    expect(dispatch).toHaveBeenCalledWith(GameActions.deckSelected({ gameId: 7, deckList: '<cockatrice_deck/>' }));
+  });
+
+  it('deckSelectFailed dispatches the deckSelectFailed signal with the transport reason', () => {
+    const { impl, dispatch } = setup();
+    impl.deckSelectFailed(7, -1, WebsocketTypes.CommandFailure.Disconnected);
+    expect(dispatch).toHaveBeenCalledWith(
+      GameActions.deckSelectFailed({ gameId: 7, responseCode: -1, failure: WebsocketTypes.CommandFailure.Disconnected }),
+    );
+  });
+
   it('zonePropertiesChanged dispatches the zonePropertiesChanged action', () => {
     const { impl, dispatch } = setup();
     const data = create(Event_ChangeZonePropertiesSchema, { zoneName: 'deck' });
     impl.zonePropertiesChanged(7, 3, data);
     expect(dispatch).toHaveBeenCalledWith(GameActions.zonePropertiesChanged({ gameId: 7, playerId: 3, data }));
+  });
+
+  it('gameLogNotice dispatches the gameLogNotice action', () => {
+    const { impl, dispatch } = setup();
+    impl.gameLogNotice(7, 3, Event_GameLogNotice_NoticeType.UNDO_DRAW_FAILED);
+    expect(dispatch).toHaveBeenCalledWith(GameActions.gameLogNotice({
+      gameId: 7, playerId: 3, noticeType: Event_GameLogNotice_NoticeType.UNDO_DRAW_FAILED,
+    }));
+  });
+
+  it('replayGameLoaded dispatches the replayGameLoaded action', () => {
+    const { impl, dispatch } = setup();
+    const gameInfo = create(ServerInfo_GameSchema, { gameId: 7, description: 'recorded' });
+    impl.replayGameLoaded(-1001, gameInfo);
+    expect(dispatch).toHaveBeenCalledWith(GameActions.replayGameLoaded({ gameId: -1001, gameInfo }));
+  });
+
+  it('replayGameUnloaded dispatches the replayGameUnloaded action', () => {
+    const { impl, dispatch } = setup();
+    impl.replayGameUnloaded(-1001);
+    expect(dispatch).toHaveBeenCalledWith(GameActions.replayGameUnloaded({ gameId: -1001 }));
+  });
+
+  it('replayGameTimeSynced dispatches the recorded container\'s game time', () => {
+    const { impl, dispatch } = setup();
+    impl.replayGameTimeSynced(-1001, 95);
+    expect(dispatch).toHaveBeenCalledWith(GameActions.gameTimeSynced({ gameId: -1001, secondsElapsed: 95 }));
   });
 });

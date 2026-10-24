@@ -310,9 +310,6 @@ describe('roomGamesBatchApplied', () => {
   });
 
   it('skips upserts but still clears selection when the room is missing', () => {
-    // Defensive: mirrors roomGameUpserted (no-op) + roomGameRemoved
-    // (selection clear runs regardless) for a room deleted between listener
-    // dispatch and reducer application.
     const state = makeRoomsState({
       rooms: {},
       selectedGameIds: { 42: 7 },

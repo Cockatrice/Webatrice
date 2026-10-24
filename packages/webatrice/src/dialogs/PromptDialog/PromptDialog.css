@@ -2,3 +2,8 @@
   width: 400px;
   max-width: 400px;
 }
+
+.PromptDialog .PromptDialog__description {
+  margin-bottom: 12px;
+  overflow-wrap: anywhere;
+}

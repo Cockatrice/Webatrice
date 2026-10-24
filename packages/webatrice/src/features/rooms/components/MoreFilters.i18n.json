@@ -1,0 +1,32 @@
+{
+  "MoreFilters": {
+    "creators": {
+      "label": "Created by",
+      "placeholder": "Host names, comma-separated"
+    },
+    "maxAge": {
+      "label": "Created within",
+      "any": "Any time",
+      "minutes": "{count, plural, one {Last minute} other {Last # minutes}}",
+      "hours": "{count, plural, one {Last hour} other {Last # hours}}"
+    },
+    "section": {
+      "hide": "Hide",
+      "spectators": "Spectators"
+    },
+    "hide": {
+      "password": "Hide password-protected games",
+      "notBuddyCreated": "Hide games not created by buddies",
+      "ignoredUsers": "Hide games by ignored users",
+      "buddiesOnly": "Hide buddies-only games",
+      "openDecklist": "Hide open-decklist games"
+    },
+    "spectators": {
+      "canWatch": "Only games spectators can watch",
+      "needPassword": "Include games where spectators need a password",
+      "canChat": "Only where spectators can chat",
+      "canSeeHands": "Only where spectators see hands"
+    },
+    "done": "Done"
+  }
+}

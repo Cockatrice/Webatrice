@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { ArrowRightLeft, ChevronDown, ChevronRight, Loader2, Puzzle, Sparkles, Users } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 /**
  * Clickable links to a card's related printings — the front/back faces
@@ -91,12 +92,14 @@ export function CardRelatedLinks({
    *  flicker. Match key is `relatedCardKey({ name, scryfallId })`. */
   pendingKey?: string;
 }) {
+  const { t } = useTranslation();
   // "Token" appears in every token's type_line (Scryfall convention:
   // "Token Artifact — Food", "Token Creature — 1/1 Boar"). Match on
   // the space-delimited word so we don't false-positive real cards
   // that happen to contain "token" in their name/text.
   const parentIsToken = /\btoken\b/i.test(parentTypeLine ?? '');
   const [reverseExpanded, setReverseExpanded] = useState(false);
+  const reverseListId = useId();
   const anyPending = !!pendingKey;
   // Bucket `allParts` by component so we can render each group under
   // its own header. Filters:
@@ -109,8 +112,12 @@ export function CardRelatedLinks({
   const meldPieces: CardRelatedLinksPart[] = [];
   const comboPieces: CardRelatedLinksPart[] = [];
   for (const part of allParts ?? []) {
-    if (!part.name) continue;
-    if (parentName && part.name.toLowerCase() === parentName.toLowerCase()) continue;
+    if (!part.name) {
+      continue;
+    }
+    if (parentName && part.name.toLowerCase() === parentName.toLowerCase()) {
+      continue;
+    }
     // Skip Scryfall's checklist entries — Wizards printed physical
     // "checklist cards" as tokens for pre-M15 DFC sets and Scryfall
     // lists them in `all_parts`. They're not real gameplay tokens
@@ -157,7 +164,7 @@ export function CardRelatedLinks({
       {otherFaces.length > 0 && (
         <Section
           icon={<ArrowRightLeft size={11} className="text-text-muted" />}
-          label="Other face"
+          label={t('CardRelatedLinks.otherFace')}
         >
           {otherFaces.map((f, i) => {
             const key = relatedCardKey({ name: f.name! });
@@ -184,17 +191,17 @@ export function CardRelatedLinks({
       {tokens.length > 0 && !parentIsToken && (
         <Section
           icon={<Sparkles size={11} className="text-text-muted" />}
-          label={tokens.length === 1 ? 'Token' : 'Tokens'}
+          label={t('CardRelatedLinks.tokens', { count: tokens.length })}
         >
-          {tokens.map((t, i) => {
-            const key = relatedCardKey({ name: t.name!, scryfallId: t.id });
+          {tokens.map((token, i) => {
+            const key = relatedCardKey({ name: token.name!, scryfallId: token.id });
             return (
               <LinkChip
                 key={`tok-${i}`}
-                label={t.name!}
+                label={token.name!}
                 loading={pendingKey === key}
                 disabled={anyPending}
-                onClick={() => onNavigate({ name: t.name!, scryfallId: t.id, kind: 'token' })}
+                onClick={() => onNavigate({ name: token.name!, scryfallId: token.id, kind: 'token' })}
               />
             );
           })}
@@ -203,7 +210,7 @@ export function CardRelatedLinks({
       {meldPieces.length > 0 && (
         <Section
           icon={<Puzzle size={11} className="text-text-muted" />}
-          label="Meld"
+          label={t('CardRelatedLinks.meld')}
         >
           {meldPieces.map((m, i) => {
             const key = relatedCardKey({ name: m.name!, scryfallId: m.id });
@@ -240,14 +247,19 @@ export function CardRelatedLinks({
             <button
               type="button"
               onClick={() => setReverseExpanded((v) => !v)}
-              className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-text-muted hover:text-text-primary transition-colors self-start"
+              aria-expanded={reverseExpanded}
+              aria-controls={reverseExpanded ? reverseListId : undefined}
+              className={[
+                'flex items-center gap-1 text-[10px] font-semibold uppercase',
+                'tracking-wider text-text-muted hover:text-text-primary transition-colors self-start',
+              ].join(' ')}
             >
               {reverseExpanded ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
               <Users size={11} />
-              {`Cards that use this token (${comboPieces.length})`}
+              {t('CardRelatedLinks.usedBy', { count: comboPieces.length })}
             </button>
             {reverseExpanded && (
-              <div className="flex flex-wrap gap-1">
+              <div id={reverseListId} className="flex flex-wrap gap-1">
                 {comboPieces.map((c, i) => {
                   const key = relatedCardKey({ name: c.name!, scryfallId: c.id });
                   return (
@@ -266,7 +278,7 @@ export function CardRelatedLinks({
         ) : (
           <Section
             icon={<Users size={11} className="text-text-muted" />}
-            label="Related"
+            label={t('CardRelatedLinks.related')}
           >
             {comboPieces.map((c, i) => {
               const key = relatedCardKey({ name: c.name!, scryfallId: c.id });
@@ -331,7 +343,11 @@ function LinkChip({
       // can redirect. No cursor override — hover cursor stays normal
       // on non-loading chips.
       disabled={loading}
-      className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded border border-border-subtle bg-bg-elevated text-text-primary text-xs transition-colors hover:bg-border-subtle hover:text-accent cursor-pointer disabled:opacity-80"
+      className={[
+        'inline-flex items-center gap-1 px-1.5 py-0.5 rounded border',
+        'border-border-subtle bg-bg-elevated text-text-primary text-xs',
+        'transition-colors hover:bg-border-subtle hover:text-accent cursor-pointer disabled:opacity-80',
+      ].join(' ')}
     >
       {loading && <Loader2 size={10} className="animate-spin" />}
       {label}

@@ -22,7 +22,7 @@ import {
 
 type ProtobufInternal = ProtobufService & {
   cmdId: number;
-  pendingCommands: Map<number, (response: Response) => void>;
+  pendingCommands: Map<number, { onResponse: (response: Response) => void }>;
 };
 
 let mockSocket: { isOpen: ReturnType<typeof vi.fn>; send: ReturnType<typeof vi.fn> };

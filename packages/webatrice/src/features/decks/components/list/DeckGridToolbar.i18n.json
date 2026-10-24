@@ -1,0 +1,41 @@
+{
+  "DeckGridToolbar": {
+    "summary": "{decks, plural, one {# deck} other {# decks}} in {folders, plural, one {# folder} other {# folders}}",
+    "folderActions": "Folder actions for {name}",
+    "newSubfolder": "New folder inside",
+    "shareFolder": "Share folder…",
+    "makeFolderPublic": "Make folder public",
+    "makeFolderPrivate": "Make folder private",
+    "sort": "Sort decks",
+    "sorts": {
+      "newest": "Newest first",
+      "oldest": "Oldest first",
+      "nameAsc": "Name A–Z",
+      "nameDesc": "Name Z–A"
+    },
+    "search": "Search decks",
+    "searchPlaceholder": "Search names and tags",
+    "colours": "Colours",
+    "colour": {
+      "W": "White",
+      "U": "Blue",
+      "B": "Black",
+      "R": "Red",
+      "G": "Green"
+    },
+    "colourMode": "Colour match",
+    "colourModes": {
+      "including": "Including",
+      "exactly": "Exactly",
+      "atMost": "At most"
+    },
+    "format": "Format",
+    "anyFormat": "Any format",
+    "bracket": "Bracket",
+    "anyBracket": "Any bracket",
+    "clear": "Clear filters",
+    "pending": "Checking {count, plural, one {# deck} other {# decks}}…",
+    "tags": "Filter by tag",
+    "bracketOption": "Bracket {level}"
+  }
+}

@@ -70,6 +70,15 @@ describe('useCurrentGame', () => {
     expect(result.current.isHost).toBe(false);
   });
 
+  it('never treats a spectator as host, so a replay (no local player, unknown host) is not one', () => {
+    const game = makeGameEntry({ spectator: true, replay: true, localPlayerId: -1, hostId: -1 });
+    const wrapper = makeWrapper({ games: { 1: game } });
+
+    const { result } = renderHook(() => useCurrentGame(1), { wrapper });
+
+    expect(result.current.isHost).toBe(false);
+  });
+
   it('returns empty shape when the requested gameId is missing', () => {
     const game = makeGameEntry();
     const wrapper = makeWrapper({ games: { 1: game } });

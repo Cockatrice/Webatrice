@@ -1,0 +1,15 @@
+{
+  "PrintingPicker": {
+    "title": "Choose printing",
+    "count": "{count, plural, one {# printing} other {# printings}}",
+    "loading": "Loading printings…",
+    "empty": "No printings found.",
+    "priceUsd": "TCGplayer USD",
+    "noPrice": "No TCGplayer price",
+    "current": "Current",
+    "loadFailed": "Failed to load printings",
+    "pin": "Pin as default printing",
+    "unpin": "Unpin default printing",
+    "pinFailed": "Failed to save the default printing"
+  }
+}

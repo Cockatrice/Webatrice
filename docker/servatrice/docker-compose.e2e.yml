@@ -21,9 +21,15 @@
 # loaded on first start. The image tag is the single source of truth for the
 # SQL schema version — binary and schema can't drift.
 
+# SERVATRICE_IMAGE comes from the root .env.e2e, but a value exported in the
+# shell wins over --env-file for interpolation, so another Servatrice can be
+# tested without editing the pin, e.g. a locally built Cockatrice master:
+#   SERVATRICE_IMAGE=webatrice-local/servatrice:master-add65ca npm run test:e2e -w @cockatrice/sockatrice
+# `missing` (not `always`) so such a local-only image is used instead of a
+# failed registry pull; the pinned release tag is immutable, so nothing is lost.
 x-servatrice: &servatrice-image
   image: ${SERVATRICE_IMAGE}
-  pull_policy: always
+  pull_policy: missing
 
 services:
   servatrice-sql:

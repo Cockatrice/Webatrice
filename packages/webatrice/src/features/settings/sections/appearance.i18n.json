@@ -1,0 +1,110 @@
+{
+  "SettingsAppearance": {
+    "group": {
+      "theme": "Theme settings",
+      "tableGrid": "Table grid layout",
+      "handLayout": "Hand layout",
+      "cardRendering": "Card rendering",
+      "cardLayout": "Card layout",
+      "cardCounters": "Card counters",
+      "menus": "Menu settings",
+      "cardPrintings": "Card printings",
+      "zoneBackgrounds": "Zone backgrounds",
+      "signIn": "Sign-in screen"
+    },
+    "themeName": {
+      "label": "Current theme",
+      "description": "Colours, surfaces and accent. Each theme has a light and a dark palette; the palette setting below picks which one you see.",
+      "midnight": "Midnight",
+      "graphite": "Graphite",
+      "carbon": "Carbon"
+    },
+    "themeMode": {
+      "label": "Active theme palette",
+      "description": "System follows your operating system's light or dark setting as it changes.",
+      "light": "Light",
+      "dark": "Dark",
+      "system": "System"
+    },
+    "invertVerticalCoordinate": {
+      "label": "Invert vertical coordinate",
+      "description": "Flip the battlefield rows top to bottom, so lands sit at the top of your side."
+    },
+    "minPlayersForMultiColumnLayout": {
+      "label": "Minimum player count for multi-column layout"
+    },
+    "horizontalHand": {
+      "label": "Display hand horizontally (wastes space)",
+      "description": "Off, your hand is a column beside your life and zones, and every card in it stays in view."
+    },
+    "leftJustifiedHand": {
+      "label": "Enable left justification",
+      "description": "Starts a horizontal hand at the left instead of centring it."
+    },
+    "displayCardNames": {
+      "label": "Display card names on cards having a picture",
+      "description": "A face-down card, and a card whose picture cannot be loaded, always shows its name."
+    },
+    "autoRotateSidewaysLayoutCards": {
+      "label": "Auto-Rotate cards with sideways layout",
+      "description": "Battles, split cards and planes are turned sideways in the card preview so they read upright."
+    },
+    "scaleCards": {
+      "label": "Scale cards on mouse over"
+    },
+    "roundCardCorners": {
+      "label": "Use rounded card corners"
+    },
+    "maxFontSizeForCards": {
+      "label": "Maximum font size for information displayed on cards"
+    },
+    "percentSuffix": "%",
+    "rowsSuffix": "rows",
+    "verticalCardOverlapPercent": {
+      "label": "Minimum overlap percentage of cards on the stack and in vertical hand"
+    },
+    "cardViewInitialRowsMax": {
+      "label": "Maximum initial height for card view window"
+    },
+    "cardViewExpandedRowsMax": {
+      "label": "Maximum expanded height for card view window",
+      "description": "Double-click a card view's title bar to switch between its initial and expanded heights. A size you set by dragging its corner is kept instead."
+    },
+    "cardCounterColor": {
+      "A": "Counter A",
+      "B": "Counter B",
+      "C": "Counter C",
+      "D": "Counter D",
+      "E": "Counter E",
+      "F": "Counter F"
+    },
+    "showShortcutsInMenus": {
+      "label": "Show keyboard shortcuts in right-click menus"
+    },
+    "bumpSetsWithCardsInDeckToTop": {
+      "label": "Bump sets that the deck contains cards from to the top in the printing selector"
+    },
+    "zoneBackgrounds": {
+      "label": "Backgrounds",
+      "description": "A card's art behind a zone of every player's area, cropped like a playmat. A table background shows where no playmat is drawn.",
+      "zone": {
+        "hand": "Hand",
+        "stack": "Stack",
+        "table": "Table",
+        "playerInfo": "Player area"
+      },
+      "none": "No background",
+      "cardName": "Card for {zone}",
+      "set": "Set",
+      "setLabel": "Set the {zone} background",
+      "editLabel": "Edit the {zone} background's crop",
+      "clearLabel": "Clear the {zone} background",
+      "change": "Change",
+      "chooseLabel": "Choose the {zone} background"
+    },
+    "signInCardArt": {
+      "label": "Card art on the sign-in screen",
+      "description": "Shows a card illustration from Scryfall behind the sign-in form. Turn it off to use a plain background and contact no other site before you sign in."
+    }
+  }
+}

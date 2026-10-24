@@ -1,0 +1,8 @@
+{
+  "ReplayParseError": {
+    "invalid": "The file is not a Cockatrice replay.",
+    "tooLarge": "The replay file is too large.",
+    "tooManyContainers": "The replay has too many event containers.",
+    "tooManyEvents": "The replay has too many events."
+  }
+}

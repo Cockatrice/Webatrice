@@ -1,10 +1,10 @@
-﻿import {
+import {
   Event_NotifyUser,
   Event_ServerShutdown,
-  Event_UserMessage,
   Event_UserMessageSchema,
   Response_GetGamesOfUser,
   Response_GetGamesOfUserSchema,
+  Response_ResponseCode,
   ServerInfo_DeckStorage_FolderSchema,
   ServerInfo_DeckStorage_TreeItemSchema,
   ServerInfo_GameSchema,
@@ -30,7 +30,6 @@ import {
 } from '../../testing/fixtures/server';
 
 const UserLevelFlag = ServerInfo_User_UserLevelFlag;
-
 
 describe('Initialisation', () => {
   it('returns initialState when called with undefined state', () => {
@@ -64,7 +63,6 @@ describe('Initialisation', () => {
   });
 });
 
-
 describe('Locale', () => {
   it('SET_LOCALE → stores the BCP-47 locale tag', () => {
     const state = makeServerState({ locale: undefined });
@@ -91,11 +89,6 @@ describe('Locale', () => {
     expect(result.locale).toBe('nl');
   });
 
-  // testConnectionStatus is a login-screen probe result, independent of the
-  // live game socket. A connection reset must not wipe it: doing so both
-  // disables the login button (LoginForm gates on 'success') and — via the
-  // known-hosts recovery effect — used to re-fire a fresh probe WebSocket on
-  // every disconnect, which trips Servatrice's max_users_per_address cap.
   it('preserves testConnectionStatus across DISCONNECTED', () => {
     const state = makeServerState({ testConnectionStatus: 'success' });
     const result = serverReducer(state, Actions.disconnected());
@@ -109,7 +102,6 @@ describe('Locale', () => {
   });
 });
 
-
 describe('Account & Connection', () => {
   it('CONNECTION_ATTEMPTED → sets connectionAttemptMade to true', () => {
     const state = makeServerState({
@@ -121,6 +113,36 @@ describe('Account & Connection', () => {
 
 });
 
+describe('Login failure code', () => {
+  it('LOGIN_FAILED → records the rejecting response code', () => {
+    const result = serverReducer(makeServerState(), Actions.loginFailed({ responseCode: 36 }));
+    expect(result.loginFailureCode).toBe(36);
+  });
+
+  it('LOGIN_FAILED without a code → records null', () => {
+    const state = makeServerState({ loginFailureCode: 12 });
+    const result = serverReducer(state, Actions.loginFailed());
+    expect(result.loginFailureCode).toBeNull();
+  });
+
+  it('CONNECTION_ATTEMPTED → clears a code from a prior attempt', () => {
+    const state = makeServerState({ loginFailureCode: 38 });
+    const result = serverReducer(state, Actions.connectionAttempted());
+    expect(result.loginFailureCode).toBeNull();
+  });
+
+  it('preserves loginFailureCode across DISCONNECTED', () => {
+    const state = makeServerState({ loginFailureCode: 38 });
+    const result = serverReducer(state, Actions.disconnected());
+    expect(result.loginFailureCode).toBe(38);
+  });
+
+  it('CLEAR_STORE → resets loginFailureCode', () => {
+    const state = makeServerState({ loginFailureCode: 38 });
+    const result = serverReducer(state, Actions.clearStore());
+    expect(result.loginFailureCode).toBeNull();
+  });
+});
 
 describe('Connect Unreachable', () => {
   it('CONNECT_UNREACHABLE → sets connectUnreachable to true', () => {
@@ -141,10 +163,6 @@ describe('Connect Unreachable', () => {
     expect(result.connectUnreachable).toBe(false);
   });
 
-  // Load-bearing: connectUnreachable is set just before the socket close that
-  // triggers the DISCONNECTED rebuild (dispatched by the updateStatus listener).
-  // The rebuild must carry the flag through or the login screen never sees it.
-  // See server.reducer.connection disconnected().
   it('preserves connectUnreachable across DISCONNECTED', () => {
     const state = makeServerState({ connectUnreachable: true });
     const result = serverReducer(state, Actions.disconnected());
@@ -169,7 +187,6 @@ describe('Connect Unreachable', () => {
     expect(result.connectUnreachable).toBe(false);
   });
 });
-
 
 describe('Registration', () => {
   it('REGISTRATION_FAILED → stores normalized error (plain reason)', () => {
@@ -198,7 +215,6 @@ describe('Registration', () => {
   });
 });
 
-
 describe('Server Info & Status', () => {
   it('SERVER_MESSAGE → merges message into state.info', () => {
     const state = makeServerState({ info: { message: null, name: 'Old', version: '1.0' } });
@@ -208,12 +224,19 @@ describe('Server Info & Status', () => {
     expect(result.info.version).toBe('1.0');
   });
 
-  it('UPDATE_INFO → merges name and version into state.info (not message)', () => {
+  it('UPDATE_INFO → merges name, version and password-hash capability into state.info (not message)', () => {
     const state = makeServerState({ info: { message: 'hi', name: null, version: null } });
-    const result = serverReducer(state, Actions.updateInfo({ info: { name: 'Servatrice', version: '2.9.0' } }));
+    const result = serverReducer(state, Actions.updateInfo({ info: { name: 'Servatrice', version: '2.9.0', supportsPasswordHash: true } }));
     expect(result.info.name).toBe('Servatrice');
     expect(result.info.version).toBe('2.9.0');
+    expect(result.info.supportsPasswordHash).toBe(true);
     expect(result.info.message).toBe('hi');
+  });
+
+  it('UPDATE_INFO without the capability leaves it unknown', () => {
+    const state = makeServerState({ info: { message: null, name: null, version: null, supportsPasswordHash: true } });
+    const result = serverReducer(state, Actions.updateInfo({ info: { name: 'Servatrice', version: '2.9.0' } }));
+    expect(result.info.supportsPasswordHash).toBeUndefined();
   });
 
   it('UPDATE_STATUS → merges state and description into status', () => {
@@ -225,7 +248,6 @@ describe('Server Info & Status', () => {
     expect(result.status.connectionAttemptMade).toBe(false);
   });
 });
-
 
 describe('User', () => {
   it('UPDATE_USER → merges action.payload.user into state.user', () => {
@@ -240,6 +262,29 @@ describe('User', () => {
     const result = serverReducer(state, Actions.accountEditChanged({ user: { realName: 'Alice Smith' } }));
     expect(result.user.realName).toBe('Alice Smith');
     expect(result.user.name).toBe('Alice');
+  });
+
+  it('ACCOUNT_EDIT_CHANGED → keeps fields the edit did not carry', () => {
+    const state = makeServerState({ user: makeUser({ name: 'Alice', email: 'a@b.com', country: 'us' }) });
+    const result = serverReducer(state, Actions.accountEditChanged({
+      user: { realName: 'Alice Smith', email: undefined, country: 'de' },
+    }));
+    expect(result.user.email).toBe('a@b.com');
+    expect(result.user.country).toBe('de');
+  });
+
+  it('ACCOUNT_EDIT_CHANGED invalidates only the cached self profile without mutating the previous state', () => {
+    const alice = makeUser({ name: 'Alice', email: 'old@example.com', realName: 'Old' });
+    const bob = makeUser({ name: 'Bob' });
+    const state = makeServerState({ user: alice, userInfo: { Alice: alice, Bob: bob } });
+    const result = serverReducer(state, Actions.accountEditChanged({ user: { realName: 'New' } }));
+
+    expect(result.user.realName).toBe('New');
+    expect(result.user.email).toBe('old@example.com');
+    expect(result.userInfo.Alice).toBeUndefined();
+    expect(result.userInfo.Bob).toBe(bob);
+    expect(state.userInfo.Alice).toBe(alice);
+    expect(state.user.realName).toBe('Old');
   });
 
   it('ACCOUNT_IMAGE_CHANGED → merges action.payload.user into state.user', () => {
@@ -257,7 +302,6 @@ describe('User', () => {
   });
 });
 
-
 describe('Connection Health', () => {
   it('connectionHealthChanged → stores degraded health', () => {
     const state = makeServerState();
@@ -271,6 +315,12 @@ describe('Connection Health', () => {
     expect(result.connectionHealth).toEqual({ missedPongs: 0, silentForMs: 0 });
   });
 
+  it('latencyStatsUpdated → stores the round-trip stats and window', () => {
+    const stats = { lastMs: 80, medianMs: 60, p95Ms: 80, maxMs: 80, sampleCount: 2 };
+    const result = serverReducer(makeServerState(), Actions.latencyStatsUpdated({ stats, samplesMs: [40, 80] }));
+    expect(result.latency).toEqual({ stats, samplesMs: [40, 80] });
+  });
+
   it('updateStatus → resets stale health from the previous socket', () => {
     const state = makeServerState({ connectionHealth: { missedPongs: 4, silentForMs: 20000 } });
     const result = serverReducer(state, Actions.updateStatus({
@@ -279,7 +329,6 @@ describe('Connection Health', () => {
     expect(result.connectionHealth).toEqual({ missedPongs: 0, silentForMs: 0 });
   });
 });
-
 
 describe('Users List', () => {
   it('UPDATE_USERS → replaces users map keyed by name', () => {
@@ -307,7 +356,6 @@ describe('Users List', () => {
     expect(result.users['Bob']).toBeDefined();
   });
 });
-
 
 describe('Buddy List', () => {
   it('UPDATE_BUDDY_LIST → replaces map keyed by name', () => {
@@ -361,7 +409,6 @@ describe('Ignore List', () => {
   });
 });
 
-
 describe('Logs', () => {
   it('VIEW_LOGS → groups LogItem[] into room/game/chat buckets', () => {
     const log = makeLogItem({ targetType: 'room' });
@@ -387,28 +434,27 @@ describe('Logs', () => {
   });
 });
 
-
 describe('Messaging', () => {
   it('USER_MESSAGE → uses receiverName as key when current user is sender', () => {
     const state = makeServerState({ user: makeUser({ name: 'Alice' }), messages: {} });
-    const messageData = { senderName: 'Alice', receiverName: 'Bob', message: 'hi' } as Event_UserMessage;
-    const result = serverReducer(state, Actions.userMessage({ messageData }));
+    const messageData = create(Event_UserMessageSchema, { senderName: 'Alice', receiverName: 'Bob', message: 'hi' });
+    const result = serverReducer(state, Actions.userMessage({ messageData, timeReceived: 123 }));
     expect(result.messages['Bob']).toHaveLength(1);
-    expect(result.messages['Bob'][0]).toEqual(messageData);
+    expect(result.messages['Bob'][0]).toMatchObject({ ...messageData, timeReceived: 123 });
   });
 
   it('USER_MESSAGE → uses senderName as key when current user is receiver', () => {
     const state = makeServerState({ user: makeUser({ name: 'Bob' }), messages: {} });
-    const messageData = { senderName: 'Alice', receiverName: 'Bob', message: 'yo' } as Event_UserMessage;
-    const result = serverReducer(state, Actions.userMessage({ messageData }));
+    const messageData = create(Event_UserMessageSchema, { senderName: 'Alice', receiverName: 'Bob', message: 'yo' });
+    const result = serverReducer(state, Actions.userMessage({ messageData, timeReceived: 123 }));
     expect(result.messages['Alice']).toHaveLength(1);
-    expect(result.messages['Alice'][0]).toEqual(messageData);
+    expect(result.messages['Alice'][0]).toMatchObject({ ...messageData, timeReceived: 123 });
   });
 
   it('USER_MESSAGE → no-ops when user is null (not yet logged in)', () => {
     const state = makeServerState({ user: null, messages: {} });
-    const messageData = { senderName: 'Alice', receiverName: 'Bob', message: 'hi' } as Event_UserMessage;
-    const result = serverReducer(state, Actions.userMessage({ messageData }));
+    const messageData = create(Event_UserMessageSchema, { senderName: 'Alice', receiverName: 'Bob', message: 'hi' });
+    const result = serverReducer(state, Actions.userMessage({ messageData, timeReceived: 123 }));
     expect(result.messages).toEqual({});
   });
 
@@ -416,31 +462,165 @@ describe('Messaging', () => {
     const existingMsg = create(Event_UserMessageSchema, { senderName: 'Alice', receiverName: 'Bob', message: 'first' });
     const state = makeServerState({
       user: makeUser({ name: 'Bob' }),
-      messages: { Alice: [existingMsg] },
+      messages: { Alice: [Object.assign(existingMsg, { timeReceived: 0 })] },
     });
     const newMsg = create(Event_UserMessageSchema, { senderName: 'Alice', receiverName: 'Bob', message: 'second' });
-    const result = serverReducer(state, Actions.userMessage({ messageData: newMsg }));
+    const result = serverReducer(state, Actions.userMessage({ messageData: newMsg, timeReceived: 123 }));
     expect(result.messages['Alice']).toHaveLength(2);
   });
 
   it(`USER_MESSAGE → caps messages at MAX_USER_MESSAGES (${MAX_USER_MESSAGES})`, () => {
     const messages = Array.from({ length: MAX_USER_MESSAGES }, (_, i) =>
-      create(Event_UserMessageSchema, { senderName: 'Alice', receiverName: 'Bob', message: `msg-${i}` })
+      Object.assign(create(Event_UserMessageSchema, { senderName: 'Alice', receiverName: 'Bob', message: `msg-${i}` }), { timeReceived: i })
     );
     const state = makeServerState({
       user: makeUser({ name: 'Bob' }),
       messages: { Alice: messages },
     });
     const newMsg = create(Event_UserMessageSchema, { senderName: 'Alice', receiverName: 'Bob', message: 'overflow' });
-    const result = serverReducer(state, Actions.userMessage({ messageData: newMsg }));
+    const result = serverReducer(state, Actions.userMessage({ messageData: newMsg, timeReceived: 123 }));
     expect(result.messages['Alice']).toHaveLength(MAX_USER_MESSAGES);
-    expect(result.messages['Alice'][MAX_USER_MESSAGES - 1]).toEqual(newMsg);
+    expect(result.messages['Alice'][MAX_USER_MESSAGES - 1]).toMatchObject({ ...newMsg, timeReceived: 123 });
     expect(result.messages['Alice'][0].message).not.toBe('msg-0');
   });
 });
 
+describe('Private chat notices', () => {
+  const msg = (message: string) =>
+    Object.assign(create(Event_UserMessageSchema, { senderName: 'Alice', receiverName: 'Bob', message }), { timeReceived: 0 });
+
+  it.each([
+    [Response_ResponseCode.RespInIgnoreList, 'ignoredByRecipient'],
+    [Response_ResponseCode.RespNameNotFound, 'recipientOffline'],
+    [Response_ResponseCode.RespChatFlood, 'chatFlood'],
+  ])('PRIVATE_MESSAGE_FAILED with code %i → appends a %s notice after the stored messages', (code, kind) => {
+    const state = makeServerState({ messages: { Alice: [msg('a'), msg('b')] } });
+    const result = serverReducer(state, Actions.privateMessageFailed({ userName: 'Alice', message: 'unsent', responseCode: code }));
+    expect(result.privateChatNotices['Alice']).toEqual([{ id: expect.any(Number), kind, position: 2 }]);
+  });
+
+  it('RespNameNotFound marks only the recipient offline until they rejoin', () => {
+    const state = makeServerState({
+      users: { Alice: makeUser({ name: 'Alice' }), Carol: makeUser({ name: 'Carol' }) },
+      messages: { Alice: [msg('hello')] },
+    });
+    const result = serverReducer(state, Actions.privateMessageFailed({
+      userName: 'Alice', message: 'unsent', responseCode: Response_ResponseCode.RespNameNotFound,
+    }));
+    expect(result.users.Alice).toBeUndefined();
+    expect(result.users.Carol).toBe(state.users.Carol);
+    expect(state.users.Alice).toBeDefined();
+    expect(result.messages.Alice).toEqual(state.messages.Alice);
+    expect(result.privateChatNotices.Alice).toEqual([
+      { id: expect.any(Number), kind: 'recipientOffline', position: 1 },
+    ]);
+    const rejoined = serverReducer(result, Actions.userJoined({ user: makeUser({ name: 'Alice' }) }));
+    expect(rejoined.users.Alice).toBeDefined();
+  });
+
+  it.each([Response_ResponseCode.RespChatFlood, Response_ResponseCode.RespInIgnoreList])(
+    'rejection %i does not mark the recipient offline', (responseCode) => {
+      const state = makeServerState({ users: { Alice: makeUser({ name: 'Alice' }) } });
+      const result = serverReducer(state, Actions.privateMessageFailed({ userName: 'Alice', message: 'unsent', responseCode }));
+      expect(result.users.Alice).toBe(state.users.Alice);
+    },
+  );
+
+  it('PRIVATE_MESSAGE_FAILED for an unmapped code → no notice', () => {
+    const state = makeServerState();
+    const result = serverReducer(state, Actions.privateMessageFailed({
+      userName: 'Alice', message: 'unsent', responseCode: Response_ResponseCode.RespContextError,
+    }));
+    expect(result.privateChatNotices).toEqual({});
+  });
+
+  it('PRIVATE_MESSAGE_FAILED without a server answer → a notSent notice carrying the reason', () => {
+    const result = serverReducer(makeServerState(), Actions.privateMessageFailed({
+      userName: 'Alice', message: 'unsent', responseCode: Response_ResponseCode.RespNotConnected,
+      failure: WebsocketTypes.CommandFailure.Timeout,
+    }));
+    expect(result.privateChatNotices['Alice']).toEqual([
+      { id: expect.any(Number), kind: 'notSent', position: 0, failure: WebsocketTypes.CommandFailure.Timeout },
+    ]);
+  });
+
+  it('USER_LEFT / USER_JOINED → record presence in an open conversation only', () => {
+    const state = makeServerState({
+      users: { Alice: makeUser({ name: 'Alice' }), Carol: makeUser({ name: 'Carol' }) },
+      messages: { Alice: [msg('a')] },
+    });
+    const left = serverReducer(state, Actions.userLeft({ name: 'Alice' }));
+    const back = serverReducer(left, Actions.userJoined({ user: makeUser({ name: 'Alice' }) }));
+    const other = serverReducer(back, Actions.userLeft({ name: 'Carol' }));
+
+    expect(other.privateChatNotices['Alice'].map((n) => [n.kind, n.position])).toEqual([['userLeft', 1], ['userJoined', 1]]);
+    expect(other.privateChatNotices['Carol']).toBeUndefined();
+  });
+
+  it('UPDATE_USERS → records no presence notices', () => {
+    const state = makeServerState({ messages: { Alice: [msg('a')] } });
+    const result = serverReducer(state, Actions.updateUsers({ users: [makeUser({ name: 'Alice' })] }));
+    expect(result.privateChatNotices).toEqual({});
+  });
+
+  it('USER_MESSAGE at the cap → shifts notice positions and drops notices before the trimmed head', () => {
+    const messages = Array.from({ length: MAX_USER_MESSAGES }, (_, i) => msg(`msg-${i}`));
+    const state = makeServerState({
+      user: makeUser({ name: 'Bob' }),
+      messages: { Alice: messages },
+      privateChatNotices: {
+        Alice: [
+          { id: 1, kind: 'userLeft', position: 0 },
+          { id: 2, kind: 'userJoined', position: 1 },
+          { id: 3, kind: 'chatFlood', position: MAX_USER_MESSAGES },
+        ],
+      },
+    });
+    const result = serverReducer(state, Actions.userMessage({ messageData: msg('overflow'), timeReceived: 123 }));
+    expect(result.privateChatNotices['Alice']).toEqual([
+      { id: 2, kind: 'userJoined', position: 0 },
+      { id: 3, kind: 'chatFlood', position: MAX_USER_MESSAGES - 1 },
+    ]);
+  });
+});
 
 describe('Games Of User', () => {
+  it('GAMES_OF_USER_REQUESTED → marks loading and drops the previous answer', () => {
+    const state = makeServerState({ gamesOfUser: { alice: { 1: makeGame({ gameId: 1 }) } } });
+    const result = serverReducer(state, Actions.gamesOfUserRequested({ userName: 'alice' }));
+    expect(result.gamesOfUser['alice']).toBeUndefined();
+    expect(result.gamesOfUserStatus['alice']).toEqual({ state: 'loading' });
+  });
+
+  it('GAMES_OF_USER → marks the request loaded', () => {
+    const state = makeServerState({ gamesOfUserStatus: { alice: { state: 'loading' } } });
+    const response = create(Response_GetGamesOfUserSchema, { roomList: [], gameList: [] });
+    const result = serverReducer(state, Actions.gamesOfUser({ userName: 'alice', response }));
+    expect(result.gamesOfUserStatus['alice']).toEqual({ state: 'loaded' });
+  });
+
+  it('GAMES_OF_USER_FAILED → records the response code', () => {
+    const state = makeServerState({ gamesOfUserStatus: { alice: { state: 'loading' } } });
+    const result = serverReducer(state, Actions.gamesOfUserFailed({ userName: 'alice', responseCode: 16 }));
+    expect(result.gamesOfUserStatus['alice']).toEqual({ state: 'failed', responseCode: 16, failure: undefined });
+  });
+
+  it('GAMES_OF_USER → resolves each game type through its own room', () => {
+    const response = create(Response_GetGamesOfUserSchema, {
+      roomList: [
+        create(ServerInfo_RoomSchema, { roomId: 1, gametypeList: [{ gameTypeId: 1, description: 'Standard' }] }),
+        create(ServerInfo_RoomSchema, { roomId: 2, gametypeList: [{ gameTypeId: 1, description: 'Draft' }] }),
+      ],
+      gameList: [
+        create(ServerInfo_GameSchema, { gameId: 7, roomId: 1, gameTypes: [1] }),
+        create(ServerInfo_GameSchema, { gameId: 8, roomId: 2, gameTypes: [1] }),
+      ],
+    });
+    const result = serverReducer(makeServerState(), Actions.gamesOfUser({ userName: 'bob', response }));
+    expect(result.gamesOfUser['bob'][7].gameType).toBe('Standard');
+    expect(result.gamesOfUser['bob'][8].gameType).toBe('Draft');
+  });
+
   it('GAMES_OF_USER → stores an empty games map when roomList/gameList are empty', () => {
     const state = makeServerState();
     const response = create(Response_GetGamesOfUserSchema, { roomList: [], gameList: [] });
@@ -505,7 +685,6 @@ describe('Games Of User', () => {
   });
 });
 
-
 describe('User Info & Notifications', () => {
   it('GET_USER_INFO → adds userInfo keyed by name', () => {
     const userInfo = makeUser({ name: 'Eve' });
@@ -540,7 +719,6 @@ describe('User Info & Notifications', () => {
     expect(result.serverShutdown).toEqual(data);
   });
 });
-
 
 describe('Moderation', () => {
   it('BAN_FROM_SERVER → sets banUser', () => {
@@ -589,7 +767,6 @@ describe('Moderation', () => {
   });
 });
 
-
 describe('ADJUST_MOD', () => {
   const baseUserLevel = UserLevelFlag.IsUser | UserLevelFlag.IsRegistered | UserLevelFlag.IsModerator | UserLevelFlag.IsJudge;
 
@@ -630,6 +807,22 @@ describe('ADJUST_MOD', () => {
     expect(result.users['Dan'].userLevel).toBe(7);
   });
 
+  it('an undefined flag leaves that role unchanged (promote to mod keeps judge)', () => {
+    const state = makeServerState({
+      users: { Dan: makeUser({ name: 'Dan', userLevel: UserLevelFlag.IsUser | UserLevelFlag.IsJudge }) },
+    });
+    const result = serverReducer(state, Actions.adjustMod({ userName: 'Dan', shouldBeMod: true }));
+    expect(result.users['Dan'].userLevel).toBe(UserLevelFlag.IsUser | UserLevelFlag.IsJudge | UserLevelFlag.IsModerator);
+  });
+
+  it('shouldBeDeveloper sets and clears IsDeveloper without touching other roles', () => {
+    const state = makeServerState({ users: { Dan: makeUser({ name: 'Dan', userLevel: baseUserLevel }) } });
+    const promoted = serverReducer(state, Actions.adjustMod({ userName: 'Dan', shouldBeDeveloper: true }));
+    expect(promoted.users['Dan'].userLevel).toBe(baseUserLevel | UserLevelFlag.IsDeveloper);
+    const demoted = serverReducer(promoted, Actions.adjustMod({ userName: 'Dan', shouldBeDeveloper: false }));
+    expect(demoted.users['Dan'].userLevel).toBe(baseUserLevel);
+  });
+
   it('non-matching users are left unchanged', () => {
     const alice = makeUser({ name: 'Alice', userLevel: 7 });
     const state = makeServerState({
@@ -639,13 +832,19 @@ describe('ADJUST_MOD', () => {
     expect(result.users['Alice']).toEqual(alice);
   });
 
+  it('also updates the userInfo snapshot so an open profile reflects the new role', () => {
+    const state = makeServerState({ userInfo: { Dan: makeUser({ name: 'Dan', userLevel: 3 }) } });
+    const result = serverReducer(state, Actions.adjustMod({ userName: 'Dan', shouldBeMod: true }));
+    expect(result.userInfo['Dan'].userLevel).toBe(7);
+    expect(result.userInfo['Dan']).not.toBe(state.userInfo['Dan']);
+  });
+
   it('unknown userName → state unchanged', () => {
     const state = makeServerState({ users: { Dan: makeUser({ name: 'Dan' }) } });
     const result = serverReducer(state, Actions.adjustMod({ userName: 'Ghost', shouldBeMod: true, shouldBeJudge: false }));
     expect(result).toEqual(state);
   });
 });
-
 
 describe('Replays', () => {
   it('REPLAY_LIST → replaces replays map keyed by gameId', () => {
@@ -698,7 +897,6 @@ describe('Replays', () => {
   });
 });
 
-
 describe('Deck Storage', () => {
   it('BACKEND_DECKS → sets backendDecks', () => {
     const deckList = makeDeckList();
@@ -742,6 +940,47 @@ describe('Deck Storage', () => {
     expect(result.backendDecks!.root!.items).toHaveLength(1);
     expect(result.backendDecks!.root!.items[0].name).toBe('newFolder');
     expect(result.backendDecks!.root!.items[0].folder!.items[0]).toEqual(item);
+  });
+
+  it('DECK_UPDATED with null backendDecks → returns state unchanged', () => {
+    const state = makeServerState({ backendDecks: null });
+    const result = serverReducer(state, Actions.deckUpdated({ deckId: 1, treeItem: makeDeckTreeItem({ id: 1 }) }));
+    expect(result).toEqual(state);
+  });
+
+  it('DECK_UPDATED → replaces the file with the same id in place, inside its folder', () => {
+    const sibling = makeDeckTreeItem({ id: 3, name: 'Other' });
+    const old = makeDeckTreeItem({ id: 9, name: 'Old name' });
+    const subfolder = create(ServerInfo_DeckStorage_TreeItemSchema, {
+      id: 0, name: 'sub', folder: create(ServerInfo_DeckStorage_FolderSchema, { items: [old, sibling] })
+    });
+    const state = makeServerState({
+      backendDecks: makeDeckList({ root: create(ServerInfo_DeckStorage_FolderSchema, { items: [subfolder] }) })
+    });
+    const renamed = makeDeckTreeItem({ id: 9, name: 'New name' });
+    const result = serverReducer(state, Actions.deckUpdated({ deckId: 9, treeItem: renamed }));
+    const items = result.backendDecks!.root!.items[0].folder!.items;
+    expect(items).toHaveLength(2);
+    expect(items[0]).toEqual(renamed);
+    expect(items[1]).toEqual(sibling);
+  });
+
+  it('DECK_UPDATED without a tree item → leaves the tree unchanged', () => {
+    const item = makeDeckTreeItem({ id: 3 });
+    const state = makeServerState({
+      backendDecks: makeDeckList({ root: create(ServerInfo_DeckStorage_FolderSchema, { items: [item] }) }),
+    });
+    const result = serverReducer(state, Actions.deckUpdated({ deckId: 3 }));
+    expect(result.backendDecks!.root!.items).toEqual([item]);
+  });
+
+  it('DECK_UPDATED for an unknown id → leaves the tree unchanged', () => {
+    const item = makeDeckTreeItem({ id: 3 });
+    const state = makeServerState({
+      backendDecks: makeDeckList({ root: create(ServerInfo_DeckStorage_FolderSchema, { items: [item] }) }),
+    });
+    const result = serverReducer(state, Actions.deckUpdated({ deckId: 99, treeItem: makeDeckTreeItem({ id: 99 }) }));
+    expect(result.backendDecks!.root!.items).toEqual([item]);
   });
 
   it('DECK_DELETE with null backendDecks → returns state unchanged', () => {
@@ -860,7 +1099,6 @@ describe('Deck Storage', () => {
   });
 });
 
-
 describe('GAMES_OF_USER', () => {
   it('stores normalized games keyed by userName and gameId', () => {
     const response = create(Response_GetGamesOfUserSchema, {
@@ -892,7 +1130,6 @@ describe('GAMES_OF_USER', () => {
   });
 });
 
-
 describe('malformed input', () => {
   it('reducer with an unrecognized action type → identical state reference', () => {
     const state = makeServerState();
@@ -917,7 +1154,7 @@ describe('malformed input', () => {
       senderName: 'Alice', receiverName: 'Bob', message: 'lost-in-the-mail',
     });
     const state = makeServerState({ user: null });
-    const result = serverReducer(state, Actions.userMessage({ messageData: msg }));
+    const result = serverReducer(state, Actions.userMessage({ messageData: msg, timeReceived: 123 }));
     expect(result.messages).toEqual({});
   });
 
@@ -928,4 +1165,18 @@ describe('malformed input', () => {
     const result = serverReducer(state, Actions.updateUsers({ users: [] }));
     expect(result.users).toEqual({});
   });
+});
+
+it.each([199, 200])('retains the newest 200 private-chat notices when starting with %s', (count) => {
+  const notices = Array.from({ length: count }, (_, id) => ({ id, kind: 'chatFlood' as const, position: 0 }));
+  const state = makeServerState({ privateChatNotices: { Alice: notices } });
+  const result = serverReducer(state, Actions.privateMessageFailed({
+    userName: 'Alice', message: 'unsent', responseCode: Response_ResponseCode.RespInIgnoreList,
+  }));
+  expect(result.privateChatNotices.Alice).toEqual([
+    ...notices.slice(count === 200 ? 1 : 0),
+    { id: expect.any(Number), kind: 'ignoredByRecipient', position: 0 },
+  ]);
+  expect(result.privateChatNotices.Alice).toHaveLength(200);
+  expect(result.messages.Alice).toBeUndefined();
 });

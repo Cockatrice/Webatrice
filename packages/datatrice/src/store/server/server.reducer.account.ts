@@ -19,7 +19,9 @@ export const accountReducers = {
 
   accountEditChanged: ((state, action) => {
     if (state.user) {
-      state.user = create(ServerInfo_UserSchema, { ...state.user, ...action.payload.user });
+      const changed = Object.fromEntries(Object.entries(action.payload.user).filter(([, value]) => value !== undefined));
+      state.user = create(ServerInfo_UserSchema, { ...state.user, ...changed });
+      delete state.userInfo[state.user.name];
     }
   }) as CaseReducer<ServerState, PayloadAction<{ user: Partial<ServerInfo_User> }>>,
 

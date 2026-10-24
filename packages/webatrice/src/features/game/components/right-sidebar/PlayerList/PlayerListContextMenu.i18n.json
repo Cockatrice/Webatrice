@@ -1,0 +1,13 @@
+{
+  "PlayerListContextMenu": {
+    "label": "Actions for {name}",
+    "copyHash": "Copy hash to clipboard",
+    "userDetails": "User details",
+    "privateChat": "Private chat",
+    "addBuddy": "Add to buddy list",
+    "removeBuddy": "Remove from buddy list",
+    "addIgnore": "Add to ignore list",
+    "removeIgnore": "Remove from ignore list",
+    "kick": "Kick from game"
+  }
+}

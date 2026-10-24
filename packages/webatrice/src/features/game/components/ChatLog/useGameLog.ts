@@ -1,6 +1,9 @@
+import { useTranslation } from 'react-i18next';
 import { useEffect, useRef, useState, RefObject } from 'react';
+import { useGameClock } from './useGameClock';
 import { useWebClient } from '@cockatrice/datatrice/react';
-import { games } from '@cockatrice/datatrice';
+import { games, server } from '@cockatrice/datatrice';
+import { useAdminLocked } from '@app/hooks';
 import { useAppSelector } from '@app/store';
 import { GameMessage, PlayerEntry } from '@cockatrice/datatrice';
 const EMPTY_MESSAGES: GameMessage[] = [];
@@ -34,19 +37,17 @@ export interface GameLog {
 export interface UseGameLogArgs {
   gameId: number | undefined;
   listRef: RefObject<HTMLDivElement | null>;
+  visible?: boolean;
 }
 
-export function useGameLog({ gameId, listRef }: UseGameLogArgs): GameLog {
+export function useGameLog({ gameId, listRef, visible = true }: UseGameLogArgs): GameLog {
+  const { t } = useTranslation();
   const webClient = useWebClient();
-  // Selector's EMPTY_ARRAY fallback is typed ServerInfo_Card[]; cast is safe at runtime.
   const messages = useAppSelector((state) =>
     gameId != null ? games.Selectors.getMessages(state, gameId) : EMPTY_MESSAGES,
-  ) as GameMessage[];
+  );
   const players = useAppSelector((state) =>
     gameId != null ? games.Selectors.getPlayers(state, gameId) : undefined,
-  );
-  const secondsElapsed = useAppSelector((state) =>
-    gameId != null ? games.Selectors.getSecondsElapsed(state, gameId) : 0,
   );
   const isSpectator = useAppSelector((state) =>
     gameId != null ? games.Selectors.isSpectator(state, gameId) : false,
@@ -56,30 +57,23 @@ export function useGameLog({ gameId, listRef }: UseGameLogArgs): GameLog {
   // command otherwise, so we disable the input up front rather than
   // let the user type a message that will silently fail.
   const spectatorsCanChat = useAppSelector((state) => {
-    if (gameId == null) return true;
+    if (gameId == null) {
+      return true;
+    }
     return games.Selectors.getGame(state, gameId)?.info.spectatorsCanChat ?? true;
   });
-  const canChat = !(isSpectator && !spectatorsCanChat);
+  const isModerator = useAppSelector(server.Selectors.getIsUserModerator);
+  const adminLocked = useAdminLocked();
+  const isJudge = useAppSelector((state) =>
+    gameId != null ? games.Selectors.getJudge(state, gameId) : false,
+  );
+  const canOverride = (isModerator && !adminLocked) || isJudge;
+  const canChat = !(isSpectator && !spectatorsCanChat && !canOverride);
   const chatDisabledReason = canChat
     ? null
-    : 'Spectators are not allowed to chat in this game.';
+    : t('ChatLog.spectatorChatDisabled');
 
-  // 1Hz ticker; resync to redux on each server `secondsElapsed`.
-  const [displaySeconds, setDisplaySeconds] = useState(secondsElapsed);
-
-  useEffect(() => {
-    setDisplaySeconds(secondsElapsed);
-  }, [secondsElapsed]);
-
-  useEffect(() => {
-    if (gameId == null) {
-      return undefined;
-    }
-    const id = window.setInterval(() => {
-      setDisplaySeconds((prev) => prev + 1);
-    }, 1000);
-    return () => window.clearInterval(id);
-  }, [gameId]);
+  const displaySeconds = useGameClock(gameId);
 
   const [draft, setDraft] = useState('');
 
@@ -87,13 +81,13 @@ export function useGameLog({ gameId, listRef }: UseGameLogArgs): GameLog {
   const wasPinnedRef = useRef(true);
   useEffect(() => {
     const el = listRef.current;
-    if (!el) {
+    if (!el || !visible) {
       return;
     }
     if (wasPinnedRef.current) {
       el.scrollTop = el.scrollHeight;
     }
-  }, [messages.length, listRef]);
+  }, [messages.length, listRef, visible]);
 
   const handleMessagesScroll = () => {
     const el = listRef.current;

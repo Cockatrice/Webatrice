@@ -16,6 +16,9 @@ export const hashPassword = async (salt: string, password: string): Promise<stri
   return salt + btoa(binary);
 };
 
+export const passwordHashAvailable = (): boolean =>
+  typeof globalThis.crypto?.subtle?.digest === 'function';
+
 export const generateSalt = (): string => {
   const characters = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
 

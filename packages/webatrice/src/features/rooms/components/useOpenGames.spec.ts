@@ -33,16 +33,14 @@ describe('useOpenGames', () => {
     expect(result.current.selectedGameId).toBeUndefined();
   });
 
-  it('handleSort toggles the room game sort order in the store', () => {
+  it('setSort stores the chosen field and direction', () => {
     const { result, store } = setup();
 
     act(() => {
-      result.current.handleSort(GameSortField.START_TIME);
+      result.current.setSort('info.description', SortDirection.ASC);
     });
 
-    expect(store.getState().rooms.sortGamesBy.field).toBe(GameSortField.START_TIME);
-    // START_TIME defaults to DESC; toggling the active field flips it to ASC.
-    expect(store.getState().rooms.sortGamesBy.order).toBe(SortDirection.ASC);
+    expect(store.getState().rooms.sortGamesBy).toEqual({ field: 'info.description', order: SortDirection.ASC });
   });
 
   it('handleSelect records the selected game id for the room', () => {

@@ -187,3 +187,22 @@ describe('ConfirmDialog', () => {
     expect(screen.getByRole('button', { name: /keep playing/i })).toBeInTheDocument();
   });
 });
+
+it.each(['focus', 'Enter'])('supports cancel as the default: %s', (check) => {
+  const onConfirm = vi.fn();
+  const onCancel = vi.fn();
+  renderWithProviders(
+    <ConfirmDialog isOpen title="Remove?" message="Really remove?" cancelDefault onConfirm={onConfirm} onCancel={onCancel} />,
+  );
+  if (check === 'focus') {
+    expect(screen.getByRole('button', { name: 'Cancel' })).toHaveFocus();
+  } else {
+    const focused = document.activeElement!;
+    if (fireEvent.keyDown(focused, { key: 'Enter', code: 'Enter' })) {
+      fireEvent.click(focused);
+    }
+    fireEvent.keyUp(focused, { key: 'Enter', code: 'Enter' });
+    expect(onConfirm).not.toHaveBeenCalled();
+    expect(onCancel).toHaveBeenCalledTimes(1);
+  }
+});

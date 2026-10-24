@@ -41,7 +41,7 @@ export function useCurrentGame(gameId?: number): CurrentGame {
       localPlayer,
       isSpectator: game.spectator,
       isJudge: game.judge,
-      isHost: game.hostId === game.localPlayerId,
+      isHost: !game.spectator && game.hostId === game.localPlayerId,
       isStarted: game.started,
     };
   }, [game, resolvedGameId]);

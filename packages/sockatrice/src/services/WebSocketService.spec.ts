@@ -1,4 +1,4 @@
-﻿import { installMockWebSocketHarness } from '../testing/mock-websocket';
+import { installMockWebSocketHarness } from '../testing/mock-websocket';
 import { withMockLocation } from '../__test-utils__';
 import { Mock } from 'vitest';
 
@@ -72,9 +72,6 @@ describe('WebSocketService', () => {
       const service = new WebSocketService({ ...mockConfig, onConnectionHealth });
       service.connect({ host: 'localhost', port: '8080' });
       mockInstance.onopen();
-      // The mock keepAliveFn never resolves the pong callback: sustained
-      // silence, yet the keepalive never tears the connection down (see
-      // KeepAliveService).
       vi.advanceTimersByTime(1000);
       vi.advanceTimersByTime(10_000);
       expect(mockInstance.close).not.toHaveBeenCalled();
@@ -84,6 +81,24 @@ describe('WebSocketService', () => {
   });
 
   describe('connect', () => {
+    it.each([
+      ['example.com', '4748', 'wss://example.com:4748/'],
+      ['example.com/server-a', '4748', 'wss://example.com/server-a'],
+    ])('exposes only the live socket endpoint for %s', (host, port, endpoint) => {
+      const service = new WebSocketService(mockConfig);
+      expect(service.connectedEndpoint).toBeNull();
+      service.connect({ host, port });
+      Object.assign(mockInstance, { url: endpoint, readyState: WebSocket.CONNECTING });
+      expect(service.connectedEndpoint).toBeNull();
+      mockInstance.readyState = WebSocket.OPEN;
+      expect(service.connectedEndpoint).toBe(endpoint);
+      mockInstance.readyState = WebSocket.CLOSED;
+      expect(service.connectedEndpoint).toBeNull();
+      mockInstance.readyState = WebSocket.OPEN;
+      service.disconnect();
+      expect(service.connectedEndpoint).toBeNull();
+    });
+
     it('creates a wss:// WebSocket for a remote target', () => {
       const service = new WebSocketService(mockConfig);
       service.connect({ host: 'example.com', port: '8080' });
@@ -91,12 +106,17 @@ describe('WebSocketService', () => {
     });
 
     it('uses wss:// for a remote target even when the page is served from localhost', () => {
-      // Regression: the old code downgraded to ws:// based on the page origin,
-      // which broke local dev against TLS-only servers (e.g. Rooster).
       const service = new WebSocketService(mockConfig);
       locationRestores.push(withMockLocation({ hostname: 'localhost' }));
       service.connect({ host: 'example.com', port: '8080' });
       expect(MockWS).toHaveBeenCalledWith('wss://example.com:8080');
+    });
+
+    it('exposes the last connect target', () => {
+      const service = new WebSocketService(mockConfig);
+      expect(service.target).toBeNull();
+      service.connect({ host: 'example.com', port: '4748' });
+      expect(service.target).toEqual({ host: 'example.com', port: '4748' });
     });
 
     it('uses ws:// only when the target host itself is local', () => {
@@ -197,9 +217,6 @@ describe('WebSocketService', () => {
 
     it('fires on the slow-hang path (connect-timer closes the stuck socket → onclose)', () => {
       createConnectedService();
-      // The timer closes the still-CONNECTING socket; in a real socket that
-      // close drives onclose. Advance the timer, then drive onclose as the
-      // browser would.
       vi.advanceTimersByTime(1000);
       expect(mockInstance.close).toHaveBeenCalled();
       mockInstance.onclose();
@@ -231,8 +248,6 @@ describe('WebSocketService', () => {
       const service = new WebSocketService(mockConfig);
       service.connect({ host: 'h', port: '1' });
       const firstSocket = mockInstance;
-      // A second connect retires the prior socket and detaches its onclose, so a
-      // late onclose is a no-op (`?.`) and can't misfire onConnectionUnreachable.
       service.connect({ host: 'h', port: '2' });
       firstSocket.onclose?.();
       expect(mockOnConnectionUnreachable).not.toHaveBeenCalled();
@@ -321,8 +336,6 @@ describe('WebSocketService', () => {
       firstInstance.readyState = WebSocket.OPEN;
       service.connect({ host: 'h', port: '2' });
       expect(firstInstance.close).toHaveBeenCalled();
-      // OPEN socket retired for reconnect: onclose/onerror detached so a late
-      // close/error can't leak side effects onto the replacement (onmessage too).
       expect(firstInstance.onclose).toBeNull();
       expect(firstInstance.onerror).toBeNull();
       expect(firstInstance.onmessage).toBeNull();
@@ -336,25 +349,15 @@ describe('WebSocketService', () => {
 
       service.connect({ host: 'h', port: '2' });
 
-      // Not aborted synchronously — an abrupt close of a CONNECTING socket
-      // strands a half-open upstream against Servatrice's per-IP cap.
       expect(firstInstance.close).not.toHaveBeenCalled();
-      // Retired orphan: lifecycle handlers silenced so a late open→close can't
-      // emit CONNECTED/DISCONNECTED or schedule a reconnect...
       expect(firstInstance.onclose).toBeNull();
       expect(firstInstance.onerror).toBeNull();
-      // ...but a clean close is armed for when the handshake completes.
       expect(typeof firstInstance.onopen).toBe('function');
       firstInstance.onopen?.();
       expect(firstInstance.close).toHaveBeenCalled();
     });
 
     it('detaches a retired OPEN socket\'s onclose AND onerror so neither leaks onto the live replacement', () => {
-      // An OPEN socket retired by a fresh connect() must run no lifecycle side
-      // effects: a late onclose OR onerror would endPingLoop() (killing the
-      // replacement's shared keepalive), corrupt hasReportedError, and emit
-      // DISCONNECTED / Connection Failed against the live socket. closeActiveSocket
-      // detaches both handlers, mirroring the CONNECTING branch.
       const { instances } = installMockWebSocketHarness();
       const service = new WebSocketService(mockConfig);
       const endSpy = vi.spyOn((service as WebSocketInternal).keepAliveService, 'endPingLoop');
@@ -364,21 +367,17 @@ describe('WebSocketService', () => {
       service.connect({ host: 'h', port: '2' });
       instances[1].onopen();
 
-      // Orphan's side-effecting handlers detached (onopen won't re-fire on an OPEN socket).
       expect(instances[0].onclose).toBeNull();
       expect(instances[0].onerror).toBeNull();
 
       endSpy.mockClear();
       mockOnStatusChange.mockClear();
 
-      // Firing the orphan's (now absent) handlers is a no-op — no keepalive teardown,
-      // no DISCONNECTED / Connection Failed against the replacement.
       instances[0].onclose?.();
       instances[0].onerror?.();
       expect(endSpy).not.toHaveBeenCalled();
       expect(mockOnStatusChange).not.toHaveBeenCalled();
 
-      // The live replacement still tears down normally when IT closes.
       instances[1].onclose();
       expect(endSpy).toHaveBeenCalled();
       expect(mockOnStatusChange).toHaveBeenCalledWith(StatusEnum.DISCONNECTED, 'Connection Closed');
@@ -466,9 +465,6 @@ describe('WebSocketService', () => {
     });
 
     it('orphan socket close during connect retire is suppressed (no DISCONNECTED)', () => {
-      // Even if socket.close() synchronously fires onclose, the retire path has
-      // already detached the handler, so the `?.` invocation is a no-op and no
-      // DISCONNECTED leaks against the replacement.
       const service = new WebSocketService(mockConfig);
       service.connect({ host: 'h', port: '1' });
       mockInstance.onopen();

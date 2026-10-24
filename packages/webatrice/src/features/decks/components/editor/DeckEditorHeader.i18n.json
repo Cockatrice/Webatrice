@@ -1,0 +1,22 @@
+{
+  "DeckHeader": {
+    "myDecks": "My decks",
+    "name": "Deck name",
+    "namePlaceholder": "Untitled deck",
+    "cardCount": "{count, plural, one {# card} other {# cards}}",
+    "sideboardCount": "{count} sideboard",
+    "saving": "Saving…",
+    "dirty": "Unsaved changes",
+    "saved": "Saved",
+    "saveFailed": "The deck could not be saved.",
+    "retrySave": "Retry",
+    "saveFailedHint": "Your last change was not saved. It will be sent again with your next change, or now with Retry.",
+    "export": "Export deck",
+    "more": "More: open deck, print, send to an online service",
+    "editTags": "Edit tags",
+    "bannerCard": "Banner card…",
+    "playmat": "Playmat…",
+    "bracketHint": "Last bracket estimate; see Deck stats",
+    "resetLayout": "Reset layout"
+  }
+}

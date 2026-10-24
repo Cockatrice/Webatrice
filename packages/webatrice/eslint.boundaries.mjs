@@ -5,7 +5,7 @@ const elements = [
   { type: 'dialogs', pattern: ['src/dialogs/**'] },
   { type: 'feature-widgets', pattern: ['src/feature-widgets/**'] },
   { type: 'feature-wrappers', pattern: ['src/feature-wrappers/**'] },
-  { type: 'features', pattern: ['src/features/**'] },
+  { type: 'features', pattern: ['src/features/*'], capture: ['feature'] },
   { type: 'hooks', pattern: ['src/hooks/**'] },
   { type: 'images', pattern: ['src/images/**'] },
   { type: 'services', pattern: ['src/services/**'] },
@@ -41,19 +41,21 @@ const rules = [
   },
 
   // Feature-wrappers are page-chrome wrappers (currently just `layout/`, holding Layout
-  // and LeftNav). They compose feature-widgets for top-level affordances (e.g. card-import
-  // dialog accessible from any page) and are consumed by features (below) for wrapping
-  // their route content.
+  // and TopBar). They compose feature-widgets for top-level affordances (e.g.
+  // card-import dialog accessible from any page) and are consumed by features (below) for
+  // wrapping their route content. Module-level feature caches register their own
+  // cleanup with services/session; AppShell hosts the session boundary.
   {
     from: { type: 'feature-wrappers' },
     allow: types('components', 'dialogs', 'feature-widgets', 'hooks', 'images', 'services', 'store', 'types', 'utils')
   },
 
   // Features are vertical slices: they pull from root-level shared assets but nothing
-  // pulls from them except the root AppShell. Features may import other features only
-  // implicitly via the containers that compose them. Features may also compose
-  // feature-widgets (one-way: features → feature-widgets, never the reverse). Features
-  // also pull from `feature-wrappers` for the page chrome (Layout, etc.).
+  // pulls from them except the root AppShell. Each feature folder is its own element,
+  // so imports inside a feature are internal and imports between features are errors —
+  // shared capabilities move to a root owner instead. Features may also compose
+  // feature-widgets (one-way: features → feature-widgets, never the reverse) and pull
+  // from `feature-wrappers` for the page chrome (Layout, etc.).
   {
     from: { type: 'features' },
     allow: types('components', 'dialogs', 'feature-widgets', 'hooks', 'images', 'services', 'feature-wrappers', 'store', 'types', 'utils')
@@ -80,7 +82,7 @@ export const boundariesConfig = [
     },
   },
   {
-    files: ['**/*.spec.*'],
+    files: ['**/*.spec.*', 'integration/**'],
     rules: { 'boundaries/dependencies': 'off' },
   },
 ];

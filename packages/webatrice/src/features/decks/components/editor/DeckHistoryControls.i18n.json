@@ -1,0 +1,31 @@
+{
+  "DeckHistory": {
+    "undo": "Undo",
+    "redo": "Redo",
+    "history": "Undo/Redo history",
+    "hint": "Click on an entry to revert to that point in the history.",
+    "undoEntry": "[undo] {reason}",
+    "redoEntry": "[redo] {reason}",
+    "zone": {
+      "main": "Mainboard",
+      "sideboard": "Sideboard"
+    },
+    "reason": {
+      "rename": "Rename deck to \"{to}\" from \"{from}\"",
+      "description": "Updated comments (was {before} chars, now {after} chars)",
+      "format": "Set format to {format}",
+      "banner": "Set banner card to {name}",
+      "bannerCleared": "Cleared banner card",
+      "tags": "Tags changed",
+      "playmat": "Playmat changed",
+      "addCard": "Added ({zone}): {name}",
+      "added": "Added {count} × \"{name}\"",
+      "removed": "Removed {count} × \"{name}\"",
+      "removeCard": "Removed \"{name}\" (all copies)",
+      "moveCard": "Moved {count} × \"{name}\" to {zone}",
+      "setCommander": "Set \"{name}\" as commander",
+      "unsetCommander": "Unset \"{name}\" as commander",
+      "changePrinting": "Changed printing of \"{name}\" to {set}"
+    }
+  }
+}

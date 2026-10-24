@@ -9,6 +9,7 @@ vi.mock('./services/WebSocketService', () => ({
     return {
       connect: vi.fn(),
       disconnect: vi.fn(),
+      dispose: vi.fn(),
       send: vi.fn(),
       checkReadyState: vi.fn().mockReturnValue(true),
     };
@@ -16,11 +17,13 @@ vi.mock('./services/WebSocketService', () => ({
 }));
 
 vi.mock('./services/ProtobufService', () => ({
+  DEFAULT_COMMAND_TIMEOUT_MS: 18_000,
   ProtobufService: vi.fn().mockImplementation(function ProtobufServiceImpl(transport: SocketTransport) {
     captured.pbOptions = transport;
     return {
       handleMessageEvent: vi.fn(),
       resetCommands: vi.fn(),
+      replayGameEventContainer: vi.fn(),
     };
   }),
 }));
@@ -43,6 +46,8 @@ import {
   Event_ServerIdentification_ServerOptions,
   Event_ServerIdentificationSchema,
   ServerMessageSchema,
+  GameEventContainerSchema,
+  ServerInfo_GameSchema,
   ServerMessage_MessageType,
   SessionEventSchema,
 } from './generated';
@@ -90,7 +95,7 @@ function makeMockResponse(): IWebClientResponse {
       testConnectionFailed: vi.fn(),
     },
     room: { clearStore: vi.fn() },
-    game: { clearStore: vi.fn() },
+    game: { clearStore: vi.fn(), replayGameLoaded: vi.fn(), replayGameUnloaded: vi.fn(), replayGameTimeSynced: vi.fn() },
     admin: {},
     moderator: {},
   } as unknown as IWebClientResponse;
@@ -108,6 +113,7 @@ describe('WebClient', () => {
       return {
         handleMessageEvent: vi.fn(),
         resetCommands: vi.fn(),
+        replayGameEventContainer: vi.fn(),
       };
     });
     (WebSocketService as Mock).mockImplementation(function WebSocketServiceImpl(options: WebSocketServiceConfig) {
@@ -115,6 +121,7 @@ describe('WebClient', () => {
       return {
         connect: vi.fn(),
         disconnect: vi.fn(),
+        dispose: vi.fn(),
         send: vi.fn(),
         checkReadyState: vi.fn().mockReturnValue(true),
       };
@@ -131,6 +138,55 @@ describe('WebClient', () => {
   });
 
   describe('constructor', () => {
+    it('forwards live status callbacks and ignores them after disposal', () => {
+      captured.wsOptions!.onStatusChange(StatusEnum.CONNECTED, 'Connected');
+      expect(mockResponse.session.updateStatus).toHaveBeenCalledExactlyOnceWith(StatusEnum.CONNECTED, 'Connected');
+      expect(client.status).toBe(StatusEnum.CONNECTED);
+      WebClient.dispose();
+      vi.mocked(mockResponse.session.updateStatus).mockClear();
+      captured.wsOptions!.onStatusChange(StatusEnum.CONNECTED, 'Late connection');
+      expect(mockResponse.session.updateStatus).not.toHaveBeenCalled();
+      expect(client.status).toBe(StatusEnum.DISCONNECTED);
+    });
+
+    it('connects once and rejects reentrant and disposed connection attempts', () => {
+      const target = { host: 'localhost', port: '4748' };
+      vi.mocked(client.protobuf.resetCommands).mockImplementationOnce(() => client.connect(target));
+      client.connect(target);
+      expect(client.socket.connect).toHaveBeenCalledExactlyOnceWith(target);
+      expect(mockResponse.session.connectionAttempted).toHaveBeenCalledExactlyOnceWith();
+      WebClient.dispose();
+      client.connect(target);
+      expect(client.socket.connect).toHaveBeenCalledTimes(1);
+      expect(mockResponse.session.connectionAttempted).toHaveBeenCalledTimes(1);
+    });
+
+    it('abandons reconnect when a settlement callback disposes its owner', () => {
+      vi.mocked(client.protobuf.resetCommands).mockImplementationOnce(() => WebClient.dispose());
+      client.connect({ host: 'localhost', port: '4748' });
+      expect(client.socket.connect).not.toHaveBeenCalled();
+      expect(mockResponse.session.connectionAttempted).not.toHaveBeenCalled();
+      expect(mockResponse.session.updateStatus).toHaveBeenCalledExactlyOnceWith(StatusEnum.DISCONNECTED, 'Connection Closed');
+      expect(() => WebClient.instance).toThrow('WebClient has not been initialized');
+    });
+
+    it('allows a live probe but creates no probe after disposal', () => {
+      const harness = installMockWebSocketHarness();
+      vi.useFakeTimers();
+      try {
+        client.testConnect({ host: 'localhost', port: '4748' });
+        expect(harness.MockWS).toHaveBeenCalledExactlyOnceWith('ws://localhost:4748');
+        WebClient.dispose();
+        client.testConnect({ host: 'elsewhere', port: '4749' });
+        expect(harness.MockWS).toHaveBeenCalledTimes(1);
+        expect(mockResponse.session.testConnectionSuccessful).not.toHaveBeenCalled();
+        expect(mockResponse.session.testConnectionFailed).not.toHaveBeenCalled();
+        expect(vi.getTimerCount()).toBe(0);
+      } finally {
+        harness.restore();
+      }
+    });
+
     it('stores the response, clientConfig, clientOptions, and protocolVersion on the instance', () => {
       expect(client.response).toBe(mockResponse);
       expect(client.clientConfig).toBe(CLIENT_CONFIG);
@@ -146,6 +202,16 @@ describe('WebClient', () => {
 
     it('calls response.session.initialized', () => {
       expect(mockResponse.session.initialized).toHaveBeenCalled();
+    });
+
+    it('forwards round-trip stats from protobuf to response.session.updateLatencyStats', () => {
+      const onLatencyStats = (ProtobufService as Mock).mock.lastCall![3];
+      const stats = { lastMs: 40, medianMs: 40, p95Ms: 40, maxMs: 40, sampleCount: 1 };
+      mockResponse.session.updateLatencyStats = vi.fn();
+
+      onLatencyStats(stats, [40]);
+
+      expect(mockResponse.session.updateLatencyStats).toHaveBeenCalledWith(stats, [40]);
     });
 
     it('sets WebClient.instance to the constructed instance', () => {
@@ -173,7 +239,7 @@ describe('WebClient', () => {
     });
 
     it('closes any open socket before clearing the instance', () => {
-      const disconnectSpy = client.socket.disconnect as Mock;
+      const disconnectSpy = client.socket.dispose as Mock;
       WebClient.dispose();
       expect(disconnectSpy).toHaveBeenCalled();
     });
@@ -284,8 +350,6 @@ describe('WebClient', () => {
       client.testConnect(target);
       wsMockInstance.onerror();
       expect(mockResponse.session.testConnectionFailed).toHaveBeenCalled();
-      // The probe socket must be released even on the error path — a leaked
-      // open socket counts against Servatrice's max_users_per_address cap.
       expect(wsMockInstance.close).toHaveBeenCalled();
     });
 
@@ -328,16 +392,12 @@ describe('WebClient', () => {
     });
 
     it('does not abort a still-CONNECTING prior probe — defers a clean close to onopen', () => {
-      // A superseded probe is usually still CONNECTING; close() on a CONNECTING
-      // socket fails the connection abnormally (1006, no clean FIN), and a proxy
-      // strands the half-open upstream against Servatrice's per-IP cap.
       const { instances } = installMockWebSocketHarness();
       client.testConnect(target);
       const first = instances[instances.length - 1];
       first.readyState = WebSocket.CONNECTING;
 
       client.testConnect(target);
-      // Not aborted synchronously; a clean close is armed for when it opens.
       expect(first.close).not.toHaveBeenCalled();
       expect(typeof first.onopen).toBe('function');
 
@@ -371,18 +431,25 @@ describe('WebClient', () => {
       // First testConnect: capture socket A (the one set up in beforeEach).
       client.testConnect(target);
       const socketA = wsMockInstance;
+      const lateMessage = socketA.onmessage!;
+      expect(lateMessage).toEqual(expect.any(Function));
 
       // Second testConnect: a fresh installMockWebSocketHarness gives us socket B,
       // and the WebClient's testSocket is now B (not A).
       const { mockInstance: socketB } = installMockWebSocketHarness();
       client.testConnect(target);
       expect(socketB).not.toBe(socketA);
+      expect(socketA.onmessage).toBeNull();
 
-      // A's onmessage now arrives late with a valid identification — the
-      // dispatch should be suppressed because testSocket !== socketA.
       const data = buildServerIdentificationMessage();
-      socketA.onmessage({ data: data.buffer });
+      const message = new MessageEvent('message', { data: data.buffer });
+      lateMessage(message);
       expect(mockResponse.session.testConnectionSuccessful).not.toHaveBeenCalled();
+      expect(mockResponse.session.testConnectionFailed).not.toHaveBeenCalled();
+      expect(mockResponse.session.connectionUnreachable).not.toHaveBeenCalled();
+
+      socketB.onmessage!(message);
+      expect(mockResponse.session.testConnectionSuccessful).toHaveBeenCalledExactlyOnceWith(false);
     });
 
     it('ignores non-SESSION_EVENT messages', () => {
@@ -420,8 +487,6 @@ describe('WebClient', () => {
       client.testConnect(target);
       wsMockInstance.onclose();
       expect(mockResponse.session.testConnectionFailed).toHaveBeenCalled();
-      // resolve() calls close() on every path (idempotent with the peer close)
-      // so the probe never lingers half-open on our side.
       expect(wsMockInstance.close).toHaveBeenCalled();
     });
   });
@@ -433,6 +498,69 @@ describe('WebClient', () => {
     });
   });
 
+  describe('replay games', () => {
+    it('forwards a recorded container and the local replay id to protobuf', () => {
+      const container = create(GameEventContainerSchema, { gameId: 7, secondsElapsed: 12 });
+      client.replayGameEventContainer(container, -1001);
+      expect(vi.mocked(client.protobuf.replayGameEventContainer).mock.calls).toEqual([[container, -1001, undefined]]);
+      expect(vi.mocked(client.socket.send).mock.calls).toEqual([]);
+    });
+
+    it('loadReplayGame hands the replay game to the game response', () => {
+      const gameInfo = create(ServerInfo_GameSchema, { gameId: 7, description: 'recorded' });
+      client.loadReplayGame(-1001, gameInfo);
+      expect(mockResponse.game.replayGameLoaded).toHaveBeenCalledWith(-1001, gameInfo);
+    });
+
+    it.each([true, false])('forwards skipRevealWindow=%s to replay dispatch', (skipRevealWindow) => {
+      const container = create(GameEventContainerSchema, { secondsElapsed: 12 });
+      const options = { skipRevealWindow };
+      client.protobuf.replayGameEventContainer = vi.fn();
+
+      client.replayGameEventContainer(container, -1001, options);
+
+      expect(client.protobuf.replayGameEventContainer).toHaveBeenCalledWith(container, -1001, options);
+    });
+
+    it('unloadReplayGame hands the closed replay game to the game response', () => {
+      client.unloadReplayGame(-1001);
+      expect(mockResponse.game.replayGameUnloaded).toHaveBeenCalledWith(-1001);
+    });
+
+    it('replayGameEventContainer reports the container\'s game time before playing its events', () => {
+      const container = create(GameEventContainerSchema, { secondsElapsed: 95 });
+      client.protobuf.replayGameEventContainer = vi.fn();
+      client.replayGameEventContainer(container, -1001);
+      expect(mockResponse.game.replayGameTimeSynced).toHaveBeenCalledWith(-1001, 95);
+      expect(client.protobuf.replayGameEventContainer).toHaveBeenCalledWith(container, -1001, undefined);
+      expect(vi.mocked(mockResponse.game.replayGameTimeSynced!).mock.invocationCallOrder[0])
+        .toBeLessThan(vi.mocked(client.protobuf.replayGameEventContainer).mock.invocationCallOrder[0]);
+    });
+
+    it('replayGameEventContainer reports no game time for a container without one', () => {
+      client.protobuf.replayGameEventContainer = vi.fn();
+      client.replayGameEventContainer(create(GameEventContainerSchema, {}), -1001);
+      expect(mockResponse.game.replayGameTimeSynced).not.toHaveBeenCalled();
+      expect(client.protobuf.replayGameEventContainer).toHaveBeenCalled();
+    });
+
+    it('replayGameEventContainer reports a recorded game time of 0', () => {
+      client.protobuf.replayGameEventContainer = vi.fn();
+      client.replayGameEventContainer(create(GameEventContainerSchema, { secondsElapsed: 0 }), -1001);
+      expect(mockResponse.game.replayGameTimeSynced).toHaveBeenCalledWith(-1001, 0);
+    });
+
+    it('replayGameEventContainer forwards timed containers when the clock callback is absent', () => {
+      delete mockResponse.game.replayGameTimeSynced;
+      const container = create(GameEventContainerSchema, { secondsElapsed: 95 });
+      client.protobuf.replayGameEventContainer = vi.fn();
+
+      client.replayGameEventContainer(container, -1001);
+
+      expect(vi.mocked(client.protobuf.replayGameEventContainer).mock.calls).toEqual([[container, -1001, undefined]]);
+    });
+  });
+
   describe('updateStatus', () => {
     it('sets the status', () => {
       client.updateStatus(StatusEnum.CONNECTED);
@@ -441,6 +569,11 @@ describe('WebClient', () => {
 
     it('calls protobuf.resetCommands on DISCONNECTED', () => {
       client.updateStatus(StatusEnum.DISCONNECTED);
+      expect(client.protobuf.resetCommands).toHaveBeenCalled();
+    });
+
+    it('calls protobuf.resetCommands on RECONNECTING (commands on the dropped socket can never be answered)', () => {
+      client.updateStatus(StatusEnum.RECONNECTING);
       expect(client.protobuf.resetCommands).toHaveBeenCalled();
     });
 

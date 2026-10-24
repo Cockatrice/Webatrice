@@ -18,8 +18,6 @@ import { WebClient } from '../../dist/index.js';
 
 const E2E_TARGET = { host: 'localhost', port: '4749' } as const;
 
-// > the default max_users_per_address (4): if probes leaked sockets, this many
-// sequential probes would be exactly the kind of burst that trips the cap.
 const PROBE_COUNT = 6;
 const PROBE_TIMEOUT_MS = 10_000;
 
@@ -58,20 +56,15 @@ describe('test-connection socket release', () => {
       for (let i = 0; i < PROBE_COUNT; i += 1) {
         const before = successSpy.mock.calls.length;
         WebClient.instance.testConnect({ ...E2E_TARGET });
-        // Each probe must succeed against real Servatrice (valid identification).
         await waitFor(() => successSpy.mock.calls.length > before, PROBE_TIMEOUT_MS);
       }
     } finally {
       globalThis.WebSocket = OriginalWebSocket;
     }
 
-    // One socket per probe — never a double-open (the burst that inflates the
-    // per-IP count).
     expect(constructed).toBe(PROBE_COUNT);
     expect(successSpy.mock.calls.length).toBeGreaterThanOrEqual(PROBE_COUNT);
 
-    // Every probe socket is released — the close frame lags the success
-    // dispatch, so drain the event loop before asserting no leak remains.
     await waitFor(() => live === 0, PROBE_TIMEOUT_MS);
     expect(live).toBe(0);
   });

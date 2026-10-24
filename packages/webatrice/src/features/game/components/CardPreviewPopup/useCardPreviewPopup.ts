@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import type { PreviewMode } from '../BattlefieldSidebar/BattlefieldSidebar';
-import type { HoveredCard } from '../PlayerBox/hoveredCard';
+import type { PreviewMode } from '../CardPreviewPane/useCardPreviewPane';
+import type { PreviewCard } from '../ui/CardPreviewContext';
 import {
   postCardPreviewMessage,
   subscribeToCardPreviewChannel,
@@ -31,7 +31,7 @@ const POPUP_FEATURES = 'width=420,height=580,menubar=no,toolbar=no,location=no,s
  *   • popup.window failed to open (blocked / navigation restrictions).
  */
 export function useCardPreviewPopup(
-  card: HoveredCard | null,
+  card: PreviewCard | null,
   mode: PreviewMode,
   detail: CardPreviewDetail | null,
   fetchState: CardPreviewFetchState,
@@ -57,7 +57,9 @@ export function useCardPreviewPopup(
   // Runs the "post card" effect on every card change so the popup
   // updates in real time; the heartbeat runs on its own interval.
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) {
+      return;
+    }
     postCardPreviewMessage({ kind: 'card', card });
   }, [card, isOpen]);
 
@@ -67,12 +69,16 @@ export function useCardPreviewPopup(
   // reflects user toggles immediately and text-mode transitions
   // (loading → loaded → not-found) update in real time.
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) {
+      return;
+    }
     postCardPreviewMessage({ kind: 'mode', mode, detail, fetchState, previousName });
   }, [mode, detail, fetchState, previousName, isOpen]);
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) {
+      return;
+    }
     // Fire an immediate heartbeat so a freshly-opened popup gets
     // marked "connected" without waiting for the first interval tick.
     postCardPreviewMessage({ kind: 'heartbeat' });
@@ -94,7 +100,9 @@ export function useCardPreviewPopup(
     onBackRef.current = onBack;
   }, [onBack]);
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) {
+      return;
+    }
     return subscribeToCardPreviewChannel((msg) => {
       if (msg.kind === 'close') {
         popupRef.current = null;
@@ -111,7 +119,9 @@ export function useCardPreviewPopup(
   // without our `close` broadcast landing. Poll `popup.closed` on a
   // slow timer so we drop the state anyway.
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) {
+      return;
+    }
     const poll = window.setInterval(() => {
       const win = popupRef.current;
       if (!win || win.closed) {
@@ -139,7 +149,9 @@ export function useCardPreviewPopup(
     // in which case we don't flip the flag so the button reads as
     // "still off" and the user can retry.
     const opened = window.open('#/card-preview-popup', POPUP_NAME, POPUP_FEATURES);
-    if (!opened) return;
+    if (!opened) {
+      return;
+    }
     popupRef.current = opened;
     setIsOpen(true);
   }, [isOpen]);

@@ -39,7 +39,7 @@ const Initialize = () => {
       <Layout>
         <Root className={'Initialize ' + classes.root}>
           <div className='Initialize-content'>
-            <img src={Images.Logo} alt="logo" />
+            <img src={Images.Logo} alt="" />
             <Typography variant="subtitle1" className='subtitle'>{ t('Initialize.title') }</Typography>
             <Trans
               i18nKey="Initialize.subtitle"

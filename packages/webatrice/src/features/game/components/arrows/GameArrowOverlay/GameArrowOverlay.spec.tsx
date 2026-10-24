@@ -1,7 +1,8 @@
 import { useRef } from 'react';
-import { screen, fireEvent } from '@testing-library/react';
+import { act, screen, fireEvent, waitFor } from '@testing-library/react';
 import { create } from '@bufbuild/protobuf';
-import { colorSchema } from '@cockatrice/sockatrice/generated';
+import { games } from '@cockatrice/datatrice';
+import { colorSchema, Event_CreateArrowSchema } from '@cockatrice/sockatrice/generated';
 import { createMockWebClient, makeStoreState, renderWithProviders } from '../../../../../__test-utils__';
 import {
   makeArrow,
@@ -9,7 +10,9 @@ import {
   makePlayerEntry,
   makePlayerProperties,
 } from '@cockatrice/datatrice/testing';
+import { getSettings, settingsStore } from '../../../../../hooks/useSettings';
 import GameArrowOverlay from './GameArrowOverlay';
+import { arrowStrokeDurationMs } from './useArrowDrawIn';
 import {
   CardRegistryContext,
   createCardRegistry,
@@ -134,5 +137,93 @@ describe('GameArrowOverlay', () => {
     fireEvent.click(screen.getByTestId('arrow-1'));
 
     expect(webClient.request.game.deleteArrow).toHaveBeenCalledWith(1, { arrowId: 1 });
+  });
+
+  describe('arrow draw animation', () => {
+    afterEach(() => {
+      settingsStore.reset();
+    });
+
+    type Store = ReturnType<typeof renderWithProviders>['store'];
+    const createArrow = (store: Store, playerId: number, id: number) => act(() => {
+      store.dispatch(games.Actions.arrowCreated({
+        gameId: 1,
+        playerId,
+        data: create(Event_CreateArrowSchema, {
+          arrowInfo: makeArrow({
+            id,
+            startPlayerId: 1,
+            startZone: 'table',
+            startCardId: 11,
+            targetPlayerId: 1,
+            targetZone: 'table',
+            targetCardId: 10,
+          }),
+        }),
+      }));
+    });
+    const clipOf = (testId: string) => screen.getByTestId(testId).parentElement!.getAttribute('clip-path');
+
+    it('draws an arrow the game adds in from its start, then shows it whole', async () => {
+      const { registry } = setupRegistryWithTwoCards();
+      const { store } = renderWithProviders(wrapWithRegistry(<Harness />, registry), { preloadedState: stateWithOneArrow() });
+      createArrow(store, 1, 2);
+
+      const group = screen.getByTestId('arrow-2').parentElement!;
+      const clipId = clipOf('arrow-2')!.match(/^url\(#(.+)\)$/)![1];
+      expect(clipId).toMatch(/^arrow-draw-.*-1-2$/);
+      expect(group.querySelector(`clipPath[id="${clipId}"]`)).not.toBeNull();
+
+      await waitFor(() => expect(screen.getByTestId('arrow-2').parentElement).not.toHaveAttribute('clip-path'));
+    });
+
+    it('shows the arrows already in the game whole, as when joining a game in progress', () => {
+      const { registry } = setupRegistryWithTwoCards();
+      renderWithProviders(wrapWithRegistry(<Harness />, registry), { preloadedState: stateWithOneArrow() });
+      expect(clipOf('arrow-1')).toBeNull();
+    });
+
+    it('does not draw an arrow in again when it comes back after an endpoint went missing', async () => {
+      const { registry, elA } = setupRegistryWithTwoCards();
+      const { store } = renderWithProviders(wrapWithRegistry(<Harness />, registry), { preloadedState: stateWithOneArrow() });
+      createArrow(store, 1, 2);
+      await waitFor(() => expect(clipOf('arrow-2')).toBeNull());
+
+      act(() => registry.unregister(makeCardKey(1, 'table', 10)));
+      expect(screen.queryByTestId('arrow-2')).not.toBeInTheDocument();
+      act(() => registry.register(makeCardKey(1, 'table', 10), elA));
+      expect(clipOf('arrow-2')).toBeNull();
+    });
+
+    it('keeps two players\' arrows with the same id apart, each drawing in on its own clip', () => {
+      const { registry } = setupRegistryWithTwoCards();
+      const state = stateWithOneArrow();
+      state.games.games[1].players[2] = makePlayerEntry({ properties: makePlayerProperties({ playerId: 2 }) });
+      const { store } = renderWithProviders(wrapWithRegistry(<Harness />, registry), { preloadedState: state });
+      createArrow(store, 2, 1);
+
+      const arrows = screen.getAllByTestId('arrow-1');
+      expect(arrows).toHaveLength(2);
+      expect(arrows.map((arrow) => arrow.parentElement!.getAttribute('clip-path'))).toEqual([
+        null,
+        expect.stringMatching(/-2-1\)$/),
+      ]);
+    });
+
+    it('shows the arrow whole at once with the animation off', async () => {
+      const settings = await getSettings();
+      settingsStore.setValue(Object.assign(settings, { animationsChosen: true, arrowDrawAnimation: false }));
+      const { registry } = setupRegistryWithTwoCards();
+      const { store } = renderWithProviders(wrapWithRegistry(<Harness />, registry), { preloadedState: stateWithOneArrow() });
+      createArrow(store, 1, 2);
+
+      expect(screen.getByTestId('arrow-2').parentElement).not.toHaveAttribute('clip-path');
+    });
+
+    it('takes desktop\'s time: 0.8 ms per pixel, from 200 to 450 ms', () => {
+      expect(arrowStrokeDurationMs(100)).toBe(200);
+      expect(arrowStrokeDurationMs(400)).toBe(320);
+      expect(arrowStrokeDurationMs(1000)).toBe(450);
+    });
   });
 });

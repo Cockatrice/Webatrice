@@ -47,6 +47,7 @@ jobs:
               - 'packages/sockatrice/buf.gen.*'
             root:
               - 'tsconfig.base.json'
+              - 'turbo.json'
               - 'package.json'
               - 'package-lock.json'
               - '.npmrc'
@@ -57,6 +58,24 @@ jobs:
               - '!**/*.md'
             changesetTouched:
               - added|modified: '.changeset/*.md'
+
+  path-case:
+    name: Path case
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+
+      - name: Setup Node
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e  # v6.4.0
+        with:
+          node-version: 24
+
+      - name: Check path case
+        run: npm run check:path-case
+
+      - name: Test path case guard
+        run: node --test scripts/check-path-case.test.mjs
 
   typecheck:
     name: Typecheck (Node ${{ matrix.node_version }})
@@ -135,6 +154,18 @@ jobs:
       - name: Datatrice lint
         if: needs.changes.outputs.datatriceGate == 'true'
         run: npm run -w @cockatrice/datatrice lint
+
+      - name: Webatrice lint
+        run: npm run -w @cockatrice/webatrice lint
+
+      # Missing and orphan keys, ICU syntax and locale folders. "Install packages"
+      # has just regenerated src/i18n-default.json, so a diff here means the
+      # committed rollup is stale.
+      - name: Webatrice i18n check
+        run: |
+          git diff --exit-code -- packages/webatrice/src/i18n-default.json \
+            || { echo '::error::src/i18n-default.json is stale; run `npm run -w @cockatrice/webatrice translate` and commit it'; exit 1; }
+          npm run -w @cockatrice/webatrice i18n:check
 
   test:
     name: Unit tests (Node ${{ matrix.node_version }})
@@ -334,7 +365,7 @@ jobs:
   ci-success:
     name: CI Success
     if: always()
-    needs: [changes, typecheck, lint, test, integration, sockatrice-e2e, app-e2e]
+    needs: [changes, path-case, typecheck, lint, test, integration, sockatrice-e2e, app-e2e]
     runs-on: ubuntu-latest
     steps:
       - name: Fail if any required job failed or was cancelled

@@ -6,6 +6,8 @@ import DialogContentText from '@mui/material/DialogContentText';
 import DialogTitle from '@mui/material/DialogTitle';
 import Button from '@mui/material/Button';
 
+import { DialogFocus } from '../DialogFocus';
+
 import './ConfirmDialog.css';
 
 const PREFIX = 'ConfirmDialog';
@@ -17,7 +19,7 @@ const classes = {
 const StyledDialog = styled(Dialog)(({ theme }) => ({
   [`&.${classes.root}`]: {
     '& .dialog-title__wrapper': {
-      borderColor: theme.palette.grey[300],
+      borderColor: theme.palette.divider,
     },
   },
 }));
@@ -29,6 +31,7 @@ export interface ConfirmDialogProps {
   confirmLabel?: string;
   cancelLabel?: string;
   destructive?: boolean;
+  cancelDefault?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
 }
@@ -40,6 +43,7 @@ function ConfirmDialog({
   confirmLabel = 'Confirm',
   cancelLabel = 'Cancel',
   destructive = false,
+  cancelDefault = false,
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
@@ -47,29 +51,33 @@ function ConfirmDialog({
     <StyledDialog
       className={'ConfirmDialog ' + classes.root}
       open={isOpen}
+      disableRestoreFocus
+      disableEnforceFocus
       onClose={onCancel}
       maxWidth={false}
     >
-      <DialogTitle className="dialog-title">
-        <div className="dialog-title__wrapper">
-          {title}
-        </div>
-      </DialogTitle>
-      <DialogContent className="dialog-content confirm-dialog__body">
-        <DialogContentText>{message}</DialogContentText>
-      </DialogContent>
-      <DialogActions>
-        <Button type="button" onClick={onCancel}>{cancelLabel}</Button>
-        <Button
-          type="button"
-          variant="contained"
-          color={destructive ? 'error' : 'primary'}
-          onClick={onConfirm}
-          autoFocus
-        >
-          {confirmLabel}
-        </Button>
-      </DialogActions>
+      <DialogFocus isOpen={isOpen}>
+        <DialogTitle className="dialog-title">
+          <div className="dialog-title__wrapper">
+            {title}
+          </div>
+        </DialogTitle>
+        <DialogContent className="dialog-content confirm-dialog__body">
+          <DialogContentText>{message}</DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button type="button" onClick={onCancel} autoFocus={cancelDefault}>{cancelLabel}</Button>
+          <Button
+            type="button"
+            variant="contained"
+            color={destructive ? 'error' : 'primary'}
+            onClick={onConfirm}
+            autoFocus={!cancelDefault}
+          >
+            {confirmLabel}
+          </Button>
+        </DialogActions>
+      </DialogFocus>
     </StyledDialog>
   );
 }

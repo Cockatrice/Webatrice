@@ -1,108 +1,105 @@
-import { ZoneName } from '@cockatrice/sockatrice';
-import { screen } from '@testing-library/react';
-// Block Battlefield's Dexie-backed useSettings from firing an async settle
-// after mount (would produce an unwrapped React state update).
-vi.mock('../../../../../hooks/useSettings');
+import { act, cleanup, screen, within } from '@testing-library/react';
+import { makeCard } from '@cockatrice/datatrice/testing';
 
-import { makeStoreState, renderWithProviders, makeUser } from '../../../../../__test-utils__';
-import {
-  makeCard,
-  makeGameEntry,
-  makePlayerEntry,
-  makePlayerProperties,
-  makeZoneEntry,
-} from '@cockatrice/datatrice/testing';
-import PlayerBoard from './PlayerBoard';
+import { getSettings, settingsStore } from '../../../../../hooks/useSettings';
+import { battlefieldEl, cardEl, pileEl, renderSeatCell, type SeatGameSpec } from '../../../__test-utils__/seatFixtures';
 
-function buildState() {
-  const table = makeZoneEntry({
-    name: ZoneName.TABLE,
-    cards: [
-      makeCard({ id: 1, name: 'Row0-Card', x: 0, y: 0 }),
-      makeCard({ id: 2, name: 'Row2-Card', x: 0, y: 2 }),
-    ],
-    cardCount: 2,
-  });
-  const hand = makeZoneEntry({ name: ZoneName.HAND, cardCount: 0 });
-  const deck = makeZoneEntry({ name: ZoneName.DECK, cardCount: 60 });
-  const player = makePlayerEntry({
-    properties: makePlayerProperties({
+vi.mock('../../../../../services/cards/catalog/lookup', async () =>
+  (await import('../../../__test-utils__/unknownCardCatalog')).unknownCardCatalog());
+
+const SPEC: SeatGameSpec = {
+  localPlayerId: 1,
+  activePlayerId: 1,
+  seats: [
+    {
       playerId: 1,
-      userInfo: makeUser({ name: 'Trajer' }),
-    }),
-    zones: {
-      [ZoneName.TABLE]: table,
-      [ZoneName.HAND]: hand,
-      [ZoneName.DECK]: deck,
+      name: 'Alice',
+      table: [makeCard({ id: 10, name: 'Bolt' })],
+      stack: [makeCard({ id: 50, name: 'Shock' })],
+      hand: [makeCard({ id: 30, name: 'Opt' })],
+      deckCount: 9,
     },
-  });
-  return makeStoreState({
-    games: {
-      games: {
-        1: makeGameEntry({ localPlayerId: 1, players: { 1: player } }),
-      },
-    },
-  });
-}
+    { playerId: 2, name: 'Bob', handCount: 2 },
+  ],
+};
+
+const seatRoot = () => battlefieldEl(1).closest<HTMLElement>('.rounded-lg')!;
 
 describe('PlayerBoard', () => {
-  it('renders the info panel, stack column, and battlefield', () => {
-    renderWithProviders(<PlayerBoard />, {
-      preloadedState: buildState(),
+  it('leaves life announcements to the game log instead of a second live region', () => {
+    renderSeatCell(SPEC);
+    const life = screen.getByLabelText('Alice\'s life');
+    expect(life.closest('[aria-live]:not([aria-live="off"]), [role="status"], [role="log"]')).toBeNull();
+    expect(life.querySelector('[aria-live]:not([aria-live="off"]), [role="status"], [role="log"]')).toBeNull();
+  });
+
+  it('composes the info column, the stack, the battlefield and the hand', () => {
+    renderSeatCell(SPEC);
+    expect(screen.getByLabelText('Alice\'s life')).toBeInTheDocument();
+    expect(pileEl('Library')).toHaveAttribute('title', 'Library, 9 cards');
+    expect(cardEl(50, 'stack')).toBeInTheDocument();
+    expect(cardEl(10, 'battlefield')).toBeInTheDocument();
+    expect(cardEl(30, 'hand')).toBeInTheDocument();
+  });
+
+  it('is a landmark named for its player, with its zones as listboxes named by owner and card count', () => {
+    renderSeatCell(SPEC);
+    const seat = screen.getByRole('region', { name: 'Alice\'s seat' });
+    expect(seat).toBe(seatRoot());
+    expect(within(seat).getByRole('listbox', { name: 'Alice\'s battlefield, 1 card' })).toBe(battlefieldEl(1));
+    expect(within(seat).getByRole('listbox', { name: 'Alice\'s stack, 1 card' })).toContainElement(cardEl(50, 'stack'));
+    expect(within(seat).getByRole('listbox', { name: 'Alice\'s hand, 1 card' })).toContainElement(cardEl(30, 'hand'));
+  });
+
+  it('keeps the battlefield and hand scrollers out of the tab order, where Tab is the board\'s Next Phase', () => {
+    renderSeatCell(SPEC);
+    expect(battlefieldEl(1)).toHaveAttribute('tabindex', '-1');
+    expect(screen.getByRole('listbox', { name: 'Alice\'s hand, 1 card' })).toHaveAttribute('tabindex', '-1');
+  });
+
+  it('names an opponent\'s hand by the server\'s count, in either hand layout', async () => {
+    renderSeatCell(SPEC, 2);
+    expect(screen.getByRole('img', { name: 'Hand, 2 cards' })).toBeInTheDocument();
+    cleanup();
+    const settings = await getSettings();
+    settingsStore.setValue(Object.assign(settings, { horizontalHand: false }));
+    renderSeatCell(SPEC, 2);
+    expect(screen.getByRole('img', { name: 'Hand, 2 cards' })).toBeInTheDocument();
+    settingsStore.reset();
+  });
+
+  it('puts the hand row below the play area on the local seat, and glows on its turn', () => {
+    renderSeatCell(SPEC);
+    expect(seatRoot().style.gridTemplateRows).toMatch(/^1fr /);
+    expect(seatRoot()).toHaveClass('border-accent');
+  });
+
+  it('gives a mirrored opponent seat a single row with no hand strip', () => {
+    renderSeatCell(SPEC, 2);
+    const root = battlefieldEl(2).closest<HTMLElement>('.rounded-lg')!;
+    expect(root.style.gridTemplateRows).toBe('1fr');
+    expect(root).toHaveClass('border-border-subtle');
+  });
+
+  it('draws each zone\'s background in its own region, under its content', async () => {
+    const params = { marginPctL: 0, marginPctR: 0, verticalOffset: 0, zoom: 1 };
+    const art = (cardName: string) => ({ cardName, cardProviderId: '', params });
+    const settings = await getSettings();
+    await act(async () => {
+      settingsStore.setValue(Object.assign(settings, {
+        zoneBackgrounds: { hand: art('Island'), stack: art('Swamp'), table: art('Forest'), playerInfo: art('Plains') },
+      }));
     });
+    renderSeatCell(SPEC);
 
-    expect(screen.getByText('Trajer')).toBeInTheDocument();
-    expect(screen.getByTestId('battlefield')).toBeInTheDocument();
-    expect(screen.getByTestId('stack-column-1')).toBeInTheDocument();
-  });
-
-  it('passes mirrored=false by default so the battlefield uses natural row order', () => {
-    const { container } = renderWithProviders(
-      <PlayerBoard />,
-      { preloadedState: buildState() },
-    );
-
-    const rowsInOrder = Array.from(
-      container.querySelectorAll('.battlefield__row'),
-    ).map((r) => r.getAttribute('data-row'));
-    expect(rowsInOrder).toEqual(['0', '1', '2']);
-  });
-
-  it('propagates mirrored=true → battlefield reverses row order', () => {
-    const { container } = renderWithProviders(
-      <PlayerBoard />,
-      { preloadedState: buildState(), boardCell: { mirrored: true } },
-    );
-
-    const rowsInOrder = Array.from(
-      container.querySelectorAll('.battlefield__row'),
-    ).map((r) => r.getAttribute('data-row'));
-    expect(rowsInOrder).toEqual(['2', '1', '0']);
-  });
-
-  it('renders info panel, stack column, battlefield left-to-right (even when mirrored)', () => {
-    const { container } = renderWithProviders(
-      <PlayerBoard />,
-      { preloadedState: buildState(), boardCell: { mirrored: true } },
-    );
-
-    const children = Array.from(container.querySelector('.player-board')!.children);
-    expect(children[0]).toHaveClass('player-info-panel');
-    expect(children[1]).toHaveClass('stack-column');
-    expect(children[2]).toHaveClass('battlefield');
-  });
-
-  it('adds the --mirrored CSS modifier only when the cell is mirrored', () => {
-    const { container: upright } = renderWithProviders(
-      <PlayerBoard />,
-      { preloadedState: buildState() },
-    );
-    expect(upright.querySelector('.player-board--mirrored')).toBeNull();
-
-    const { container: mirrored } = renderWithProviders(
-      <PlayerBoard />,
-      { preloadedState: buildState(), boardCell: { mirrored: true } },
-    );
-    expect(mirrored.querySelector('.player-board--mirrored')).not.toBeNull();
+    const region = (zone: string) => screen.getByTestId(`zone-background-${zone}`).parentElement!;
+    expect(region('hand')).toContainElement(cardEl(30, 'hand'));
+    expect(region('stack')).toContainElement(cardEl(50, 'stack'));
+    expect(region('table')).toContainElement(battlefieldEl(1));
+    expect(region('playerInfo')).toContainElement(screen.getByLabelText('Alice\'s life'));
+    for (const zone of ['hand', 'stack', 'table', 'playerInfo']) {
+      expect(region(zone).className + region(zone).style.zIndex).toMatch(/isolate|30/);
+    }
+    settingsStore.reset();
   });
 });

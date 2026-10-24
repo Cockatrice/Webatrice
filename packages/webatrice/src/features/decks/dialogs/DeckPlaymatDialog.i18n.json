@@ -1,0 +1,15 @@
+{
+  "DeckPlaymat": {
+    "title": "Edit Playmat",
+    "ok": "OK",
+    "numeric": "Show numeric controls",
+    "invalidParams": "Enter crop values within the displayed limits.",
+    "nameTooLong": "Card names must contain at most {max} characters.",
+    "card": "Card name",
+    "printing": "Printing",
+    "defaultPrinting": "Default printing",
+    "remove": "Remove Playmat",
+    "unknownCard": "Card not found.",
+    "lookupFailed": "Could not look up this card. Please try again."
+  }
+}

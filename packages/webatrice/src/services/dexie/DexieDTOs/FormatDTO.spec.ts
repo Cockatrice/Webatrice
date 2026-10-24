@@ -14,6 +14,8 @@ vi.mock('../DexieService', () => ({
 
 import { FormatDTO } from './FormatDTO';
 
+const mapToClassCalls = [...formatsTable.mapToClass.mock.calls];
+
 describe('FormatDTO', () => {
   beforeEach(() => {
     formatsTable.put.mockClear();
@@ -23,7 +25,7 @@ describe('FormatDTO', () => {
   });
 
   it('registers itself with the formats table on import', () => {
-    expect(formatsTable.mapToClass).toHaveBeenCalledWith(FormatDTO);
+    expect(mapToClassCalls).toEqual([[FormatDTO]]);
   });
 
   it('save() puts the instance into the formats table', async () => {

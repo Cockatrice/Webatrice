@@ -33,6 +33,7 @@ import {
   Event_DumpZone_ext,
   Event_ChangeZoneProperties_ext,
   Event_ReverseTurn_ext,
+  Event_GameLogNotice_ext,
 } from '../../generated';
 
 import type { GameEventMeta } from '../../types/WebSocketConfig';
@@ -50,6 +51,7 @@ import { dumpZone } from './dumpZone';
 import { flipCard } from './flipCard';
 import { gameClosed } from './gameClosed';
 import { gameHostChanged } from './gameHostChanged';
+import { gameLogNotice } from './gameLogNotice';
 import { gameSay } from './gameSay';
 import { gameStateChanged } from './gameStateChanged';
 import { joinGame } from './joinGame';
@@ -107,4 +109,5 @@ export const GameEvents: GameExtensionRegistry = [
   makeGameEntry(Event_DumpZone_ext, dumpZone),
   makeGameEntry(Event_ChangeZoneProperties_ext, changeZoneProperties),
   makeGameEntry(Event_ReverseTurn_ext, reverseTurn),
+  makeGameEntry(Event_GameLogNotice_ext, gameLogNotice),
 ];

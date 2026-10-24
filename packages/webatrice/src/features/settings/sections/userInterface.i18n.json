@@ -1,0 +1,110 @@
+{
+  "SettingsUserInterface": {
+    "group": {
+      "general": "General interface settings",
+      "notifications": "Notifications settings",
+      "animation": "Animation settings",
+      "deckEditor": "Deck editor/storage settings",
+      "replay": "Replay settings"
+    },
+    "doubleClickToPlay": {
+      "label": "Double-click cards to play them (instead of single-click)"
+    },
+    "clickPlaysAllSelected": {
+      "label": "Clicking plays all selected cards (instead of just the clicked card)",
+      "description": "Applies when the card you click is part of the selection. On the battlefield, a click always taps or untaps the whole selection."
+    },
+    "playToStack": {
+      "label": "Play all nonlands onto the stack (not the battlefield) by default",
+      "description": "When off, double-clicking a permanent in your hand puts it straight onto the battlefield. Instants and sorceries still go to the stack."
+    },
+    "doNotDeleteArrowsInSubPhases": {
+      "label": "Do not delete arrows inside of subphases",
+      "description": "An arrow drawn during combat lasts until combat ends, and one drawn in the beginning phase until the first main phase. Off, every arrow goes at the next phase."
+    },
+    "closeEmptyCardView": {
+      "label": "Close card view window when last card is removed"
+    },
+    "focusCardViewSearchBar": {
+      "label": "Auto focus search bar when card view window is opened"
+    },
+    "annotateTokens": {
+      "label": "Annotate card text on tokens",
+      "description": "A token you create, from a card's token list or the token dialog, carries its rules text as its annotation."
+    },
+    "showDragSelectionCount": {
+      "label": "Show selection count during drag selection"
+    },
+    "showTotalSelectionCount": {
+      "label": "Show total selection count"
+    },
+    "keepGameChatFocus": {
+      "label": "Keep game chat focused when clicking in game (Note: disables card view search bar)",
+      "description": "Clicking cards and the table leaves the focus on the game chat, so you can keep typing."
+    },
+    "notificationsEnabled": {
+      "label": "Mark the browser tab when something happens in your game",
+      "description": "While Webatrice is in a background tab, its title is marked until you come back."
+    },
+    "spectatorNotificationsEnabled": {
+      "label": "Also mark the tab for game events while you are spectating"
+    },
+    "buddyConnectNotificationsEnabled": {
+      "label": "Notify when users in your buddy list connect"
+    },
+    "playBadge": {
+      "label": "Play badge",
+      "description": "What the number on Play in the navigation rail counts: chat in your rooms and games that mentions you, or every unread room line and game event.",
+      "mentions": "Mentions only",
+      "all": "All activity"
+    },
+    "browserNotifications": {
+      "label": "Desktop notifications",
+      "description": "Lets Webatrice show system notifications while its tab is in the background. Without them, notifications appear inside the page.",
+      "status": {
+        "granted": "Allowed",
+        "denied": "Blocked. Allow notifications for this site in your browser settings.",
+        "default": "Not allowed yet",
+        "unsupported": "Not supported by this browser"
+      },
+      "request": "Allow notifications"
+    },
+    "tapAnimation": {
+      "label": "Tap/untap animation"
+    },
+    "openDeckInNewTab": {
+      "label": "Open deck in new tab by default",
+      "description": "Applies to Open deck in the deck editor. On, the deck opens in a new tab; off, it replaces the deck you are editing, asking first if that deck has unsaved changes. Decks opened from My Decks always get their own tab."
+    },
+    "commanderSpellbookIntegration": {
+      "label": "CommanderSpellbook integration",
+      "description": "The Commander bracket estimate sends your deck's card names to Scryfall and Commander Spellbook, external services. Enabled estimates when you ask; Automatic whenever a Commander deck changes.",
+      "unprompted": "Ask before first use",
+      "disabled": "Disabled",
+      "enabled": "Enabled",
+      "automatic": "Automatic"
+    },
+    "replayRewindBufferingMs": {
+      "label": "Buffer time for backwards skip via shortcut",
+      "description": "Skipping back several times within this time rewinds the replay once, after the last skip. 0 rewinds on every skip.",
+      "unit": "ms"
+    },
+    "animations": {
+      "all": {
+        "label": "All animations",
+        "description": "Until you change an animation here, they follow your system's \"reduce motion\" setting. With all four off, the board's other motion stops too: card flips, draw flights, the hand slide, the end step flash and hover transitions."
+      },
+      "enableAll": "Enable all animations",
+      "disableAll": "Disable all animations"
+    },
+    "arrowDrawAnimation": {
+      "label": "Arrow draw animation"
+    },
+    "lifeCounterAnimations": {
+      "label": "Life counter flash"
+    },
+    "battlefieldFlash": {
+      "label": "Battlefield flash on damage"
+    }
+  }
+}

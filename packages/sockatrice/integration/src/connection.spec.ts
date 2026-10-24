@@ -7,7 +7,7 @@
 // WebClient's own `status` property.
 
 import { create } from '@bufbuild/protobuf';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi, type Mock } from 'vitest';
 
 import * as Data from '../../src/generated';
 import { AuthenticationCommands } from '../../src';
@@ -20,6 +20,8 @@ import {
   openMockWebSocket,
   setPendingOptions,
   connectAndHandshake,
+  connectAndHandshakeWithSalt,
+  connectAndLogin,
   PROTOCOL_VERSION,
 } from '../../src/testing/setup';
 import {
@@ -58,6 +60,19 @@ function serverIdentification(
 }
 
 describe('connection lifecycle', () => {
+  it('exposes the most recent connect target before and after replacing the socket', () => {
+    const client = getWebClient();
+    expect(client.socket.target).toBeNull();
+
+    connectWithOptions(loginOptions());
+    expect(client.socket.target).toEqual({ host: 'localhost', port: '4748' });
+    expect(getMockWebSocket().url).toBe('ws://localhost:4748');
+
+    connectWithOptions({ ...loginOptions(), host: 'server.example', port: '8443' });
+    expect(client.socket.target).toEqual({ host: 'server.example', port: '8443' });
+    expect(getMockWebSocket().url).toBe('wss://server.example:8443');
+  });
+
   it('flips status through CONNECTING → CONNECTED on socket open', () => {
     connectWithOptions(loginOptions());
 
@@ -79,7 +94,7 @@ describe('connection lifecycle', () => {
     deliverMessage(serverIdentification());
 
     expect(getWebClient().status).toBe(WebsocketTypes.StatusEnum.LOGGING_IN);
-    expect(getMockResponse().session.updateInfo).toHaveBeenCalledWith('TestServer', '2.8.0');
+    expect(getMockResponse().session.updateInfo).toHaveBeenCalledWith('TestServer', '2.8.0', false);
 
     const { value, cmdId } = findLastSessionCommand(Data.Command_Login_ext);
     expect(value.userName).toBe('alice');
@@ -129,16 +144,42 @@ describe('connection lifecycle', () => {
     expect(getWebClient().status).toBe(WebsocketTypes.StatusEnum.DISCONNECTED);
   });
 
-  it('enters RECONNECTING on unexpected socket close after a successful handshake', () => {
-    connectAndHandshake();
-
-    expect(() => findLastSessionCommand(Data.Command_Login_ext)).not.toThrow();
+  it('enters RECONNECTING on unexpected socket close after a successful login', () => {
+    connectAndLogin();
 
     const mock = getMockWebSocket();
     mock.readyState = 3;
     mock.onclose?.({ code: 1006, reason: '', wasClean: false } as CloseEvent);
 
     expect(getWebClient().status).toBe(WebsocketTypes.StatusEnum.RECONNECTING);
+  });
+
+  it('fails a login that is in flight when the socket drops', () => {
+    connectAndHandshake();
+    expect(() => findLastSessionCommand(Data.Command_Login_ext)).not.toThrow();
+
+    const mock = getMockWebSocket();
+    mock.readyState = 3;
+    mock.onclose?.({ code: 1006, reason: '', wasClean: false } as CloseEvent);
+
+    expect(getMockResponse().session.loginFailed).toHaveBeenCalledTimes(1);
+    expect(getWebClient().status).toBe(WebsocketTypes.StatusEnum.RECONNECTING);
+  });
+
+  it('keeps reconnecting when a password-salt request is cut off by the drop', () => {
+    connectAndHandshakeWithSalt();
+    expect(() => findLastSessionCommand(Data.Command_RequestPasswordSalt_ext)).not.toThrow();
+    const sockets = (globalThis.WebSocket as unknown as Mock).mock.calls.length;
+
+    const mock = getMockWebSocket();
+    mock.readyState = 3;
+    mock.onclose?.({ code: 1006, reason: '', wasClean: false } as CloseEvent);
+
+    expect(getMockResponse().session.loginFailed).toHaveBeenCalledTimes(1);
+    expect(getWebClient().status).toBe(WebsocketTypes.StatusEnum.RECONNECTING);
+
+    vi.advanceTimersByTime(1000);
+    expect((globalThis.WebSocket as unknown as Mock).mock.calls.length).toBe(sockets + 1);
   });
 
   it('login() caches the pending options, flips to CONNECTING, and opens the socket', () => {
@@ -162,5 +203,26 @@ describe('connection lifecycle', () => {
 
     expect(getWebClient().status).toBe(WebsocketTypes.StatusEnum.LOGGING_IN);
     expect(findLastSessionCommand(Data.Command_Login_ext).value.userName).toBe('alice');
+  });
+});
+
+describe('connected endpoint identity', () => {
+  it.each([
+    ['example.com', '4748', 'wss://example.com:4748'],
+    ['example.com/server-a', '4748', 'wss://example.com/server-a'],
+  ])('only exposes the live socket URL for %s', (host, port, endpoint) => {
+    const client = getWebClient();
+    expect(client.socket.connectedEndpoint).toBeNull();
+    client.connect({ host, port });
+    expect(client.socket.connectedEndpoint).toBeNull();
+    openMockWebSocket();
+    expect(client.socket.connectedEndpoint).toBe(endpoint);
+    getMockWebSocket().readyState = WebSocket.CLOSED;
+    expect(client.socket.connectedEndpoint).toBeNull();
+    getMockWebSocket().readyState = WebSocket.OPEN;
+    expect(client.socket.connectedEndpoint).toBe(endpoint);
+    client.disconnect();
+    expect(client.socket.connectedEndpoint).toBeNull();
+    expect(getMockWebSocket().close.mock.calls).toEqual([[]]);
   });
 });

@@ -20,8 +20,18 @@ export const EDHPL_EXTRA_TURN_REGEX =
   /(take an extra turn|target player takes an extra turn|target player takes \w* extra turns)/i;
 
 /** Oracle-text pattern that flags a card as mass land denial. */
-export const EDHPL_MLD_REGEX =
-  /(^(noncreature|creature|red|white|blue|black|green) spells|^spells your opponents cast) cost \{\d\} more to cast|each player sacrifices \w* (lands|land for each)|destroy all (lands|islands|mountains|forests|swamps|plains)|destroy all (\w*, )*and lands|untap (only|more than) \w* (land|permanent|nonbasic)|(islands|mountains|forests|swamps|plains|\w* lands) don't untap|nonbasic lands are (mountains|islands)/i;
+export const EDHPL_MLD_REGEX = new RegExp(
+  [
+    /(^(noncreature|creature|red|white|blue|black|green) spells|^spells your opponents cast) cost \{\d\} more to cast/,
+    /each player sacrifices \w* (lands|land for each)/,
+    /destroy all (lands|islands|mountains|forests|swamps|plains)/,
+    /destroy all (\w*, )*and lands/,
+    /untap (only|more than) \w* (land|permanent|nonbasic)/,
+    /(islands|mountains|forests|swamps|plains|\w* lands) don't untap/,
+    /nonbasic lands are (mountains|islands)/,
+  ].map((part) => part.source).join('|'),
+  'i',
+);
 
 // ---------- Curated card lists ----------
 
@@ -54,7 +64,7 @@ export const RESTRICTED_MLD: ReadonlySet<string> = new Set([
   'Epicenter',
   'Global Ruin',
   'Hokori, Dust Drinker',
-  "Razia's Purification",
+  'Razia\'s Purification',
   'Rising Waters',
   'Soulscour',
   'Sunder',
@@ -71,7 +81,7 @@ export const RESTRICTED_MLD: ReadonlySet<string> = new Set([
   'Numot, the Devastator',
   'Kudzu',
   'Demonic Hordes',
-  "Urza's Sylex",
+  'Urza\'s Sylex',
   'Infernal Darkness',
   'Trinisphere',
   'Worldfire',
@@ -128,24 +138,14 @@ export const EARLY_COMBO_MANA_CUTOFF = 7;
 /** Per-category caps indexed by bracket 1..5. If a category's match
  *  count exceeds `maxes[N-1]`, the deck is pushed above bracket N. */
 export const EDHPL_MAXES = {
-  turns:        [0, 2, 3, 100, 100],
-  denial:       [0, 0, 0, 100, 100],
+  turns: [0, 2, 3, 100, 100],
+  denial: [0, 0, 0, 100, 100],
   gameChangers: [0, 0, 3, 100, 100],
-  earlyCombos:  [0, 0, 0, 100, 100],
-  lateCombos:   [0, 0, 100, 100, 100],
+  earlyCombos: [0, 0, 0, 100, 100],
+  lateCombos: [0, 0, 100, 100, 100],
 } as const;
 
 /** Restricted-list "auto-bump" threshold. Any restricted extra-turn
  *  or restricted MLD card in the deck bumps the minimum bracket to
  *  this value. */
 export const RESTRICTED_UNDER_BRACKET = 3;
-
-// ---------- Display labels ----------
-
-export const BRACKET_LABEL: Record<number, string> = {
-  1: 'Exhibition',
-  2: 'Core',
-  3: 'Upgraded',
-  4: 'Optimized',
-  5: 'cEDH',
-};

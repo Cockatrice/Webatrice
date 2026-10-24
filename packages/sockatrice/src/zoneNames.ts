@@ -13,3 +13,9 @@ export const ZoneName = {
 } as const;
 
 export type ZoneNameValue = (typeof ZoneName)[keyof typeof ZoneName];
+
+const BUILTIN_ZONES: ReadonlySet<string> = new Set(Object.values(ZoneName));
+
+export function isBuiltinZone(name: string): name is ZoneNameValue {
+  return BUILTIN_ZONES.has(name);
+}

@@ -1,6 +1,23 @@
-/** Convert a Cockatrice/Transifex-style locale code (underscore, e.g. `pt_BR`,
- *  `en_US`) to a BCP-47 tag (hyphen, `pt-BR`) for JS `Intl` APIs, which throw
- *  `RangeError: Invalid language tag` on underscores. The underscore form stays
- *  canonical everywhere else (Language enum, localStorage `i18nextLng`, the
- *  `public/locales/<code>` directory names, Transifex). */
+import { DEFAULT_LANGUAGE, Language } from '@app/types';
+
 export const toBcp47 = (lng: string | undefined): string => (lng ?? '').replace(/_/g, '-');
+
+export const LANGUAGE_STORAGE_KEY = 'i18nextLng';
+
+const LANGUAGES = Object.values(Language);
+
+export function resolveSupportedLanguage(tag: string | null | undefined): Language | undefined {
+  if (!tag) {
+    return undefined;
+  }
+  const normalized = tag.trim().replace(/-/g, '_').toLowerCase();
+  const exact = LANGUAGES.find((language) => language.toLowerCase() === normalized);
+  if (exact) {
+    return exact;
+  }
+  const base = normalized.split('_')[0];
+  return LANGUAGES.find((language) => language.toLowerCase().split('_')[0] === base);
+}
+
+export const toSupportedLanguage = (tag: string | null | undefined): Language =>
+  resolveSupportedLanguage(tag) ?? DEFAULT_LANGUAGE;

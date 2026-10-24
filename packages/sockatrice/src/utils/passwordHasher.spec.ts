@@ -3,7 +3,7 @@ vi.mock('../../generated/proto/event_server_identification_pb', async (importOri
   Event_ServerIdentification_ServerOptions: { SupportsPasswordHash: 1 },
 }));
 
-import { hashPassword, generateSalt, passwordSaltSupported } from './passwordHasher';
+import { hashPassword, generateSalt, passwordHashAvailable, passwordSaltSupported } from './passwordHasher';
 
 describe('hashPassword', () => {
   it('returns a string starting with the salt', async () => {
@@ -69,5 +69,20 @@ describe('passwordSaltSupported', () => {
 
   it('returns true when bit 0 is set alongside other bits (3)', () => {
     expect(passwordSaltSupported(3)).toBeTruthy();
+  });
+});
+
+describe('passwordHashAvailable', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('is true when crypto.subtle can digest', () => {
+    expect(passwordHashAvailable()).toBe(true);
+  });
+
+  it('is false without crypto.subtle, as outside a secure context', () => {
+    vi.stubGlobal('crypto', { getRandomValues: globalThis.crypto.getRandomValues.bind(globalThis.crypto) });
+    expect(passwordHashAvailable()).toBe(false);
   });
 });

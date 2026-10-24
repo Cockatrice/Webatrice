@@ -1,0 +1,16 @@
+{
+  "RoomGameInfoDialog": {
+    "host": "Host",
+    "formats": "Format",
+    "created": "Created",
+    "seats": "Seats",
+    "rules": "Who can join",
+    "spectators": "Spectators",
+    "gameId": "Game number",
+    "unknown": "Unknown",
+    "anyone": "Anyone can join",
+    "rule": {
+      "password": "Password"
+    }
+  }
+}

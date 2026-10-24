@@ -1,0 +1,35 @@
+{
+  "object": "card",
+  "id": "00000000-0000-4000-8000-0000000e2e02",
+  "name": "Castle Ardenvale",
+  "layout": "normal",
+  "mana_cost": "",
+  "cmc": 0,
+  "type_line": "Land",
+  "oracle_text": "Castle Ardenvale enters tapped unless you control a Plains.\n{T}: Add {W}.\n{2}{W}{W}, {T}: Create a 1/1 white Human creature token.",
+  "colors": [],
+  "color_identity": ["W"],
+  "set": "e2e",
+  "collector_number": "2",
+  "image_uris": {
+    "small": "https://cards.scryfall.io/small/front/e2e/castle-ardenvale.jpg",
+    "normal": "https://cards.scryfall.io/normal/front/e2e/castle-ardenvale.jpg",
+    "large": "https://cards.scryfall.io/large/front/e2e/castle-ardenvale.jpg"
+  },
+  "all_parts": [
+    {
+      "object": "related_card",
+      "id": "00000000-0000-4000-8000-0000000e2e03",
+      "component": "token",
+      "name": "Human",
+      "type_line": "Token Creature — Human"
+    },
+    {
+      "object": "related_card",
+      "id": "00000000-0000-4000-8000-0000000e2e02",
+      "component": "combo_piece",
+      "name": "Castle Ardenvale",
+      "type_line": "Land"
+    }
+  ]
+}

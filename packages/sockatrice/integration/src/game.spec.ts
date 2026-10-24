@@ -1,13 +1,13 @@
-﻿// Game scenarios — game join, state initialization, card operations,
+// Game scenarios — game join, state initialization, card operations,
 // player counters, game chat, game close, and outbound game commands.
 
-import { create } from '@bufbuild/protobuf';
-import { describe, expect, it } from 'vitest';
+import { create, setExtension, toBinary } from '@bufbuild/protobuf';
+import { describe, expect, it, vi } from 'vitest';
 
 import * as Data from '../../src/generated';
 import { GameCommands, RoomCommands } from '../../src';
 
-import { connectAndHandshake, connectAndLogin, getMockResponse } from '../../src/testing/setup';
+import { connectAndHandshake, connectAndLogin, getMockResponse, getMockWebSocket, getWebClient } from '../../src/testing/setup';
 import {
   buildResponse,
   buildResponseMessage,
@@ -81,6 +81,34 @@ function setupGameState(gameId: number): void {
 }
 
 describe('game', () => {
+  it('preserves deck-select context on repeated identical wire events, but not playmat announcements', () => {
+    connectAndLogin();
+    const context = create(Data.GameEventContextSchema);
+    setExtension(context, Data.Context_DeckSelect_ext, create(Data.Context_DeckSelectSchema, { deckHash: 'same-deck' }));
+    const properties = create(Data.ServerInfo_PlayerPropertiesSchema, {
+      deckHash: 'same-deck', playmatParams: { cardName: 'Forest' },
+    });
+    const event = create(Data.GameEventSchema, { playerId: 1 });
+    setExtension(event, Data.Event_PlayerPropertiesChanged_ext,
+      create(Data.Event_PlayerPropertiesChangedSchema, { playerProperties: properties }));
+    const message = create(Data.ServerMessageSchema, {
+      messageType: Data.ServerMessage_MessageType.GAME_EVENT_CONTAINER,
+      gameEventContainer: { gameId: 42, context, eventList: [event] },
+    });
+    const selected = toBinary(Data.ServerMessageSchema, message);
+    deliverMessage(selected);
+    deliverMessage(selected);
+    deliverMessage(buildGameEventMessage({
+      gameId: 42, playerId: 1, ext: Data.Event_PlayerPropertiesChanged_ext,
+      value: create(Data.Event_PlayerPropertiesChangedSchema, { playerProperties: properties }),
+    }));
+    const response = getMockResponse().game.playerPropertiesChanged;
+    expect(response).toHaveBeenCalledTimes(3);
+    expect(response).toHaveBeenNthCalledWith(1, 42, 1, properties, true);
+    expect(response).toHaveBeenNthCalledWith(2, 42, 1, properties, true);
+    expect(response).toHaveBeenNthCalledWith(3, 42, 1, properties, false);
+  });
+
   it('dispatches gameJoined and gameStateChanged on Event_GameJoined + Event_GameStateChanged', () => {
     connectAndLogin();
     joinGame(42);
@@ -442,6 +470,61 @@ describe('game', () => {
     expect(findLastGameCommand(Data.Command_SetSideboardLock_ext).value.locked).toBe(true);
   });
 
+  it('pre-game: deck select routes Response_DeckDownload to deckSelected', () => {
+    connectAndLogin();
+    joinGame(42);
+
+    GameCommands.deckSelect(42, { deckId: 7 });
+    const deckCmd = findLastGameCommand(Data.Command_DeckSelect_ext);
+    expect(deckCmd.value.deckId).toBe(7);
+
+    const serverDeck = '<cockatrice_deck version="1"><zone name="main"><card number="1" name="Forest"/></zone></cockatrice_deck>';
+    deliverMessage(buildResponseMessage(buildResponse({
+      cmdId: deckCmd.cmdId,
+      responseCode: Data.Response_ResponseCode.RespOk,
+      ext: Data.Response_DeckDownload_ext,
+      value: create(Data.Response_DeckDownloadSchema, { deck: serverDeck }),
+    })));
+    expect(getMockResponse().game.deckSelected).toHaveBeenCalledWith(42, serverDeck);
+  });
+
+  it('pre-game: a rejected deck selection reports its game, response code and request identity', () => {
+    connectAndLogin();
+    getMockWebSocket().send.mockClear();
+    const error = vi.spyOn(console, 'error');
+    try {
+      GameCommands.deckSelect(42, { deckId: 7 }, 'rejected-pick');
+      expect(getMockWebSocket().send.mock.calls).toHaveLength(1);
+      const command = findLastGameCommand(Data.Command_DeckSelect_ext);
+      expect(command.gameId).toBe(42);
+      expect({ ...command.value }).toEqual({ $typeName: 'Command_DeckSelect', deckId: 7 });
+
+      deliverMessage(buildResponseMessage(buildResponse({
+        cmdId: command.cmdId,
+        responseCode: Data.Response_ResponseCode.RespInvalidData,
+      })));
+
+      expect(vi.mocked(getMockResponse().game.deckSelectFailed!).mock.calls).toEqual([
+        [42, Data.Response_ResponseCode.RespInvalidData, undefined, 'rejected-pick'],
+      ]);
+      expect(vi.mocked(getMockResponse().game.deckSelected!).mock.calls).toEqual([]);
+      expect(error.mock.calls).toEqual([]);
+    } finally {
+      error.mockRestore();
+    }
+  });
+
+  it('pre-game: force start is one Command_ReadyStart carrying ready and force_start', () => {
+    connectAndLogin();
+    joinGame(42);
+
+    GameCommands.readyStart(42, { ready: true, forceStart: true });
+    const cmd = findLastGameCommand(Data.Command_ReadyStart_ext);
+    expect(cmd.value.ready).toBe(true);
+    expect(cmd.value.forceStart).toBe(true);
+    expect(() => findLastGameCommand(Data.Command_KickFromGame_ext)).toThrow();
+  });
+
   it('host transition: another player joins, host kicks them, host changes', () => {
     connectAndLogin();
     joinGame(42);
@@ -583,11 +666,11 @@ describe('game', () => {
 
     deliverMessage(buildGameEventMessage({
       gameId: 42,
-      playerId: -1,
+      playerId: 1,
       ext: Data.Event_ReverseTurn_ext,
       value: create(Data.Event_ReverseTurnSchema, { reversed: true }),
     }));
-    expect(getMockResponse().game.turnReversed).toHaveBeenCalledWith(42, true);
+    expect(getMockResponse().game.turnReversed).toHaveBeenCalledWith(42, true, 1);
 
     GameCommands.setActivePhase(42, { phase: 2 });
     expect(findLastGameCommand(Data.Command_SetActivePhase_ext).value.phase).toBe(2);
@@ -805,5 +888,93 @@ describe('game', () => {
       value: create(Data.Event_LeaveSchema, { reason: Data.Event_Leave_LeaveReason.USER_LEFT }),
     }));
     expect(getMockResponse().game.playerLeft).toHaveBeenCalledWith(99, 1, expect.any(Number));
+  });
+});
+
+describe('next-turn outcomes over the transport', () => {
+  function sendNextTurn(...correlation: [requestId?: string]): number {
+    GameCommands.nextTurn(42, ...correlation);
+    const { container, value, cmdId } = findLastGameCommand(Data.Command_NextTurn_ext);
+    expect({ ...value }).toEqual({ $typeName: Data.Command_NextTurnSchema.typeName });
+    const command = create(Data.GameCommandSchema);
+    setExtension(command, Data.Command_NextTurn_ext, create(Data.Command_NextTurnSchema));
+    expect(container).toEqual(create(Data.CommandContainerSchema, {
+      cmdId: BigInt(cmdId), gameId: 42, gameCommand: [command],
+    }));
+    return cmdId;
+  }
+
+  function answer(cmdId: number, responseCode: Data.Response_ResponseCode): void {
+    deliverMessage(buildResponseMessage(buildResponse({ cmdId, responseCode })));
+  }
+
+  it('delivers reordered success and failure responses with their original request identities', () => {
+    connectAndLogin();
+    getMockWebSocket().send.mockClear();
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      const first = sendNextTurn('turn-a');
+      const second = sendNextTurn('turn-b');
+      const third = sendNextTurn('turn-c');
+      const fourth = sendNextTurn('turn-d');
+      expect(new Set([first, second, third, fourth]).size).toBe(4);
+      expect(getMockWebSocket().send.mock.calls).toHaveLength(4);
+
+      answer(second, Data.Response_ResponseCode.RespOk);
+      answer(fourth, Data.Response_ResponseCode.RespContextError);
+      answer(third, Data.Response_ResponseCode.RespOk);
+      answer(first, Data.Response_ResponseCode.RespOk);
+
+      expect(vi.mocked(getMockResponse().game.nextTurnAnswered!).mock.calls).toEqual([
+        [42, 'turn-b'], [42, 'turn-c'], [42, 'turn-a'],
+      ]);
+      expect(vi.mocked(getMockResponse().game.nextTurnFailed!).mock.calls).toEqual([
+        [42, Data.Response_ResponseCode.RespContextError, undefined, 'turn-d'],
+      ]);
+      expect(vi.mocked(getMockResponse().game.activePlayerSet).mock.calls).toEqual([]);
+      expect(error.mock.calls).toEqual([]);
+    } finally {
+      error.mockRestore();
+    }
+  });
+
+  it('preserves callback arity for success and failure when the request identity is omitted', () => {
+    connectAndLogin();
+    getMockWebSocket().send.mockClear();
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      answer(sendNextTurn(), Data.Response_ResponseCode.RespOk);
+      answer(sendNextTurn(), Data.Response_ResponseCode.RespContextError);
+
+      expect(getMockWebSocket().send.mock.calls).toHaveLength(2);
+      expect(vi.mocked(getMockResponse().game.nextTurnAnswered!).mock.calls).toEqual([[42]]);
+      expect(vi.mocked(getMockResponse().game.nextTurnFailed!).mock.calls).toEqual([
+        [42, Data.Response_ResponseCode.RespContextError, undefined],
+      ]);
+      expect(error.mock.calls).toEqual([]);
+    } finally {
+      error.mockRestore();
+    }
+  });
+
+  it('settles responses without logging handler exceptions when optional outcome callbacks are absent', () => {
+    connectAndLogin();
+    getMockWebSocket().send.mockClear();
+    const client = getWebClient();
+    const game = client.response.game;
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      client.response.game = { ...game, nextTurnAnswered: undefined, nextTurnFailed: undefined };
+      answer(sendNextTurn('turn-success'), Data.Response_ResponseCode.RespOk);
+      answer(sendNextTurn('turn-failure'), Data.Response_ResponseCode.RespContextError);
+
+      expect(getMockWebSocket().send.mock.calls).toHaveLength(2);
+      expect(vi.mocked(game.nextTurnAnswered!).mock.calls).toEqual([]);
+      expect(vi.mocked(game.nextTurnFailed!).mock.calls).toEqual([]);
+      expect(error.mock.calls).toEqual([]);
+    } finally {
+      client.response.game = game;
+      error.mockRestore();
+    }
   });
 });

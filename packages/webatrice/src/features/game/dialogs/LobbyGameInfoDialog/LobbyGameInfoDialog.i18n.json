@@ -1,0 +1,25 @@
+{
+  "LobbyGameInfoDialog": {
+    "open": "Game info",
+    "noDescription": "No description",
+    "row": {
+      "description": "Description",
+      "host": "Host",
+      "format": "Format",
+      "seats": "Seats",
+      "whoCanJoin": "Who can join",
+      "password": "Password",
+      "spectators": "Spectators",
+      "decklists": "Decklists"
+    },
+    "format": {
+      "any": "Any",
+      "unknown": "Unknown"
+    },
+    "seats": "{taken} of {max} taken",
+    "audience": "{audience, select, buddies {The host's buddies} registered {Registered players} other {Anyone, guests included}}",
+    "password": "{set, select, yes {Set} other {None}}",
+    "spectators": "{allowed, select, no {No one can watch} other {Allowed{chat, select, yes {, can chat} other {}}{seeAll, select, yes {, see every hand} other {}}{needPassword, select, yes {, need the password} other {}}}}",
+    "decklists": "{shared, select, yes {Shared when decks load} other {Not shared}}"
+  }
+}

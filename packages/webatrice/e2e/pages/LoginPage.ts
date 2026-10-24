@@ -2,16 +2,15 @@ import { expect, type Locator, type Page } from '@playwright/test';
 
 // Page object for the Login screen (`/login`).
 //
-// The Tailwind rewrite replaced the MUI Select KnownHosts picker with a
-// custom dropdown built from a trigger `<button>` (accessible-named via
-// aria-labelledby against the visible "Host" caption) plus refresh and
-// chevron buttons in a non-label wrapper (KnownHosts.tsx). No
-// `role="combobox"`, no `role="option"` — options are plain `<div>` rows
-// with click handlers.
+// The login home shows the selected server as one line with a "Change
+// server" button (KnownHosts.tsx, summary variant) that opens the saved
+// host list. The dialogs keep the field variant, whose trigger `<button>`
+// is named by its visible "Host" caption. Saved hosts are a
+// single-tab-stop `role="listbox"` of clickable `<li role="option">`s.
 //
-// Login button + Register button both still resolve by role/name. The
-// login button remains disabled until the test-connection probe reports
-// `success`; `selectHost` waits for that. The registration dialog is a
+// The state-aware sign-in button reads "Sign in and play" only when it can
+// be pressed; while the server is tested or the session opens it names the
+// step instead, so `selectHost` waits for the enabled "Sign in and play". The registration dialog is a
 // Tailwind DialogShell (portalled `role="dialog"` with `aria-modal`).
 
 // Text used by the KnownHosts dropdown from KnownHosts.i18n.json.
@@ -27,12 +26,8 @@ export class LoginPage {
     await expect(this.hostPicker).toBeVisible();
   }
 
-  // The KnownHosts trigger is a <button> whose accessible name is the
-  // visible "Host" caption (wired via aria-labelledby in KnownHosts.tsx),
-  // so we can locate it by role + exact name. `exact` guards against
-  // "Host Name" / "Host Address" field labels in KnownHostDialog.
   get hostPicker(): Locator {
-    return this.hostPickerIn(this.page);
+    return this.page.getByRole('button', { name: /^change server$/i }).first();
   }
 
   // Same lookup, but scoped to a specific dialog (registration form has
@@ -41,8 +36,14 @@ export class LoginPage {
     return scope.getByRole('button', { name: 'Host', exact: true }).first();
   }
 
+  private hostOption(scope: Page | Locator, label: string): Locator {
+    return scope.getByRole('option').filter({
+      has: this.page.locator('span.font-medium', { hasText: new RegExp(`^${label}$`, 'i') }),
+    }).first();
+  }
+
   get loginButton(): Locator {
-    return this.page.getByRole('button', { name: /^login$/i });
+    return this.page.getByRole('button', { name: /^sign in and play$/i });
   }
 
   get registerButton(): Locator {
@@ -50,7 +51,7 @@ export class LoginPage {
   }
 
   async openHostPicker(scope: Page | Locator = this.page): Promise<void> {
-    await this.hostPickerIn(scope).click();
+    await (scope === this.page ? this.hostPicker : this.hostPickerIn(scope)).click();
   }
 
   async addHost(label: string, host: string, port: number): Promise<void> {
@@ -80,18 +81,9 @@ export class LoginPage {
 
   async selectHost(label: string): Promise<void> {
     await this.openHostPicker();
-    // Dropdown options are plain <div class="group ...">s (no role). Each
-    // row renders the host name and address in adjacent <span>s inside a
-    // wrapping <span class="flex-1 min-w-0 truncate"> — the two collapse
-    // to one textContent like "e2elocalhost:4748" (no separator). Match
-    // the row by the dedicated `<span class="font-medium">{host.name}</span>`
-    // so an anchored equality on the host name doesn't collide with the
-    // address, and no word-boundary tricks are needed.
-    const option = this.page.locator('div.group', {
-      has: this.page.locator('span.font-medium', { hasText: new RegExp(`^${label}$`, 'i') }),
-    });
-    await expect(option.first()).toBeVisible();
-    await option.first().click();
+    const option = this.hostOption(this.page, label);
+    await expect(option).toBeVisible();
+    await option.click();
     await expect(this.loginButton).toBeEnabled({ timeout: 15_000 });
   }
 
@@ -141,12 +133,8 @@ export class LoginPage {
     if (!alreadyPicked) {
       await this.openHostPicker(dialog);
       const option = options.hostLabel
-        ? dialog.locator('div.group', {
-          has: dialog.locator('span.font-medium', {
-            hasText: new RegExp(`^${options.hostLabel}$`, 'i'),
-          }),
-        }).first()
-        : dialog.locator('div.group').first();
+        ? this.hostOption(dialog, options.hostLabel)
+        : dialog.getByRole('option').first();
       await expect(option).toBeVisible();
       await option.click();
     }

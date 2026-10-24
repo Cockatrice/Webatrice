@@ -1,20 +1,6 @@
-/**
- * Card name search for the deck editor's QuickAdd dropdown.
- *
- * Uses Scryfall's `/cards/autocomplete` endpoint, which returns up to
- * 20 card names ordered by relevance (substring + fuzzy match, not
- * strict prefix). This matches fancy webatrice's behavior — typing
- * "risen" surfaces "Risen Reef", "Risen Riptide", etc. rather than
- * "Arisen Gorgon" first.
- *
- * We deliberately do not fall back to Dexie prefix search here:
- *   - Dexie can only do prefix matches cheaply (`startsWithIgnoreCase`),
- *     so it would sort "Arisen …" ahead of "Risen …" — the exact bug
- *     we're fixing.
- *   - Autocomplete is fast (a single small JSON payload) and correct.
- *   - The dropdown only needs the name; hydration happens later, at
- *     which point Dexie is consulted first via `cardLookup.ts`.
- */
+
+import { rethrowCancellationOrRateLimit, scheduleScryfallRequest } from '../../services/scryfall/scheduler';
+import type { DeckCard } from './types';
 
 export interface SearchResult {
   name: string;
@@ -23,23 +9,28 @@ export interface SearchResult {
 
 const MIN_QUERY = 2;
 
-export async function searchCards(query: string, limit = 20): Promise<SearchResult[]> {
+export async function searchCards(query: string, limit = 20, signal?: AbortSignal): Promise<SearchResult[]> {
   const q = query.trim();
-  if (q.length < MIN_QUERY) return [];
+  if (q.length < MIN_QUERY) {
+    return [];
+  }
 
   const url = `https://api.scryfall.com/cards/autocomplete?q=${encodeURIComponent(q)}`;
   try {
-    const res = await fetch(url);
-    if (!res.ok) return [];
+    const res = await scheduleScryfallRequest(url, signal ? { signal } : undefined);
+    if (!res.ok) {
+      return [];
+    }
     const body = (await res.json()) as { data?: string[] };
     return (body.data ?? []).slice(0, limit).map((name) => ({ name, source: 'scryfall' }));
-  } catch {
+  } catch (error) {
+    rethrowCancellationOrRateLimit(error);
     return [];
   }
 }
 
 /**
- * Rich Scryfall card shape used by the advanced-search results grid.
+ * Rich Scryfall card shape used by the card database dock.
  * Superset of what the printings picker needs — we surface image_uris,
  * type_line, mana_cost, set, and collector so the tile can render a
  * card image with proper labels without a second fetch.
@@ -51,33 +42,114 @@ export interface ScryfallSearchCard {
   type_line?: string;
   set?: string;
   collector_number?: string;
-  image_uris?: { small?: string; normal?: string; large?: string };
-  card_faces?: Array<{ image_uris?: { small?: string; normal?: string } }>;
+  image_uris?: { small?: string; normal?: string; large?: string; art_crop?: string };
+  card_faces?: Array<{
+    mana_cost?: string;
+    type_line?: string;
+    image_uris?: { small?: string; normal?: string; art_crop?: string };
+  }>;
+  prices?: { usd?: string | null; usd_foil?: string | null };
+  game_changer?: boolean;
 }
 
-/**
- * Full-fat Scryfall search (as opposed to `/cards/autocomplete` used by
- * QuickAdd). Accepts Scryfall's full query syntax so filter clauses
- * like `c:wu`, `t:creature`, `cmc<=3`, `o:"draw a card"` all compose
- * into the same request. Aborts cleanly via AbortController so the
- * caller can cancel in-flight requests when the user keeps typing.
- */
-export async function searchScryfallCards(
-  query: string,
-  signal?: AbortSignal,
-): Promise<ScryfallSearchCard[]> {
-  const q = query.trim();
-  if (!q) return [];
+export interface ScryfallSearchPage {
+  cards: ScryfallSearchCard[];
+  total: number;
+  nextPage: string | null;
+}
+
+export type ScryfallSearchFailure = { kind: 'failed' } | { kind: 'badQuery'; details: string };
+
+export class ScryfallSearchError extends Error {
+  constructor(readonly failure: ScryfallSearchFailure) {
+    super();
+    this.name = 'ScryfallSearchError';
+  }
+}
+
+export function scryfallSearchUrl(query: string): string {
   // `unique=cards` collapses printings so each card appears once, which
   // matches how the printings picker layers on top of a search result.
-  const url = `https://api.scryfall.com/cards/search?q=${encodeURIComponent(q)}&unique=cards&order=name`;
+  return `https://api.scryfall.com/cards/search?q=${encodeURIComponent(query.trim())}&unique=cards&order=name`;
+}
+
+export async function searchScryfallPage(url: string, signal?: AbortSignal): Promise<ScryfallSearchPage> {
   try {
-    const res = await fetch(url, { signal });
-    if (!res.ok) return []; // 404 = zero matches; treat as empty
-    const body = (await res.json()) as { data?: ScryfallSearchCard[] };
-    return body.data ?? [];
+    const res = await scheduleScryfallRequest(url, { signal });
+    if (!res.ok) {
+      if (res.status === 404 || res.status === 400) {
+        const body = await res.json() as { object?: string; code?: string; details?: string } | null;
+        if (res.status === 404 && body?.object === 'error' && body.code === 'not_found') {
+          return { cards: [], total: 0, nextPage: null };
+        }
+        if (res.status === 400 && body?.object === 'error' && body.code === 'bad_request'
+          && typeof body.details === 'string') {
+          throw new ScryfallSearchError({ kind: 'badQuery', details: body.details });
+        }
+      }
+      throw new ScryfallSearchError({ kind: 'failed' });
+    }
+    const body = (await res.json()) as {
+      data?: ScryfallSearchCard[];
+      total_cards?: number;
+      has_more?: boolean;
+      next_page?: string;
+    };
+    const cards = body.data ?? [];
+    return {
+      cards,
+      total: body.total_cards ?? cards.length,
+      nextPage: body.has_more && body.next_page ? body.next_page : null,
+    };
   } catch (e) {
-    if ((e as { name?: string })?.name === 'AbortError') throw e;
-    return [];
+    if ((e as { name?: string })?.name === 'AbortError') {
+      throw e;
+    }
+    if (e instanceof ScryfallSearchError) {
+      throw e;
+    }
+    throw new ScryfallSearchError({ kind: 'failed' });
   }
+}
+
+export function searchCardImage(card: ScryfallSearchCard): string | undefined {
+  return (
+    card.image_uris?.normal ??
+    card.image_uris?.small ??
+    card.card_faces?.[0]?.image_uris?.normal ??
+    card.card_faces?.[0]?.image_uris?.small
+  );
+}
+
+export function searchCardAsPreview(card: ScryfallSearchCard): DeckCard {
+  return {
+    name: card.name,
+    quantity: 1,
+    category: 'main',
+    typeLine: card.type_line,
+    manaCost: card.mana_cost,
+    set: card.set,
+    collectorNumber: card.collector_number,
+    scryfallId: card.id,
+    imageUri: searchCardImage(card),
+    lookupSource: 'scryfall',
+  };
+}
+
+export function searchCardArt(card: ScryfallSearchCard): string | undefined {
+  return card.image_uris?.art_crop ?? card.card_faces?.[0]?.image_uris?.art_crop ?? searchCardImage(card);
+}
+
+export function searchCardManaCost(card: ScryfallSearchCard): string {
+  return card.mana_cost || card.card_faces?.[0]?.mana_cost || '';
+}
+
+export function searchCardTypeLine(card: ScryfallSearchCard): string {
+  return card.type_line ?? card.card_faces?.[0]?.type_line ?? '';
+}
+
+export function searchCardUsd(card: ScryfallSearchCard): number | undefined {
+  const raw = card.prices?.usd ?? card.prices?.usd_foil;
+  const usd = raw == null ? NaN : Number.parseFloat(raw);
+  return Number.isFinite(usd) ? usd : undefined;
 }

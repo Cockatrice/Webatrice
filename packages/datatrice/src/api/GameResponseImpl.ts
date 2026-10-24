@@ -11,6 +11,7 @@ import {
   Event_DrawCards,
   Event_DumpZone,
   Event_FlipCard,
+  Event_GameLogNotice_NoticeType,
   Event_GameStateChanged,
   Event_MoveCard,
   Event_RevealCards,
@@ -20,6 +21,7 @@ import {
   Event_SetCounter,
   Event_Shuffle,
   ServerInfo_Card,
+  ServerInfo_Game,
   ServerInfo_PlayerProperties,
 } from '@cockatrice/sockatrice/generated';
 import type { WebsocketTypes } from '@cockatrice/sockatrice/types';
@@ -45,8 +47,16 @@ export class GameResponseImpl implements WebsocketTypes.IGameResponse {
     this.store.dispatch(GameActions.playerLeft({ gameId, playerId, reason, timeReceived: Date.now() }));
   }
 
-  playerPropertiesChanged(gameId: number, playerId: number, properties: ServerInfo_PlayerProperties): void {
-    this.store.dispatch(GameActions.playerPropertiesChanged({ gameId, playerId, properties }));
+  playerPropertiesChanged(gameId: number, playerId: number, properties: ServerInfo_PlayerProperties, isDeckSelect?: boolean): void {
+    this.store.dispatch(GameActions.playerPropertiesChanged({ gameId, playerId, properties, isDeckSelect }));
+  }
+
+  deckSelected(gameId: number, deckList: string, requestId?: string): void {
+    this.store.dispatch(GameActions.deckSelected({ gameId, deckList, requestId }));
+  }
+
+  deckSelectFailed(gameId: number, responseCode: number, failure?: WebsocketTypes.CommandFailure, requestId?: string): void {
+    this.store.dispatch(GameActions.deckSelectFailed({ gameId, responseCode, failure, requestId }));
   }
 
   gameClosed(gameId: number): void {
@@ -117,8 +127,8 @@ export class GameResponseImpl implements WebsocketTypes.IGameResponse {
     this.store.dispatch(GameActions.cardsDrawn({ gameId, playerId, data }));
   }
 
-  cardsRevealed(gameId: number, playerId: number, data: Event_RevealCards): void {
-    this.store.dispatch(GameActions.cardsRevealed({ gameId, playerId, data }));
+  cardsRevealed(gameId: number, playerId: number, data: Event_RevealCards, replayOptions?: WebsocketTypes.ReplayEventOptions): void {
+    this.store.dispatch(GameActions.cardsRevealed({ gameId, playerId, data, replayOptions }));
   }
 
   zoneViewRevealed(gameId: number, playerId: number, zoneName: string, cards: ServerInfo_Card[], isReversed: boolean): void {
@@ -141,8 +151,16 @@ export class GameResponseImpl implements WebsocketTypes.IGameResponse {
     this.store.dispatch(GameActions.activePhaseSet({ gameId, phase }));
   }
 
-  turnReversed(gameId: number, reversed: boolean): void {
-    this.store.dispatch(GameActions.turnReversed({ gameId, reversed }));
+  nextTurnAnswered(gameId: number, requestId?: string): void {
+    this.store.dispatch(GameActions.nextTurnAnswered({ gameId, requestId }));
+  }
+
+  nextTurnFailed(gameId: number, responseCode: number, failure?: WebsocketTypes.CommandFailure, requestId?: string): void {
+    this.store.dispatch(GameActions.nextTurnFailed({ gameId, responseCode, failure, requestId }));
+  }
+
+  turnReversed(gameId: number, reversed: boolean, playerId?: number): void {
+    this.store.dispatch(GameActions.turnReversed({ gameId, reversed, playerId }));
   }
 
   zoneDumped(gameId: number, playerId: number, data: Event_DumpZone): void {
@@ -151,5 +169,21 @@ export class GameResponseImpl implements WebsocketTypes.IGameResponse {
 
   zonePropertiesChanged(gameId: number, playerId: number, data: Event_ChangeZoneProperties): void {
     this.store.dispatch(GameActions.zonePropertiesChanged({ gameId, playerId, data }));
+  }
+
+  gameLogNotice(gameId: number, playerId: number, noticeType: Event_GameLogNotice_NoticeType): void {
+    this.store.dispatch(GameActions.gameLogNotice({ gameId, playerId, noticeType }));
+  }
+
+  replayGameLoaded(gameId: number, gameInfo: ServerInfo_Game): void {
+    this.store.dispatch(GameActions.replayGameLoaded({ gameId, gameInfo }));
+  }
+
+  replayGameUnloaded(gameId: number): void {
+    this.store.dispatch(GameActions.replayGameUnloaded({ gameId }));
+  }
+
+  replayGameTimeSynced(gameId: number, secondsElapsed: number): void {
+    this.store.dispatch(GameActions.gameTimeSynced({ gameId, secondsElapsed }));
   }
 }

@@ -1,0 +1,70 @@
+/* Pre-boot tokens mirror src/styles/tokens.css for the palette preflight.js applies from the
+   saved theme (html data-theme and data-scheme); the bare block is the default theme's dark palette. */
+.Unsupported {
+  --bg-base: 30 31 34;
+  --bg-surface: 43 45 49;
+  --border-subtle: 70 73 79;
+  --text-primary: 242 243 245;
+  --text-secondary: 208 211 216;
+  box-sizing: border-box;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  font-family: system-ui, sans-serif;
+  line-height: 1.5;
+  background: rgb(var(--bg-base));
+  color: rgb(var(--text-primary));
+}
+.Unsupported-paper {
+  width: 600px;
+  max-width: 100%;
+  padding: 40px;
+  text-align: center;
+  border-radius: 8px;
+  background: rgb(var(--bg-surface));
+  border: 1px solid rgb(var(--border-subtle));
+}
+.Unsupported-paper h1 {
+  margin: 0 0 8px;
+  font-size: 2rem;
+  font-weight: 500;
+}
+.Unsupported-paper__header {
+  margin-bottom: 40px;
+}
+.Unsupported-paper__missing {
+  margin-bottom: 40px;
+  text-align: left;
+}
+.Unsupported-paper__missing ul {
+  margin: 8px 0 0;
+  padding-left: 24px;
+  list-style: disc;
+  color: rgb(var(--text-secondary));
+}
+.Unsupported-paper__note {
+  color: rgb(var(--text-secondary));
+}
+[data-scheme='midnight'][data-theme='dark'] .Unsupported {
+  --bg-base: 20 17 29;
+  --bg-surface: 32 28 45;
+  --border-subtle: 67 60 92;
+  --text-primary: 244 242 248;
+  --text-secondary: 208 203 220;
+}
+[data-scheme='carbon'][data-theme='dark'] .Unsupported {
+  --bg-base: 18 18 18;
+  --bg-surface: 29 29 29;
+  --border-subtle: 55 55 55;
+  --text-primary: 245 245 245;
+  --text-secondary: 207 207 207;
+}
+[data-theme='light'] .Unsupported {
+  --bg-base: 239 240 244;
+  --bg-surface: 255 255 255;
+  --border-subtle: 212 213 221;
+  --text-primary: 22 23 29;
+  --text-secondary: 60 62 74;
+}

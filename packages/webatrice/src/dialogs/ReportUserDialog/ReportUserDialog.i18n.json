@@ -1,0 +1,56 @@
+{
+  "ReportUserDialog": {
+    "title": "Report User",
+    "info": "Reports are reviewed by moderators. False reports may result in account penalties.",
+    "detailsGroup": "Report Details",
+    "reportedUser": "Reported User:",
+    "gameId": "Game ID:",
+    "gameIdPlaceholder": "(Optional) Enter game ID if available",
+    "gameIdTooltip": "If the report is related to a specific game, enter its ID.",
+    "categoryGroup": "Category",
+    "category": "Category:",
+    "descriptionGroup": "Description",
+    "descriptionPlaceholder": "Please describe what happened. Include dates, game details, or any evidence if available.",
+    "chatGroup": "Chat Log Context",
+    "chatEmpty": "No chat context available (not triggered from chat).",
+    "chatNote": "This chat log is captured from your local chat window and may not reflect the full conversation.",
+    "cancel": "Cancel",
+    "submit": "Submit Report",
+    "submitting": "Submitting...",
+    "confirmTitle": "Confirm Report",
+    "confirmMessage": "Submit report against {user} for {category}?",
+    "confirmYes": "Yes",
+    "confirmNo": "No",
+    "submittedTitle": "Report Submitted",
+    "submittedMessage": "Your report has been submitted and will be reviewed by a moderator. Thank you.",
+    "validation": {
+      "description": "Please describe what happened before submitting.",
+      "gameId": "Enter a game number, or leave it empty."
+    },
+    "error": {
+      "tooManyRequests": "You have reached the daily report limit. Please try again later.",
+      "nameNotFound": "The reported user could not be found. Guests (unregistered users) cannot be reported.",
+      "generic": "Failed to submit report. Please try again."
+    },
+    "categoryLabel": {
+      "cheating": "Cheating / Unsporting behavior",
+      "bug_abuse": "Bug Abuse",
+      "harassment": "Harassment / Abuse",
+      "verbal_abuse": "Verbal Abuse",
+      "hate_speech": "Hate speech",
+      "spam": "Spam",
+      "other": "Other"
+    },
+    "categoryTooltip": {
+      "cheating": "Using external tools, cheat programs, or exploiting game bugs",
+      "bug_abuse": "Exploiting a bug or glitch to gain an unfair advantage",
+      "harassment": "Threatening, bullying, or persistent unwanted contact",
+      "verbal_abuse": "Abusive or offensive language directed at another player",
+      "hate_speech": "Discriminatory language targeting race, gender, religion, etc.",
+      "spam": "Repeated unwanted messages or advertisements",
+      "other": "Any behavior not covered by the above categories"
+    },
+    "menuItem": "Report user",
+    "menuItemSelf": "You can't report yourself."
+  }
+}

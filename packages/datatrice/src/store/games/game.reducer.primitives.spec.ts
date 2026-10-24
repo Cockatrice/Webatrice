@@ -776,8 +776,6 @@ describe('zoneCardCountAdjusted', () => {
 
 describe('playerPropertiesUpdated', () => {
   it('ping-only update routes to state.pings and leaves the player graph untouched by reference', () => {
-    // A ping-only Event_PlayerPropertiesChanged must land in state.pings and
-    // leave player/players refs identical — see GamesState.pings.
     const existing = makePlayerProperties({
       playerId: 1,
       deckHash: 'abc123',
@@ -801,8 +799,6 @@ describe('playerPropertiesUpdated', () => {
   });
 
   it('sparse merge: a mixed payload merges set fields, preserves the rest, and still updates pings', () => {
-    // mergeSetFields uses isFieldSet tracking bits to leave the deck hash
-    // and sideboard lock untouched when the wire payload doesn't carry them.
     const existing = makePlayerProperties({
       playerId: 1,
       deckHash: 'abc123',

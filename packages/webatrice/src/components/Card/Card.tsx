@@ -1,5 +1,5 @@
-import { CardDTO, getScryfallUrl } from '@app/services';
-import { ScryfallImageSize } from '@cockatrice/datatrice';
+import { useCardImageUrls, useImageCandidates } from '@app/hooks';
+import { CardDTO } from '@app/services';
 import './Card.css';
 
 interface CardProps {
@@ -7,18 +7,13 @@ interface CardProps {
 }
 
 const Card = ({ card }: CardProps) => {
+  const { src, onError } = useImageCandidates(useCardImageUrls(card));
+
   if (!card) {
     return null;
   }
 
-  const printing = Array.isArray(card.set) ? card.set[0] : card.set;
-  const oracleUrl = printing?.picurl ?? printing?.picURL;
-  const name = card.name?.value;
-  const src = oracleUrl
-    ?? (name ? getScryfallUrl({ name }, ScryfallImageSize.Normal) : null)
-    ?? undefined;
-
-  return <img className="card" src={src} alt={name} />;
+  return <img className="card" src={src ?? undefined} alt={card.name?.value} onError={onError} />;
 };
 
 export default Card;

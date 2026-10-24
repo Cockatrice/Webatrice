@@ -1,6 +1,7 @@
 import { useForm, Controller } from 'react-hook-form';
 import Button from '@mui/material/Button';
 import Box from '@mui/material/Box';
+import { useTranslation } from 'react-i18next';
 
 import { InputField } from '@app/components';
 
@@ -14,6 +15,7 @@ interface AddUserFormProps {
 }
 
 const AddUserForm = ({ label, onSubmit }: AddUserFormProps) => {
+  const { t } = useTranslation();
   const { control, handleSubmit, reset } = useForm<AddUserFormValues>({
     defaultValues: { userName: '' },
   });
@@ -40,7 +42,7 @@ const AddUserForm = ({ label, onSubmit }: AddUserFormProps) => {
             )}
           />
         </Box>
-        <Button color="primary" variant="contained" type="submit">Add</Button>
+        <Button color="primary" variant="contained" type="submit">{t('Account.addUser.submit')}</Button>
       </Box>
     </form>
   );

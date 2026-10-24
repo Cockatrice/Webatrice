@@ -1,0 +1,43 @@
+{
+  "Account": {
+    "action": {
+      "edit": "Edit",
+      "changePassword": "Change Password",
+      "changeAvatar": "Change Avatar"
+    },
+    "buddies": {
+      "online": "Buddies Online: ?/{total}",
+      "add": "Add to Buddies"
+    },
+    "ignored": {
+      "online": "Ignored Users Online: ?/{total}",
+      "add": "Add to Ignore"
+    },
+    "details": {
+      "location": "Location: ({country})",
+      "userLevel": "User Level: {userLevel}",
+      "accountAge": "Account Age: {accountAge}",
+      "realName": "Real Name: {realName}"
+    },
+    "server": {
+      "name": "Server Name: {serverName}",
+      "version": "Server Version: {serverVersion}"
+    },
+    "addUser": {
+      "submit": "Add"
+    },
+    "level": {
+      "administrator": "Administrator",
+      "developer": "Developer",
+      "moderator": "Moderator",
+      "registered": "Registered user",
+      "unregistered": "Unregistered user",
+      "judge": "Judge"
+    },
+    "age": {
+      "unknown": "Unknown",
+      "days": "{count, plural, one {# Day} other {# Days}} {date}",
+      "yearsAndDays": "{years, plural, one {# Year} other {# Years}}, {days, plural, one {# Day} other {# Days}} {date}"
+    }
+  }
+}

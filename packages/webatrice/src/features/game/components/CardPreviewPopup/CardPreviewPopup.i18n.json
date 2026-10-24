@@ -1,0 +1,9 @@
+{
+  "CardPreviewPopup": {
+    "title": "Card Preview",
+    "receiving": "Receiving updates from the main window.",
+    "reconnectingDescription": "Waiting for the main window to reconnect…",
+    "live": "● Live",
+    "reconnecting": "○ Reconnecting…"
+  }
+}

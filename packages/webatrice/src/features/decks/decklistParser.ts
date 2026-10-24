@@ -1,122 +1,270 @@
-import type { DeckCategory } from './types';
+import type { DeckCategory } from '@app/types';
 
-/**
- * Parse a pasted Magic deck list into (quantity, name, category)
- * tuples. Ported from fancy webatrice's `decklistParser.ts` — same
- * grammar tolerances so users who exported from Moxfield / Arena /
- * MTGO / Cockatrice can paste without editing.
- *
- * Supported shapes (case-insensitive on section markers):
- *   4 Lightning Bolt
- *   4x Lightning Bolt              — MTGA export sometimes uses `x`
- *   1 Sol Ring (2XM) 300           — MTGA export with set + collector number
- *   SB: 2 Wear // Tear             — old MTGO sideboard prefix (mapped to sideboard)
- *   Deck                            — section marker (mainboard)
- *   Commander                       — section marker (commander zone)
- *   Sideboard                       — section marker (sideboard zone)
- *   Companion                       — treated as sideboard
- *   //  or  #  starts a comment (whole line ignored)
- *
- * We drop empty lines. Set + collector number are captured for future
- * printing-pinning; the current caller only uses `name` for the card
- * lookup. Sideboard cards are preserved (Cockatrice supports side
- * zones in Commander decks — used for wishboards / extras).
- */
+export type ExtraZone = 'tokens' | 'maybeboard';
 
 export type ParsedEntry = {
   quantity: number;
   name: string;
   category: DeckCategory;
-  /** True for cards under a "Commander" section header. Card still
-   *  goes into the main zone at import time — commander is a UI
-   *  marker, not a distinct zone. See DeckCard.isCommander. */
   isCommander?: boolean;
+  extraZone?: ExtraZone;
   set?: string;
   collectorNumber?: string;
 };
 
 export type ParseResult = {
   entries: ParsedEntry[];
-  /** Lines we couldn't make sense of, surfaced back to the user so a
-   *  malformed paste doesn't silently drop cards. */
   ignored: string[];
+  name?: string;
+  description?: string;
 };
 
-// Section marker lines (whole line, tolerant of trailing text like "Deck (100)")
-const SECTION_RE = /^\s*(deck|main(?:board)?|commander|sideboard|maybeboard|companion|about)\b/i;
+type Section = { category: DeckCategory; isCommander?: boolean; extraZone?: ExtraZone; about?: boolean };
 
-// Comment / metadata lines to skip silently
-const COMMENT_RE = /^\s*(?:\/\/|#)/;
+const MAIN: Section = { category: 'main' };
+const SIDE: Section = { category: 'sideboard' };
 
-// Card line: quantity [x] name [(SET) collector]
-// Groups: 1=qty, 2=name (greedy), 3=set (optional), 4=collector (optional)
-const CARD_RE =
-  /^\s*(\d+)\s*x?\s+([^()\n]+?)(?:\s+\(([A-Za-z0-9]{2,5})\)\s+([0-9A-Za-z-★]+))?\s*$/;
+const SECTIONS: Array<[RegExp, Section]> = [
+  [/^(?:main\s*deck|main(?:board)?|deck(?:list)?)$/, MAIN],
+  [/^commanders?$/, { category: 'main', isCommander: true }],
+  [/^(?:side\s*board|sideboard|companion)$/, SIDE],
+  [/^(?:maybe\s*board|maybeboard|considering)$/, { category: 'main', extraZone: 'maybeboard' }],
+  [/^tokens?$/, { category: 'main', extraZone: 'tokens' }],
+  [/^about$/, { category: 'main', about: true }],
+];
 
-// MTGO-style sideboard prefix: "SB: 1 Card Name"
-const SB_PREFIX_RE = /^\s*SB:\s*/i;
+const SECTION_LINE = /^\s*(?:\/\/\s*|#\s*)?([a-z][a-z ]*?)\s*(?:\(\d+\))?\s*:?\s*$/i;
+const COMMENT_LINE = /^\s*(?:\/\/|#)/;
+const SB_PREFIX = /^\s*SB:\s*/i;
+const QUANTITY = /^[xX([]*(\d+)[xX*)\]]* ?(.+)$/;
+const MWS_SET = /^\[([A-Za-z0-9]{2,6})\]\s*(.+)$/;
+const SET_SUFFIX = /\s+\(([A-Za-z0-9]{2,6})\)(?:\s+([0-9A-Za-z][0-9A-Za-z★†-]*))?$/;
+const MARKER_SUFFIX = /\s+(?:\*([A-Za-z]+)\*|\^[^^]*\^|\[([^\]]*)\])$/;
+const GROUP_HEADER = /^[A-Za-z][A-Za-z ,'-]*\s*\(\d+\)$/;
+const ARENA_NAME = /^\s*Name\s+(.+)$/i;
+const BASIC_LAND = /^(?:snow-covered\s+)?(?:plains|island|swamp|mountain|forest|wastes)$/i;
 
-// Returns the zone (category) + whether cards in this section
-// should be flagged as commanders. Commander sections put cards
-// in main with `isCommander=true` — there's no distinct command
-// zone, only a UI marker.
-function mapSection(header: string): { category: DeckCategory; isCommander: boolean } {
-  const h = header.toLowerCase();
-  if (h.startsWith('commander')) return { category: 'main', isCommander: true };
-  if (h.startsWith('sideboard') || h.startsWith('companion') || h.startsWith('maybeboard')) {
-    return { category: 'sideboard', isCommander: false };
+function sectionOf(line: string): Section | null {
+  const match = line.match(SECTION_LINE);
+  if (!match) {
+    return null;
   }
-  return { category: 'main', isCommander: false };
+  const word = match[1].trim().toLowerCase();
+  for (const [pattern, section] of SECTIONS) {
+    if (pattern.test(word)) {
+      return section;
+    }
+  }
+  return null;
+}
+
+function normalizeName(name: string): string {
+  return name
+    .replace(/’/g, '\'')
+    .replace(/\s*\(Transform\)\s*/i, ' ')
+    .replace(/\s*[|/]+\s*/g, ' // ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+interface CardLine {
+  entry: ParsedEntry;
+  sideboardMark: boolean;
+}
+
+function parseCardLine(raw: string, section: Section): CardLine | null {
+  let line = raw.trim();
+  const sideboardMark = SB_PREFIX.test(line);
+  if (sideboardMark) {
+    line = line.replace(SB_PREFIX, '');
+  }
+
+  let isCommander = section.isCommander === true;
+  let category = sideboardMark ? 'sideboard' as const : section.category;
+  let extraZone = sideboardMark ? undefined : section.extraZone;
+
+  for (let marker = line.match(MARKER_SUFFIX); marker; marker = line.match(MARKER_SUFFIX)) {
+    const flag = marker[1]?.toUpperCase();
+    if (flag === 'CMDR') {
+      isCommander = true;
+    }
+    for (const tag of (marker[2] ?? '').split(',').map((part) => part.replace(/\{[^}]*\}/g, '').trim().toLowerCase())) {
+      if (tag === 'commander') {
+        isCommander = true;
+      } else if (tag === 'sideboard') {
+        category = 'sideboard';
+      } else if (tag === 'maybeboard') {
+        extraZone = 'maybeboard';
+      }
+    }
+    line = line.slice(0, marker.index).trimEnd();
+  }
+
+  let quantity = 1;
+  const counted = line.match(QUANTITY);
+  if (counted) {
+    quantity = parseInt(counted[1], 10);
+    line = counted[2];
+  } else if (!/^[\p{L}[]/u.test(line) || GROUP_HEADER.test(line)) {
+    return null;
+  }
+
+  let set: string | undefined;
+  let collectorNumber: string | undefined;
+  const mws = line.match(MWS_SET);
+  if (mws) {
+    set = mws[1].toUpperCase();
+    line = mws[2];
+  }
+  const suffix = line.match(SET_SUFFIX);
+  if (suffix) {
+    set = suffix[1].toUpperCase();
+    collectorNumber = suffix[2];
+    line = line.slice(0, suffix.index);
+  }
+
+  const name = normalizeName(line);
+  if (!name || quantity < 1) {
+    return null;
+  }
+  return {
+    sideboardMark,
+    entry: {
+      quantity,
+      name,
+      category: isCommander ? 'main' : category,
+      ...(isCommander ? { isCommander: true } : {}),
+      ...(extraZone && !isCommander ? { extraZone } : {}),
+      ...(set ? { set } : {}),
+      ...(collectorNumber ? { collectorNumber } : {}),
+    },
+  };
+}
+
+function headerLines(lines: string[]): { name?: string; description?: string; start: number } {
+  const firstBlank = lines.findIndex((line) => !line.trim());
+  if (firstBlank <= 0) {
+    return { start: 0 };
+  }
+  const head = lines.slice(0, firstBlank);
+  if (!head.every((line) => COMMENT_LINE.test(line)) || head.some((line) => sectionOf(line))) {
+    return { start: 0 };
+  }
+  const text = head.map((line) => line.replace(COMMENT_LINE, '').trim()).filter(Boolean);
+  if (!text.length) {
+    return { start: firstBlank };
+  }
+  return {
+    name: text[0],
+    ...(text.length > 1 ? { description: text.slice(1).join('\n') } : {}),
+    start: firstBlank,
+  };
 }
 
 export function parseDecklist(text: string): ParseResult {
+  const lines = text.replace(/^\uFEFF/, '').split(/\r?\n/).map((line) => line.replace(/\s+$/, ''));
+  const header = headerLines(lines);
   const entries: ParsedEntry[] = [];
+  const blockOf: number[] = [];
   const ignored: string[] = [];
-  let currentSection: { category: DeckCategory; isCommander: boolean } = {
-    category: 'main',
-    isCommander: false,
-  };
+  let name = header.name;
+  let section = MAIN;
+  let sawSection = false;
+  let sawMark = false;
+  let block = 0;
+  let blankSinceCard = false;
 
-  for (const raw of text.split(/\r?\n/)) {
-    const line = raw.trimEnd();
-    if (!line.trim()) continue;
-    if (COMMENT_RE.test(line)) continue;
-
-    const sectionMatch = line.match(SECTION_RE);
-    if (sectionMatch) {
-      currentSection = mapSection(sectionMatch[1]);
+  for (const line of lines.slice(header.start)) {
+    if (!line.trim()) {
+      blankSinceCard = entries.length > 0;
       continue;
     }
-
-    // MTGO explicit sideboard prefix overrides the current section
-    // marker for that single line.
-    let workingLine = line;
-    let sectionForThisLine = currentSection;
-    if (SB_PREFIX_RE.test(workingLine)) {
-      workingLine = workingLine.replace(SB_PREFIX_RE, '');
-      sectionForThisLine = { category: 'sideboard', isCommander: false };
+    const nextSection = sectionOf(line);
+    if (nextSection) {
+      section = nextSection;
+      sawSection = sawSection || nextSection !== MAIN;
+      continue;
     }
-
-    const m = workingLine.match(CARD_RE);
-    if (!m) {
+    if (section.about) {
+      const arenaName = line.match(ARENA_NAME);
+      if (arenaName && !name) {
+        name = arenaName[1].trim();
+      }
+      continue;
+    }
+    if (COMMENT_LINE.test(line)) {
+      continue;
+    }
+    const parsed = parseCardLine(line, section);
+    if (!parsed) {
       ignored.push(line);
       continue;
     }
-    const [, qty, name, set, collector] = m;
-    const quantity = parseInt(qty, 10);
-    if (!quantity || quantity < 1) {
-      ignored.push(line);
-      continue;
+    if (blankSinceCard) {
+      block += 1;
+      blankSinceCard = false;
     }
-    entries.push({
-      quantity,
-      name: name.trim(),
-      category: sectionForThisLine.category,
-      ...(sectionForThisLine.isCommander ? { isCommander: true } : {}),
-      set: set || undefined,
-      collectorNumber: collector || undefined,
+    sawMark = sawMark || parsed.sideboardMark;
+    entries.push(parsed.entry);
+    blockOf.push(block);
+  }
+
+  if (!sawSection && !sawMark && block === 1) {
+    entries.forEach((entry, i) => {
+      if (blockOf[i] === 1 && !entry.isCommander && !entry.extraZone) {
+        entry.category = 'sideboard';
+      }
     });
   }
 
-  return { entries, ignored };
+  return {
+    entries,
+    ignored,
+    ...(name ? { name } : {}),
+    ...(header.description ? { description: header.description } : {}),
+  };
+}
+
+export function isBasicLand(name: string): boolean {
+  return BASIC_LAND.test(name.trim());
+}
+
+type CountedCard = Pick<ParsedEntry, 'name' | 'quantity' | 'category' | 'isCommander'> & { extraZone?: ExtraZone };
+
+function looksSingleton(cards: readonly CountedCard[]): boolean {
+  return cards.every((card) => card.quantity === 1 || isBasicLand(card.name));
+}
+
+function deckCount(cards: readonly CountedCard[], category: DeckCategory): number {
+  return cards
+    .filter((card) => card.category === category && !card.extraZone)
+    .reduce((sum, card) => sum + card.quantity, 0);
+}
+
+export function promoteSideboardCommanders<T extends CountedCard>(cards: readonly T[]): T[] {
+  if (cards.some((card) => card.isCommander)) {
+    return [...cards];
+  }
+  const side = cards.filter((card) => card.category === 'sideboard' && !card.extraZone);
+  const main = cards.filter((card) => card.category === 'main' && !card.extraZone);
+  const sideCount = deckCount(cards, 'sideboard');
+  if (sideCount < 1 || sideCount > 2 || side.some((card) => card.quantity !== 1)) {
+    return [...cards];
+  }
+  if (deckCount(cards, 'main') + sideCount !== 100 || !looksSingleton(main)) {
+    return [...cards];
+  }
+  return cards.map((card) => (side.includes(card) ? { ...card, category: 'main', isCommander: true } : card));
+}
+
+export function inferDeckFormat(cards: readonly CountedCard[]): string {
+  if (cards.some((card) => card.isCommander)) {
+    return 'commander';
+  }
+  const main = cards.filter((card) => card.category === 'main' && !card.extraZone);
+  const mainCount = deckCount(cards, 'main');
+  if (mainCount >= 98 && mainCount <= 100 && looksSingleton(main)) {
+    return 'commander';
+  }
+  return '';
 }

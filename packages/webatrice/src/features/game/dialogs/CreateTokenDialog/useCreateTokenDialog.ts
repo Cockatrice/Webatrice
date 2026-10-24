@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
+import { useCardOverride, usePreference } from '@app/hooks';
 import { TokenDTO, dexieService } from '@app/services';
 
 import type { CreateTokenSubmit } from './CreateTokenDialog';
@@ -46,6 +48,7 @@ export const MAX_ANNOTATION_LEN = 255;
 export interface UseCreateTokenDialogArgs {
   isOpen: boolean;
   onSubmit: (args: CreateTokenSubmit) => void;
+  initial?: CreateTokenSubmit | null;
   predefinedTokenNames?: string[];
 }
 
@@ -54,7 +57,7 @@ function colorFromToken(token: TokenDTO): string {
   if (!raw) {
     return '';
   }
-  const colors = raw.split(/[\s,]+/).filter(Boolean).map((c: string) => c.toLowerCase());
+  const colors = raw.toLowerCase().split('').filter((c) => 'wubrgm'.includes(c));
   if (colors.length === 0) {
     return '';
   }
@@ -62,22 +65,24 @@ function colorFromToken(token: TokenDTO): string {
     return 'm';
   }
   const first = colors[0];
+  if (first === 'm') {
+    return 'm';
+  }
   if (first === 'w' || first === 'u' || first === 'b' || first === 'r' || first === 'g') {
     return first;
   }
   return '';
 }
 
-function providerIdFromToken(token: TokenDTO): string | undefined {
-  return token.set?.[0]?.value ?? undefined;
-}
-
 export function useCreateTokenDialog({
   isOpen,
   onSubmit,
+  initial,
   predefinedTokenNames,
 }: UseCreateTokenDialogArgs): CreateTokenDialogState {
+  const { t } = useTranslation();
   const [name, setName] = useState('');
+  const { pinnedPrintingId } = useCardOverride(name.trim());
   const [color, setColor] = useState(CREATE_TOKEN_DEFAULT_COLOR);
   const [pt, setPT] = useState('');
   const [annotation, setAnnotation] = useState('');
@@ -89,23 +94,22 @@ export function useCreateTokenDialog({
   const [search, setSearch] = useState('');
   const [availableTokens, setAvailableTokens] = useState<TokenDTO[]>([]);
   const [selectedTokenName, setSelectedTokenName] = useState<string | null>(null);
-  const [providerId, setProviderId] = useState<string | undefined>(undefined);
+  const annotateTokens = usePreference('annotateTokens');
 
   useEffect(() => {
     if (isOpen) {
-      setName('');
-      setColor(CREATE_TOKEN_DEFAULT_COLOR);
-      setPT('');
-      setAnnotation('');
-      setDestroyOnZoneChange(true);
-      setFaceDown(false);
+      setName(initial?.name ?? '');
+      setColor(initial?.color ?? CREATE_TOKEN_DEFAULT_COLOR);
+      setPT(initial?.pt ?? '');
+      setAnnotation(initial?.annotation ?? '');
+      setDestroyOnZoneChange(initial?.destroyOnZoneChange ?? true);
+      setFaceDown(initial?.faceDown ?? false);
       setError(null);
       setSearch('');
       setSelectedTokenName(null);
-      setProviderId(undefined);
       setScope(predefinedTokenNames?.length ? 'deck' : 'all');
     }
-  }, [isOpen, predefinedTokenNames]);
+  }, [isOpen, initial, predefinedTokenNames]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -157,7 +161,9 @@ export function useCreateTokenDialog({
     setColor(colorFromToken(token));
     const ptRaw = token.prop?.value?.pt?.value ?? '';
     setPT(ptRaw.slice(0, MAX_PT_LEN));
-    setProviderId(providerIdFromToken(token));
+    if (annotateTokens) {
+      setAnnotation((token.text?.value ?? '').slice(0, MAX_ANNOTATION_LEN));
+    }
     if (error) {
       setError(null);
     }
@@ -166,7 +172,7 @@ export function useCreateTokenDialog({
   const handleSubmit = (e?: React.FormEvent<HTMLFormElement>) => {
     e?.preventDefault();
     if (name.trim().length === 0) {
-      setError('Name is required');
+      setError(t('CreateTokenDialog.validation.nameRequired'));
       return;
     }
     const payload: CreateTokenSubmit = {
@@ -177,9 +183,7 @@ export function useCreateTokenDialog({
       destroyOnZoneChange,
       faceDown,
     };
-    if (providerId) {
-      payload.providerId = providerId;
-    }
+    payload.providerId = pinnedPrintingId ?? '';
     onSubmit(payload);
   };
 

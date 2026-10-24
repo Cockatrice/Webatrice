@@ -8,6 +8,7 @@ import {
   type RegisterParams,
 } from '../../generated';
 
+import { CommandFailure } from '../../services/command-options';
 import { StatusEnum } from '../../types/StatusEnum';
 import { WebClient } from '../../WebClient';
 import type { ConnectTarget } from '../../types/WebClientConfig';
@@ -81,8 +82,16 @@ export function register(options: ConnectTarget & RegisterParams, password?: str
         );
       },
     },
-    onError: () => onRegistrationError(
-      () => WebClient.instance.response.session.registrationFailed('Registration failed due to a server issue')
-    ),
+    onError: (_responseCode, _raw, failure) => {
+      if (failure === CommandFailure.Disconnected) {
+        WebClient.instance.response.session.registrationFailed('The connection to the server has been lost.');
+        return;
+      }
+      onRegistrationError(() => WebClient.instance.response.session.registrationFailed(
+        failure === CommandFailure.Timeout
+          ? 'The server did not respond. Please try again.'
+          : 'Registration failed due to a server issue'
+      ));
+    },
   });
 }

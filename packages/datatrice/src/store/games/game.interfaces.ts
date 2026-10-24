@@ -1,5 +1,13 @@
 import type { ServerInfo_Card } from '@cockatrice/sockatrice/generated';
+import type { WebsocketTypes } from '@cockatrice/sockatrice/types';
 import type { Enriched } from '../../types';
+
+export interface GameCommandFailedPayload {
+  gameId: number;
+  responseCode: number;
+  failure?: WebsocketTypes.CommandFailure;
+  requestId?: string;
+}
 
 /** A pending "someone revealed their zone to us" notification. Set when
  *  Event_RevealCards arrives with a non-empty `cards[]` (i.e. WE are on the
@@ -18,11 +26,6 @@ export interface IncomingReveal {
 
 export interface GamesState {
   games: { [gameId: number]: Enriched.GameEntry };
-  // @critical Live ping clock per game, keyed [gameId][playerId]. Authoritative
-  // over the stale `properties.pingSeconds` snapshot inside each player; held as
-  // a sibling of `games` so ping-only ticks touch no game-graph reference. Read
-  // via Selectors.getPings / getPlayerPing only. Rationale (why it lives outside
-  // the game graph) in datatrice.instructions.md § Store performance invariants.
   pings: { [gameId: number]: { [playerId: number]: number } };
   /** Optional so pre-existing fixtures that only stub the `games` map
    *  don't have to be updated. `getIncomingReveal` selector treats

@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<cockatrice_carddatabase version="3">
+  <sets>
+    <set>
+      <name>ABC</name>
+      <longname>Legacy &amp; Friends</longname>
+      <settype>Expansion</settype>
+      <releasedate>2015-07-17</releasedate>
+    </set>
+    <set>
+      <name>XYZ</name>
+      <longname>Legacy Reprints</longname>
+      <settype>Masters</settype>
+      <releasedate>2016-06-10</releasedate>
+    </set>
+  </sets>
+  <cards>
+    <card>
+      <name>Legacy Golem</name>
+      <manacost>2WU</manacost>
+      <cmc>4</cmc>
+      <type>Legendary Artifact Creature — Golem</type>
+      <pt>3/4</pt>
+      <loyalty>5</loyalty>
+      <color>W</color>
+      <colors>UB</colors>
+      <color>R</color>
+      <text><![CDATA[Create a Soldier token. <rules> & more.]]></text>
+      <tablerow>2</tablerow>
+      <cipt>1</cipt>
+      <landscapeOrientation>1</landscapeOrientation>
+      <upsidedown>1</upsidedown>
+      <set muId="123" uuId="legacy-uuid" picURL="https://example.test/golem.png" num="12" rarity="rare">ABC</set>
+      <set muId="456" uuId="reprint-uuid" picURL="https://example.test/reprint.png" num="34" rarity="mythic">XYZ</set>
+      <related count="2">Soldier Token</related>
+    </card>
+    <card>
+      <name>Soldier Token</name>
+      <token>1</token>
+      <type>Token Creature - Soldier</type>
+      <pt>1/1</pt>
+      <color>W</color>
+      <tablerow>2</tablerow>
+      <set picURL="https://example.test/soldier.png">ABC</set>
+      <reverse-related>Legacy Golem</reverse-related>
+    </card>
+  </cards>
+</cockatrice_carddatabase>

@@ -1,14 +1,38 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
-import { localOracleImportService, IngestResult } from './LocalOracleImportService';
-import { Card, Set } from '@app/services';
+import { useImportSummaryText, useUnloadRisk, type ImportSummaryText } from '@app/hooks';
+import {
+  cardDatabaseService,
+  saveCardSourceScan,
+  scanCardSourceFiles,
+  type CardSourceFileKind,
+  type CardSourceScan,
+  type UnknownSetsAnswer,
+} from '@app/services';
+
+export interface CardImportReview {
+  cards: number;
+  sets: number;
+  tokens: number;
+  formats: number;
+  setNames: string[];
+  files: { name: string; kind: CardSourceFileKind }[];
+  problems: string[];
+}
+
+export interface CardImportResult {
+  text: ImportSummaryText;
+  unknownSets: string[];
+}
+
 export interface CardImportForm {
+  answerUnknownSets: (answer: UnknownSetsAnswer) => Promise<void>;
   loading: boolean;
   activeStep: number;
   steps: { key: string; label: string }[];
-  importedCards: Card[];
-  importedSets: Set[];
-  ingest: IngestResult | null;
+  review: CardImportReview | null;
+  result: CardImportResult | null;
   error: string | null;
   handleBack: () => void;
   handleLocalFiles: (files: File[]) => Promise<void>;
@@ -17,23 +41,32 @@ export interface CardImportForm {
 
 const STEP_KEYS = ['importFiles', 'reviewAndSave', 'finished'] as const;
 
+function reviewOf(scan: CardSourceScan, problems: string[]): CardImportReview {
+  const records = scan.sources.map((source) => source.records);
+  return {
+    cards: records.reduce((total, r) => total + r.cards.length, 0),
+    sets: records.reduce((total, r) => total + r.sets.length, 0),
+    tokens: records.reduce((total, r) => total + r.tokens.length, 0),
+    formats: records.reduce((total, r) => total + r.formats.length, 0),
+    setNames: records.flatMap((r) => r.sets.map((set) => set.longname?.value ?? set.name.value)),
+    files: scan.sources.map(({ name, kind }) => ({ name, kind })),
+    problems,
+  };
+}
+
 export function useCardImportForm(): CardImportForm {
+  const { t } = useTranslation();
+  const summaryText = useImportSummaryText();
   const [loading, setLoading] = useState(false);
   const [activeStep, setActiveStep] = useState(0);
-  const [importedCards, setImportedCards] = useState<Card[]>([]);
-  const [importedSets, setImportedSets] = useState<Set[]>([]);
-  const [ingest, setIngest] = useState<IngestResult | null>(null);
+  const [scan, setScan] = useState<CardSourceScan | null>(null);
+  const [review, setReview] = useState<CardImportReview | null>(null);
+  const [result, setResult] = useState<CardImportResult | null>(null);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (loading) {
-      setError(null);
-    }
-  }, [loading]);
+  useUnloadRisk(activeStep === 1);
 
   const steps = STEP_KEYS.map(key => ({ key, label: `CardImportForm.steps.${key}` }));
 
-  const handleNext = () => setActiveStep(s => s + 1);
   const handleBack = () => {
     setError(null);
     setActiveStep(s => Math.max(0, s - 1));
@@ -41,39 +74,38 @@ export function useCardImportForm(): CardImportForm {
 
   const handleLocalFiles = async (files: File[]) => {
     setLoading(true);
+    setError(null);
     try {
-      const result = await localOracleImportService.ingest(files);
-      if (result.acceptedFiles.length === 0) {
-        throw new Error('No recognized files. Expected cards.xml, tokens.xml, or spoiler.xml.');
+      const next = await scanCardSourceFiles(files);
+      const { problems } = summaryText({ imported: [], skipped: next.skipped, failed: next.failed }, 'cardFiles');
+      if (next.sources.length === 0) {
+        setError([t('CardImportForm.message.noCardFiles'), ...problems].join(' '));
+        return;
       }
-      setIngest(result);
-      setImportedCards(result.cards);
-      setImportedSets(result.sets);
-      handleNext();
+      setScan(next);
+      setReview(reviewOf(next, problems));
+      setActiveStep(1);
     } catch (e) {
-      setError((e as Error).message);
+      console.error(e);
+      setError(t('CardImportForm.message.readFailed'));
     } finally {
       setLoading(false);
     }
   };
 
   const handleLocalSave = async () => {
-    if (!ingest) {
+    if (!scan) {
       return;
     }
     setLoading(true);
+    setError(null);
     try {
-      await localOracleImportService.persist({
-        cards: ingest.cards,
-        sets: ingest.sets,
-        tokens: ingest.tokens,
-        formats: ingest.formats,
-        info: ingest.info,
-      });
-      handleNext();
+      const summary = await saveCardSourceScan(scan);
+      setResult({ text: summaryText(summary, 'cardFiles'), unknownSets: summary.unknownSets });
+      setActiveStep(2);
     } catch (e) {
       console.error(e);
-      setError('Failed to save imported data');
+      setError(t('CardImportForm.message.saveFailed'));
     } finally {
       setLoading(false);
     }
@@ -83,9 +115,17 @@ export function useCardImportForm(): CardImportForm {
     loading,
     activeStep,
     steps,
-    importedCards,
-    importedSets,
-    ingest,
+    review,
+    result,
+    answerUnknownSets: async (answer) => {
+      try {
+        await cardDatabaseService.resolveUnknownSets(answer);
+        setResult((current) => (current ? { ...current, unknownSets: [] } : current));
+      } catch (e) {
+        console.error(e);
+        setError(t('CardImportForm.message.saveFailed'));
+      }
+    },
     error,
     handleBack,
     handleLocalFiles,

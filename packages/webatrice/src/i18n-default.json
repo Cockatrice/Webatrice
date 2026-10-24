@@ -1,6 +1,8 @@
 {
+  "RouteLoading": {
+    "loading": "Loading…"
+  },
   "Common": {
-    "language": "English",
     "disconnect": "Disconnect",
     "label": {
       "confirmEmail": "Confirm Email",
@@ -17,7 +19,8 @@
       "realName": "Real Name",
       "saveChanges": "Save Changes",
       "token": "Token",
-      "username": "Username"
+      "username": "Username",
+      "none": "None"
     },
     "validation": {
       "emailsMustMatch": "Emails don't match",
@@ -278,11 +281,329 @@
       "ZW": "Zimbabwe",
       "EU": "European Union"
     },
+    "languagePicker": "Language",
     "languages": {
-      "en-US": "English - US",
+      "en_US": "English - US",
+      "de": "German",
+      "es": "Spanish",
+      "fi": "Finnish",
       "fr": "French",
+      "it": "Italian",
       "nl": "Dutch",
-      "pt_BR": "Portuguese - Brazil"
+      "pl": "Polish",
+      "pt_BR": "Portuguese - Brazil",
+      "ru": "Russian",
+      "tok": "Toki Pona",
+      "yue": "Cantonese"
+    },
+    "action": {
+      "cancel": "Cancel",
+      "close": "Close",
+      "create": "Create",
+      "send": "Send",
+      "reset": "Reset",
+      "join": "Join",
+      "dismiss": "Dismiss",
+      "delete": "Delete",
+      "remove": "Remove",
+      "copy": "Copy",
+      "back": "Back"
+    },
+    "status": {
+      "loading": "Loading…",
+      "copied": "Copied"
+    }
+  },
+  "CardDetails": {
+    "label": {
+      "name": "Name:",
+      "pt": "P/T:",
+      "cost": "Cost:",
+      "cmc": "CMC:",
+      "identity": "Identity:",
+      "colors": "Color(s):",
+      "mainType": "Main Type:",
+      "type": "Type:",
+      "side": "Side:",
+      "layout": "Layout:"
+    }
+  },
+  "CardRelatedLinks": {
+    "otherFace": "Other face",
+    "tokens": "{count, plural, one {Token} other {Tokens}}",
+    "meld": "Meld",
+    "usedBy": "Cards that use this token ({count})",
+    "related": "Related"
+  },
+  "ErrorFallback": {
+    "returnToLobby": "Return to lobby",
+    "chunk": {
+      "title": "A new version is available",
+      "message": "Reload to get the latest version of Webatrice and open this page.",
+      "reload": "Reload"
+    },
+    "route": {
+      "title": "Something went wrong",
+      "message": "This page hit an unexpected error. Your connection to the server is unaffected.",
+      "retry": "Try again"
+    }
+  },
+  "GameCard": {
+    "untitled": "Game #{id}, no description",
+    "hostedBy": "Hosted by",
+    "moreFormats": "+{count}",
+    "players": "{taken} / {max} players",
+    "restriction": {
+      "none": "Anyone can join",
+      "password": "Password",
+      "buddiesOnly": "Buddies only",
+      "registeredOnly": "Registered users",
+      "openDecklists": "Open decklists"
+    },
+    "spectators": {
+      "notAllowed": "Spectators not allowed",
+      "watching": "{count} watching",
+      "canChat": "can chat",
+      "seeHands": "see hands",
+      "password": "password"
+    },
+    "blocked": {
+      "started": "This game has started",
+      "full": "Every seat is taken"
+    },
+    "join": "Join",
+    "spectate": "Spectate",
+    "joinLabel": "Join {name}",
+    "joinPasswordLabel": "Join {name} (asks for the password)",
+    "joinBlockedLabel": "Join {name}: {reason}",
+    "spectateLabel": "Spectate {name}"
+  },
+  "GameLink": {
+    "anchor": {
+      "plain": "Join game",
+      "withId": "Join game #{gameId} on {hostname}",
+      "withDescription": "Join game \"{description}\" (#{gameId}) on {hostname}"
+    },
+    "confirm": {
+      "title": "Join game",
+      "id": "Join game #{gameId} on {server}?",
+      "idInRoom": "Join game #{gameId} in \"{room}\" on {server}?",
+      "description": "Join game \"{description}\" (#{gameId}) on {server}?",
+      "descriptionInRoom": "Join game \"{description}\" (#{gameId}) in \"{room}\" on {server}?"
+    },
+    "invalid": {
+      "title": "Open game",
+      "hostname": "Missing or empty hostname in the game link",
+      "port": "Invalid or missing port in the game link",
+      "roomId": "Invalid or missing room id in the game link",
+      "gameId": "Invalid or missing game id in the game link"
+    },
+    "otherServer": "This game is on {server}. Log in to that server to join it.",
+    "desktopPortRequired": "To join game links for this server, set its desktop port in the server's settings.",
+    "notFound": "Game {gameId} not found in the room",
+    "full": "The game is full. Join as a spectator instead?",
+    "password": {
+      "id": "Password for game #{gameId}:",
+      "description": "Password for \"{description}\":"
+    },
+    "yes": "Yes",
+    "no": "No",
+    "join": "Join"
+  },
+  "MentionCompleter": {
+    "label": "Mention suggestions"
+  },
+  "Notifications": {
+    "title": {
+      "mention": "{sender} mentioned you",
+      "mentionIn": "{sender} mentioned you in {room}",
+      "buddy": "{name} is online",
+      "game": "Your game \"{game}\" is ready"
+    },
+    "body": {
+      "seats": "{taken} of {max} seats taken"
+    },
+    "system": {
+      "message": "New message from {sender}"
+    },
+    "toastTitle": "{title}:",
+    "action": {
+      "message": "Reply",
+      "mention": "Open room",
+      "buddy": "Message",
+      "game": "Go to game",
+      "report": "View report"
+    },
+    "age": {
+      "now": "just now",
+      "minutes": "{count}m ago",
+      "hours": "{count}h ago"
+    }
+  },
+  "Toast": {
+    "region": "Notifications"
+  },
+  "UserBadges": {
+    "admin": "Admin",
+    "moderator": "Moderator",
+    "judge": "Judge"
+  },
+  "UserActionsMenu": {
+    "label": "Actions for {name}",
+    "privateChat": "Private chat",
+    "viewPublicDecks": "View this user's public decks",
+    "viewPublicDecksSelf": "Your own decks are in My Decks.",
+    "addBuddy": "Add to Buddy List",
+    "removeBuddy": "Remove from Buddy List",
+    "addIgnore": "Add to Ignore List",
+    "removeIgnore": "Remove from Ignore List"
+  },
+  "DesignSystem": {
+    "availability": {
+      "open": "Open",
+      "password": "Password",
+      "full": "Full",
+      "started": "In progress",
+      "buddies": "Buddies only"
+    },
+    "seats": "{taken} of {max} seats taken",
+    "role": {
+      "admin": "Administrator",
+      "mod": "Moderator",
+      "judge": "Judge"
+    }
+  },
+  "AlertDialog": {
+    "details": "Show details"
+  },
+  "DebugLogDialog": {
+    "title": "Debug Log",
+    "logLabel": "Client log",
+    "clearOnClose": "Clear log when closing",
+    "clear": "Clear log",
+    "copy": "Copy to clipboard",
+    "copied": "Copied",
+    "copyFailed": "The browser blocked the clipboard. Select the text and copy it instead."
+  },
+  "ReportUserDialog": {
+    "title": "Report User",
+    "info": "Reports are reviewed by moderators. False reports may result in account penalties.",
+    "detailsGroup": "Report Details",
+    "reportedUser": "Reported User:",
+    "gameId": "Game ID:",
+    "gameIdPlaceholder": "(Optional) Enter game ID if available",
+    "gameIdTooltip": "If the report is related to a specific game, enter its ID.",
+    "categoryGroup": "Category",
+    "category": "Category:",
+    "descriptionGroup": "Description",
+    "descriptionPlaceholder": "Please describe what happened. Include dates, game details, or any evidence if available.",
+    "chatGroup": "Chat Log Context",
+    "chatEmpty": "No chat context available (not triggered from chat).",
+    "chatNote": "This chat log is captured from your local chat window and may not reflect the full conversation.",
+    "cancel": "Cancel",
+    "submit": "Submit Report",
+    "submitting": "Submitting...",
+    "confirmTitle": "Confirm Report",
+    "confirmMessage": "Submit report against {user} for {category}?",
+    "confirmYes": "Yes",
+    "confirmNo": "No",
+    "submittedTitle": "Report Submitted",
+    "submittedMessage": "Your report has been submitted and will be reviewed by a moderator. Thank you.",
+    "validation": {
+      "description": "Please describe what happened before submitting.",
+      "gameId": "Enter a game number, or leave it empty."
+    },
+    "error": {
+      "tooManyRequests": "You have reached the daily report limit. Please try again later.",
+      "nameNotFound": "The reported user could not be found. Guests (unregistered users) cannot be reported.",
+      "generic": "Failed to submit report. Please try again."
+    },
+    "categoryLabel": {
+      "cheating": "Cheating / Unsporting behavior",
+      "bug_abuse": "Bug Abuse",
+      "harassment": "Harassment / Abuse",
+      "verbal_abuse": "Verbal Abuse",
+      "hate_speech": "Hate speech",
+      "spam": "Spam",
+      "other": "Other"
+    },
+    "categoryTooltip": {
+      "cheating": "Using external tools, cheat programs, or exploiting game bugs",
+      "bug_abuse": "Exploiting a bug or glitch to gain an unfair advantage",
+      "harassment": "Threatening, bullying, or persistent unwanted contact",
+      "verbal_abuse": "Abusive or offensive language directed at another player",
+      "hate_speech": "Discriminatory language targeting race, gender, religion, etc.",
+      "spam": "Repeated unwanted messages or advertisements",
+      "other": "Any behavior not covered by the above categories"
+    },
+    "menuItem": "Report user",
+    "menuItemSelf": "You can't report yourself."
+  },
+  "CardDatabaseOverview": {
+    "summary": "{cards} cards, {sets} sets, {tokens} tokens, {formats} formats loaded.",
+    "empty": "No card database loaded yet. Import Oracle's cards.xml to get started.",
+    "sources": "Loaded files (in load order)",
+    "column": {
+      "file": "File",
+      "kind": "Kind",
+      "origin": "Source",
+      "contents": "Contents",
+      "imported": "Imported"
+    },
+    "kind": {
+      "main": "Card database",
+      "legacy": "Card database (earlier import)",
+      "tokens": "Tokens",
+      "spoiler": "Spoilers",
+      "custom": "Custom set",
+      "user-tokens": "Custom tokens"
+    },
+    "origin": {
+      "file": "Local file",
+      "url": "Downloaded",
+      "editor": "Token editor",
+      "migration": "Earlier import"
+    },
+    "contents": "{cards} cards, {sets} sets, {tokens} tokens",
+    "version": "version {version}",
+    "lastCheck": "Last checked for card updates: {date}",
+    "button": {
+      "reload": "Reload card database",
+      "addCustom": "Add custom sets/cards",
+      "remove": "Remove",
+      "updateTokens": "Update tokens",
+      "updateSpoilers": "Update spoilers",
+      "checkCards": "Check for card updates"
+    },
+    "newSets": {
+      "title": "New sets found",
+      "text": "{count, plural, one {# new set found} other {# new sets found}} in the card database. Set code(s): {codes}. Do you want to enable it/them?",
+      "yes": "Yes",
+      "yesAlways": "Yes, always enable",
+      "no": "No",
+      "view": "View sets"
+    },
+    "message": {
+      "reloaded": "Card database reloaded: {cards} cards, {sets} sets, {tokens} tokens.",
+      "allSetsEnabled": "All sets have been enabled. Use Manage sets to change which sets are used and their art priority.",
+      "spoilersUpToDate": "Spoilers already up to date.",
+      "spoilerSeasonEnded": "Spoiler season has ended.",
+      "spoilerSeasonEndedRemoved": "Spoiler season has ended; spoiler.xml was removed. Import a fresh cards.xml from Oracle.",
+      "cardUpdateAvailable": "A newer card database ({latest}) is available; yours is {installed}. Run Oracle in desktop Cockatrice, then import the new cards.xml.",
+      "cardsUpToDate": "Your card database is up to date ({version}).",
+      "offline": "Could not reach {url}. Check your connection; nothing was changed.",
+      "httpError": "{url} answered HTTP {status}; nothing was changed.",
+      "failed": "The update failed and nothing was changed: {error}"
+    }
+  },
+  "CardImportDialog": {
+    "title": "Card database",
+    "close": "Close",
+    "tab": {
+      "import": "Import cards",
+      "database": "Loaded data",
+      "sets": "Manage sets",
+      "tokens": "Custom tokens"
     }
   },
   "CardImportForm": {
@@ -298,23 +619,185 @@
       "browseFiles": "Browse files…"
     },
     "message": {
-      "finished": "Finished!",
       "importSummary": "Imported {cards} cards across {sets} sets ({tokens} tokens, {formats} formats).",
-      "dropzone": "Drop cards.xml, tokens.xml, and/or spoiler.xml here",
-      "oracleHelp": "Oracle output is generated by desktop Cockatrice into one of these directories:",
+      "dropzone": "Drop cards.xml, tokens.xml, spoiler.xml or custom set files here",
+      "oracleHelp": "Desktop Cockatrice keeps these files in its data folder:",
       "acceptedFiles": "Accepted: {files}",
-      "skippedFiles": "Skipped (unrecognized name): {files}"
+      "saveFailed": "Failed to save imported data",
+      "customSetsHelp": "Custom sets are in its customsets folder, and the tokens you made are in customsets/TK.xml.",
+      "fileKind": "{name} ({kind})",
+      "noCardFiles": "No card files found. Pick cards.xml, tokens.xml, spoiler.xml or custom sets (Cockatrice card XML).",
+      "readFailed": "Could not read the files you picked."
+    },
+    "os": {
+      "windows": "Windows:",
+      "macos": "macOS:",
+      "linux": "Linux:"
     }
+  },
+  "CardSourcesSettings": {
+    "label": {
+      "url": "URL:",
+      "list": "Picture URL templates",
+      "placeholders": "Available placeholders"
+    },
+    "button": {
+      "add": "Add New URL",
+      "edit": "Edit URL",
+      "remove": "Remove URL",
+      "up": "Move up",
+      "down": "Move down",
+      "reset": "Reset Download URLs"
+    },
+    "validation": {
+      "url": "Enter an http(s) URL"
+    },
+    "message": {
+      "reset": "Download URLs have been reset."
+    },
+    "error": {
+      "load": "Could not read the download URLs: {error}",
+      "save": "Could not save the download URLs: {error}"
+    }
+  },
+  "EditTokens": {
+    "list": "Custom tokens",
+    "empty": "No custom tokens yet.",
+    "data": "Token data",
+    "label": {
+      "newName": "Please enter the name of the token:",
+      "name": "Name",
+      "color": "Color",
+      "pt": "P/T",
+      "annotation": "Annotation"
+    },
+    "color": {
+      "w": "white",
+      "u": "blue",
+      "b": "black",
+      "r": "red",
+      "g": "green",
+      "m": "multicolor",
+      "c": "colorless"
+    },
+    "button": {
+      "add": "Add token",
+      "remove": "Remove token",
+      "apply": "Save token",
+      "export": "Export TK.xml"
+    },
+    "validation": {
+      "tooLong": "At most {max} characters",
+      "conflict": "The chosen name conflicts with an existing card or token. Make sure to enable the 'Token' set in the \"Manage sets\" dialog to display them correctly."
+    },
+    "selectHint": "Select a token to edit it.",
+    "error": {
+      "load": "Could not read your tokens: {error}",
+      "save": "Could not save your tokens: {error}"
+    }
+  },
+  "ManageSets": {
+    "search": "Search by set name, code, type, or release date",
+    "label": {
+      "sets": "Sets"
+    },
+    "column": {
+      "enabled": "Enabled",
+      "code": "Set code",
+      "longName": "Long name",
+      "setType": "Set type",
+      "releaseDate": "Release date"
+    },
+    "move": {
+      "top": "Move selected set to the top",
+      "up": "Move selected set up",
+      "down": "Move selected set down",
+      "bottom": "Move selected set to the bottom"
+    },
+    "button": {
+      "defaultOrder": "Default order",
+      "enableAll": "Enable all sets",
+      "disableAll": "Disable all sets",
+      "enableSelected": "Enable selected set(s)",
+      "disableSelected": "Disable selected set(s)",
+      "useSorting": "Use the current sorting as the set priority instead",
+      "save": "Save",
+      "cancel": "Cancel"
+    },
+    "tooltip": {
+      "defaultOrder": "Restore original art priority order",
+      "useSorting": "Sorts the set priority using the same column"
+    },
+    "sortNote": "Sorting by column allows you to find a set while not changing set priority. To enable ordering again, click the column header until this message disappears.",
+    "hints": {
+      "title": "Hints",
+      "selection": "Ctrl-click or Shift-click to select several sets. From the keyboard, the arrow keys move and select, Shift extends the selection, Ctrl moves without selecting, Space selects and Ctrl+A selects every set shown.",
+      "deckEditor": "Deck Editor: printings from enabled sets are offered first.",
+      "cardArt": "Card Art: image priority is decided in the following order: first the printing a card was chosen with, then the enabled sets in this list (top to bottom), then disabled sets."
+    },
+    "empty": "No sets loaded. Import a card database first.",
+    "error": {
+      "load": "Could not read the sets: {error}",
+      "save": "Could not save the set preferences: {error}"
+    }
+  },
+  "ChatDock": {
+    "region": "Private chats",
+    "window": "Chat with {name}",
+    "showProfile": "{name}: show profile",
+    "minimise": "Minimise chat with {name}",
+    "close": "Close chat with {name}",
+    "open": "Open chat with {name}",
+    "openUnread": "Open chat with {name}, {count} unread",
+    "buddy": "buddy",
+    "profile": {
+      "label": "{name} profile",
+      "loading": "Loading profile…",
+      "more": "More",
+      "moreLabel": "More actions for {name}",
+      "openPage": "Profile page",
+      "addBuddy": "Add buddy",
+      "removeBuddy": "Remove buddy",
+      "ignore": "Ignore",
+      "unignore": "Unignore",
+      "report": "Report"
+    }
+  },
+  "PrivateChat": {
+    "presence": {
+      "online": "Online",
+      "offline": "Offline"
+    },
+    "blocked": {
+      "ignoring": "You have ignored {name}; your messages are not delivered.",
+      "offline": "{name} is offline; messages cannot be delivered."
+    },
+    "notice": {
+      "ignoredByRecipient": "This user is ignoring you, they cannot see your messages in main chat and you cannot join their games.",
+      "recipientOffline": "Message not sent — {name} is offline.",
+      "chatFlood": "You are flooding the chat. Please wait a couple of seconds.",
+      "userLeft": "{name} has left the server.",
+      "userJoined": "{name} has joined the server.",
+      "notSent": "Message not sent: {reason}"
+    },
+    "log": "Private chat with {name}",
+    "input": "Message {name}",
+    "subtitle": "private chat",
+    "empty": "No messages yet — say hi."
   },
   "KnownHostDialog": {
     "title": "{mode, select, edit {Edit} other {Add}} Known Host",
     "subtitle": "Adding a new host allows you to connect to different servers. Enter the details below to your host list."
   },
   "KnownHostForm": {
-    "help": "Need help adding a new host?",
     "label": {
       "add": "Add Host",
-      "find": "Find Host"
+      "find": "Find Host",
+      "desktopPort": "Desktop port (optional)"
+    },
+    "desktopPortHelp": "Optional TCP port used by desktop clients. Set this to open desktop share links and send game invites for this server.",
+    "validation": {
+      "desktopPort": "Enter a whole number from 1 to 65535, or leave this empty."
     }
   },
   "KnownHosts": {
@@ -322,7 +805,450 @@
     "add": "Add new host",
     "refresh": "Test connection",
     "toggle": "Toggle host list",
-    "toast": "Host successfully {mode, select, created {created} deleted {deleted} other {edited}}."
+    "saved": "Saved hosts",
+    "edit": "Edit {name}",
+    "status": {
+      "testing": "Testing the connection…",
+      "success": "Server reachable",
+      "failed": "Couldn't reach the server"
+    },
+    "toast": "Host successfully {mode, select, created {created} deleted {deleted} other {edited}}.",
+    "public": {
+      "title": "Public servers",
+      "refresh": "Refresh the server list with known public servers",
+      "loading": "Loading public servers…",
+      "error": "Couldn't download the public server list.",
+      "stale": "Couldn't refresh; showing the last downloaded list.",
+      "unavailable": {
+        "noWebSocket": "Desktop client only: no WebSocket port",
+        "noSecureWebSocket": "Desktop client only: no secure WebSocket port"
+      }
+    },
+    "change": "Change server",
+    "summary": {
+      "testing": "Testing the connection…",
+      "success": "Reachable",
+      "failed": "Not reachable",
+      "none": "No server selected"
+    }
+  },
+  "Moderation": {
+    "menu": {
+      "warnUser": "Warn user",
+      "warnHistory": "View user's warn history",
+      "banUser": "Ban from server",
+      "banHistory": "View user's ban history",
+      "adminNotes": "View admin notes",
+      "investigateUser": "Investigate user",
+      "promoteMod": "Promote user to moderator",
+      "demoteMod": "Demote user from moderator",
+      "promoteJudge": "Promote user to judge",
+      "demoteJudge": "Demote user from judge",
+      "promoteDeveloper": "Promote user to developer",
+      "demoteDeveloper": "Demote user from developer",
+      "self": "You can't use moderator actions on yourself."
+    },
+    "common": {
+      "ok": "OK",
+      "cancel": "Cancel",
+      "close": "Close",
+      "success": "Success",
+      "failed": "Failed",
+      "loading": "Loading…"
+    },
+    "warn": {
+      "title": "Warn user for misconduct",
+      "description": "Which warning would you like to send?",
+      "userName": "User name",
+      "reason": "Warning",
+      "redact": "Redact all messages from this user in all rooms",
+      "withLevel": "{warning} (IL {level})",
+      "errorBlankName": "User name to send a warning to can not be blank, please specify a user to warn.",
+      "errorBlankReason": "Warning to use can not be blank, please select a valid warning to send."
+    },
+    "ban": {
+      "title": "Ban user from server",
+      "banType": "Ban type",
+      "byName": "ban user name",
+      "byIp": "ban IP address",
+      "byClientId": "ban client ID",
+      "duration": "Duration of the ban",
+      "permanent": "permanent ban",
+      "temporary": "temporary ban",
+      "days": "Days",
+      "hours": "Hours",
+      "minutes": "Minutes",
+      "reason": "Please enter the reason for the ban. This is only saved for moderators and cannot be seen by the banned person.",
+      "visibleReason": "Please enter the reason for the ban that will be visible to the banned person.",
+      "redact": "Redact all messages from this user in all rooms",
+      "errorNoType": "You have to select a name-based, IP-based, clientId based, or some combination of the three to place a ban.",
+      "errorBlankName": "You must have a value in the name ban when selecting the name ban checkbox.",
+      "errorBlankIp": "You must have a value in the ip ban when selecting the ip ban checkbox.",
+      "errorBlankClientId": "You must have a value in the clientid ban when selecting the clientid ban checkbox."
+    },
+    "banHistory": {
+      "title": "Ban History",
+      "banTime": "Ban Time",
+      "moderator": "Moderator",
+      "banLength": "Ban Length",
+      "banReason": "Ban Reason",
+      "visibleReason": "Visible Reason",
+      "empty": "User has never been banned.",
+      "failed": "Failed to collect ban information."
+    },
+    "warnHistory": {
+      "title": "Warning History",
+      "warningTime": "Warning Time",
+      "moderator": "Moderator",
+      "userName": "User Name",
+      "reason": "Reason",
+      "empty": "User has never been warned.",
+      "failed": "Failed to collect warning information."
+    },
+    "adminNotes": {
+      "title": "Admin Notes for {userName}",
+      "update": "Update Notes",
+      "failed": "Failed to get admin notes."
+    },
+    "adjustMod": {
+      "promoted": "Successfully promoted user.",
+      "demoted": "Successfully demoted user.",
+      "promoteFailed": "Failed to promote user.",
+      "demoteFailed": "Failed to demote user."
+    }
+  },
+  "NotificationCentre": {
+    "bell": {
+      "label": "Notifications",
+      "labelUnread": "Notifications, {count} new"
+    },
+    "drawer": {
+      "title": "Notifications",
+      "new": "{count} new",
+      "markAllRead": "Mark all read",
+      "close": "Close notifications",
+      "filters": "Show",
+      "sectionNew": "New",
+      "sectionEarlier": "Earlier this session",
+      "empty": "Nothing yet this session. Messages, mentions, buddies coming online, games filling up and report updates will collect here.",
+      "emptyFiltered": "Nothing of this kind yet this session.",
+      "unread": "Unread",
+      "settings": "Notification settings"
+    },
+    "filter": {
+      "all": "All",
+      "message": "Messages",
+      "mention": "Mentions",
+      "game": "Games",
+      "buddy": "Buddies",
+      "report": "Reports"
+    },
+    "permission": {
+      "granted": "Browser notifications are on",
+      "default": "Browser notifications are off",
+      "denied": "Browser notifications are blocked",
+      "unsupported": "Browser notifications are not supported here"
+    }
+  },
+  "ReplayPreview": {
+    "seat": "{name}'s seat",
+    "playerNumber": "Player {id}",
+    "counts": "Hand {hand} · Library {library}",
+    "emptyBattlefield": "Nothing on the battlefield",
+    "turnStrip": "Turn {turn} · {player} · {phase}",
+    "stack": "Stack:",
+    "phase": {
+      "0": "Untap",
+      "1": "Upkeep",
+      "2": "Draw",
+      "3": "Main 1",
+      "4": "Start combat",
+      "5": "Attack",
+      "6": "Block",
+      "7": "Damage",
+      "8": "End combat",
+      "9": "Main 2",
+      "10": "End"
+    },
+    "logAt": "Log at {time}",
+    "controls": {
+      "backBig": "Back 10 seconds",
+      "back": "Back 1 second",
+      "play": "Play preview",
+      "pause": "Pause preview",
+      "forward": "Forward 1 second",
+      "forwardBig": "Forward 10 seconds"
+    },
+    "turn": "Turn {turn}",
+    "keySpace": "Space",
+    "hintPlay": "play",
+    "hintStep": "step",
+    "watchFrom": "Watch from {time}"
+  },
+  "GameLog": {
+    "cardMoved": {
+      "control": "{actor} gives {target} control over {card}.",
+      "play": "{actor} puts {card} into play{from}{faceDown}.",
+      "grave": "{actor} puts {card}{from} into their graveyard{faceDown}.",
+      "exile": "{actor} exiles {card}{from}{faceDown}.",
+      "hand": "{actor} moves {card}{from} to their hand.",
+      "sideboard": "{actor} moves {card}{from} to sideboard.",
+      "stack": "{actor} plays {card}{from}{faceDown}.",
+      "library": "{actor} puts {card}{from} into their library.",
+      "bottom": "{actor} puts {card}{from} onto the bottom of their library.",
+      "top": "{actor} puts {card}{from} on top of their library.",
+      "position": "{actor} puts {card}{from} into their library {position} cards from the top.",
+      "customFaceDown": "{actor} moves {card}{from} to custom zone ''{targetZone}'' face down.",
+      "custom": "{actor} moves {card}{from} to custom zone ''{targetZone}''."
+    },
+    "cardFlipped": {
+      "down": "{actor} turns {card} face-down.",
+      "up": "{actor} turns {card} face-up."
+    },
+    "cardDestroyed": {
+      "message": "{actor} destroys {card}."
+    },
+    "cardAttached": {
+      "detach": "{actor} unattaches {card}.",
+      "attach": "{actor} attaches {card} to {target}''s {targetCard}."
+    },
+    "tokenCreated": {
+      "faceDown": "{actor} creates a face down token.",
+      "pt": "{actor} creates token: {card} ({pt}).",
+      "name": "{actor} creates token: {card}."
+    },
+    "cardAttrChanged": {
+      "tap": "{actor} taps {card}.",
+      "untap": "{actor} untaps {card}.",
+      "attack": "{actor} declares {card} as an attacker.",
+      "removePT": "{actor} removes the PT of {card}.",
+      "setPT": "{actor} changes the PT of {card} from nothing to {value}.",
+      "changePT": "{actor} changes the PT of {card} from {previous} to {value}.",
+      "annotation": "{actor} sets annotation of {card} to \"{value}\".",
+      "clearAnnotation": "{actor} sets annotation of {card} to \"\".",
+      "doesntUntap": "{actor} sets {card} to not untap normally.",
+      "untaps": "{actor} sets {card} to untap normally."
+    },
+    "cardAttrChangedBulk": {
+      "tap": "{actor} taps their permanents.",
+      "untap": "{actor} untaps their permanents."
+    },
+    "cardCounterChanged": {
+      "add": "{actor} places {delta} counter(s) on {card} (now {value}).",
+      "remove": "{actor} removes {delta} counter(s) from {card} (now {value}).",
+      "set": "{actor} sets counters on {card} to {value}."
+    },
+    "counterSet": {
+      "message": "{actor} sets counter {displayName} to {value} ({delta})."
+    },
+    "cardsDrawn": {
+      "one": "{actor} draws {count} card.",
+      "many": "{actor} draws {count} cards."
+    },
+    "cardUndoneDraw": {
+      "named": "{actor} undoes their last draw ({card}).",
+      "unknown": "{actor} undoes their last draw."
+    },
+    "undoDrawFailed": {
+      "message": "{actor} failed to undo their last draw."
+    },
+    "zoneShuffled": {
+      "message": "{actor} shuffles their library."
+    },
+    "cardPeeked": {
+      "named": "{actor} peeks at face down card #{cardId}: {card}.",
+      "unknown": "{actor} peeks at face down card #{cardId}."
+    },
+    "cardsRevealed": {
+      "lendAll": "{actor} reveals {zone}.",
+      "lendTarget": "{actor} lends {zone} to {target}.",
+      "zoneTarget": "{actor} reveals {zone} to {target}.",
+      "zone": "{actor} reveals {zone}.",
+      "oneTarget": "{actor} reveals {count} card from {zone} to {target}.",
+      "manyTarget": "{actor} reveals {count} cards from {zone} to {target}.",
+      "one": "{actor} reveals {count} card from {zone}.",
+      "many": "{actor} reveals {count} cards from {zone}.",
+      "cardsTarget": "{actor} reveals {count} card(s) from {fromLabel} to {target}.",
+      "cards": "{actor} reveals {count} card(s) from {fromLabel}."
+    },
+    "zoneDumped": {
+      "own": "{actor} is looking at {zoneLabel}.",
+      "other": "{actor} is looking at {owner}''s {zone}.",
+      "topOwn": "{actor} is looking at the top {count} {noun} of {zoneLabel}.",
+      "topOther": "{actor} is looking at the top {count} {noun} of {owner}''s {zone}."
+    },
+    "zonePropertiesChanged": {
+      "reveal": "{actor} is now keeping the top card of {zone} revealed.",
+      "look": "{actor} can now look at top card of {zone} at any time.",
+      "hide": "{actor} is not revealing the top card of {zone} any longer."
+    },
+    "activePhaseSet": {
+      "message": "It is now the {phase}."
+    },
+    "activePlayerSet": {
+      "message": "{actor}''s turn."
+    },
+    "turnReversed": {
+      "reversed": "{actor} reversed turn order, now it''s reversed.",
+      "normal": "{actor} reversed turn order, now it''s normal."
+    },
+    "dieRolled": {
+      "none": "{actor} rolls a {sides}-sided die.",
+      "coin": "{actor} flipped a coin. It landed as {face}.",
+      "single": "{actor} rolls a {roll} with a {sides}-sided die.",
+      "coins": "{actor} flips {count} coins. There are {heads} heads and {tails} tails.",
+      "multiple": "{actor} rolls a {sides}-sided dice {count} times: {rolls}."
+    },
+    "playerJoined": {
+      "message": "{actor} has joined the game."
+    },
+    "leaveMessage": {
+      "message": "{actor} has left the game ({reasonText})."
+    },
+    "arrowCreated": {
+      "selfPlayer": "{actor} points from their {sourceCard} to themselves.",
+      "ownPlayer": "{actor} points from their {sourceCard} to {target}.",
+      "otherSelf": "{actor} points from {source}''s {sourceCard} to themselves.",
+      "otherPlayer": "{actor} points from {source}''s {sourceCard} to {target}.",
+      "selfCard": "{actor} points from their {sourceCard} to their {targetCard}.",
+      "ownCard": "{actor} points from their {sourceCard} to {target}''s {targetCard}.",
+      "otherOwnCard": "{actor} points from {source}''s {sourceCard} to their own {targetCard}.",
+      "otherCard": "{actor} points from {source}''s {sourceCard} to {target}''s {targetCard}."
+    },
+    "gameStarted": {
+      "message": "The game has started."
+    },
+    "gameClosed": {
+      "message": "The game has been closed."
+    },
+    "replayStarted": {
+      "message": "You are watching a replay of game #{gameId}."
+    },
+    "playerConceded": {
+      "message": "{actor} has conceded the game."
+    },
+    "playerUnconceded": {
+      "message": "{actor} has unconceded the game."
+    },
+    "playerReady": {
+      "message": "{actor} is ready to start the game."
+    },
+    "playerUnready": {
+      "message": "{actor} is not ready to start the game any more."
+    },
+    "sideboardLocked": {
+      "message": "{actor} has locked their sideboard."
+    },
+    "sideboardUnlocked": {
+      "message": "{actor} has unlocked their sideboard."
+    },
+    "deckLoaded": {
+      "message": "{actor} has loaded a deck ({hash})."
+    },
+    "player": {
+      "unknown": "Unknown player",
+      "server": "The server",
+      "number": "Player {id}"
+    },
+    "card": {
+      "unknown": "a card",
+      "one": "card",
+      "many": "cards"
+    },
+    "faceDown": " face down",
+    "zone": {
+      "play": "play",
+      "custom": "custom zone ''{zone}''",
+      "battlefield": {
+        "own": "their battlefield",
+        "other": "the battlefield",
+        "bare": "battlefield"
+      },
+      "hand": {
+        "own": "their hand",
+        "other": "the hand",
+        "bare": "hand"
+      },
+      "graveyard": {
+        "own": "their graveyard",
+        "other": "the graveyard",
+        "bare": "graveyard"
+      },
+      "exile": {
+        "own": "their exile",
+        "other": "the exile",
+        "bare": "exile"
+      },
+      "library": {
+        "own": "their library",
+        "other": "the library",
+        "bare": "library"
+      },
+      "sideboard": {
+        "own": "their sideboard",
+        "other": "the sideboard",
+        "bare": "sideboard"
+      },
+      "stack": {
+        "own": "their stack",
+        "other": "the stack",
+        "bare": "stack"
+      }
+    },
+    "coin": {
+      "heads": "Heads (1)",
+      "tails": "Tails (2)"
+    },
+    "leaveReason": {
+      "1": "reason unknown",
+      "2": "kicked by game host or moderator",
+      "3": "player left the game",
+      "4": "player disconnected from server"
+    },
+    "source": {
+      "custom": " from custom zone ''{zone}''",
+      "battlefield": " from play",
+      "graveyard": " from their graveyard",
+      "exile": " from exile",
+      "hand": " from their hand",
+      "sideboard": " from sideboard",
+      "stack": " from the stack",
+      "library": {
+        "top": {
+          "own": " from the top of their library",
+          "other": " from the top of {owner}''s library"
+        },
+        "bottom": {
+          "own": " from the bottom of their library",
+          "other": " from the bottom of {owner}''s library"
+        },
+        "any": {
+          "own": " from their library",
+          "other": " from {owner}''s library"
+        }
+      }
+    },
+    "sourceCard": {
+      "top": {
+        "own": "the top card of their library",
+        "other": "the top card of {owner}''s library"
+      },
+      "bottom": {
+        "own": "the bottom card of their library",
+        "other": "the bottom card of {owner}''s library"
+      }
+    },
+    "counter": {
+      "life": "Life",
+      "white": "White",
+      "blue": "Blue",
+      "black": "Black",
+      "red": "Red",
+      "green": "Green",
+      "colorless": "Colorless",
+      "other": "Other",
+      "unknown": "counter"
+    }
   },
   "ShortcutsTab": {
     "title": "Keyboard Shortcuts",
@@ -330,8 +1256,9 @@
     "search": "Search shortcuts",
     "noResults": "No shortcuts match your search.",
     "edit": "Edit shortcut",
+    "editAction": "Edit shortcut for {action}",
     "resetAction": "Reset to default",
-    "resetAll": "Reset all to defaults",
+    "resetNamedAction": "Reset {action} to default",
     "conflictWarning": "Conflicts with: {actions}",
     "recording": "Press a key combination…",
     "recordingHint": "Press Esc to cancel. Add additional combinations to support multiple bindings for one action.",
@@ -341,9 +1268,21 @@
     "noBinding": "No binding",
     "group": {
       "game": "Game",
+      "gameCardCounters": "Card Counters",
+      "gamePlayerCounters": "Player Counters",
+      "gamePowerToughness": "Power and Toughness",
       "gamePhases": "Game Phases",
+      "gamePlayingArea": "Playing Area",
+      "gameMoveSelected": "Move Selected Card",
+      "gameView": "View",
+      "gameMoveTop": "Move Top Card",
+      "gameMoveBottom": "Move Bottom Card",
+      "gameplay": "Gameplay",
+      "gameDrawing": "Drawing",
+      "gameHand": "Hand",
       "deckEditor": "Deck Editor",
-      "room": "Room"
+      "room": "Room",
+      "replays": "Replays"
     },
     "action": {
       "chat.focus": "Focus chat",
@@ -354,6 +1293,10 @@
       "game.shuffleLibrary": "Shuffle library",
       "game.nextPhase": "Next phase",
       "game.prevPhase": "Previous phase",
+      "game.nextPhaseAction": "Next phase with action",
+      "game.reverseTurn": "Reverse turn order",
+      "game.rotateViewCW": "Rotate view clockwise",
+      "game.rotateViewCCW": "Rotate view counterclockwise",
       "game.drawMultipleCards": "Draw multiple cards…",
       "game.undoDraw": "Undo draw",
       "game.rollDice": "Roll dice…",
@@ -373,6 +1316,18 @@
       "game.flipCard": "Flip card face-down",
       "game.unattachCard": "Unattach card",
       "game.cloneCard": "Clone card",
+      "game.revealSelectedToAll": "Reveal selected cards to all players",
+      "game.hideRevealedCard": "Hide revealed card",
+      "game.sayMacro1": "Say message macro 1",
+      "game.sayMacro2": "Say message macro 2",
+      "game.sayMacro3": "Say message macro 3",
+      "game.sayMacro4": "Say message macro 4",
+      "game.sayMacro5": "Say message macro 5",
+      "game.sayMacro6": "Say message macro 6",
+      "game.sayMacro7": "Say message macro 7",
+      "game.sayMacro8": "Say message macro 8",
+      "game.sayMacro9": "Say message macro 9",
+      "game.sayMacro10": "Say message macro 10",
       "game.moveSelectedToGrave": "Move selection to graveyard",
       "game.moveSelectedToLibraryBottom": "Move selection to bottom of library",
       "game.setCardPT": "Set power/toughness…",
@@ -411,12 +1366,2150 @@
       "game.drawArrow": "Draw arrow",
       "game.resetPT": "Reset power/toughness",
       "game.reduceLifeByPower": "Reduce life by total power",
+      "game.mulligan": "Mulligan (choose hand size)…",
+      "game.setLife": "Set life…",
+      "game.removeLocalArrows": "Remove local arrows",
+      "game.tapCard": "Tap / untap card",
+      "game.playCard": "Play card",
+      "game.playCardFaceDown": "Play card face down",
+      "game.createRelatedTokens": "Create all related tokens",
+      "game.moveSelectedToExile": "Move selection to exile",
+      "game.moveSelectedToHand": "Move selection to hand",
+      "game.moveSelectedToLibraryTop": "Move selection to top of library",
+      "game.moveSelectedToBattlefield": "Move selection to battlefield",
+      "game.moveCardDialog": "Move focused card…",
+      "game.viewHand": "View hand",
+      "game.viewExile": "View exile",
+      "game.sortHandByName": "Sort hand by name",
+      "game.sortHandByManaValue": "Sort hand by mana value",
+      "game.revealHandToAll": "Reveal hand to all players",
+      "game.revealRandomHandCardToAll": "Reveal random hand card to all players",
+      "game.moveTopToPlayFaceDown": "Play top card face down",
+      "game.moveTopNToGraveFaceDown": "Move top N cards to graveyard face down…",
+      "game.moveTopToExile": "Move top card to exile",
+      "game.moveTopNToExile": "Move top N cards to exile…",
+      "game.moveTopNToExileFaceDown": "Move top N cards to exile face down…",
+      "game.moveTopToBottom": "Put top card on bottom",
+      "game.moveBottomToPlay": "Play bottom card",
+      "game.moveBottomToPlayFaceDown": "Play bottom card face down",
+      "game.moveBottomToGrave": "Move bottom card to graveyard",
+      "game.moveBottomNToGrave": "Move bottom N cards to graveyard…",
+      "game.moveBottomNToGraveFaceDown": "Move bottom N cards to graveyard face down…",
+      "game.moveBottomToExile": "Move bottom card to exile",
+      "game.moveBottomNToExile": "Move bottom N cards to exile…",
+      "game.moveBottomNToExileFaceDown": "Move bottom N cards to exile face down…",
+      "game.moveBottomToTop": "Put bottom card on top",
+      "game.drawBottomCard": "Draw bottom card",
+      "game.drawBottomCards": "Draw bottom N cards…",
+      "game.shuffleTopCards": "Shuffle top N cards…",
+      "game.shuffleBottomCards": "Shuffle bottom N cards…",
+      "game.addCounterD": "Add cyan counter",
+      "game.removeCounterD": "Remove cyan counter",
+      "game.setCounterD": "Set cyan counter…",
+      "game.addCounterE": "Add purple counter",
+      "game.removeCounterE": "Remove purple counter",
+      "game.setCounterE": "Set purple counter…",
+      "game.addCounterF": "Add magenta counter",
+      "game.removeCounterF": "Remove magenta counter",
+      "game.setCounterF": "Set magenta counter…",
+      "game.incLife": "Add life",
+      "game.decLife": "Remove life",
+      "game.incManaCounterW": "Add white mana counter",
+      "game.decManaCounterW": "Remove white mana counter",
+      "game.setManaCounterW": "Set white mana counter…",
+      "game.incManaCounterU": "Add blue mana counter",
+      "game.decManaCounterU": "Remove blue mana counter",
+      "game.setManaCounterU": "Set blue mana counter…",
+      "game.incManaCounterB": "Add black mana counter",
+      "game.decManaCounterB": "Remove black mana counter",
+      "game.setManaCounterB": "Set black mana counter…",
+      "game.incManaCounterR": "Add red mana counter",
+      "game.decManaCounterR": "Remove red mana counter",
+      "game.setManaCounterR": "Set red mana counter…",
+      "game.incManaCounterG": "Add green mana counter",
+      "game.decManaCounterG": "Remove green mana counter",
+      "game.setManaCounterG": "Set green mana counter…",
+      "game.incManaCounterX": "Add colorless mana counter",
+      "game.decManaCounterX": "Remove colorless mana counter",
+      "game.setManaCounterX": "Set colorless mana counter…",
+      "game.flowP": "Power +1, toughness -1",
+      "game.flowT": "Power -1, toughness +1",
+      "game.setPhase0": "Phase: Untap",
+      "game.setPhase1": "Phase: Upkeep",
+      "game.setPhase2": "Phase: Draw",
+      "game.setPhase3": "Phase: First main phase",
+      "game.setPhase4": "Phase: Start combat",
+      "game.setPhase5": "Phase: Attack",
+      "game.setPhase6": "Phase: Block",
+      "game.setPhase7": "Phase: Damage",
+      "game.setPhase8": "Phase: End combat",
+      "game.setPhase9": "Phase: Second main phase",
+      "game.setPhase10": "Phase: End",
       "deck.new": "New deck",
       "deck.save": "Save deck",
       "deck.load": "Load deck",
       "deck.addCard": "Add card",
       "deck.removeCard": "Remove card",
-      "room.sendMessage": "Send message"
+      "deck.undo": "Undo deck edit",
+      "deck.redo": "Redo deck edit",
+      "deck.addSearchResult": "Add highlighted search result",
+      "deck.addSearchResultToSideboard": "Add highlighted search result to sideboard",
+      "room.sendMessage": "Send message",
+      "replays.playPause": "Play/Pause",
+      "replays.skipForward": "Skip forward",
+      "replays.skipBackward": "Skip backward",
+      "replays.skipForwardBig": "Skip forward by a lot",
+      "replays.skipBackwardBig": "Skip backward by a lot",
+      "replays.toggleFastForward": "Toggle fast forward"
+    }
+  },
+  "UserGamesDialog": {
+    "menu": {
+      "showGames": "Show this user's games",
+      "offline": "This user is offline."
+    },
+    "title": "{name}'s games",
+    "loading": "Loading games…",
+    "empty": "{name} is not in any games.",
+    "column": {
+      "room": "Room",
+      "description": "Description",
+      "creator": "Creator",
+      "type": "Type",
+      "restrictions": "Restrictions",
+      "players": "Players",
+      "spectators": "Spectators"
+    },
+    "action": {
+      "join": "Join",
+      "spectate": "Join as spectator",
+      "joinAsJudge": "Join as judge",
+      "spectateAsJudge": "Join as judge spectator"
+    },
+    "error": {
+      "title": "Error",
+      "userNotFound": "This user does not exist.",
+      "ignored": "You are being ignored by {name} and can't see their games.",
+      "unknown": "Could not get {name}'s games.",
+      "joinRoomFirst": "Please join the respective room first."
+    },
+    "password": {
+      "title": "Password required",
+      "label": "Password for \"{name}\":",
+      "gameIdLabel": "Password for game #{gameId}:",
+      "submit": "Join"
+    }
+  },
+  "LatencyStatus": {
+    "ping": "Ping: {ms} ms",
+    "detailsName": "Connection latency details",
+    "summary": "Connection quality over the last {count, plural, one {# sample} other {# samples}}:",
+    "last": "Last: {ms} ms",
+    "median": "Median: {ms} ms",
+    "p95": "95th percentile: {ms} ms",
+    "max": "Maximum: {ms} ms",
+    "short": "{ms} ms"
+  },
+  "NavRail": {
+    "label": "Main navigation",
+    "home": "Webatrice home",
+    "place": {
+      "play": "Play",
+      "decks": "Decks",
+      "replays": "Replays",
+      "people": "People",
+      "staff": "Staff",
+      "settings": "Settings"
+    },
+    "toggle": {
+      "hide": "Hide the navigation rail",
+      "show": "Show the navigation rail"
+    }
+  },
+  "TopBar": {
+    "replays": {
+      "tab": "Replays"
+    },
+    "replayTab": "Replay",
+    "tab": {
+      "lobby": "Lobby",
+      "room": "Room {id}",
+      "game": "Game {id}",
+      "deck": "Deck #{id}",
+      "unsavedDeck": "Unsaved deck",
+      "publicDecks": "Public decks of {name}",
+      "myDecks": "My Decks",
+      "player": "Player"
+    },
+    "connection": {
+      "connected": "Connected",
+      "disconnected": "Disconnected",
+      "stale": "Server not responding"
+    },
+    "user": {
+      "signedIn": "Signed in",
+      "signOut": "Sign out"
+    },
+    "game": {
+      "snapGrid": "Snap grid",
+      "phaseTrackToggle": "Auto-hide phase tracker",
+      "phaseTrackCollapse": "Collapse the phase track into an auto-hiding HUD",
+      "phaseTrackPin": "Keep the phase track always visible"
+    },
+    "tabs": {
+      "label": "Open tabs",
+      "close": "Close {title}",
+      "spectating": "Spectating"
+    },
+    "group": {
+      "rooms": "Rooms",
+      "games": "Games",
+      "decks": "Decks",
+      "replays": "Replays",
+      "pages": "Page"
+    }
+  },
+  "UnreadBadge": {
+    "label": "{count} unread"
+  },
+  "UserMenu": {
+    "account": "Account",
+    "settings": "Settings",
+    "shortcuts": "Shortcuts",
+    "myReports": "My Reports",
+    "logs": "Logs",
+    "administration": "Administration",
+    "moderation": "Moderation",
+    "reportQueue": "Report Queue",
+    "cardArtRules": "Card Art Rules",
+    "developer": "Developer",
+    "importCards": "Import cards",
+    "debugLog": "Debug log",
+    "onTheBoard": "On the board",
+    "staff": "Staff tools",
+    "roleOnServer": "{role} · {server}",
+    "role": {
+      "admin": "Administrator",
+      "moderator": "Moderator",
+      "judge": "Judge",
+      "registered": "Registered user",
+      "unregistered": "Unregistered user"
+    }
+  },
+  "Staff": {
+    "nav": "Staff tools",
+    "tool": {
+      "reports": "Reports",
+      "moderation": "Moderation",
+      "logs": "Logs",
+      "administration": "Administration",
+      "cardArtRules": "Card art rules",
+      "developer": "Developer"
+    },
+    "needsServer": "Needs server 3.1",
+    "unresolvedBadge": "{count, plural, one {# unresolved report} other {# unresolved reports}}",
+    "lock": {
+      "region": "Administration lock",
+      "locked": "Functions locked",
+      "unlocked": "Functions unlocked",
+      "lockedIcon": "Locked",
+      "lockedHint": "Administration functions (server message, shut down, reload config, force-activate, grant replay access) and moderator actions on users stay greyed out until you unlock.",
+      "unlockedHint": "Administration functions and moderator actions on users are live. Lock again when you are done.",
+      "unlock": "Unlock functions",
+      "lock": "Lock functions"
+    },
+    "drawer": {
+      "close": "Close details"
+    },
+    "sanctions": {
+      "warn": "Warn...",
+      "ban": "Ban...",
+      "hint": "Both ask to confirm, with a reason",
+      "lockedHint": "Unlock functions to warn or ban."
+    }
+  },
+  "Account": {
+    "action": {
+      "edit": "Edit",
+      "changePassword": "Change Password",
+      "changeAvatar": "Change Avatar"
+    },
+    "buddies": {
+      "online": "Buddies Online: ?/{total}",
+      "add": "Add to Buddies"
+    },
+    "ignored": {
+      "online": "Ignored Users Online: ?/{total}",
+      "add": "Add to Ignore"
+    },
+    "details": {
+      "location": "Location: ({country})",
+      "userLevel": "User Level: {userLevel}",
+      "accountAge": "Account Age: {accountAge}",
+      "realName": "Real Name: {realName}"
+    },
+    "server": {
+      "name": "Server Name: {serverName}",
+      "version": "Server Version: {serverVersion}"
+    },
+    "addUser": {
+      "submit": "Add"
+    },
+    "level": {
+      "administrator": "Administrator",
+      "developer": "Developer",
+      "moderator": "Moderator",
+      "registered": "Registered user",
+      "unregistered": "Unregistered user",
+      "judge": "Judge"
+    },
+    "age": {
+      "unknown": "Unknown",
+      "days": "{count, plural, one {# Day} other {# Days}} {date}",
+      "yearsAndDays": "{years, plural, one {# Year} other {# Years}}, {days, plural, one {# Day} other {# Days}} {date}"
+    }
+  },
+  "AccountDialogs": {
+    "label": {
+      "cancel": "Cancel",
+      "ok": "OK"
+    },
+    "error": {
+      "editNotAllowed": "This server does not permit you to update your user information.",
+      "passwordCheckWrong": "The entered password does not match your account.",
+      "updateFailed": "An error occurred while trying to update your user information.",
+      "passwordNotAllowed": "This server does not permit you to change your password.",
+      "passwordTooShort": "The new password is too short.",
+      "oldPasswordWrong": "The old password is incorrect.",
+      "avatarNotAllowed": "This server does not permit you to update your avatar.",
+      "avatarFailed": "An error occurred while trying to update your avatar."
+    },
+    "validation": {
+      "maxChars": "Maximum of {count} characters"
+    }
+  },
+  "ChangeAvatarDialog": {
+    "title": "Change avatar",
+    "noImage": "No image chosen.",
+    "invalidImage": "Invalid image chosen.",
+    "previewAlt": "New avatar preview",
+    "instructions": "To change your avatar, choose a new image. To remove your current avatar, confirm without choosing a new image.",
+    "browse": "Browse...",
+    "hint": "Images are automatically downscaled to at most {size}x{size} pixels.",
+    "success": "Avatar updated."
+  },
+  "ChangePasswordDialog": {
+    "title": "Change password",
+    "label": {
+      "oldPassword": "Old password",
+      "newPassword": "New password",
+      "newPasswordConfirm": "Confirm new password"
+    },
+    "success": "Password changed."
+  },
+  "EditUserDialog": {
+    "title": "Edit user profile",
+    "fetchFailed": "Failed to load your user information. Please try again.",
+    "label": {
+      "passwordCheck": "Current password (required to change your email)"
+    },
+    "success": "User information updated."
+  },
+  "Administration": {
+    "admin": {
+      "title": "Server",
+      "updateServerMessage": "Update server message",
+      "shutdownServer": "Shut down server",
+      "reloadConfig": "Reload configuration",
+      "updateServerMessageHint": "Re-read the server's welcome message and send it to everyone.",
+      "reloadConfigHint": "Re-read the server's configuration file.",
+      "shutdownServerHint": "Warn everyone and stop the server after a delay.",
+      "adminOnly": "Only administrators can use the server functions."
+    },
+    "moderator": {
+      "title": "Moderator",
+      "replayId": "Replay ID",
+      "grantReplayAccess": "Grant replay access",
+      "userToActivate": "User name",
+      "forceActivateUser": "Force-activate user",
+      "grantReplayAccessHint": "Give yourself access to a replay by its ID.",
+      "forceActivateUserHint": "Activate an account that never confirmed its email."
+    },
+    "shutdown": {
+      "title": "Shut down server",
+      "reason": "Reason for shutdown",
+      "minutes": "Time until shutdown (minutes)",
+      "confirm": "Shut down"
+    },
+    "button": {
+      "unlock": "Unlock functions",
+      "cancel": "Cancel",
+      "ok": "OK"
+    },
+    "result": {
+      "successTitle": "Success",
+      "errorTitle": "Error",
+      "replayAccessGranted": "Replay access granted",
+      "replayIdInvalid": "Unable to grant replay access. Replay ID invalid",
+      "replayAccessInternalError": "Unable to grant replay access. Internal error",
+      "userActivated": "User successfully activated",
+      "activateNameInvalid": "Unable to activate user. Username invalid",
+      "activateAlreadyActive": "Unable to activate user. User already active",
+      "activateInternalError": "Unable to activate user. Internal error",
+      "serverMessageUpdated": "Server message updated",
+      "shutdownScheduled": "Server shutdown scheduled",
+      "configReloaded": "Configuration reloaded",
+      "serverMessageFailed": "Could not update the server message.",
+      "shutdownFailed": "Could not schedule the server shutdown.",
+      "configReloadFailed": "Could not reload the configuration."
+    },
+    "validation": {
+      "minutes": "Enter a whole number of minutes from 0 to {max}",
+      "replayId": "Enter a replay ID (digits only)"
+    },
+    "title": "Administration",
+    "subtitle": "Server and moderator functions. They stay greyed out while functions are locked.",
+    "lockedNotice": "Functions are locked. Unlock them here or in the staff tools list."
+  },
+  "CardArtRules": {
+    "title": "Card art rules",
+    "label": {
+      "card": "Card",
+      "cardPlaceholder": "Type a card name...",
+      "providerId": "Printing (provider ID)",
+      "mode": "Mode",
+      "reason": "Reason"
+    },
+    "column": {
+      "card": "Card",
+      "providerId": "Provider ID",
+      "mode": "Mode",
+      "reason": "Reason"
+    },
+    "button": {
+      "add": "Add rule",
+      "remove": "Remove rule",
+      "refresh": "Refresh",
+      "dismiss": "Dismiss"
+    },
+    "error": {
+      "list": "Failed to load card art rules.",
+      "add": "Failed to add the card art rule.",
+      "remove": "Failed to remove the card art rule."
+    },
+    "validation": {
+      "tooLong": "At most {max} characters"
+    },
+    "subtitle": "Allow or deny the art of a card printing for everyone on this server.",
+    "empty": "No rules yet.",
+    "count": "{count, plural, one {# rule} other {# rules}}",
+    "drawer": "Rule details",
+    "noSelection": "No rule selected",
+    "noSelectionHint": "Pick a rule to remove it, or add one below.",
+    "anyPrinting": "Every printing",
+    "noReason": "No reason given.",
+    "addTitle": "Add a rule"
+  },
+  "DeckEditor": {
+    "downloadFailed": "Failed to download this deck from the server.",
+    "loadFailedTitle": "Deck could not be loaded",
+    "shell": {
+      "loadingDeck": "Loading deck…",
+      "notFoundTitle": "Deck not found",
+      "notFoundBody": "Servatrice didn''t return this deck. Might have been deleted.",
+      "backToDecks": "Back to My Decks",
+      "emptyMtg": "Empty deck. Use <hl>Find cards</hl> on the left to start adding, or import a list from My Decks.",
+      "emptyPlain": "Empty deck. Type a card name in <hl>Add a card</hl> on the left to start.",
+      "noCards": "No cards in this deck yet."
+    },
+    "dock": {
+      "label": "Find cards"
+    },
+    "inspector": {
+      "label": "Card and stats",
+      "toggle": "Show the selected card and deck stats",
+      "close": "Hide the selected card and deck stats",
+      "stats": "Deck stats"
+    },
+    "layout": {
+      "hideDock": "Hide Find cards",
+      "showDock": "Show Find cards",
+      "resizeDock": "Resize Find cards",
+      "resizeInspector": "Resize the card and stats pane",
+      "resizeHint": "Drag or use the arrow keys. Double-click resets the width; Enter hides the pane.",
+      "collapseAll": "Collapse all card groups",
+      "expandAll": "Expand all card groups",
+      "compactRows": "Compact rows"
+    },
+    "section": {
+      "commander": "{count, plural, one {Commander} other {Commanders}}",
+      "creature": "Creatures",
+      "planeswalker": "Planeswalkers",
+      "battle": "Battles",
+      "instant": "Instants",
+      "sorcery": "Sorceries",
+      "enchantment": "Enchantments",
+      "artifact": "Artifacts",
+      "land": "Lands",
+      "other": "Other",
+      "sideboard": "Sideboard",
+      "main": "Main deck"
+    },
+    "row": {
+      "unknown": "Not in your card DB and Scryfall couldn''t find it. The card is saved but details/images can''t be shown.",
+      "label": "{count} × {card}",
+      "commander": "Commander"
+    },
+    "rowActions": {
+      "trigger": "Actions for {card}",
+      "quantity": "Quantity",
+      "removeOne": "Remove one",
+      "addOne": "Add one",
+      "changePrinting": "Change printing",
+      "markCommander": "Mark as commander",
+      "unmarkCommander": "Unmark as commander",
+      "moveToMain": "Move to main",
+      "moveToSideboard": "Move to sideboard",
+      "details": "Card details",
+      "commanderStaysMain": "The commander stays in the main deck",
+      "quantityNow": "Quantity {count}"
+    },
+    "list": {
+      "addPlaceholder": "Add a card by name",
+      "decrease": "Decrease",
+      "decreaseCard": "Decrease {card}",
+      "increase": "Increase",
+      "increaseCard": "Increase {card}",
+      "removeCard": "Remove {card}",
+      "label": "Cards"
+    },
+    "buy": {
+      "deck": "Buy · ${total}",
+      "disabled": "Add cards to enable",
+      "openDeck": "Open the full deck in TCGplayer''s mass-entry cart (opens in a new tab)",
+      "pricing": "Pricing {count, plural, one {# card} other {# cards}}… ({priced}/{total})",
+      "missing": "{count, plural, one {# card has} other {# cards have}} no price on Scryfall",
+      "missingShort": "{count, plural, one {# unpriced} other {# unpriced}}"
+    },
+    "hydrating": "Loading card data. Editing is available when loading finishes."
+  },
+  "DeckSharing": {
+    "shareDeck": "Share deck...",
+    "title": "Share deck",
+    "nameLabel": "Share name:",
+    "defaultDeckName": "Shared deck",
+    "defaultDecksName": "Shared decks",
+    "create": "Create share link",
+    "cancel": "Cancel",
+    "close": "Close",
+    "creating": "Creating share link…",
+    "createdCopied": "Share link created and copied to the clipboard:",
+    "created": "Share link created:",
+    "expires": "The share expires on {date}.",
+    "copy": "Copy link",
+    "copied": "Copied",
+    "copyFailed": "Couldn't copy the link. It is selected: copy it with Ctrl+C (⌘C on a Mac).",
+    "createFailed": "Failed to create the share link (server response code {code}).",
+    "notConnected": "You must be connected to the server to share a deck.",
+    "linkLabel": "Share link",
+    "notSupported": "This server does not support deck share links or public decks.",
+    "noServer": "This session's server is not known, so a share link for it can't be made.",
+    "emptyDeck": "The deck is empty. Add cards before sharing it.",
+    "visibilityFailed": "Failed to change deck visibility on server (response code {code}).",
+    "error": "Error",
+    "public": "Public",
+    "inherited": "Public (inherited)",
+    "deckPublic": "This deck is visible to other users",
+    "deckInherited": "This deck is private, but a parent folder is public (inherited).",
+    "folderPublic": "This folder is visible to other users",
+    "folderInherited": "This folder is private, but a parent folder is public (inherited)."
+  },
+  "DeckShareLinks": {
+    "open": "Share links",
+    "title": "My share links",
+    "loading": "Loading share links…",
+    "none": "You have no active share links.",
+    "summary": "{count, plural, one {# deck} other {# decks}} · created {created} · expires {expires}",
+    "revoke": "Revoke",
+    "revokeNamed": "Revoke {name}",
+    "confirmRevoke": "Revoke the share link \"{name}\"? Anyone who has the link will no longer be able to open it.",
+    "listFailed": "Failed to load your share links (server response code {code}).",
+    "revokeFailed": "Failed to revoke the share link (server response code {code}).",
+    "close": "Close"
+  },
+  "OpenShareLink": {
+    "open": "Open shared deck",
+    "title": "Open shared deck",
+    "label": "Share link:",
+    "submit": "Open",
+    "cancel": "Cancel",
+    "problem": {
+      "invalid": "This is not a share link.",
+      "hostname": "Missing or empty hostname in the share link",
+      "port": "Invalid or missing port in the share link",
+      "share": "Missing or empty share value in the share link"
+    }
+  },
+  "SharedDeck": {
+    "title": "Open shared decks",
+    "share": "Share: {name}",
+    "untitled": "Untitled",
+    "from": "From {server}",
+    "expires": "This share link expires on {date}",
+    "loading": "Loading the shared deck…",
+    "otherServer": "This share link is for {server}. Log in to that server to open it.",
+    "notFound": "The shared deck could not be found or has expired",
+    "empty": "The shared deck is empty",
+    "downloadFailed": "Failed to download the shared deck",
+    "unreadable": "The shared deck could not be loaded",
+    "openDeck": "Open",
+    "openDeckNamed": "Open {name}",
+    "back": "My Decks",
+    "desktopPortRequired": "To open this desktop or legacy share link, set the desktop port for this server in its settings."
+  },
+  "PublicDecks": {
+    "title": "Public decks of {name}",
+    "loading": "Loading public decks…",
+    "empty": "This user has not published any decks.",
+    "listFailed": "Failed to load the user's public decks (server response code {code}).",
+    "openFailed": "Failed to open the public deck (server response code {code}).",
+    "unreadable": "The public deck could not be parsed.",
+    "refresh": "Refresh",
+    "openDeckNamed": "Open {name}"
+  },
+  "ReadOnlyDeck": {
+    "import": "Import to my decks",
+    "readOnly": "Read-only",
+    "main": "Main deck",
+    "sideboard": "Sideboard",
+    "close": "Close",
+    "cardCount": "{count, plural, one {# card} other {# cards}}"
+  },
+  "Decks": {
+    "listError": "Failed to load your decks from the server.",
+    "retry": "Retry",
+    "moveFailed": "Couldn’t move {name}. The original deck is unchanged.",
+    "uploadFailed": "Couldn’t save {name} to the server.",
+    "dismiss": "Dismiss",
+    "list": {
+      "title": "My Decks",
+      "viewMode": "View mode",
+      "view": {
+        "card": "Grid",
+        "compact": "List"
+      },
+      "refreshLabel": "Refresh deck list",
+      "newDeck": "New deck",
+      "defaultDeckName": "New Deck",
+      "loading": "Loading decks…",
+      "emptyTitle": "No decks yet",
+      "emptyBody": "Decks are saved to your account on this server. Bring your decks over from desktop Cockatrice, paste a list from another site, or start a new one.",
+      "created": "Created {age}",
+      "age": {
+        "unknown": "unknown",
+        "justNow": "just now"
+      },
+      "emptyFromDesktop": "Import from Cockatrice",
+      "emptyPaste": "Paste a deck list",
+      "emptySources": "Lists from Moxfield, Archidekt, MTG Arena, MTGO and TappedOut work too."
+    },
+    "badge": {
+      "bracket": "Commander Bracket {level}",
+      "bracketShort": "B{level}",
+      "priceLoading": "Loading price…",
+      "priceNone": "No cached price — open the deck to compute it",
+      "priceTotal": "TCGplayer USD total",
+      "priceTotalMissing": "TCGplayer USD total. {count, plural, one {# card} other {# cards}} had no price on file — actual total is higher.",
+      "identity": "Colour identity: {colours}"
+    },
+    "grid": {
+      "decks": "Decks",
+      "disconnected": "Connect to the server to change this deck.",
+      "stillLoading": "Still loading this deck from the server.",
+      "noMatches": "No decks match these filters."
+    },
+    "dropToImport": "Drop to import into your deck library"
+  },
+  "CardSearch": {
+    "label": "Search cards",
+    "searching": "Searching…",
+    "searchFailed": "Search failed",
+    "noResults": "No results.",
+    "filter": {
+      "clear": "Clear filters",
+      "to": "to",
+      "rarity": "Rarity",
+      "subtype": "Subtype",
+      "subtypePlaceholder": "e.g. Elemental, or \"Human Warrior\" for both",
+      "oracle": "Oracle text contains",
+      "oraclePlaceholder": "e.g. \"draw a card\""
+    },
+    "color": {
+      "W": "White",
+      "U": "Blue",
+      "B": "Black",
+      "R": "Red",
+      "G": "Green",
+      "C": "Colorless"
+    },
+    "cardType": {
+      "Creature": "Creature",
+      "Planeswalker": "Planeswalker",
+      "Battle": "Battle",
+      "Instant": "Instant",
+      "Sorcery": "Sorcery",
+      "Enchantment": "Enchantment",
+      "Artifact": "Artifact",
+      "Land": "Land",
+      "Other": "Other"
+    },
+    "rarity": {
+      "common": {
+        "name": "Common",
+        "short": "C"
+      },
+      "uncommon": {
+        "name": "Uncommon",
+        "short": "U"
+      },
+      "rare": {
+        "name": "Rare",
+        "short": "R"
+      },
+      "mythic": {
+        "name": "Mythic",
+        "short": "M"
+      }
+    },
+    "badQuery": "Search failed: {details}"
+  },
+  "CardSearchDock": {
+    "label": "Card database",
+    "title": "Find cards",
+    "matches": "{count, plural, one {# match} other {# matches}}",
+    "placeholder": "Card name or Scryfall syntax",
+    "clear": "Clear search",
+    "results": "Search results",
+    "empty": "Type a card name or pick a filter. Scryfall syntax works too.",
+    "loadMore": "Show more ({shown} of {total})",
+    "highlighted": "{name} highlighted",
+    "addMain": "Add {name} to the deck",
+    "addSide": "Add {name} to the sideboard",
+    "sideShort": "SB",
+    "addedMain": "Added {name} to the deck",
+    "addedSide": "Added {name} to the sideboard",
+    "inDeck": "{count} in deck",
+    "noPrice": "No price",
+    "view": {
+      "label": "Results view",
+      "list": "List",
+      "art": "Art"
+    },
+    "keys": {
+      "adds": "adds",
+      "side": "to sideboard"
+    },
+    "filter": {
+      "colours": "Colours",
+      "colourMode": "Colour match",
+      "mode": {
+        "withinIdentity": "Within commander",
+        "includes": "Includes",
+        "exactly": "Exactly",
+        "atMost": "At most"
+      },
+      "types": "Card types",
+      "manaValueShort": "MV",
+      "manaValueMin": "Lowest mana value",
+      "manaValueMax": "Highest mana value",
+      "any": "any",
+      "legalIn": "Legal in {format}",
+      "more": "More filters"
+    },
+    "printings": {
+      "label": "Printings of {name}",
+      "title": "Printing",
+      "count": "{count, plural, one {# printing} other {# printings}}",
+      "loading": "Loading printings…",
+      "empty": "No printings found.",
+      "choose": "{set} #{number}: add this printing",
+      "chosen": "Chosen"
+    },
+    "gameChanger": {
+      "present": "Game Changer: it counts toward the deck’s bracket.",
+      "under": "Game Changer. Adding it makes {count}; Bracket 3 allows {limit}.",
+      "atLimit": "Game Changer. Adding it makes {count}, the most Bracket 3 allows.",
+      "over": "Game Changer. Adding it makes {count}, more than Bracket 3 allows."
+    }
+  },
+  "DeckLink": {
+    "label": "Load deck from online service",
+    "placeholder": "Paste a link to a deck on Archidekt, Deckstats, Moxfield or TappedOut",
+    "unsupported": "Not a supported deck link. (Archidekt, Deckstats, Moxfield, and TappedOut are supported.)",
+    "copyText": "Browsers can't read decks from {provider} directly. Open its text export, copy the list and paste it below.",
+    "copyFromPage": "Browsers can't read decks from {provider} directly. Open the deck, use its Export option to copy the list, and paste it below.",
+    "open": "Open on {provider}"
+  },
+  "ExportHelp": {
+    "title": "How to copy a deck from another site or app",
+    "source": {
+      "moxfield": {
+        "name": "Moxfield",
+        "steps": "Open the deck, choose Export, copy the list as text (the Arena or plain-text option), and paste it below."
+      },
+      "archidekt": {
+        "name": "Archidekt",
+        "steps": "Open the deck, choose Export from the deck menu, copy the text, and paste it below. Categories and tags are fine."
+      },
+      "arena": {
+        "name": "MTG Arena",
+        "steps": "In Decks, select the deck and click Export. It is copied to your clipboard; paste it below."
+      },
+      "mtgo": {
+        "name": "MTGO",
+        "steps": "Save the deck as a .dek or .txt file and open it here, or paste its text below."
+      },
+      "cockatrice": {
+        "name": "Cockatrice",
+        "steps": "Open a .cod or .txt file from your Cockatrice decks folder. To bring over every deck at once, use Import from Cockatrice on the Decks page."
+      }
+    }
+  },
+  "FormatPicker": {
+    "label": "Format",
+    "other": {
+      "dialog": "Other (specify)",
+      "sidebar": "Other"
+    },
+    "placeholder": {
+      "dialog": "e.g. Netrunner, Playtest, Cube",
+      "sidebar": "e.g. Netrunner, Playtest"
+    },
+    "unset": "Not set"
+  },
+  "DeckBracket": {
+    "assessing": "Assessing bracket…",
+    "failed": "Couldn’t assess bracket: {message}",
+    "unknownError": "Bracket assessment failed",
+    "title": "Bracket {level} · {label}",
+    "partialTitle": "At least bracket {level} · {label}",
+    "methodology": "Minimum bracket per <0>edhpowerlevel</0>’s algorithm: Game Changers, MLD, extra turns, and early game-defining combos.",
+    "provenance": "Card data from Scryfall; combos from Commander Spellbook, which receives the main deck’s card names and quantities.",
+    "consent": {
+      "prompt": "Bracket analysis sends this deck’s card names to Scryfall (Game Changers list and card text), and the main deck’s card names and quantities to Commander Spellbook (combos). Choose Enable to estimate when you ask, or Automatic to estimate whenever the deck changes.",
+      "enable": "Enable",
+      "automatic": "Automatic",
+      "disable": "Disable",
+      "revoke": "Turn off bracket analysis"
+    },
+    "estimate": "Estimate bracket",
+    "partialNotice": "Partial estimate: this deck may sit in a higher bracket. It isn’t saved with the deck until every source answers.",
+    "sourceUnavailable": "{source} unavailable ({reason})",
+    "sourcePartial": "{source}: {missing} of {total} cards missing ({reason})",
+    "retry": "Retry",
+    "source": {
+      "gameChangers": "Scryfall Game Changers list",
+      "oracleText": "Scryfall card text",
+      "combos": "Commander Spellbook combos"
+    },
+    "failure": {
+      "timeout": "timed out",
+      "network": "network error",
+      "http": "HTTP {status}",
+      "malformed": "unexpected response"
+    },
+    "level": {
+      "1": "Exhibition",
+      "2": "Core",
+      "3": "Upgraded",
+      "4": "Optimized",
+      "5": "cEDH"
+    },
+    "signal": {
+      "gameChangers": "Game Changers",
+      "denial": "MLD",
+      "turns": "Extra turns",
+      "earlyCombos": "Early combos",
+      "lateCombos": "Late combos"
+    },
+    "chainable": "— chain-able:",
+    "bracket": "Bracket",
+    "estimateNote": "estimate",
+    "partialEstimate": "partial estimate",
+    "why": "Why this bracket?"
+  },
+  "DeckBreakdown": {
+    "stat": {
+      "total": "Total",
+      "nonland": "Nonland",
+      "lands": "Lands",
+      "avgCmc": "Avg MV"
+    },
+    "bracketEstimate": "Bracket estimate",
+    "manaCurve": "Mana curve",
+    "colorDistribution": "Colours",
+    "cardTypes": "Card types",
+    "colorBar": "Colour distribution: {summary}",
+    "curve": {
+      "label": "Mana curve: {summary}",
+      "barTitle": "{count, plural, one {# card} other {# cards}} at mana value {cmc}",
+      "sevenPlus": "7+"
+    },
+    "noCards": "No cards yet."
+  },
+  "DeckBanner": {
+    "label": "Banner Card"
+  },
+  "DeckHeader": {
+    "myDecks": "My decks",
+    "name": "Deck name",
+    "namePlaceholder": "Untitled deck",
+    "cardCount": "{count, plural, one {# card} other {# cards}}",
+    "sideboardCount": "{count} sideboard",
+    "saving": "Saving…",
+    "dirty": "Unsaved changes",
+    "saved": "Saved",
+    "saveFailed": "The deck could not be saved.",
+    "retrySave": "Retry",
+    "saveFailedHint": "Your last change was not saved. It will be sent again with your next change, or now with Retry.",
+    "export": "Export deck",
+    "more": "More: open deck, print, send to an online service",
+    "editTags": "Edit tags",
+    "bannerCard": "Banner card…",
+    "playmat": "Playmat…",
+    "bracketHint": "Last bracket estimate; see Deck stats",
+    "resetLayout": "Reset layout"
+  },
+  "DeckHistory": {
+    "undo": "Undo",
+    "redo": "Redo",
+    "history": "Undo/Redo history",
+    "hint": "Click on an entry to revert to that point in the history.",
+    "undoEntry": "[undo] {reason}",
+    "redoEntry": "[redo] {reason}",
+    "zone": {
+      "main": "Mainboard",
+      "sideboard": "Sideboard"
+    },
+    "reason": {
+      "rename": "Rename deck to \"{to}\" from \"{from}\"",
+      "description": "Updated comments (was {before} chars, now {after} chars)",
+      "format": "Set format to {format}",
+      "banner": "Set banner card to {name}",
+      "bannerCleared": "Cleared banner card",
+      "tags": "Tags changed",
+      "playmat": "Playmat changed",
+      "addCard": "Added ({zone}): {name}",
+      "added": "Added {count} × \"{name}\"",
+      "removed": "Removed {count} × \"{name}\"",
+      "removeCard": "Removed \"{name}\" (all copies)",
+      "moveCard": "Moved {count} × \"{name}\" to {zone}",
+      "setCommander": "Set \"{name}\" as commander",
+      "unsetCommander": "Unset \"{name}\" as commander",
+      "changePrinting": "Changed printing of \"{name}\" to {set}"
+    }
+  },
+  "DeckInspector": {
+    "title": "Selected card",
+    "empty": "Pick a card in the deck or in the search to see it here.",
+    "noImage": "No image available",
+    "price": "${price}",
+    "quantity": "Quantity",
+    "decrease": "Remove one {card}",
+    "increase": "Add one {card}",
+    "add": "Add to deck",
+    "addToSideboard": "Add to sideboard",
+    "changePrinting": "Change printing",
+    "toSideboard": "To sideboard",
+    "toMain": "To main deck",
+    "details": "Details",
+    "remove": "Remove",
+    "removeCommander": "Remove commander"
+  },
+  "DeckLegality": {
+    "checking": "Checking legality…",
+    "legal": "Legal in {format}",
+    "illegal": "{count, plural, one {# card isn't} other {# cards aren't}} legal in {format}",
+    "unavailable": "Legality can't be checked for {format}",
+    "unchecked": "{count, plural, one {# card couldn't be checked} other {# cards couldn't be checked}}",
+    "reason": {
+      "banned": "Banned in this format",
+      "notLegal": "Not legal in this format",
+      "tooMany": "Too many copies (at most {max})"
+    }
+  },
+  "DeckTools": {
+    "print": "Print deck...",
+    "sendTo": "Send deck to online service",
+    "decklistOrg": "Create decklist (decklist.org)",
+    "decklistXyz": "Create decklist (decklist.xyz)",
+    "deckstats": "Analyze deck (deckstats.net)",
+    "tappedout": "Analyze deck (tappedout.net)",
+    "empty": "There are no cards in your deck to be exported",
+    "zone": {
+      "main": "Mainboard",
+      "sideboard": "Sideboard"
+    }
+  },
+  "DeckTags": {
+    "label": "Tags",
+    "add": "Add Tag",
+    "placeholder": "Add a new tag (e.g., Aggro)",
+    "remove": "Remove tag {tag}",
+    "empty": "Tag name cannot be empty!",
+    "duplicate": "This tag already exists."
+  },
+  "OpenDeckButton": {
+    "label": "Open deck…",
+    "pickerTitle": "Open deck",
+    "empty": "No other decks in your deck storage.",
+    "confirmTitle": "Are you sure?",
+    "confirmMessage": "The decklist has been modified.\nDo you want to save the changes?",
+    "save": "Save",
+    "discard": "Discard",
+    "openInNewTab": "Open in new tab",
+    "cancel": "Cancel"
+  },
+  "SampleHand": {
+    "title": "Sample hand",
+    "redraw": "Draw a new sample hand",
+    "size": "Sample hand size",
+    "empty": "Add cards to the main deck to draw a sample hand."
+  },
+  "DeckActionsMenu": {
+    "more": "More actions for {name}",
+    "label": "Actions for {name}",
+    "open": "Open in editor",
+    "share": "Share link…",
+    "makePublic": "Make public",
+    "makePrivate": "Make private",
+    "editTags": "Edit tags…",
+    "setBanner": "Set banner card…",
+    "rename": "Rename…",
+    "move": "Move to folder…",
+    "download": "Download .cod",
+    "delete": "Delete deck…"
+  },
+  "DeckFolders": {
+    "root": "Server deck storage",
+    "newFolder": "New folder",
+    "downloadFolder": "Download all decks as .cod files",
+    "deleteFolder": "Delete folder",
+    "empty": "This folder is empty."
+  },
+  "DeckGridToolbar": {
+    "summary": "{decks, plural, one {# deck} other {# decks}} in {folders, plural, one {# folder} other {# folders}}",
+    "folderActions": "Folder actions for {name}",
+    "newSubfolder": "New folder inside",
+    "shareFolder": "Share folder…",
+    "makeFolderPublic": "Make folder public",
+    "makeFolderPrivate": "Make folder private",
+    "sort": "Sort decks",
+    "sorts": {
+      "newest": "Newest first",
+      "oldest": "Oldest first",
+      "nameAsc": "Name A–Z",
+      "nameDesc": "Name Z–A"
+    },
+    "search": "Search decks",
+    "searchPlaceholder": "Search names and tags",
+    "colours": "Colours",
+    "colour": {
+      "W": "White",
+      "U": "Blue",
+      "B": "Black",
+      "R": "Red",
+      "G": "Green"
+    },
+    "colourMode": "Colour match",
+    "colourModes": {
+      "including": "Including",
+      "exactly": "Exactly",
+      "atMost": "At most"
+    },
+    "format": "Format",
+    "anyFormat": "Any format",
+    "bracket": "Bracket",
+    "anyBracket": "Any bracket",
+    "clear": "Clear filters",
+    "pending": "Checking {count, plural, one {# deck} other {# decks}}…",
+    "tags": "Filter by tag",
+    "bracketOption": "Bracket {level}"
+  },
+  "DeckStorageSidebar": {
+    "subtitle": "Server deck storage · {count, plural, one {# deck} other {# decks}}",
+    "folders": "Folders",
+    "allDecks": "All decks",
+    "sharing": "Sharing",
+    "publicDecks": "Public decks",
+    "expand": "Expand {name}",
+    "collapse": "Collapse {name}"
+  },
+  "DeckTile": {
+    "open": "Open {name}",
+    "tags": "Tags",
+    "cards": "{count, plural, one {# card} other {# cards}}"
+  },
+  "ImportMenu": {
+    "import": "Import",
+    "label": "Import decks",
+    "fromCockatrice": "From Cockatrice desktop…",
+    "pasteOrOpen": "Paste a list or open a deck file…",
+    "disconnected": "Connect to a server first"
+  },
+  "DeckImport": {
+    "defaultName": "Imported deck",
+    "error": {
+      "readFailed": "Could not read the selected file",
+      "noCards": "No cards recognised. Check the format — one line per card, like `1 Sol Ring`.",
+      "resolveFailed": "Failed to resolve cards",
+      "notDeckFile": "{name} is not a deck file. Open a .cod, .txt, .dec, .dek or .mwDeck file.",
+      "noCardsInFile": "No cards found in {name}.",
+      "notConnected": "Not connected to the server. Reconnect, then import again."
+    }
+  },
+  "DeckSummary": {
+    "section": {
+      "other": "Other",
+      "unknown": "Unknown format"
+    }
+  },
+  "CardDetailDialog": {
+    "noImage": "No image",
+    "cmc": "CMC {cmc}",
+    "backTo": "Back to {name}",
+    "actions": "Actions",
+    "addToDeck": "Add to deck",
+    "buy": "Buy @ TCGplayer",
+    "quantity": "Quantity",
+    "removed": "removed from deck",
+    "decrease": "Decrease quantity",
+    "increase": "Increase quantity",
+    "removeFromDeck": "Remove from deck"
+  },
+  "CreateDeckDialog": {
+    "title": "Create a deck",
+    "deckName": "Deck name",
+    "namePlaceholder": "Untitled Deck",
+    "format": "Format"
+  },
+  "CreateFolder": {
+    "title": "New folder",
+    "label": "Name of new folder:",
+    "create": "Create",
+    "cancel": "Cancel",
+    "problem": {
+      "empty": "Enter a folder name.",
+      "tooLong": "This name makes the folder path too long for the server.",
+      "exists": "A folder with this name already exists here."
+    }
+  },
+  "DeckPlaymat": {
+    "title": "Edit Playmat",
+    "ok": "OK",
+    "numeric": "Show numeric controls",
+    "invalidParams": "Enter crop values within the displayed limits.",
+    "nameTooLong": "Card names must contain at most {max} characters.",
+    "card": "Card name",
+    "printing": "Printing",
+    "defaultPrinting": "Default printing",
+    "remove": "Remove Playmat",
+    "unknownCard": "Card not found.",
+    "lookupFailed": "Could not look up this card. Please try again."
+  },
+  "DeckStorageEditDialog": {
+    "title": {
+      "rename": "Rename deck",
+      "tags": "Edit tags",
+      "banner": "Set banner card"
+    },
+    "name": "Deck name",
+    "save": "Save",
+    "saving": "Saving deck…",
+    "loading": "Loading deck…",
+    "loadFailed": "Could not load this deck.",
+    "saveFailed": "Could not save this deck. Please try again.",
+    "editorHasChanges": "This deck is open in the deck editor with unsaved changes. Save or discard them there first, then try again.",
+    "howItWorks": "Saving uploads the deck again over the same deck on the server.",
+    "changedElsewhere": "This deck changed on the server since it was loaded. The latest version is shown now; check it and save again.",
+    "lastSaveFailed": "The last change saved from storage did not reach the server. Save again to retry, or discard it.",
+    "discard": "Discard",
+    "retry": "Retry"
+  },
+  "DeleteDeckDialog": {
+    "title": "Delete deck?",
+    "message": "<name>{name}</name> will be permanently removed from the server. This can''t be undone."
+  },
+  "DeleteFolder": {
+    "title": "Delete folder?",
+    "body": "The folder {name} will be permanently removed from the server.",
+    "scope": "This also deletes {decks, plural, one {# deck} other {# decks}} and {folders, plural, one {# subfolder} other {# subfolders}} inside it.",
+    "irreversible": "This can't be undone.",
+    "delete": "Delete",
+    "cancel": "Cancel"
+  },
+  "ExportDeckDialog": {
+    "title": "Export deck",
+    "download": "Download .{extension}",
+    "format": {
+      "plain": {
+        "label": "Plain text",
+        "description": "Simple list, grouped by section. Works with most tools."
+      },
+      "arena": {
+        "label": "MTG Arena",
+        "description": "Includes set + collector. Works for Arena, Moxfield, Archidekt imports."
+      },
+      "cockatrice": {
+        "label": "Cockatrice (.cod)",
+        "description": "XML deck file for Cockatrice — preserves everything."
+      }
+    }
+  },
+  "ImportDeckDialog": {
+    "title": "Import a deck",
+    "subtitle": "Paste a list or open a deck file. Cockatrice .cod and .txt, Moxfield, Archidekt, Arena and MTGO lists all work.",
+    "resolving": "Looking up cards…",
+    "importing": "Creating deck…",
+    "next": "Next: check cards",
+    "importCards": "Import {count, plural, one {# card} other {# cards}}",
+    "deckName": "Deck name",
+    "format": "Format",
+    "decklist": "Decklist",
+    "uploadFile": "Open a deck file",
+    "uploadFileHint": "Cockatrice .cod, or a .txt, .dec, .dek or .mwDeck list",
+    "placeholder": "Paste your deck list (Arena / MTGO / Moxfield export). Example:\n\nCommander\n1 Atraxa, Grand Unifier\n\nDeck\n1 Sol Ring\n1 Cultivate\n1 Swords to Plowshares\n...",
+    "review": {
+      "matched": "{count, plural, other {# matched}}",
+      "missing": "{count, plural, other {# unknown (imported with warning)}}",
+      "ignored": "{count, plural, one {# unrecognised line} other {# unrecognised lines}}",
+      "unknown": "unknown",
+      "kept": "Kept as in the file: {zones}",
+      "showIgnored": "Show unrecognised lines",
+      "main": "Main",
+      "sideboard": "Sideboard",
+      "commander": "Commander"
+    },
+    "zone": {
+      "tokens": "Tokens",
+      "maybeboard": "Maybeboard"
+    }
+  },
+  "MoveDeck": {
+    "title": "Move {name}",
+    "target": "To folder",
+    "howItWorks": "The deck is copied into the folder and keeps its visibility; the original is deleted once the copy is saved. The copy gets a new deck id. Share links you already made keep working: they hold a copy of the deck from when they were made.",
+    "move": "Move",
+    "cancel": "Cancel"
+  },
+  "PrintingPicker": {
+    "title": "Choose printing",
+    "count": "{count, plural, one {# printing} other {# printings}}",
+    "loading": "Loading printings…",
+    "empty": "No printings found.",
+    "priceUsd": "TCGplayer USD",
+    "noPrice": "No TCGplayer price",
+    "current": "Current",
+    "loadFailed": "Failed to load printings",
+    "pin": "Pin as default printing",
+    "unpin": "Unpin default printing",
+    "pinFailed": "Failed to save the default printing"
+  },
+  "DeckMigration": {
+    "title": "Import from Cockatrice",
+    "guest": "Decks are saved to your account on this server. Sign in with a registered account to import decks; replays and custom sets can still be imported into this browser.",
+    "offline": "You're not connected to a server, so decks can't be imported right now. Replays and custom sets can still be imported into this browser.",
+    "os": {
+      "windows": "Windows",
+      "macos": "macOS",
+      "linux": "Linux"
+    },
+    "source": {
+      "intro": "Bring over the decks, replays and custom sets from desktop Cockatrice. Choose your Cockatrice folder (or just its decks folder), or drop files and folders here. You'll see what was found before anything is imported.",
+      "drop": "Drop your Cockatrice folder, a decks folder or deck files here",
+      "pickFolder": "Choose a folder",
+      "pickFiles": "Choose files",
+      "whereTitle": "Where desktop Cockatrice keeps your files",
+      "os": "Your computer",
+      "copy": "Copy",
+      "copied": "Copied",
+      "hint": {
+        "windows": "This folder is hidden. In the folder picker, paste the path into the address bar and press Enter.",
+        "macos": "Library is hidden in Finder. In the folder picker, press Cmd+Shift+G and paste the path.",
+        "linux": "Folders starting with a dot are hidden. In the folder picker, press Ctrl+L and paste the path, or Ctrl+H to show hidden folders."
+      },
+      "what": "Inside it, decks/ holds your decks (with their subfolders), replays/ your replays and customsets/ your custom sets and tokens. If you moved your decks folder in desktop's settings, choose that folder instead.",
+      "pasteLead": "Coming from Moxfield, Archidekt, MTG Arena or MTGO?",
+      "paste": "Paste a deck list"
+    },
+    "scan": {
+      "reading": "Reading deck files: {done} of {total}",
+      "checkingCards": "Checking card names…"
+    },
+    "preview": {
+      "found": "Found {decks, plural, one {# deck} other {# decks}} in {folders, plural, one {# folder} other {# folders}}, {replays, plural, one {# replay} other {# replays}} and {sets, plural, one {# custom set file} other {# custom set files}}.",
+      "decks": "Decks",
+      "all": "Select all",
+      "none": "Select none",
+      "topFolder": "Top level",
+      "cards": "{count, plural, one {# card} other {# cards}}",
+      "unknown": "{count, plural, one {# unknown card} other {# unknown cards}}",
+      "onServer": "Already on server",
+      "destination": "Put them in this folder (subfolders are kept)",
+      "destinationTop": "Top level of your decks",
+      "sameName": "If a deck with the same name is already there",
+      "skip": "Skip it",
+      "keepBoth": "Keep both",
+      "replays": "Import {count, plural, one {# replay} other {# replays}} into this browser",
+      "customSets": "Import {count, plural, one {# custom set file} other {# custom set files}} into this browser's card database",
+      "cardDatabase": "Not needed: {files}. Webatrice gets its card data from Scryfall.",
+      "import": "{count, plural, =0 {Import} one {Import # deck} other {Import # decks}}",
+      "options": "Import options",
+      "ignored": "{count, plural, one {# line wasn't read} other {# lines weren't read}}"
+    },
+    "zone": {
+      "tokens": "{count, plural, one {# token} other {# tokens}}",
+      "maybeboard": "{count} maybeboard"
+    },
+    "problem": {
+      "unreadable": "Couldn't read this file",
+      "empty": "No cards in this file",
+      "tooLarge": "Too large for the server (over 2 MB)",
+      "exists": "skipped, already on the server",
+      "pathTooLong": "skipped, folder path too long for the server"
+    },
+    "failure": {
+      "flood": "The server is busy; try again in a minute",
+      "server": "The server refused it (code {code})",
+      "timeout": "The server didn't answer",
+      "folder": "Not imported: couldn't create the folder {folder}"
+    },
+    "progress": {
+      "decks": "Importing decks: {done} of {total}",
+      "keepOpen": "Keep this window open until the import finishes. The server accepts a few decks per second, so large libraries take a few minutes.",
+      "stop": "Stop after this deck",
+      "folders": "Creating folder {name}",
+      "stopping": "Stopping…"
+    },
+    "summary": {
+      "decks": "{count, plural, =0 {No decks imported.} one {Imported # deck.} other {Imported # decks.}}",
+      "disconnected": "The connection dropped, so {count, plural, one {# deck was} other {# decks were}} not imported.",
+      "cancelled": "Stopped: {count, plural, one {# deck was} other {# decks were}} not imported.",
+      "unknown": "Some cards weren't recognised and were imported with a warning. Open these decks to fix them: {names}",
+      "renamed": "Decks whose names were already taken were imported with a number after the name.",
+      "again": "Run the import again to finish: decks that are already on the server are skipped.",
+      "more": "Import more",
+      "done": "Done",
+      "skippedGroup": "{count, plural, one {# deck} other {# decks}}: {reason}",
+      "stoppedReplays": "Stopped before all replays were imported.",
+      "stoppedCustomSets": "Stopped before all custom set files were imported.",
+      "legFailed": {
+        "replays": "Replays couldn't be imported: {detail}",
+        "customSets": "Custom sets couldn't be imported: {detail}",
+        "decks": "The deck import stopped with an error: {detail}"
+      }
+    },
+    "error": {
+      "nothingFound": "No decks, replays or custom sets were found there. Choose your Cockatrice folder or its decks folder."
+    },
+    "leg": {
+      "replays": "Importing replays into this browser…",
+      "customSets": "Importing custom sets into this browser…"
+    }
+  },
+  "Developer": {
+    "timings": {
+      "title": "Load timings",
+      "description": "Milliseconds since boot. Home data is the first room list received; route ready is the current route's React commit (background requests may still be running)."
+    },
+    "table": {
+      "stats": "Server statistics",
+      "commands": "Command statistics"
+    },
+    "column": {
+      "command": "Command",
+      "count": "Count",
+      "totalMs": "Total ms",
+      "avgMs": "Avg ms"
+    },
+    "stat": {
+      "usersOnline": "Registered users online",
+      "modsOnline": "Moderators online",
+      "gamesRunning": "Games running",
+      "trafficSent": "Traffic sent (last tick)",
+      "trafficReceived": "Traffic received (last tick)",
+      "uptime": "Server uptime",
+      "snapshot": "Snapshot taken",
+      "liveMetrics": "Live Metrics",
+      "cardsInGames": "Cards in live games",
+      "totalCommands": "Total commands processed",
+      "avgCommandTime": "Avg command time",
+      "activeCommandTypes": "Active command types",
+      "stalls": "Event loop stalls",
+      "lastStall": "Last stall overshoot",
+      "worstStall": "Worst stall overshoot",
+      "gameStarts": "Game starts",
+      "avgGameStart": "Avg game start time"
+    },
+    "unit": {
+      "gib": "{value} GiB",
+      "mib": "{value} MiB",
+      "kib": "{value} KiB",
+      "bytes": "{value} bytes",
+      "seconds": "{value} s",
+      "milliseconds": "{value} ms",
+      "uptimeDays": "{days}d {hours}h {minutes}m",
+      "uptimeHours": "{hours}h {minutes}m"
+    },
+    "autoRefresh": {
+      "label": "Auto-refresh",
+      "tooltip": "Automatically request fresh server statistics at a fixed interval.",
+      "interval": "Every (seconds)",
+      "intervalTooltip": "Seconds between automatic refreshes."
+    },
+    "status": {
+      "updated": "Updated {time}",
+      "unavailable": "No server statistics available yet.",
+      "idle": "Server statistics, on request."
+    },
+    "button": {
+      "refresh": "Refresh server stats"
+    },
+    "title": "Developer",
+    "empty": "No statistics yet. Refresh to ask the server."
+  },
+  "Game": {
+    "empty": "No active game. Join a game from a room to see the board.",
+    "confirm": {
+      "concede": {
+        "message": "Are you sure you want to concede this game?"
+      },
+      "unconcede": {
+        "title": "Unconcede",
+        "message": "You have already conceded.  Do you want to return to this game?"
+      },
+      "leave": {
+        "message": "Are you sure you want to leave this game?"
+      }
+    },
+    "toast": {
+      "kicked": "You were kicked from the game",
+      "closed": "The game was closed by the host"
+    }
+  },
+  "GameErrorBoundary": {
+    "title": "The game board hit an unexpected error",
+    "message": "You are still in the game. Reload the board to pick up where you left off.",
+    "retry": "Reload board"
+  },
+  "GameLobby": {
+    "loadingGame": "Loading game…",
+    "gameNumber": "Game #{id}",
+    "fromMyDecks": "From My Decks",
+    "loadingDecks": "Loading your decks…",
+    "noDecks": "No decks yet — create one from the My Decks page, or upload a .cod below.",
+    "watching": {
+      "judge": "Watching as judge",
+      "spectator": "Watching as spectator"
+    },
+    "upload": {
+      "heading": "Upload a .cod file"
+    },
+    "deckCategory": {
+      "other": "Other",
+      "unknown": "Unknown format"
+    },
+    "player": {
+      "readyWithDeck": "Ready · {name}",
+      "waitingWithDeck": "{name} · waiting to ready",
+      "deckSubmittedWaiting": "Deck submitted · waiting to ready",
+      "choosingDeck": "Choosing a deck…",
+      "kick": "Kick",
+      "waiting": "Waiting for player…",
+      "bracketTitle": "Commander Bracket {level} (from the deck's cached assessment)",
+      "bracketBadge": "B{level}",
+      "ready": "Ready"
+    },
+    "action": {
+      "unloadDeck": "Unload deck",
+      "readyStart": "Ready to start",
+      "sideboardLocked": "Sideboard locked",
+      "sideboardUnlocked": "Sideboard unlocked",
+      "forceStart": "Force start"
+    },
+    "deck": {
+      "heading": "Your deck",
+      "maindeck": "Maindeck: {count}",
+      "sideboard": "Sideboard: {count}",
+      "moveToSideboard": "Move {name} to the sideboard",
+      "moveToMaindeck": "Move {name} to the maindeck",
+      "lockedHint": "Unlock the sideboard to change which cards you play this game."
+    },
+    "forceStart": {
+      "title": "Are you sure you want to force start?",
+      "message": "This will kick all non-ready players from the game."
+    },
+    "deckSelectFailed": "The server did not accept this deck."
+  },
+  "BoardTray": {
+    "label": "Hand tray",
+    "yourHand": "Your hand",
+    "handHeading": "Your hand · {count}",
+    "sort": "Sort",
+    "reveal": "Reveal",
+    "sideboard": "Sideboard",
+    "actions": "Quick actions",
+    "action": {
+      "untapAll": "Untap all",
+      "draw": "Draw",
+      "shuffle": "Shuffle",
+      "drawN": "Draw N",
+      "rollDie": "Roll die",
+      "createToken": "Create token"
+    }
+  },
+  "CardPreviewPane": {
+    "label": "Card preview",
+    "closePreview": "Close preview window",
+    "openPreview": "Open preview in a separate window",
+    "previewInWindow": "Preview is open in a separate window",
+    "bringBack": "Click to bring back",
+    "hoverToPreview": "Hover a card to preview it here",
+    "backTo": "Back to {name}",
+    "loading": "Loading…",
+    "title": "Card info",
+    "modes": "Card info view",
+    "modeImage": "Image",
+    "modeDescription": "Description",
+    "modeBoth": "Both",
+    "hide": "Hide card info",
+    "show": "Show card info"
+  },
+  "CardPreviewPopup": {
+    "title": "Card Preview",
+    "receiving": "Receiving updates from the main window.",
+    "reconnectingDescription": "Waiting for the main window to reconnect…",
+    "live": "● Live",
+    "reconnecting": "○ Reconnecting…"
+  },
+  "ChatLog": {
+    "heading": "Chat & log",
+    "empty": "no messages",
+    "inputLabel": "Game chat message",
+    "placeholder": "Say something…",
+    "unavailable": "Chat unavailable",
+    "spectatorChatDisabled": "Spectators are not allowed to chat in this game."
+  },
+  "GameDock": {
+    "label": "Game dock",
+    "tabs": "Dock panels",
+    "tab": {
+      "log": "Chat & log",
+      "players": "Players",
+      "spectators": "Spectators"
+    },
+    "players": "Players",
+    "spectating": "Spectating",
+    "collapse": "Collapse the dock",
+    "expand": "Expand the dock",
+    "leaveTitle": "Leave the game",
+    "leave": "Leave",
+    "concedeTitle": "Concede this game",
+    "concede": "Concede",
+    "rejoinTitle": "Rejoin the game",
+    "rejoin": "Rejoin",
+    "sideboardTitle": "Open sideboard",
+    "sideboard": "Sideboard",
+    "gameInfo": "Game info"
+  },
+  "GameInvite": {
+    "copyLink": "Copy game link",
+    "inviteToGame": "Invite to Game...",
+    "invite": "Invite",
+    "linkCopied": "Game link copied",
+    "linkCopyFailed": "Could not copy the game link",
+    "desktopPortRequired": "Set this server's desktop port in server settings to copy links or send invites.",
+    "inviteSent": "Invitation sent to {name}",
+    "inviteFailed": {
+      "ignoring": "{name} is ignoring you, so the invitation was not delivered",
+      "offline": "{name} is no longer online, so the invitation was not delivered",
+      "rejected": "The server did not deliver the invitation to {name}",
+      "notSent": "The invitation to {name} was not sent: {reason}"
+    },
+    "message": "Join my game (#{gameId}):",
+    "messageWithDescription": "Join my game \"{description}\" (#{gameId}):",
+    "dialog": {
+      "title": "Invite to Game",
+      "search": "Search users...",
+      "buddies": "Buddies",
+      "online": "Online",
+      "empty": "No one to invite",
+      "invite": "Invite",
+      "cancel": "Cancel"
+    }
+  },
+  "GameMenu": {
+    "button": "Game",
+    "title": "Game actions",
+    "item": {
+      "nextPhase": "Next phase",
+      "nextPhaseAction": "Next phase with action",
+      "nextTurn": "Next turn",
+      "reverseTurn": "Reverse turn order",
+      "rotateViewCW": "Rotate view clockwise",
+      "rotateViewCCW": "Rotate view counterclockwise"
+    }
+  },
+  "PhaseTrack": {
+    "label": "Turn phases",
+    "activePlayerOnly": "Only the active player can change phases",
+    "passTitle": "Pass to the next turn"
+  },
+  "SidebarResizer": {
+    "label": "Resize sidebar",
+    "title": "Drag to resize the sidebar (Arrow keys for keyboard)"
+  },
+  "TallyOverlay": {
+    "tally": "Tally",
+    "selectedCount": "{count, plural, one {# card selected} other {# cards selected}}"
+  },
+  "TurnBar": {
+    "whoseTurn": "{name}'s turn",
+    "noTurn": "No active turn",
+    "elapsedTitle": "Time since the game started",
+    "stack": "Stack",
+    "stackEmpty": "empty",
+    "stackItem": "{card} on the stack ({name})",
+    "pass": "Pass turn",
+    "passDisabled": "You cannot pass the turn right now"
+  },
+  "CardMenu": {
+    "tapUntap": "Tap / Untap",
+    "skipUntapping": "Skip untapping",
+    "turnOver": "Turn Over",
+    "turnOverFaceUp": "Turn Over (face up)",
+    "peek": "Peek at card face",
+    "clone": "Clone",
+    "moveTo": "Move to",
+    "topLibraryRandom": "Top of library in random order",
+    "xFromTop": "X cards from the top of library...",
+    "bottomLibraryRandom": "Bottom of library in random order",
+    "attach": "Attach to card...",
+    "unattach": "Unattach",
+    "drawArrow": "Draw arrow...",
+    "powerToughness": "Power / toughness",
+    "increasePower": "Increase power",
+    "decreasePower": "Decrease power",
+    "increasePowerDecreaseToughness": "Increase power and decrease toughness",
+    "increaseToughness": "Increase toughness",
+    "decreaseToughness": "Decrease toughness",
+    "decreasePowerIncreaseToughness": "Decrease power and increase toughness",
+    "increasePowerToughness": "Increase power and toughness",
+    "decreasePowerToughness": "Decrease power and toughness",
+    "setPowerToughness": "Set power and toughness...",
+    "resetPowerToughness": "Reset power and toughness",
+    "setAnnotation": "Set annotation...",
+    "reduceLifeByPower": "Reduce life by power",
+    "selectAll": "Select All",
+    "selectRow": "Select Row",
+    "selectColumn": "Select Column",
+    "cardCounters": "Card counters",
+    "addCounter": "Add counter ({letter})",
+    "setCounters": "Set counters ({letter})...",
+    "play": "Play",
+    "playFaceDown": "Play Face Down",
+    "revealTo": "Reveal to...",
+    "allPlayers": "All players",
+    "hide": "Hide",
+    "viewRelated": "View related cards",
+    "token": "Token: {description}",
+    "transform": "Token: Transform into \"{name}\"",
+    "allTokens": "All tokens",
+    "table": "Table"
+  },
+  "PlayerMenu": {
+    "setCounter": "Set counter...",
+    "counters": "Counters",
+    "untapAll": "Untap all permanents",
+    "rollDie": "Roll die...",
+    "createToken": "Create token...",
+    "createPredefinedToken": "Create predefined token",
+    "gameInfo": "Game info...",
+    "customZones": "Custom Zones",
+    "viewCustomZone": "View custom zone ''{name}''",
+    "tallySubtypes": "Subtypes",
+    "tallyPower": "Total Power",
+    "tallyToughness": "Total Toughness",
+    "say": "Say"
+  },
+  "ZoneMenu": {
+    "revealRandom": "Reveal random card to...",
+    "viewExile": "View exile",
+    "moveGraveyard": "Move graveyard to...",
+    "moveExile": "Move exile to...",
+    "drawCards": "Draw cards...",
+    "undoDraw": "Undo last draw",
+    "shuffle": "Shuffle",
+    "viewTop": "View top cards of library...",
+    "viewBottom": "View bottom cards of library...",
+    "revealLibrary": "Reveal library to...",
+    "lendLibrary": "Lend library to...",
+    "revealTop": "Reveal top cards to...",
+    "alwaysRevealTop": "Always reveal top card",
+    "alwaysLookTop": "Always look at top card",
+    "topLibrary": "Top of library...",
+    "bottomLibrary": "Bottom of library...",
+    "playTopFaceDown": "Play top card face down",
+    "putTopOnBottom": "Put top card on bottom",
+    "moveTopNGrave": "Move top cards to graveyard...",
+    "moveTopNGraveFaceDown": "Move top cards to graveyard face down...",
+    "moveTopExile": "Move top card to exile",
+    "moveTopNExile": "Move top cards to exile...",
+    "moveTopNExileFaceDown": "Move top cards to exile face down...",
+    "shuffleTop": "Shuffle top cards...",
+    "promptMoveTop": "Move top cards to {target}",
+    "promptShuffleTop": "Shuffle top cards of library",
+    "drawBottom": "Draw bottom card",
+    "drawBottomN": "Draw bottom cards...",
+    "promptDrawBottom": "Draw bottom cards",
+    "promptDrawTop": "Draw cards",
+    "playBottom": "Play bottom card",
+    "playBottomFaceDown": "Play bottom card face down",
+    "putBottomOnTop": "Put bottom card on top",
+    "moveBottomGrave": "Move bottom card to graveyard",
+    "moveBottomNGrave": "Move bottom cards to graveyard...",
+    "moveBottomNGraveFaceDown": "Move bottom cards to graveyard face down...",
+    "moveBottomExile": "Move bottom card to exile",
+    "moveBottomNExile": "Move bottom cards to exile...",
+    "moveBottomNExileFaceDown": "Move bottom cards to exile face down...",
+    "shuffleBottom": "Shuffle bottom cards...",
+    "promptMoveBottom": "Move bottom cards to {target}",
+    "promptShuffleBottom": "Shuffle bottom cards of library",
+    "openDeckEditor": "Open deck in deck editor",
+    "noPlayers": "(no players)",
+    "actionMove": "Move",
+    "actionDraw": "Draw",
+    "actionShuffle": "Shuffle"
+  },
+  "HandMenu": {
+    "view": "View hand",
+    "sort": "Sort hand by...",
+    "sortName": "Name",
+    "sortType": "Type",
+    "sortManaValue": "Mana Value",
+    "reveal": "Reveal hand to...",
+    "mulliganChoose": "Take mulligan (Choose hand size)",
+    "mulliganSame": "Take mulligan (Same hand size)",
+    "mulliganMinusOne": "Take mulligan (Hand size - 1)",
+    "move": "Move hand to...",
+    "topLibrary": "Top of library",
+    "bottomLibrary": "Bottom of library"
+  },
+  "PlayerInfoPanel": {
+    "life": "{name}'s life",
+    "lifeHint": "Click or Up arrow: gain 1. Right-click or Down arrow: lose 1. Enter or Ctrl+L: set.",
+    "manaPool": "Mana pool",
+    "playerMenu": "{name}'s player menu",
+    "commander": "Commander: {name}",
+    "mana": {
+      "W": "White",
+      "U": "Blue",
+      "B": "Black",
+      "R": "Red",
+      "G": "Green",
+      "C": "Colorless",
+      "O": "Other"
+    }
+  },
+  "PlayerList": {
+    "empty": "no players",
+    "noSpectators": "no spectators",
+    "unknown": "(unknown)",
+    "host": "Host",
+    "moreActions": "More actions for {name}",
+    "role": {
+      "judge": "Judge",
+      "spectator": "Spectator",
+      "conceded": "Conceded",
+      "player": "Player"
+    }
+  },
+  "PlayerListContextMenu": {
+    "label": "Actions for {name}",
+    "copyHash": "Copy hash to clipboard",
+    "userDetails": "User details",
+    "privateChat": "Private chat",
+    "addBuddy": "Add to buddy list",
+    "removeBuddy": "Remove from buddy list",
+    "addIgnore": "Add to ignore list",
+    "removeIgnore": "Remove from ignore list",
+    "kick": "Kick from game"
+  },
+  "PlayerListDialogs": {
+    "unknownUser": "(unknown user)",
+    "close": "Close",
+    "realName": "Real name",
+    "country": "Country",
+    "accountAge": "Account age",
+    "userLevel": "User level"
+  },
+  "HandZone": {
+    "button": "Hand — {count, plural, one {# card} other {# cards}}",
+    "menu": "Hand"
+  },
+  "PendingTargetAnnouncer": {
+    "arrow": "Choose a target for the arrow from {name}: press Enter on a card, or on a player's life. Escape cancels.",
+    "attach": "Choose a battlefield card to attach {name} to, and press Enter on it. Escape cancels.",
+    "thisCard": "this card"
+  },
+  "PlayerBoard": {
+    "seat": "{name}'s seat",
+    "battlefield": "{name}'s battlefield, {count, plural, one {# card} other {# cards}}",
+    "stack": "{name}'s stack, {count, plural, one {# card} other {# cards}}",
+    "hand": "{name}'s hand, {count, plural, one {# card} other {# cards}}",
+    "playerMenu": "Player \"{name}\"",
+    "cardKeys": "Arrow keys move between cards and select; Shift and an arrow extends the selection, Ctrl and an arrow moves without selecting, and Space marks or unmarks a card. Enter plays or taps, M moves to a zone and position you choose, Shift+F10 opens the card menu, hold Z to zoom. Tab is Next phase; F6 moves on to the next control.",
+    "you": "You"
+  },
+  "SeatCard": {
+    "faceDown": "Face-down card {id}",
+    "tapped": "tapped",
+    "doesntUntap": "doesn't untap",
+    "attached": "attached",
+    "pt": "power and toughness {pt}",
+    "counter": "{count, plural, one {# counter {letter}} other {# counters {letter}}}",
+    "annotation": "note: {text}",
+    "counterBadge": "Counter {letter}: {count}"
+  },
+  "ZoneStack": {
+    "library": "Library",
+    "graveyard": "Graveyard",
+    "exile": "Exile",
+    "pile": "{zone}, {count, plural, one {# card} other {# cards}}",
+    "pileWithTop": "{zone}, {count, plural, one {# card} other {# cards}}, top: {top}",
+    "hand": "Hand, {count, plural, one {# card} other {# cards}}"
+  },
+  "CreateTokenDialog": {
+    "title": "Create token",
+    "search": "Search tokens",
+    "noTokens": "No predefined tokens available.",
+    "placeholder": {
+      "powerToughness": "e.g. 3/3"
+    },
+    "destroyOnZoneChange": "Destroy token when it leaves the table",
+    "faceDown": "Create face-down (Only hides name)",
+    "validation": {
+      "nameRequired": "Name is required"
+    }
+  },
+  "DeckSelectDialog": {
+    "title": "Select Deck",
+    "instructions": "Pick a .cod file from your computer or paste its XML below, then click Submit Deck. After the server accepts the deck, the Ready button unlocks.",
+    "deckFile": "Deck file",
+    "chooseFile": "Choose .cod file",
+    "noFile": "No file selected",
+    "pasteDivider": "— or paste XML below —",
+    "deckList": "Deck list",
+    "deckListPlaceholder": "<?xml version=\"1.0\"?>\n<cockatrice_deck version=\"1\">\n  ...\n</cockatrice_deck>",
+    "deckHash": "Deck hash: {hash}",
+    "leave": "Leave Game",
+    "submit": "Submit Deck",
+    "ready": "Ready",
+    "unready": "Unready",
+    "error": {
+      "readFile": "Could not read the selected file",
+      "invalidCod": "Not a valid Cockatrice deck (.cod) file"
+    }
+  },
+  "GameInfoDialog": {
+    "title": "Game info",
+    "gameName": "Game {id}",
+    "noDescription": "(no description)",
+    "none": "(none)",
+    "yes": "Yes",
+    "no": "No",
+    "players": "Players",
+    "row": {
+      "gameId": "Game ID",
+      "name": "Name",
+      "description": "Description",
+      "started": "Started",
+      "elapsed": "Elapsed",
+      "host": "Host"
+    },
+    "tag": {
+      "host": "host",
+      "spectator": "spectator",
+      "judge": "judge",
+      "you": "you"
+    }
+  },
+  "IncomingRevealDialog": {
+    "title": "{player} reveals their {zone}",
+    "titleUnknownSender": "A player reveals their {zone}",
+    "moveLent": "Move {name} to a battlefield"
+  },
+  "LobbyGameInfoDialog": {
+    "open": "Game info",
+    "noDescription": "No description",
+    "row": {
+      "description": "Description",
+      "host": "Host",
+      "format": "Format",
+      "seats": "Seats",
+      "whoCanJoin": "Who can join",
+      "password": "Password",
+      "spectators": "Spectators",
+      "decklists": "Decklists"
+    },
+    "format": {
+      "any": "Any",
+      "unknown": "Unknown"
+    },
+    "seats": "{taken} of {max} taken",
+    "audience": "{audience, select, buddies {The host's buddies} registered {Registered players} other {Anyone, guests included}}",
+    "password": "{set, select, yes {Set} other {None}}",
+    "spectators": "{allowed, select, no {No one can watch} other {Allowed{chat, select, yes {, can chat} other {}}{seeAll, select, yes {, see every hand} other {}}{needPassword, select, yes {, need the password} other {}}}}",
+    "decklists": "{shared, select, yes {Shared when decks load} other {Not shared}}"
+  },
+  "MoveCardsDialog": {
+    "title": "Move {count, plural, one {{name}} other {# cards}}",
+    "destination": "To",
+    "battlefieldOf": "{name}'s battlefield",
+    "zone": {
+      "hand": "Hand",
+      "stack": "Stack",
+      "library": "Library",
+      "graveyard": "Graveyard",
+      "exile": "Exile"
+    },
+    "row": "Row",
+    "rows": {
+      "lands": "Lands row",
+      "creatures": "Creatures row",
+      "other": "Other permanents row"
+    },
+    "column": "Column (1 to {max})",
+    "position": "Position (1 to {max}; {max} is the end)",
+    "libraryPosition": "Position from the top (1 to {max})",
+    "move": "Move",
+    "cancel": "Cancel"
+  },
+  "MoveTopUntilDialog": {
+    "title": "Put top cards on stack until…",
+    "librarySize": "Library size: {count}",
+    "filter": "Card name (or search expressions)",
+    "hits": "Number of hits",
+    "autoPlay": "Auto play hits",
+    "start": "Start"
+  },
+  "RollDieDialog": {
+    "title": "Roll Dice",
+    "sides": "Number of sides",
+    "count": "Number of dice",
+    "roll": "Roll",
+    "validation": {
+      "positiveInteger": "Enter an integer ≥ 1"
+    }
+  },
+  "ZoneViewPanel": {
+    "expand": "Expand the card view",
+    "close": "Close the card view",
+    "search": "Search the cards",
+    "shuffleOnClose": "shuffle when closing",
+    "noMatch": "No cards match the current filter."
+  },
+  "ZoneViewTitle": {
+    "zone": "{zone} — {player}",
+    "library": "{player}'s library",
+    "top": "Top {count} cards — {player}",
+    "bottom": "Bottom {count} cards — {player}"
+  },
+  "ZoneView": {
+    "groupBy": {
+      "label": "Group by",
+      "none": "Ungrouped",
+      "type": "Group by Type",
+      "cmc": "Group by Mana Value",
+      "color": "Group by Color"
+    },
+    "sortBy": {
+      "label": "Sort by",
+      "none": "Unsorted",
+      "name": "Sort by Name",
+      "cmc": "Sort by Mana Cost",
+      "type": "Sort by Type",
+      "color": "Sort by Colors",
+      "set": "Sort by Set",
+      "pt": "Sort by P/T"
+    },
+    "pileView": "pile view",
+    "pileViewRequiresGrouping": "Pile view requires a grouping",
+    "pileViewDescription": "Stack cards within each group",
+    "searchPlaceholder": "Search by card name (or search expressions)",
+    "position": {
+      "top": "Top",
+      "bottom": "Bottom"
+    },
+    "status": {
+      "writeAccess": "write access granted (drag a card onto your battlefield)",
+      "loadingCardDetails": "Loading card details…",
+      "noCards": "No cards to show."
+    },
+    "group": {
+      "creature": "Creature",
+      "planeswalker": "Planeswalker",
+      "battle": "Battle",
+      "instant": "Instant",
+      "sorcery": "Sorcery",
+      "enchantment": "Enchantment",
+      "artifact": "Artifact",
+      "land": "Land",
+      "other": "Other",
+      "mana": "Mana {value}",
+      "colorless": "Colorless"
+    }
+  },
+  "ZoneLabel": {
+    "title": {
+      "table": "Battlefield",
+      "grave": "Graveyard",
+      "rfg": "Exile",
+      "hand": "Hand",
+      "deck": "Library",
+      "sb": "Sideboard",
+      "stack": "Stack"
+    },
+    "inline": {
+      "table": "battlefield",
+      "grave": "graveyard",
+      "rfg": "exile",
+      "hand": "hand",
+      "deck": "library",
+      "sb": "sideboard",
+      "stack": "stack"
+    }
+  },
+  "GamePrompt": {
+    "token": {
+      "title": "Create tokens",
+      "label": "Number",
+      "create": "Create",
+      "invalid": "Enter 1 to {max}"
+    },
+    "action": {
+      "save": "Save",
+      "set": "Set"
+    },
+    "life": {
+      "title": "Set life total",
+      "label": "Life total",
+      "description": "Numbers or math (e.g. 40+10)",
+      "invalid": "Enter a number or a sum like 40+10"
+    },
+    "powerToughness": {
+      "title": "Change power/toughness",
+      "label": "Change stats to",
+      "placeholder": "e.g. 3/4, +1/+1, or blank to clear"
+    },
+    "annotation": {
+      "title": "Set annotation",
+      "label": "Please enter the new annotation",
+      "placeholder": "Leave blank to clear"
+    },
+    "counter": {
+      "title": "Set counter {counter}",
+      "label": "Counter value"
+    },
+    "library": {
+      "numberOfCards": "Number of cards",
+      "empty": "The library is empty",
+      "moveFromTopTitle": "Place card X cards from top of library",
+      "position": "Place at position (1 = top, {count} = bottom)"
+    },
+    "mulligan": {
+      "title": "Draw hand",
+      "helper": "0 and lower are in comparison to current hand size"
+    },
+    "draw": {
+      "cardsTitle": "Draw cards"
+    },
+    "view": {
+      "topLibrary": "View top cards of library",
+      "bottomLibrary": "View bottom cards of library",
+      "action": "View",
+      "revealTop": "Reveal top cards of library"
+    },
+    "playerCounter": {
+      "title": "Set counter",
+      "current": "Current: {count}"
+    },
+    "validation": {
+      "integer": "Enter an integer.",
+      "integerRange": "Enter an integer between {min} and {max}.",
+      "positiveInteger": "Enter a positive integer",
+      "zeroOrMore": "Enter 0 or more",
+      "oneOrMore": "Enter 1 or more"
+    }
+  },
+  "GameReplay": {
+    "missing": "This replay is no longer open. Replays are kept only until the page is reloaded.",
+    "backToReplays": "Back to replays",
+    "sidebar": {
+      "tag": "Replay",
+      "close": "Close",
+      "closeTitle": "Close the replay"
+    },
+    "timeline": {
+      "label": "Replay timeline",
+      "turns": "Turns",
+      "turn": "T{turn}"
+    },
+    "controls": {
+      "play": "Play",
+      "pause": "Pause",
+      "skipForward": "Skip forward 1 second",
+      "skipBackward": "Skip backward 1 second",
+      "skipForwardBig": "Skip forward 10 seconds",
+      "skipBackwardBig": "Skip backward 10 seconds",
+      "fastForward": "Fast forward ({speed}x)",
+      "settings": "Replay settings"
+    },
+    "settings": {
+      "fastForwardSpeed": "Fast forward speed",
+      "skipEmptySections": "Skip empty sections"
+    }
+  },
+  "Login": {
+    "header": {
+      "title": "Sign in",
+      "brand": "Webatrice",
+      "headline": "Play Magic online, free, with anyone."
+    },
+    "action": {
+      "watchReplay": "Watch a replay",
+      "register": "Create an account",
+      "registerOn": "On {server}",
+      "registerHint": "Free, on the server you pick",
+      "watchReplayHint": "No sign-in needed"
+    },
+    "footer": {
+      "version": "Webatrice {version}",
+      "debugLog": "Debug log"
+    },
+    "toasts": {
+      "accountActivationSuccess": "Account Activated Successfully",
+      "passwordResetSuccessToast": "Password Reset Successfully"
+    },
+    "status": {
+      "serverUnreachable": "Trouble reaching the server. Wait a minute and try again.",
+      "passwordChangeRequired": "An administrator has reset your password. The server will not sign you in until you choose a new one: use “Forgot password?” to set it, then sign in with the new password.",
+      "passwordChangeRequiredAction": "Reset password",
+      "serverFull": "The server has reached its maximum number of users. Please check back later."
+    },
+    "art": {
+      "label": "Art:",
+      "shuffle": "Show different card art"
     }
   },
   "AccountActivationDialog": {
@@ -443,11 +3536,34 @@
   },
   "LoginForm": {
     "label": {
-      "autoConnect": "Auto Connect",
-      "forgot": "Forgot Password",
-      "login": "Login",
-      "savePassword": "Save Password",
-      "savedPassword": "* Saved Password *"
+      "autoConnect": "Sign in automatically",
+      "forgot": "Forgot password?",
+      "login": "Sign in and play",
+      "savePassword": "Save password",
+      "savedPassword": "* Saved Password *",
+      "showPassword": "Show password",
+      "hidePassword": "Hide password"
+    },
+    "phase": {
+      "noServer": "Choose a server to sign in",
+      "testing": "Testing the server…",
+      "unreachable": "Server not reachable",
+      "connecting": "Connecting…",
+      "signingIn": "Signing in…",
+      "entering": "Opening the lobby…"
+    },
+    "steps": {
+      "label": "Connection steps",
+      "server": "Server",
+      "serverTesting": "Testing server",
+      "serverReachable": "Server reachable",
+      "serverUnreachable": "Server not reachable",
+      "signIn": "Sign in",
+      "signingIn": "Signing in",
+      "signedIn": "Signed in",
+      "signInFailed": "Sign-in failed",
+      "lobby": "Lobby",
+      "lobbyOpening": "Opening lobby"
     }
   },
   "RegisterForm": {
@@ -470,107 +3586,1563 @@
       "reset": "Reset Password"
     }
   },
-  "Login": {
-    "header": {
-      "title": "Login",
-      "subtitle": "A cross-platform virtual tabletop for multiplayer card games."
+  "LogSearchForm": {
+    "group": {
+      "filters": "Filters",
+      "locations": "Log locations",
+      "dateRange": "Date range",
+      "results": "Results"
     },
-    "footer": {
-      "registerPrompt": "Not registered yet?",
-      "registerAction": "Create an account",
-      "credit": "Cockatrice is an open source project",
-      "version": "Version"
+    "label": {
+      "userName": "User name",
+      "ipAddress": "IP address",
+      "gameName": "Game name",
+      "gameId": "Game ID",
+      "message": "Message",
+      "rooms": "Main room",
+      "games": "Game room",
+      "chats": "Private chat",
+      "pastDays": "Past days",
+      "today": "Today",
+      "lastHour": "Last hour",
+      "days": "Days",
+      "maximumResults": "At most"
     },
-    "content": {
-      "subtitle1": "Play multiplayer card games online.",
-      "subtitle2": "Cross-platform virtual tabletop for multiplayer card games. Forever free."
+    "description": "At least one filter is required. The more information you put in, the more specific your results will be.",
+    "error": {
+      "noFilter": "You must select at least one filter.",
+      "noDays": "You have to select a valid number of days to locate."
     },
-    "toasts": {
-      "passwordResetSuccessToast": "Password Reset Successfully",
-      "accountActivationSuccess": "Account Activated Successfully"
-    },
-    "status": {
-      "serverUnreachable": "Trouble reaching the server. Wait a minute and try again."
+    "button": {
+      "search": "Get user logs",
+      "clear": "Clear filters"
     }
   },
   "Logs": {
     "tab": {
-      "rooms": "Rooms",
-      "games": "Games",
-      "chats": "Chats"
+      "rooms": "Room logs",
+      "games": "Game logs",
+      "chats": "Chat logs"
     },
     "column": {
       "time": "Time",
-      "senderName": "Sender Name",
+      "senderName": "Sender",
       "senderIp": "Sender IP",
       "message": "Message",
       "targetId": "Target ID",
-      "targetName": "Target Name"
+      "targetName": "Target"
     },
-    "message": {
-      "emptyFilter": "Enter at least one search field before submitting."
-    }
+    "notice": {
+      "title": "Message History",
+      "empty": "There are no messages for the selected filters.",
+      "failed": "Failed to collect message history information."
+    },
+    "title": "Log Results",
+    "tabWithCount": "{tab} ({count})",
+    "pageTitle": "Logs",
+    "subtitle": "Search room, game and private chat history.",
+    "empty": "No messages to show. Search to see results.",
+    "details": "Message details"
   },
-  "LogSearchForm": {
-    "label": {
-      "userName": "Username",
-      "ipAddress": "IP Address",
-      "gameName": "Game Name",
-      "gameId": "GameID",
-      "message": "Message",
-      "rooms": "Rooms",
-      "games": "Games",
-      "chats": "Chats"
+  "ModerationPage": {
+    "search": {
+      "placeholder": "User name",
+      "investigate": "Investigate"
+    },
+    "action": {
+      "resetPassword": "Reset password",
+      "removeAvatar": "Remove avatar"
+    },
+    "info": {
+      "title": "User info",
+      "registered": "Registered",
+      "lastLogin": "Last login",
+      "status": "Status",
+      "adminNotes": "Admin notes",
+      "active": "active",
+      "inactive": "inactive",
+      "admin": "admin",
+      "noNotes": "No notes.",
+      "loadError": "Error loading user info.",
+      "drawer": "User details",
+      "noUser": "No user",
+      "hint": "Search for a user name to see their account, alts and sessions.",
+      "reports": "Reports",
+      "warnings": "Warnings",
+      "bans": "Bans"
+    },
+    "alts": {
+      "title": "Alts",
+      "user": "User",
+      "email": "Email",
+      "clientId": "Client ID",
+      "registered": "Registered",
+      "lastLogin": "Last login",
+      "warns": "Warns",
+      "bans": "Bans",
+      "active": "Active",
+      "empty": "No alts found."
+    },
+    "sessions": {
+      "title": "Sessions",
+      "ip": "IP",
+      "clientId": "Client ID",
+      "start": "Start",
+      "end": "End",
+      "type": "Type",
+      "empty": "No sessions found."
+    },
+    "staff": {
+      "title": "Staff last logins",
+      "user": "User",
+      "level": "Level",
+      "lastLogin": "Last login",
+      "refresh": "Refresh",
+      "empty": "No staff logins to show."
+    },
+    "level": {
+      "admin": "Admin",
+      "developer": "Developer",
+      "moderator": "Moderator",
+      "judge": "Judge"
+    },
+    "value": {
+      "unknown": "Unknown",
+      "loading": "Loading...",
+      "yes": "yes",
+      "no": "no",
+      "activeSession": "Active",
+      "noUser": "Search for a user to fill this table."
+    },
+    "confirm": {
+      "resetTitle": "Reset Password",
+      "reset": "Reset the password of {userName}? A temporary password will be generated and shown to you. The user must change it on their first login.",
+      "avatarTitle": "Remove Avatar",
+      "avatar": "Remove the avatar of {userName}? The user will have to upload a new one."
+    },
+    "password": {
+      "title": "Password reset",
+      "for": "Temporary password for {userName}:",
+      "label": "Temporary password",
+      "secureChannel": "Pass it to the user through a secure channel."
+    },
+    "notice": {
+      "errorTitle": "Error",
+      "resetFailed": "Password reset failed.",
+      "avatarRemovedTitle": "Avatar removed",
+      "avatarRemoved": "The avatar of {userName} has been removed.",
+      "avatarFailed": "Could not remove the avatar."
     },
     "button": {
-      "search": "Search Logs"
+      "ok": "OK",
+      "cancel": "Cancel"
+    },
+    "title": "Moderation",
+    "subtitle": "Look up a user's account, alts and sessions.",
+    "subtitleBasic": "Look up a user's account, warnings and bans.",
+    "needsServer": "Needs server 3.1.",
+    "records": "History",
+    "recordAction": {
+      "warnHistory": "Warn history",
+      "banHistory": "Ban history",
+      "adminNotes": "Admin notes"
+    },
+    "basic": {
+      "hint": "Search for a user name to see their account, warnings and bans.",
+      "role": "Role",
+      "accountAge": "Account age",
+      "realName": "Real name",
+      "country": "Country",
+      "clientId": "Client ID",
+      "address": "IP address",
+      "countsNote": "Report, warning and ban counts, alts and sessions need server 3.1. The histories below work on this server."
+    }
+  },
+  "People": {
+    "title": "People",
+    "subtitle": "{online} of {buddies} buddies online · {others, plural, one {# other player} other {# other players}} online",
+    "search": {
+      "label": "Search buddies and online players, or type a name to add",
+      "noMatches": "Nobody matches “{query}”."
+    },
+    "add": {
+      "buddy": "Add buddy",
+      "ignore": "Ignore",
+      "ignoreLabel": "Ignore a player by name"
+    },
+    "myGame": {
+      "hosting": "You are hosting {description}",
+      "seated": "You are in {description}",
+      "untitled": "an untitled game",
+      "seats": "{seated} of {max} seats taken.",
+      "hintBuddies": "Invite a buddy from the list.",
+      "hintOthers": "No buddies online. Invite anyone from Everyone else online.",
+      "hintNoLink": "To invite from here, set this server's desktop port in its settings."
+    },
+    "online": {
+      "title": "Buddies online",
+      "noBuddies": "No buddies yet. Search for a player above or open Everyone else online and add the people you play with.",
+      "noneOnline": "None of your buddies are online right now."
+    },
+    "activity": {
+      "hosting": "Hosting “{description}” in {room} · {open, plural, one {# seat open} other {# seats open}}",
+      "waiting": "Waiting in “{description}” in {room} · {open, plural, one {# seat open} other {# seats open}}",
+      "playing": "Playing “{description}” in {room} · {minutes} min",
+      "playingNoTime": "Playing “{description}” in {room}",
+      "untitled": "game #{gameId}",
+      "idle": "Online, not in a game",
+      "unknown": "Online"
+    },
+    "action": {
+      "join": "Join",
+      "joinLabel": "Join {name}'s game",
+      "watch": "Watch",
+      "watchLabel": "Spectate {name}'s game",
+      "invite": "Invite",
+      "inviteLabel": "Invite {name} to your game",
+      "message": "Message",
+      "messageLabel": "Message {name}",
+      "messageUnread": "Message {name}, {count} unread",
+      "more": "More actions for {name}",
+      "addBuddy": "Add {name} to buddies",
+      "unignore": "Stop ignoring {name}",
+      "profile": "Open {name}'s profile"
+    },
+    "offline": {
+      "title": "Offline buddies"
+    },
+    "others": {
+      "title": "Everyone else online"
+    },
+    "ignored": {
+      "title": "Ignored",
+      "empty": "You are not ignoring anyone."
+    },
+    "section": {
+      "preview": "{count, plural, =1 {{first}} =2 {{first} and {second}} other {{first}, {second} and {more} more}}"
+    },
+    "join": {
+      "roomTimeout": "Could not open the game's room in time. Try again, or join the room from Play first."
     }
   },
   "Player": {
     "title": "User Information",
+    "moderation": "Moderation",
     "label": {
       "realName": "Real Name",
       "location": "Location",
       "userLevel": "User Level",
       "accountAge": "Account Age"
     },
-    "level": {
-      "administrator": "Administrator",
-      "moderator": "Moderator",
-      "registered": "Registered user",
-      "unregistered": "Unregistered user",
-      "judge": "Judge"
-    },
-    "age": {
-      "unknown": "Unknown",
-      "days": "{count, plural, one {# day} other {# days}}",
-      "daysWithYears": "{years, plural, one {# year} other {# years}}, {days, plural, one {# day} other {# days}}"
-    },
     "action": {
       "addBuddy": "Add to Buddy List",
       "removeBuddy": "Remove from Buddy List",
       "addIgnore": "Add to Ignore List",
       "removeIgnore": "Remove from Ignore List",
-      "message": "Message",
-      "warn": "Warn User",
-      "ban": "Ban from Server",
       "notFound": "User not found or still loading…"
     }
   },
+  "Replays": {
+    "title": "Replays",
+    "subtitle": "{matches} matches stored on the server · {files} files in this browser",
+    "subtitleLocal": "{files} files in this browser",
+    "action": {
+      "openFile": "Open .cor file",
+      "import": "Import to library",
+      "delete": "Delete",
+      "submitCode": "Open share code"
+    },
+    "source": {
+      "label": "Source",
+      "all": "All",
+      "server": "On the server",
+      "local": "On this device"
+    },
+    "group": {
+      "today": "Today",
+      "yesterday": "Yesterday",
+      "week": "Earlier this week",
+      "older": "Older"
+    },
+    "list": {
+      "label": "Matches",
+      "search": "Search replays",
+      "searchPlaceholder": "Search players or game names",
+      "loading": "Loading replays…",
+      "empty": "No replays yet. Finished games you played while registered appear here; you can also import .cor files.",
+      "noMatches": "No replays match your search.",
+      "oneGame": "1 game",
+      "games": "{count} games",
+      "kept": "Kept",
+      "notKept": "Not kept",
+      "savedIn": "Saved in {folder}",
+      "savedHere": "Saved in this browser",
+      "onlyHere": "Only in this browser",
+      "fileSize": "{size} KB"
+    },
+    "detail": {
+      "label": "Replay details",
+      "empty": "Select a match to see its games and preview a replay.",
+      "gameNumber": "Game #{id}",
+      "total": "{duration} total",
+      "imported": "Imported {date}",
+      "versus": "vs",
+      "games": "Games in this match",
+      "keep": "Keep",
+      "kept": "Kept",
+      "shareCode": "Share code",
+      "download": "Download",
+      "saveToLibrary": "Save to library",
+      "inLibrary": "In library",
+      "saveMissing": "Save {count} missing to library",
+      "deleteFromServer": "Delete from server",
+      "saveAsFile": "Save as file",
+      "deleteFile": "Delete from this browser"
+    },
+    "preview": {
+      "title": "Preview {name}",
+      "serverHint": "Loading the preview downloads the replay and replays it in your browser, so you can scrub to a moment before opening it.",
+      "localHint": "Loading the preview reads the replay from your library and replays it in your browser, so you can scrub to a moment before opening it.",
+      "downloadAndPreview": "Download and preview",
+      "readAndPreview": "Read and preview",
+      "loading": "Loading…",
+      "retry": "Try again",
+      "failed": "Could not load the preview: {error}",
+      "loadedServer": "Downloaded replay #{id} from the server and replayed it here to draw this preview.",
+      "loadedLocal": "Read {name} from your library and replayed it here to draw this preview."
+    },
+    "notice": {
+      "error": "Error",
+      "failed": "Failed",
+      "imported": "Import finished"
+    },
+    "local": {
+      "deleteTitle": "Delete local file",
+      "deleteMessage": "Are you sure you want to delete this replay from this browser?",
+      "deleteFailed": "Could not delete the replay.",
+      "loadFailed": "Could not read the local replay library.",
+      "saveFailed": "Could not save the replay to the local library.",
+      "missingData": "The replay data for this entry is missing.",
+      "readFailed": "Could not read the replay from the local library.",
+      "invalidFile": "\"{name}\" is not a Cockatrice replay (.cor) file.",
+      "tooLarge": "These files are too large to be replays and were not imported: {names}"
+    },
+    "server": {
+      "disconnected": "Connect to a server to see the replays stored for your account.",
+      "unregistered": "Only registered users can store replays on the server.",
+      "replayTitle": "Replay #{id}",
+      "matchReplayTitle": "{name} (#{id})",
+      "deleteTitle": "Delete remote replay",
+      "deleteMessage": "Are you sure you want to delete this match's replays from the server?",
+      "deleteFailed": "Could not delete the replay.",
+      "keepFailed": "Could not change the expiration lock.",
+      "downloadFailed": "Could not download the replay.",
+      "listFailed": "Could not load the replays stored on the server.",
+      "unreadable": "The server sent a replay that could not be read."
+    },
+    "share": {
+      "codeTitle": "Replay Share Code",
+      "codeMessage": "Others can use this code to add the replay to their list of remote replays:",
+      "copy": "Copy to clipboard",
+      "copied": "Copied",
+      "ok": "OK",
+      "codeLabel": "Replay share code",
+      "codeRequired": "Enter a share code.",
+      "getFailedTitle": "Failed to get code",
+      "getFailed": "Could not get replay code",
+      "submitFailedTitle": "Failed to submit code",
+      "notPermitted": "Either this server does not support replay sharing, or does not permit replay sharing for you.",
+      "foundTitle": "Replay code found",
+      "found": "Replay was added, or you already had access to it.",
+      "notFound": "Replay code not found",
+      "unexpected": "Unexpected error"
+    }
+  },
+  "Reports": {
+    "loading": "Loading...",
+    "loadFailed": "Failed to load reports.",
+    "count": "{count, plural, one {# report} other {# reports}}",
+    "refresh": "Refresh",
+    "column": {
+      "id": "ID",
+      "age": "Age",
+      "reportedUser": "Reported user",
+      "category": "Category",
+      "status": "Status",
+      "assignedTo": "Assigned",
+      "nobody": "Nobody"
+    },
+    "age": {
+      "minutes": "{count} min",
+      "hours": "{count} h",
+      "days": "{count} d"
+    },
+    "view": {
+      "unresolved": "Unresolved",
+      "open": "Open",
+      "assigned": "Assigned",
+      "resolved": "Resolved",
+      "dismissed": "Dismissed",
+      "all": "All"
+    },
+    "drawer": {
+      "label": "Report {id}",
+      "subtitle": "{reporter} reported {reported} · {time}",
+      "game": "Game #{gameId}",
+      "mineSubtitle": "You reported {reported} · {time}"
+    },
+    "thread": {
+      "noDescription": "No description.",
+      "chatGroup": "Chat log",
+      "chatCaveat": "Captured from {name}'s client. It may be incomplete or edited; check it against the server log or replay.",
+      "noChatLog": "No chat log attached.",
+      "comments": "Replies",
+      "threadWith": "Thread with {name}",
+      "noComments": "No comments yet.",
+      "detailsFailed": "Failed to load report details.",
+      "addComment": "Add a comment",
+      "commentPlaceholder": "Add to your report (moderators will see it)",
+      "replyPlaceholder": "Comment to {name} (they will see it)",
+      "closedPlaceholder": "This report is closed.",
+      "send": "Send",
+      "commentFailed": "Failed to send comment.",
+      "moderatorPrefix": "Moderator",
+      "youPrefix": "You",
+      "reporterPrefix": "Reporter",
+      "resolution": "Resolution note:"
+    },
+    "mine": {
+      "title": "My reports",
+      "subtitle": "Reports you filed, and what moderators said about them."
+    },
+    "queue": {
+      "title": "Reports",
+      "searchPlaceholder": "Search reports",
+      "filter": "Report status",
+      "shownOfTotal": "{shown} of {total, plural, one {# report} other {# reports}}",
+      "assign": "Assign to me",
+      "resolve": "Resolve",
+      "resolveWithNote": "Resolve with note...",
+      "dismiss": "Dismiss...",
+      "viewReplay": "Replay",
+      "joinGame": "Join",
+      "assigning": "Assigning...",
+      "assignedDone": "Assigned.",
+      "assignFailed": "Assignment failed.",
+      "resolving": "Resolving...",
+      "dismissing": "Dismissing...",
+      "done": "Done.",
+      "actionFailed": "Action failed.",
+      "loadingReplay": "Loading replay...",
+      "noReplay": "No replay available for this game.",
+      "replayOpened": "Replay opened.",
+      "replayParseFailed": "Failed to parse replay.",
+      "replayTitle": "Report game #{gameId}",
+      "noRoom": "No room recorded for this report, use the replay instead.",
+      "joining": "Attempting to join game...",
+      "resolveTitle": "Resolve report",
+      "dismissTitle": "Dismiss report",
+      "resolveNoteLabel": "Resolution note (optional):",
+      "dismissNoteLabel": "Optional note:",
+      "ok": "OK",
+      "joinFailedTitle": "Join game"
+    },
+    "status": {
+      "open": "Open",
+      "assigned": "Assigned",
+      "resolved": "Resolved",
+      "dismissed": "Dismissed"
+    },
+    "userContext": {
+      "title": "Reported user",
+      "reports": "reports",
+      "warns": "warnings",
+      "bans": "bans",
+      "adminNotes": "Admin notes",
+      "recentReports": "Recent reports against this user",
+      "ageValue": "{days} days old · since {date}",
+      "none": "No notes.",
+      "noRecent": "No previous reports against this user.",
+      "loadFailed": "Error loading user info.",
+      "recentLine": "[{date}] #{id} by {reporter} [{status}]: {category}",
+      "openProfile": "Open profile",
+      "newAccount": "New account"
+    },
+    "stats": {
+      "title": "Report statistics",
+      "loading": "Loading statistics...",
+      "failed": "Error loading statistics.",
+      "line": "Last 24 h {day} · 7 days {week} · average time to resolve {hours} h",
+      "total": "Total: {total} reports ({open} open, {assigned} assigned, {resolved} resolved or dismissed)",
+      "month": "Last 30 days: {month}",
+      "weekCompare": "This week {thisWeek}, last week {lastWeek} ({change})",
+      "weekChangeNew": "new",
+      "topCategories": "Top categories",
+      "mostReported": "Most reported users",
+      "topReporters": "Top reporters",
+      "none": "None yet."
+    }
+  },
+  "Room": {
+    "title": "Games in <room>{room}</room>",
+    "createGame": "Create game"
+  },
+  "GameRow": {
+    "untitled": "Game #{id}, no description",
+    "passwordIcon": "Password",
+    "age": {
+      "new": "<1 min",
+      "minutes": "{count} min",
+      "hours": "{count} h"
+    },
+    "restriction": {
+      "buddiesOnly": "Buddies only",
+      "registeredOnly": "Registered users",
+      "openDecklists": "Open decklists"
+    },
+    "watching": {
+      "label": "{count} watching",
+      "none": "None",
+      "chat": "chat",
+      "hands": "hands"
+    },
+    "blocked": {
+      "pending": "Joining another game…",
+      "started": "This game has started",
+      "full": "Every seat is taken",
+      "notAllowed": "Spectators not allowed"
+    },
+    "join": "Join {game}",
+    "joinWithPassword": "Join {game} (asks for the password)",
+    "joinBlocked": "Join {game}: {reason}",
+    "spectate": "Spectate {game}",
+    "spectateBlocked": "Spectate {game}: {reason}",
+    "more": "More for {game}"
+  },
+  "GamesList": {
+    "heading": "Games in {room}",
+    "empty": "No games open right now. Create one to start playing.",
+    "emptyFiltered": "No games match your filters.",
+    "column": {
+      "game": "Game · {sort}",
+      "seats": "Seats",
+      "watching": "Watching",
+      "actions": "Actions"
+    },
+    "action": {
+      "spectate": "Spectate",
+      "judge": "Join as judge",
+      "judgeSpectate": "Spectate as judge",
+      "info": "Game info",
+      "copyLink": "Copy game link"
+    },
+    "error": {
+      "title": "Error"
+    }
+  },
+  "MoreFilters": {
+    "creators": {
+      "label": "Created by",
+      "placeholder": "Host names, comma-separated"
+    },
+    "maxAge": {
+      "label": "Created within",
+      "any": "Any time",
+      "minutes": "{count, plural, one {Last minute} other {Last # minutes}}",
+      "hours": "{count, plural, one {Last hour} other {Last # hours}}"
+    },
+    "section": {
+      "hide": "Hide",
+      "spectators": "Spectators"
+    },
+    "hide": {
+      "password": "Hide password-protected games",
+      "notBuddyCreated": "Hide games not created by buddies",
+      "ignoredUsers": "Hide games by ignored users",
+      "buddiesOnly": "Hide buddies-only games",
+      "openDecklist": "Hide open-decklist games"
+    },
+    "spectators": {
+      "canWatch": "Only games spectators can watch",
+      "needPassword": "Include games where spectators need a password",
+      "canChat": "Only where spectators can chat",
+      "canSeeHands": "Only where spectators see hands"
+    },
+    "done": "Done"
+  },
+  "PasswordPopover": {
+    "label": "Password for {game}"
+  },
+  "QuickFilterBar": {
+    "search": "Search game descriptions",
+    "format": {
+      "label": "Format",
+      "all": "All",
+      "many": "{count} formats"
+    },
+    "players": {
+      "label": "Players",
+      "any": "Any",
+      "exactly": "{count}",
+      "atLeast": "{count}+",
+      "atMost": "Up to {count}",
+      "between": "{min}–{max}",
+      "presets": "Common sizes",
+      "preset": {
+        "any": "Any",
+        "two": "2 players",
+        "threeFour": "3–4 players",
+        "fivePlus": "5+ players"
+      },
+      "min": "At least",
+      "max": "At most",
+      "hint": "Counts the seats a game has, not who has joined."
+    },
+    "hideFullAndStarted": "Hide full & started",
+    "hidePassword": "Hide password",
+    "more": "More filters",
+    "moreActive": "{count, plural, one {# filter on} other {# filters on}}",
+    "count": "<b>{visible}</b> of {total, plural, one {# game} other {# games}}",
+    "clearAll": "Clear all",
+    "removeChip": "Remove filter: {filter}",
+    "chip": {
+      "creators": "Created by {names}",
+      "maxAge": "Created: {age}",
+      "hidePassword": "Hide password",
+      "hideBuddiesOnly": "Hide buddies-only games",
+      "hideIgnored": "Hide games by ignored users",
+      "hideNotBuddy": "Only games by buddies",
+      "hideOpenDecklist": "Hide open-decklist games",
+      "spectators": "Spectators can watch"
+    },
+    "sort": {
+      "label": "Sort: {sort}",
+      "menu": "Sort games",
+      "newest": "Newest first",
+      "oldest": "Oldest first",
+      "description": "Description A–Z",
+      "host": "Host A–Z",
+      "custom": "Custom order"
+    }
+  },
+  "RoomChat": {
+    "notice": {
+      "chatFlood": "You are flooding the chat. Please wait a couple of seconds.",
+      "notSent": "Message not sent: {reason}"
+    },
+    "log": "{room} chat",
+    "input": "Message {room}",
+    "subtitle": "Room chat",
+    "empty": "No messages yet — say hi."
+  },
+  "RoomUsers": {
+    "title": "People",
+    "count": "{count, plural, other {# in {room}}}",
+    "search": "Find a player",
+    "list": "People in {room}",
+    "online": "{count, plural, other {# online}}",
+    "section": {
+      "buddies": "Buddies",
+      "offline": "Offline buddies",
+      "staff": "Staff here",
+      "everyone": "Everyone in {room}"
+    },
+    "hosting": "Hosting {game}",
+    "untitledGame": "Game #{id}",
+    "inRoom": "In {room}",
+    "elsewhere": "Online, not in this room",
+    "showGames": "Show {name}’s games",
+    "message": "Message {name}",
+    "preview": "{count, plural, =0 {{names}. Show everyone} other {{names} and # more. Show everyone}}",
+    "empty": {
+      "buddies": "None of your buddies are online.",
+      "search": "No one here matches."
+    }
+  },
+  "CreateGameDialog": {
+    "title": "Create a game in {room}",
+    "startFrom": "Start from",
+    "preset": {
+      "commanderPod": {
+        "name": "Commander pod"
+      },
+      "oneVsOne": {
+        "name": "Competitive 1v1"
+      },
+      "friendsOnly": {
+        "name": "Friends only"
+      },
+      "duelCommander": {
+        "name": "Duel Commander"
+      },
+      "needsAccount": "Needs a registered account",
+      "customised": "Customised"
+    },
+    "label": {
+      "description": "Description",
+      "format": "Format",
+      "password": "Password (optional)",
+      "maxPlayers": "Seats",
+      "startingLifeTotal": "Starting life",
+      "onlyBuddies": "Buddies only",
+      "onlyRegistered": "Registered only",
+      "spectatorsAllowed": "Can watch",
+      "spectatorsNeedPassword": "Need the password",
+      "spectatorsCanTalk": "Can chat",
+      "spectatorsSeeEverything": "See every hand",
+      "joinAsSpectator": "Host without playing",
+      "shareDecklistsOnLoad": "Share decklists",
+      "joinAsJudge": "Join as judge",
+      "remember": "Remember as my default"
+    },
+    "placeholder": {
+      "password": "Anyone who can see the game can join"
+    },
+    "format": {
+      "any": "Any"
+    },
+    "summary": {
+      "game": "{seats, plural, one {# seat} other {# seats}} for {audience, select, buddies {your buddies} registered {registered players} other {anyone, guests included}}{password, select, yes {, with a password} other {}}, {life} life{hasFormat, select, yes {, {format}} other {}}.",
+      "watch": "{allowed, select, no {No one can watch.} other {People can watch{chat, select, yes { and chat} other {}}{seeAll, select, yes {, seeing every hand} other {}}{needPassword, select, yes {, with the password} other {}}.}}",
+      "decklists": "Decklists are shared when decks load.",
+      "hostWatches": "You host without taking a seat.",
+      "hostJudges": "You join as judge."
+    },
+    "advanced": {
+      "title": "Advanced",
+      "show": "{count, plural, one {Show # setting} other {Show # settings}}",
+      "hide": "Hide"
+    },
+    "section": {
+      "table": "Table",
+      "whoCanJoin": "Who can join",
+      "spectators": "Spectators"
+    },
+    "error": {
+      "range": "Enter a whole number from {min} to {max}"
+    },
+    "action": {
+      "create": "Create game"
+    }
+  },
+  "RoomGameInfoDialog": {
+    "host": "Host",
+    "formats": "Format",
+    "created": "Created",
+    "seats": "Seats",
+    "rules": "Who can join",
+    "spectators": "Spectators",
+    "gameId": "Game number",
+    "unknown": "Unknown",
+    "anyone": "Anyone can join",
+    "rule": {
+      "password": "Password"
+    }
+  },
+  "ReconnectingHome": {
+    "status": "Reconnecting — showing your last session. Actions will be available when live data arrives."
+  },
+  "RoomsList": {
+    "joinError": {
+      "title": "Error",
+      "notFound": "Failed to join the server room: it doesn't exist on the server.",
+      "contextError": "The server thinks you are in the server room but your client is unable to display it. Try restarting your client.",
+      "userLevelTooLow": "You do not have the required permission to join this server room.",
+      "unknown": "Failed to join the server room due to an unknown error: {code}."
+    },
+    "title": "Rooms",
+    "count": "{count, plural, other {# on this server}}",
+    "summary": "{games, plural, one {# game} other {# games}} · {people, plural, one {# person} other {# people}}",
+    "restricted": "Restricted: {level}",
+    "joined": "Joined",
+    "empty": "No rooms available.",
+    "open": "Open",
+    "openLabel": "Open {room}",
+    "joinLabel": "Join {room}"
+  },
+  "BuddiesOnline": {
+    "title": "Buddies online",
+    "count": "{online} of {total}",
+    "hosting": "Hosting",
+    "untitledGame": "game #{id}",
+    "online": "Online",
+    "showGames": "Show {name}'s games",
+    "message": "Message {name}",
+    "empty": "{count, plural, one {Your buddy isn't online right now.} other {None of your # buddies is online right now.}}",
+    "allBuddies": "See all buddies"
+  },
+  "BuddyGames": {
+    "title": "Hosted by your buddies",
+    "whereOne": "in {room}, open seats first",
+    "whereMany": "in the {count} rooms you joined, open seats first",
+    "allGames": "All games in {room}",
+    "empty": "None of your buddies is hosting a game in your rooms right now.",
+    "emptyNoBuddies": "Add buddies on the People page to see when they're online and the games they host.",
+    "emptyNotJoined": "Join a room to see the games your buddies host there.",
+    "findPeople": "Find people",
+    "joinRoom": "Join {room}"
+  },
+  "HomeGames": {
+    "passwordTitle": "Join game",
+    "errorTitle": "Couldn't join the game"
+  },
+  "HomeHero": {
+    "online": "{count, plural, other {# online}}",
+    "games": "{count, plural, one {# game} other {# games}}",
+    "welcome": "Welcome back, {name}",
+    "usualRoomJoined": "{room}, your usual room, has {games, plural, one {# game} other {# games}}; {open, plural, =0 {none has an open seat right now} one {# has an open seat right now} other {# have open seats right now}}.",
+    "usualRoom": "{room}, your usual room, has {games, plural, one {# game} other {# games}}.",
+    "noRooms": "This server has no rooms yet.",
+    "play": "Play in {room}",
+    "createGame": "Create game"
+  },
+  "OpenGames": {
+    "title": "Open seats in {room}",
+    "where": "closest to starting first",
+    "allGames": "All {count, plural, one {# game} other {# games}}",
+    "empty": "No open seats in {room} right now. Create a game and players can join you.",
+    "createGame": "Create game"
+  },
+  "RecentDecks": {
+    "title": "Recent decks",
+    "where": "opened in this browser",
+    "allDecks": "All decks",
+    "newDeck": "New deck",
+    "empty": "Coming from desktop Cockatrice? Bring your decks, replays and custom sets over in one go, or start a new deck.",
+    "cards": "{count, plural, one {# card} other {# cards}}",
+    "bracket": "· Bracket {level}",
+    "emptySaved": "{count, plural, one {You have # deck saved on this server.} other {You have # decks saved on this server.}} Open one and it shows up here.",
+    "openDecks": "Open your decks",
+    "importDeck": "Import from Cockatrice"
+  },
+  "ServerAnnouncement": {
+    "title": "From the server",
+    "empty": "No announcement from this server.",
+    "showMore": "Show more",
+    "showLess": "Show less"
+  },
   "Settings": {
     "title": "Settings",
-    "navLabel": "Settings",
-    "tab": {
-      "shortcuts": "Shortcuts"
+    "subtitle": "Changes apply as you make them",
+    "searchLabel": "Search settings",
+    "searchPlaceholder": "Search all {settings} settings and {shortcuts} shortcuts",
+    "clearSearch": "Clear search",
+    "matchCount": "{count, plural, one {# matching setting} other {# matching settings}}{shortcuts, plural, =0 {} one {, # shortcut} other {, # shortcuts}}",
+    "noResults": "No settings match \"{query}\"",
+    "noResultsHint": "Try a shorter word, like \"card\" or \"sound\".",
+    "jumpTo": "Jump to section",
+    "restoreDefaults": "Restore defaults",
+    "restoreSection": "Restore {section} defaults",
+    "restoreAll": "Restore all defaults",
+    "restoreDefaultsConfirm": {
+      "title": "Restore {section} defaults?",
+      "message": "Every {section} setting goes back to its default. This cannot be undone.",
+      "allTitle": "Restore all defaults?",
+      "allMessage": "Every setting goes back to its default. Picture download URLs and keyboard shortcuts stay as they are. This cannot be undone.",
+      "cancel": "Cancel"
+    },
+    "section": {
+      "appearance": "Appearance",
+      "userInterface": "User Interface",
+      "chat": "Chat",
+      "sound": "Sound",
+      "shortcuts": "Shortcuts",
+      "general": "General",
+      "cardSources": "Card Sources",
+      "storage": "Storage"
+    },
+    "blurb": {
+      "general": "Language, startup and diagnostics",
+      "appearance": "Theme, playmats, how cards look, counter colours",
+      "userInterface": "Clicks, notifications and animations",
+      "cardSources": "Where card pictures come from",
+      "storage": "What this browser keeps for you",
+      "chat": "Mentions, highlights, filters and message macros",
+      "sound": "Sound effects and volume",
+      "shortcuts": "Keys for games, decks, rooms and replays"
+    },
+    "shortcuts": {
+      "title": "Keyboard shortcuts",
+      "summary": "{count} shortcuts, each with its own keys. Change them on the Shortcuts page.",
+      "open": "Open Shortcuts",
+      "matches": "{count, plural, one {# matching shortcut} other {# matching shortcuts}}",
+      "more": "and {count} more on the Shortcuts page",
+      "unbound": "No key"
     }
+  },
+  "PlaymatSettings": {
+    "title": "Playmats",
+    "serverNote": "Playmats are shown on servers that support them (Servatrice 3.1 and later).",
+    "visibility": {
+      "label": "Playmat visibility",
+      "all": "Show all playmats",
+      "ownOnly": "Show own playmat only",
+      "none": "Don't use playmats"
+    },
+    "mode": {
+      "label": "Default collection behavior",
+      "overrideDeck": "Override deck playmat",
+      "fallback": "Fallback if deck has none",
+      "deckOnly": "Deck only, ignore collection",
+      "description": "When a deck has its own playmat, which one you see."
+    },
+    "collection": {
+      "title": "Default playmat collection",
+      "empty": "No playmats yet.",
+      "listMode": "List mode",
+      "fixed": "Fixed (always the first entry)",
+      "roundRobin": "Round-robin (cycle through entries)",
+      "random": "Random (pick one per game)",
+      "cardName": "Card name",
+      "cardNamePlaceholder": "Type a card name...",
+      "add": "Add",
+      "done": "Done",
+      "description": "Card art used as your playmat. The list mode decides which one each game uses.",
+      "addArt": "Add card art",
+      "moveEarlier": "Move {card} earlier",
+      "moveLater": "Move {card} later",
+      "editCrop": "Edit the crop of {card}",
+      "removeCard": "Remove {card}",
+      "cropOf": "Crop of {card}",
+      "cancel": "Cancel"
+    },
+    "crop": {
+      "title": "Crop",
+      "preview": "Playmat preview",
+      "leftMargin": "Left margin (%):",
+      "rightMargin": "Right margin (%):",
+      "verticalOffset": "Vertical offset:",
+      "zoom": "Zoom:"
+    },
+    "validation": {
+      "unknownCard": "Choose a card from your card database.",
+      "tooLong": "Card names must be at most {max} characters.",
+      "lookupFailed": "Could not check the card name. Try again.",
+      "saveFailed": "Could not save playmat settings. Try again."
+    }
+  },
+  "SettingsAppearance": {
+    "group": {
+      "theme": "Theme settings",
+      "tableGrid": "Table grid layout",
+      "handLayout": "Hand layout",
+      "cardRendering": "Card rendering",
+      "cardLayout": "Card layout",
+      "cardCounters": "Card counters",
+      "menus": "Menu settings",
+      "cardPrintings": "Card printings",
+      "zoneBackgrounds": "Zone backgrounds",
+      "signIn": "Sign-in screen"
+    },
+    "themeName": {
+      "label": "Current theme",
+      "description": "Colours, surfaces and accent. Each theme has a light and a dark palette; the palette setting below picks which one you see.",
+      "midnight": "Midnight",
+      "graphite": "Graphite",
+      "carbon": "Carbon"
+    },
+    "themeMode": {
+      "label": "Active theme palette",
+      "description": "System follows your operating system's light or dark setting as it changes.",
+      "light": "Light",
+      "dark": "Dark",
+      "system": "System"
+    },
+    "invertVerticalCoordinate": {
+      "label": "Invert vertical coordinate",
+      "description": "Flip the battlefield rows top to bottom, so lands sit at the top of your side."
+    },
+    "minPlayersForMultiColumnLayout": {
+      "label": "Minimum player count for multi-column layout"
+    },
+    "horizontalHand": {
+      "label": "Display hand horizontally (wastes space)",
+      "description": "Off, your hand is a column beside your life and zones, and every card in it stays in view."
+    },
+    "leftJustifiedHand": {
+      "label": "Enable left justification",
+      "description": "Starts a horizontal hand at the left instead of centring it."
+    },
+    "displayCardNames": {
+      "label": "Display card names on cards having a picture",
+      "description": "A face-down card, and a card whose picture cannot be loaded, always shows its name."
+    },
+    "autoRotateSidewaysLayoutCards": {
+      "label": "Auto-Rotate cards with sideways layout",
+      "description": "Battles, split cards and planes are turned sideways in the card preview so they read upright."
+    },
+    "scaleCards": {
+      "label": "Scale cards on mouse over"
+    },
+    "roundCardCorners": {
+      "label": "Use rounded card corners"
+    },
+    "maxFontSizeForCards": {
+      "label": "Maximum font size for information displayed on cards"
+    },
+    "percentSuffix": "%",
+    "rowsSuffix": "rows",
+    "verticalCardOverlapPercent": {
+      "label": "Minimum overlap percentage of cards on the stack and in vertical hand"
+    },
+    "cardViewInitialRowsMax": {
+      "label": "Maximum initial height for card view window"
+    },
+    "cardViewExpandedRowsMax": {
+      "label": "Maximum expanded height for card view window",
+      "description": "Double-click a card view's title bar to switch between its initial and expanded heights. A size you set by dragging its corner is kept instead."
+    },
+    "cardCounterColor": {
+      "A": "Counter A",
+      "B": "Counter B",
+      "C": "Counter C",
+      "D": "Counter D",
+      "E": "Counter E",
+      "F": "Counter F"
+    },
+    "showShortcutsInMenus": {
+      "label": "Show keyboard shortcuts in right-click menus"
+    },
+    "bumpSetsWithCardsInDeckToTop": {
+      "label": "Bump sets that the deck contains cards from to the top in the printing selector"
+    },
+    "zoneBackgrounds": {
+      "label": "Backgrounds",
+      "description": "A card's art behind a zone of every player's area, cropped like a playmat. A table background shows where no playmat is drawn.",
+      "zone": {
+        "hand": "Hand",
+        "stack": "Stack",
+        "table": "Table",
+        "playerInfo": "Player area"
+      },
+      "none": "No background",
+      "cardName": "Card for {zone}",
+      "set": "Set",
+      "setLabel": "Set the {zone} background",
+      "editLabel": "Edit the {zone} background's crop",
+      "clearLabel": "Clear the {zone} background",
+      "change": "Change",
+      "chooseLabel": "Choose the {zone} background"
+    },
+    "signInCardArt": {
+      "label": "Card art on the sign-in screen",
+      "description": "Shows a card illustration from Scryfall behind the sign-in form. Turn it off to use a plain background and contact no other site before you sign in."
+    }
+  },
+  "SettingsCardSources": {
+    "group": {
+      "downloads": "URL Download Priority"
+    },
+    "pictureUrls": {
+      "label": "Picture download URLs",
+      "description": "Card art is tried from these URLs top to bottom for each printing, after the card database's own picture URL and before the Scryfall fallback."
+    }
+  },
+  "SettingsChat": {
+    "group": {
+      "chat": "Chat settings",
+      "highlight": "Custom alert words",
+      "macros": "In-game message macros"
+    },
+    "chatMention": {
+      "label": "Enable chat mentions",
+      "description": "Highlights @yourname in room chat and alerts you when someone mentions you."
+    },
+    "chatMentionCompleter": {
+      "label": "Enable mention completer",
+      "description": "Typing @ in a chat suggests the names in the room, game or conversation. Use the arrow keys to choose, Enter or Tab to insert, Escape to close."
+    },
+    "chatMentionColor": {
+      "label": "Mention highlight color"
+    },
+    "invertTextColor": {
+      "label": "Invert text color",
+      "description": "White text on the highlight color. Off uses black text."
+    },
+    "ignoreUnregisteredUsers": {
+      "label": "Ignore chat room messages sent by unregistered users"
+    },
+    "ignoreUnregisteredUserMessages": {
+      "label": "Ignore private messages sent by unregistered users"
+    },
+    "ignoreNonBuddyUserMessages": {
+      "label": "Ignore private messages sent by non-buddy users"
+    },
+    "privateMessageFilter": {
+      "description": "Applies to new conversations only. Moderators and administrators always get through."
+    },
+    "showMessagePopups": {
+      "label": "Enable desktop notifications for private messages"
+    },
+    "showMentionPopups": {
+      "label": "Enable desktop notification for mentions"
+    },
+    "roomHistory": {
+      "label": "Enable room message history on join"
+    },
+    "ignoreAllPrivateMessages": {
+      "label": "Ignore all private messages",
+      "description": "Also silences conversations you already have open. Messages from moderators and administrators still arrive."
+    },
+    "useGameTime": {
+      "label": "Use game time instead of local time in game logs",
+      "description": "Each line shows how long the game had been running when it happened."
+    },
+    "highlightWords": {
+      "label": "Alert words",
+      "description": "Separate words with a space, alphanumeric characters only.",
+      "placeholder": "Word1 Word2 Word3"
+    },
+    "chatHighlightColor": {
+      "label": "Alert word highlight color"
+    },
+    "macros": {
+      "label": "Messages",
+      "description": "Quick messages to send during a game, kept in this order.",
+      "empty": "No messages yet.",
+      "placeholder": "Message",
+      "newLabel": "New message",
+      "editLabel": "Edit message {index}",
+      "add": "Add New Message",
+      "save": "Save",
+      "cancel": "Cancel",
+      "edit": "Edit message \"{message}\"",
+      "remove": "Remove message \"{message}\"",
+      "tooLong": "Messages can be at most {max} characters."
+    }
+  },
+  "SettingsGeneral": {
+    "group": {
+      "language": "Language",
+      "version": "Version",
+      "startup": "Startup",
+      "diagnostics": "Diagnostics"
+    },
+    "debugLog": {
+      "label": "Debug log",
+      "description": "Recent client messages, to copy into a bug report. Kept in memory only; passwords are left out.",
+      "button": "View debug log"
+    },
+    "language": {
+      "label": "Language",
+      "description": "The language of menus, dialogs and messages. Missing translations show in English.",
+      "followBrowser": "Use the browser's language"
+    },
+    "notifyAboutMissingFeatures": {
+      "label": "Notify if a feature supported by the server is missing in my client",
+      "description": "Shown once per server each time you open Webatrice."
+    },
+    "startupTab": {
+      "label": "Startup tab",
+      "description": "Where you land after signing in. Reloading the page keeps the page you were on.",
+      "deckStorage": "Deck Storage",
+      "replays": "Game Replays",
+      "server": "Server",
+      "serverRoom": "Server Room"
+    },
+    "startupServer": {
+      "label": "Server",
+      "description": "The room opens when you sign in to this server. Signing in to any other server opens its lobby.",
+      "any": "Any server"
+    },
+    "startupRoom": {
+      "label": "Room",
+      "placeholder": "Room name"
+    }
+  },
+  "SettingsSound": {
+    "group": {
+      "sound": "Sound settings"
+    },
+    "soundEnabled": {
+      "label": "Enable sounds",
+      "description": "Plays a sound for game events, mentions, private messages and buddies signing on or off."
+    },
+    "soundTheme": {
+      "label": "Current sounds theme"
+    },
+    "test": {
+      "label": "Test system sound engine",
+      "button": "Play test sound"
+    },
+    "masterVolume": {
+      "label": "Master volume"
+    }
+  },
+  "SettingsStorage": {
+    "group": {
+      "usage": "Browser storage",
+      "clear": "Cached and imported data"
+    },
+    "loading": "Reading storage...",
+    "cancel": "Cancel",
+    "clearFailed": "Could not clear. Try again.",
+    "usage": {
+      "label": "Storage used",
+      "description": "Webatrice keeps cards, settings and caches in this browser. The browser's own estimate.",
+      "value": "{used} of {quota}",
+      "unavailable": "This browser does not report its storage use."
+    },
+    "table": {
+      "cards": "Cards",
+      "sets": "Sets",
+      "tokens": "Tokens",
+      "formats": "Formats",
+      "info": "Card database info",
+      "cardSources": "Loaded card files",
+      "cardSourcePayloads": "Loaded card file contents",
+      "setPreferences": "Set preferences",
+      "cardDataSettings": "Picture download settings",
+      "scryfallCache": "Scryfall card cache",
+      "replays": "Local replays and folders",
+      "replayData": "Local replay files",
+      "hosts": "Known servers",
+      "settings": "Settings"
+    },
+    "persistent": {
+      "label": "Persistent storage",
+      "description": "Without it, the browser may delete this data when the disk runs low.",
+      "request": "Keep my data",
+      "status": {
+        "granted": "Granted",
+        "refused": "The browser declined",
+        "default": "Not granted"
+      }
+    },
+    "scryfallCache": {
+      "label": "Scryfall card cache",
+      "description": "Card details fetched from Scryfall. They are fetched again when needed.",
+      "count": "{count, plural, one {# card} other {# cards}}",
+      "button": "Clear cache"
+    },
+    "cardData": {
+      "label": "Card database",
+      "description": "The cards, sets and tokens you imported, and the files they came from. Tokens you made in the token editor, set preferences, download URLs, settings, shortcuts and servers are kept.",
+      "count": "{count, plural, one {# entry} other {# entries}}",
+      "button": "Delete card data",
+      "confirm": {
+        "title": "Delete card data?",
+        "message": "This deletes the imported card database. You will need to import it again to see card details offline."
+      }
+    }
+  },
+  "SettingsUserInterface": {
+    "group": {
+      "general": "General interface settings",
+      "notifications": "Notifications settings",
+      "animation": "Animation settings",
+      "deckEditor": "Deck editor/storage settings",
+      "replay": "Replay settings"
+    },
+    "doubleClickToPlay": {
+      "label": "Double-click cards to play them (instead of single-click)"
+    },
+    "clickPlaysAllSelected": {
+      "label": "Clicking plays all selected cards (instead of just the clicked card)",
+      "description": "Applies when the card you click is part of the selection. On the battlefield, a click always taps or untaps the whole selection."
+    },
+    "playToStack": {
+      "label": "Play all nonlands onto the stack (not the battlefield) by default",
+      "description": "When off, double-clicking a permanent in your hand puts it straight onto the battlefield. Instants and sorceries still go to the stack."
+    },
+    "doNotDeleteArrowsInSubPhases": {
+      "label": "Do not delete arrows inside of subphases",
+      "description": "An arrow drawn during combat lasts until combat ends, and one drawn in the beginning phase until the first main phase. Off, every arrow goes at the next phase."
+    },
+    "closeEmptyCardView": {
+      "label": "Close card view window when last card is removed"
+    },
+    "focusCardViewSearchBar": {
+      "label": "Auto focus search bar when card view window is opened"
+    },
+    "annotateTokens": {
+      "label": "Annotate card text on tokens",
+      "description": "A token you create, from a card's token list or the token dialog, carries its rules text as its annotation."
+    },
+    "showDragSelectionCount": {
+      "label": "Show selection count during drag selection"
+    },
+    "showTotalSelectionCount": {
+      "label": "Show total selection count"
+    },
+    "keepGameChatFocus": {
+      "label": "Keep game chat focused when clicking in game (Note: disables card view search bar)",
+      "description": "Clicking cards and the table leaves the focus on the game chat, so you can keep typing."
+    },
+    "notificationsEnabled": {
+      "label": "Mark the browser tab when something happens in your game",
+      "description": "While Webatrice is in a background tab, its title is marked until you come back."
+    },
+    "spectatorNotificationsEnabled": {
+      "label": "Also mark the tab for game events while you are spectating"
+    },
+    "buddyConnectNotificationsEnabled": {
+      "label": "Notify when users in your buddy list connect"
+    },
+    "playBadge": {
+      "label": "Play badge",
+      "description": "What the number on Play in the navigation rail counts: chat in your rooms and games that mentions you, or every unread room line and game event.",
+      "mentions": "Mentions only",
+      "all": "All activity"
+    },
+    "browserNotifications": {
+      "label": "Desktop notifications",
+      "description": "Lets Webatrice show system notifications while its tab is in the background. Without them, notifications appear inside the page.",
+      "status": {
+        "granted": "Allowed",
+        "denied": "Blocked. Allow notifications for this site in your browser settings.",
+        "default": "Not allowed yet",
+        "unsupported": "Not supported by this browser"
+      },
+      "request": "Allow notifications"
+    },
+    "tapAnimation": {
+      "label": "Tap/untap animation"
+    },
+    "openDeckInNewTab": {
+      "label": "Open deck in new tab by default",
+      "description": "Applies to Open deck in the deck editor. On, the deck opens in a new tab; off, it replaces the deck you are editing, asking first if that deck has unsaved changes. Decks opened from My Decks always get their own tab."
+    },
+    "commanderSpellbookIntegration": {
+      "label": "CommanderSpellbook integration",
+      "description": "The Commander bracket estimate sends your deck's card names to Scryfall and Commander Spellbook, external services. Enabled estimates when you ask; Automatic whenever a Commander deck changes.",
+      "unprompted": "Ask before first use",
+      "disabled": "Disabled",
+      "enabled": "Enabled",
+      "automatic": "Automatic"
+    },
+    "replayRewindBufferingMs": {
+      "label": "Buffer time for backwards skip via shortcut",
+      "description": "Skipping back several times within this time rewinds the replay once, after the last skip. 0 rewinds on every skip.",
+      "unit": "ms"
+    },
+    "animations": {
+      "all": {
+        "label": "All animations",
+        "description": "Until you change an animation here, they follow your system's \"reduce motion\" setting. With all four off, the board's other motion stops too: card flips, draw flights, the hand slide, the end step flash and hover transitions."
+      },
+      "enableAll": "Enable all animations",
+      "disableAll": "Disable all animations"
+    },
+    "arrowDrawAnimation": {
+      "label": "Arrow draw animation"
+    },
+    "lifeCounterAnimations": {
+      "label": "Life counter flash"
+    },
+    "battlefieldFlash": {
+      "label": "Battlefield flash on damage"
+    }
+  },
+  "BrowserFeature": {
+    "syntax": "Modern JavaScript, used by the whole client",
+    "esModules": "JavaScript modules, used to load the client",
+    "bigInt": "BigInt numbers, used by the server protocol",
+    "webSocket": "WebSockets, used to connect to the server",
+    "cryptoRandom": "Secure random numbers, used to log in",
+    "textEncoder": "Text encoding, used by the server protocol",
+    "structuredClone": "Structured cloning, used to track server requests",
+    "fetch": "Fetch, used to load translations, servers and card data",
+    "indexedDB": "IndexedDB storage, used for cards, decks and settings",
+    "resizeObserver": "Resize observers, used to lay out the game board",
+    "webCrypto": "Password hashing, which needs a page served over https://; passwords are sent to the server unhashed instead",
+    "worker": "Web Workers, used to keep the connection alive in a background tab",
+    "broadcastChannel": "Broadcast channels, used by the pop-out card preview",
+    "clipboard": "The clipboard, used by copy buttons (needs a page served over https://)"
+  },
+  "CommandFailureNotices": {
+    "createGame": {
+      "title": "Could not create game",
+      "serverError": "Server error."
+    },
+    "deckUpload": {
+      "title": "Could not save deck",
+      "serverError": "Failed to upload deck to server"
+    }
+  },
+  "FeatureDetection": {
+    "degraded": "Some features are unavailable in this browser: {features}."
   },
   "Initialize": {
     "title": "DID YOU KNOW",
     "subtitle": "<1>Cockatrice is run by volunteers</1><2>that love card games!</2>"
   },
+  "MissingFeaturesNotice": {
+    "title": "Information",
+    "message": "This server supports additional features that your client doesn't have.\nThis is most likely not a problem, but this message might mean there is a new version of Webatrice available or this server is running a custom or pre-release version.\n\nTo update your client, reload the page."
+  },
+  "ServerNotices": {
+    "closed": {
+      "title": "Connection closed"
+    },
+    "shutdown": {
+      "title": "Scheduled server shutdown",
+      "message": "The server is going to be restarted in {countdown}.\nAll running games will be lost.\nReason for shutdown: {reason}"
+    },
+    "unknown": {
+      "title": "Unknown Event",
+      "message": "The server has sent you a message that your client does not understand.\nThis message might mean there is a new version of Cockatrice available or this server is running a custom or pre-release version.\n\nTo update your client, reload this page."
+    },
+    "idle": {
+      "title": "Idle Timeout",
+      "message": "You are about to be logged out due to inactivity."
+    },
+    "promoted": {
+      "title": "Promotion",
+      "message": "You have been promoted. Please log out and back in for changes to take effect."
+    },
+    "warning": {
+      "title": "Warned",
+      "message": "You have received a warning due to {reason}.\nPlease refrain from engaging in this activity or further actions may be taken against you. If you have any questions, please private message a moderator."
+    },
+    "custom": {
+      "message": "You have received the following message from the server.\n(custom messages like these could be untranslated)"
+    }
+  },
   "Unsupported": {
     "title": "Unsupported Browser",
     "subtitle1": "Please update your browser and/or check your permissions.",
-    "subtitle2": "Note: Private browsing causes some browsers to disable certain permissions or features."
+    "subtitle2": "Note: Private browsing causes some browsers to disable certain permissions or features.",
+    "missing": "This browser does not provide:"
+  },
+  "CommandFailure": {
+    "notSent": "You are not connected to the server.",
+    "timeout": "The server did not respond. Please try again.",
+    "disconnected": "The connection to the server has been lost."
+  },
+  "ImportSummary": {
+    "imported": {
+      "replays": "{count, plural, =0 {No replays were imported.} one {Imported # replay.} other {Imported # replays.}}",
+      "cardFiles": "{count, plural, =0 {No card files were imported.} one {Imported # card file.} other {Imported # card files.}}"
+    },
+    "duplicates": "{count, plural, one {Skipped # duplicate.} other {Skipped # duplicates.}}",
+    "problem": {
+      "unsupported": {
+        "replays": "Not replay (.cor) files, skipped: {names}",
+        "cardFiles": "Not XML files, skipped: {names}"
+      },
+      "invalid": {
+        "replays": "Not readable as Cockatrice replays: {names}",
+        "cardFiles": "Not Cockatrice card files (card XML version 3 or 4): {names}"
+      },
+      "too-large": {
+        "replays": "Too large to be replays: {names}",
+        "cardFiles": "Too large to import: {names}"
+      },
+      "save-failed": {
+        "replays": "Could not be saved in this browser: {names}",
+        "cardFiles": "Could not be saved in this browser: {names}"
+      }
+    }
+  },
+  "JoinGameError": {
+    "notInRoom": "Please join the appropriate room first.",
+    "notFound": "The game does not exist any more.",
+    "full": "The game is already full.",
+    "wrongPassword": "Wrong password.",
+    "noSpectators": "Spectators are not allowed in this game.",
+    "buddiesOnly": "This game is only open to its creator's buddies.",
+    "registeredOnly": "This game is only open to registered users.",
+    "ignored": "You are being ignored by the creator of this game.",
+    "failed": "Unable to join the game."
+  },
+  "ReplayParseError": {
+    "invalid": "The file is not a Cockatrice replay.",
+    "tooLarge": "The replay file is too large.",
+    "tooManyContainers": "The replay has too many event containers.",
+    "tooManyEvents": "The replay has too many events."
+  },
+  "DeckFormat": {
+    "commander": "Commander",
+    "paupercommander": "Pauper Commander",
+    "duel": "Duel Commander",
+    "oathbreaker": "Oathbreaker",
+    "standard": "Standard",
+    "pioneer": "Pioneer",
+    "modern": "Modern",
+    "legacy": "Legacy",
+    "vintage": "Vintage",
+    "pauper": "Pauper",
+    "premodern": "Premodern",
+    "oldschool": "Old School",
+    "predh": "PreDH",
+    "penny": "Penny Dreadful",
+    "standardbrawl": "Standard Brawl",
+    "historic": "Historic",
+    "timeless": "Timeless",
+    "gladiator": "Gladiator",
+    "future": "Future"
+  },
+  "GameInfo": {
+    "restriction": {
+      "password": "password",
+      "buddiesOnly": "buddies only",
+      "registeredOnly": "reg. users only",
+      "openDecklists": "open decklists"
+    },
+    "spectators": {
+      "notAllowed": "not allowed",
+      "withChat": "{count} (can chat)",
+      "withHands": "{count} (can see hands)",
+      "withChatAndHands": "{count} (can chat & see hands)"
+    }
+  },
+  "GamePhase": {
+    "unknown": "phase {phase}",
+    "untap": {
+      "short": "Untap",
+      "log": "untap step",
+      "title": "Untap step (double-click: untap all)"
+    },
+    "upkeep": {
+      "short": "Upkeep",
+      "log": "upkeep step",
+      "title": "Upkeep step"
+    },
+    "draw": {
+      "short": "Draw",
+      "log": "draw step",
+      "title": "Draw step (double-click: draw a card)"
+    },
+    "firstMain": {
+      "short": "Main 1",
+      "log": "first main phase",
+      "title": "First main phase"
+    },
+    "beginCombat": {
+      "short": "Start Combat",
+      "log": "beginning of combat",
+      "title": "Beginning of combat"
+    },
+    "declareAttackers": {
+      "short": "Attack",
+      "log": "declare attackers step",
+      "title": "Declare attackers"
+    },
+    "declareBlockers": {
+      "short": "Block",
+      "log": "declare blockers step",
+      "title": "Declare blockers"
+    },
+    "combatDamage": {
+      "short": "Damage",
+      "log": "combat damage step",
+      "title": "Combat damage"
+    },
+    "endCombat": {
+      "short": "End Combat",
+      "log": "end of combat",
+      "title": "End of combat"
+    },
+    "secondMain": {
+      "short": "Main 2",
+      "log": "second main phase",
+      "title": "Second main phase"
+    },
+    "endCleanup": {
+      "short": "End",
+      "log": "end step",
+      "title": "End step / cleanup"
+    }
   }
 }

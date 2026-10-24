@@ -1,0 +1,19 @@
+{
+  "CardPreviewPane": {
+    "label": "Card preview",
+    "closePreview": "Close preview window",
+    "openPreview": "Open preview in a separate window",
+    "previewInWindow": "Preview is open in a separate window",
+    "bringBack": "Click to bring back",
+    "hoverToPreview": "Hover a card to preview it here",
+    "backTo": "Back to {name}",
+    "loading": "Loading…",
+    "title": "Card info",
+    "modes": "Card info view",
+    "modeImage": "Image",
+    "modeDescription": "Description",
+    "modeBoth": "Both",
+    "hide": "Hide card info",
+    "show": "Show card info"
+  }
+}

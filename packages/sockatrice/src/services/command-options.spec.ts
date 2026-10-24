@@ -8,7 +8,7 @@ vi.mock('@bufbuild/protobuf', async () => {
 
 import { create, getExtension } from '@bufbuild/protobuf';
 
-import { handleResponse } from './command-options';
+import { CommandFailure, handleFailure, handleResponse } from './command-options';
 
 describe('handleResponse', () => {
   it('calls onResponse and returns early when provided', () => {
@@ -53,5 +53,51 @@ describe('handleResponse', () => {
     handleResponse('test.Type', create(ResponseSchema, { responseCode: 42 }), {});
     expect(consoleSpy).toHaveBeenCalled();
     consoleSpy.mockRestore();
+  });
+});
+
+describe('handleFailure', () => {
+  it('passes RespNotConnected, a synthesised response and the reason to onError', () => {
+    const onError = vi.fn();
+    handleFailure('test', CommandFailure.Timeout, { onError }, 7);
+    expect(onError).toHaveBeenCalledWith(
+      Response_ResponseCode.RespNotConnected,
+      expect.objectContaining({ cmdId: 7n, responseCode: Response_ResponseCode.RespNotConnected }),
+      CommandFailure.Timeout,
+    );
+  });
+
+  it('prefers an onResponseCode[RespNotConnected] handler over onError', () => {
+    const handler = vi.fn();
+    const onError = vi.fn();
+    handleFailure('test', CommandFailure.Disconnected, {
+      onError,
+      onResponseCode: { [Response_ResponseCode.RespNotConnected]: handler },
+    });
+    expect(handler).toHaveBeenCalledWith(expect.objectContaining({ responseCode: Response_ResponseCode.RespNotConnected }));
+    expect(onError).not.toHaveBeenCalled();
+  });
+
+  it('never calls onResponse or onSuccess', () => {
+    const onResponse = vi.fn();
+    const onSuccess = vi.fn();
+    handleFailure('test', CommandFailure.NotSent, { onResponse });
+    handleFailure('test', CommandFailure.NotSent, { onSuccess });
+    expect(onResponse).not.toHaveBeenCalled();
+    expect(onSuccess).not.toHaveBeenCalled();
+  });
+
+  it('warns when no handler can take the failure', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    handleFailure('test.Type', CommandFailure.Timeout, { onSuccess: vi.fn() });
+    expect(warn).toHaveBeenCalledWith('test.Type failed: timeout');
+    warn.mockRestore();
+  });
+
+  it('stays quiet for an onResponse-only command (the keepalive ping reports its own health)', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    handleFailure('test', CommandFailure.Timeout, { onResponse: vi.fn() });
+    expect(warn).not.toHaveBeenCalled();
+    warn.mockRestore();
   });
 });

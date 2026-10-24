@@ -1,0 +1,38 @@
+{
+  "EditTokens": {
+    "list": "Custom tokens",
+    "empty": "No custom tokens yet.",
+    "data": "Token data",
+    "label": {
+      "newName": "Please enter the name of the token:",
+      "name": "Name",
+      "color": "Color",
+      "pt": "P/T",
+      "annotation": "Annotation"
+    },
+    "color": {
+      "w": "white",
+      "u": "blue",
+      "b": "black",
+      "r": "red",
+      "g": "green",
+      "m": "multicolor",
+      "c": "colorless"
+    },
+    "button": {
+      "add": "Add token",
+      "remove": "Remove token",
+      "apply": "Save token",
+      "export": "Export TK.xml"
+    },
+    "validation": {
+      "tooLong": "At most {max} characters",
+      "conflict": "The chosen name conflicts with an existing card or token. Make sure to enable the 'Token' set in the \"Manage sets\" dialog to display them correctly."
+    },
+    "selectHint": "Select a token to edit it.",
+    "error": {
+      "load": "Could not read your tokens: {error}",
+      "save": "Could not save your tokens: {error}"
+    }
+  }
+}

@@ -19,21 +19,21 @@ const ShortcutsRow = ({ actionId, conflicts, onEdit }: ShortcutsRowProps) => {
   const sequences = useResolvedBinding(actionId);
   const isOverridden = useAppSelector((s) => shortcuts.Selectors.isOverridden(s, actionId));
   const hasConflict = conflicts.length > 0;
+  const action = t(`ShortcutsTab.action.${actionId}`);
+  const conflictText = hasConflict
+    ? t('ShortcutsTab.conflictWarning', { actions: conflicts.map((id) => t(`ShortcutsTab.action.${id}`)).join(', ') })
+    : '';
 
   return (
     <div className="grid grid-cols-[1fr_auto_auto] items-center gap-3 px-3 py-2 border-b border-border-subtle last:border-b-0">
       <div className="flex items-center gap-2 min-w-0">
         <span className="text-sm text-text-primary truncate">
-          {t(`ShortcutsTab.action.${actionId}`)}
+          {action}
         </span>
         {hasConflict && (
-          <span
-            className="text-amber-400 shrink-0"
-            title={t('ShortcutsTab.conflictWarning', {
-              actions: conflicts.map((id) => t(`ShortcutsTab.action.${id}`)).join(', '),
-            })}
-          >
-            <AlertTriangle size={14} />
+          <span className="text-warning shrink-0" title={conflictText}>
+            <AlertTriangle size={14} aria-hidden />
+            <span className="sr-only">{conflictText}</span>
           </span>
         )}
       </div>
@@ -56,7 +56,7 @@ const ShortcutsRow = ({ actionId, conflicts, onEdit }: ShortcutsRowProps) => {
         <button
           type="button"
           onClick={onEdit}
-          aria-label={t('ShortcutsTab.edit')}
+          aria-label={t('ShortcutsTab.editAction', { action })}
           title={t('ShortcutsTab.edit')}
           className="p-1.5 rounded text-text-muted hover:text-text-primary hover:bg-bg-elevated transition-colors"
         >
@@ -66,9 +66,12 @@ const ShortcutsRow = ({ actionId, conflicts, onEdit }: ShortcutsRowProps) => {
           type="button"
           onClick={() => dispatch(shortcuts.Actions.resetAction({ actionId }))}
           disabled={!isOverridden}
-          aria-label={t('ShortcutsTab.resetAction')}
+          aria-label={t('ShortcutsTab.resetNamedAction', { action })}
           title={t('ShortcutsTab.resetAction')}
-          className="p-1.5 rounded text-text-muted hover:text-text-primary hover:bg-bg-elevated transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+          className={[
+            'p-1.5 rounded text-text-muted hover:text-text-primary',
+            'hover:bg-bg-elevated transition-colors disabled:opacity-30 disabled:cursor-not-allowed',
+          ].join(' ')}
         >
           <RotateCcw size={14} />
         </button>

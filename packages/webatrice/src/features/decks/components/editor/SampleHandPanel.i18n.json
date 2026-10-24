@@ -1,0 +1,8 @@
+{
+  "SampleHand": {
+    "title": "Sample hand",
+    "redraw": "Draw a new sample hand",
+    "size": "Sample hand size",
+    "empty": "Add cards to the main deck to draw a sample hand."
+  }
+}

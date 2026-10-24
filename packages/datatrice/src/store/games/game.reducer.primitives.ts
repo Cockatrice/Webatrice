@@ -1,3 +1,4 @@
+import { withEventTime, type EventTime } from './game.actionTime';
 import { ZoneName } from '@cockatrice/sockatrice';
 import { CaseReducer, PayloadAction } from '@reduxjs/toolkit';
 import { clone, isFieldSet } from '@bufbuild/protobuf';
@@ -15,10 +16,6 @@ import type { LogEntry } from './messageLog';
 
 const pingField = ServerInfo_PlayerPropertiesSchema.field.pingSeconds;
 
-// Fields a volatile ping tick may carry that never affect the player graph: the
-// clock itself plus the redundant player_id the action already carries. An
-// update whose set fields are all volatile takes the ping-only fast path — see
-// GamesState.pings.
 const VOLATILE_PING_FIELDS = new Set([
   pingField,
   ServerInfo_PlayerPropertiesSchema.field.playerId,
@@ -30,6 +27,32 @@ const isPingOnlyUpdate = (properties: ServerInfo_PlayerProperties): boolean =>
   );
 
 export const primitiveReducers = {
+  zoneOrderReplacedLocally: ((state, action) => {
+    const { gameId, playerId, zoneName, order } = action.payload;
+    const zone = state.games[gameId]?.players[playerId]?.zones[zoneName];
+    if (!zone || order.length !== zone.order.length) {
+      return;
+    }
+    const remaining = new Set(zone.order);
+    if (remaining.size !== order.length) {
+      return;
+    }
+    for (const id of order) {
+      if (!remaining.delete(id)) {
+        return;
+      }
+    }
+    if (order.every((id, index) => id === zone.order[index])) {
+      return;
+    }
+    zone.order = [...order];
+  }) as CaseReducer<GamesState, PayloadAction<{
+    gameId: number;
+    playerId: number;
+    zoneName: string;
+    order: number[];
+  }>>,
+
   gamePlayersReplaced: ((state, action) => {
     const { gameId, players, order } = action.payload;
     const game = state.games[gameId];
@@ -41,7 +64,6 @@ export const primitiveReducers = {
     // fall back to the map's key order (numeric). Keep only ids that are present.
     const ids = order ?? Object.keys(players).map(Number);
     game.seatOrder = ids.filter((id) => players[id] != null);
-    // Reseed the live ping map from the snapshot — see GamesState.pings.
     const pings: { [playerId: number]: number } = {};
     for (const idKey of Object.keys(players)) {
       const id = Number(idKey);
@@ -54,7 +76,7 @@ export const primitiveReducers = {
     order?: number[];
   }>>,
 
-  gameInfoUpdated: ((state, action) => {
+  gameInfoUpdated: withEventTime(((state, action) => {
     const { gameId, gameStarted, activePlayerId, activePhase, secondsElapsed } = action.payload;
     const game = state.games[gameId];
     if (!game) {
@@ -69,8 +91,9 @@ export const primitiveReducers = {
     if (activePhase !== undefined) {
       game.activePhase = activePhase;
     }
-    if (secondsElapsed !== undefined) {
+    if (secondsElapsed !== undefined && !game.replay) {
       game.secondsElapsed = secondsElapsed;
+      game.secondsElapsedAt = action.payload.timeReceived;
     }
   }) as CaseReducer<GamesState, PayloadAction<{
     gameId: number;
@@ -78,7 +101,16 @@ export const primitiveReducers = {
     activePlayerId?: number;
     activePhase?: number;
     secondsElapsed?: number;
-  }>>,
+  } & EventTime>>),
+
+  gameTimeSynced: withEventTime(((state, action) => {
+    const game = state.games[action.payload.gameId];
+    if (!game) {
+      return;
+    }
+    game.secondsElapsed = action.payload.secondsElapsed;
+    game.secondsElapsedAt = action.payload.timeReceived;
+  }) as CaseReducer<GamesState, PayloadAction<{ gameId: number; secondsElapsed: number } & EventTime>>),
 
   cardMovedBetweenZones: ((state, action) => {
     const {
@@ -283,14 +315,9 @@ export const primitiveReducers = {
     if (!game || !player) {
       return;
     }
-    // The ping clock lives in the sibling state.pings map, not the player
-    // graph — see GamesState.pings.
     if (isFieldSet(properties, pingField)) {
       state.pings[gameId][playerId] = properties.pingSeconds;
     }
-    // Ping-only fast path: leave `player.properties` (and thus the player and
-    // players refs) untouched so the tick stream invalidates no
-    // players-subscribed selector or component.
     if (isPingOnlyUpdate(properties)) {
       return;
     }
@@ -322,16 +349,16 @@ export const primitiveReducers = {
     count: number;
   }>>,
 
-  gameMessageAppended: ((state, action) => {
+  gameMessageAppended: withEventTime(((state, action) => {
     const { gameId, playerId, message } = action.payload;
     const game = state.games[gameId];
     if (!game) {
       return;
     }
-    pushEventMessage(game, playerId, message);
+    pushEventMessage(game, playerId, message, action.payload.timeReceived);
   }) as CaseReducer<GamesState, PayloadAction<{
     gameId: number;
     playerId: number;
     message: string | LogEntry;
-  }>>,
+  } & EventTime>>),
 };

@@ -2,6 +2,7 @@ import type { Store } from '@reduxjs/toolkit';
 import type { WebsocketTypes } from '@cockatrice/sockatrice/types';
 
 import { AdminResponseImpl } from './AdminResponseImpl';
+import { DeveloperResponseImpl } from './DeveloperResponseImpl';
 import { GameResponseImpl } from './GameResponseImpl';
 import { ModeratorResponseImpl } from './ModeratorResponseImpl';
 import { RoomResponseImpl } from './RoomResponseImpl';
@@ -17,5 +18,6 @@ export function attachResponseHandlers(store: Store): WebsocketTypes.IWebClientR
     game: new GameResponseImpl(store),
     admin: new AdminResponseImpl(store),
     moderator: new ModeratorResponseImpl(store),
+    developer: new DeveloperResponseImpl(store),
   };
 }

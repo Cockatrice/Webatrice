@@ -1,5 +1,5 @@
-import type { PreviewMode } from '../BattlefieldSidebar/BattlefieldSidebar';
-import type { HoveredCard } from '../PlayerBox/hoveredCard';
+import type { PreviewMode } from '../CardPreviewPane/useCardPreviewPane';
+import type { PreviewCard } from '../ui/CardPreviewContext';
 
 // Fixed channel name so the popped-out window can find the main
 // window's broadcasts without needing an opaque handle. Only one main
@@ -24,7 +24,7 @@ const CHANNEL_NAME = 'webatrice-card-preview';
  *              `beforeunload` race.
  */
 export type CardPreviewMessage =
-  | { kind: 'card'; card: HoveredCard | null }
+  | { kind: 'card'; card: PreviewCard | null }
   | {
       kind: 'mode';
       mode: PreviewMode;
@@ -87,7 +87,9 @@ export type CardPreviewFetchState = 'idle' | 'loading' | 'loaded' | 'not-found';
 
 /** Guards against SSR / non-browser environments. */
 function makeChannel(): BroadcastChannel | null {
-  if (typeof BroadcastChannel === 'undefined') return null;
+  if (typeof BroadcastChannel === 'undefined') {
+    return null;
+  }
   try {
     return new BroadcastChannel(CHANNEL_NAME);
   } catch {
@@ -102,7 +104,9 @@ function makeChannel(): BroadcastChannel | null {
  */
 export function postCardPreviewMessage(msg: CardPreviewMessage): void {
   const ch = makeChannel();
-  if (!ch) return;
+  if (!ch) {
+    return;
+  }
   try {
     ch.postMessage(msg);
   } finally {
@@ -119,9 +123,13 @@ export function subscribeToCardPreviewChannel(
   handler: (msg: CardPreviewMessage) => void,
 ): () => void {
   const ch = makeChannel();
-  if (!ch) return () => {};
+  if (!ch) {
+    return () => {};
+  }
   const onMessage = (event: MessageEvent<CardPreviewMessage>) => {
-    if (!event.data) return;
+    if (!event.data) {
+      return;
+    }
     handler(event.data);
   };
   ch.addEventListener('message', onMessage);

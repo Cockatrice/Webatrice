@@ -12,7 +12,7 @@
 
 .deck-select-dialog__file-name {
   font-size: 13px;
-  color: #56607a;
+  color: rgb(var(--text-muted));
   font-family: ui-monospace, Menlo, Consolas, monospace;
   word-break: break-all;
 }
@@ -20,7 +20,7 @@
 .deck-select-dialog__divider {
   display: block;
   margin: 4px 0 6px;
-  color: #9ea6b8;
+  color: rgb(var(--text-muted));
   text-align: center;
 }
 
@@ -28,9 +28,9 @@
   margin-top: 10px;
   padding: 8px 12px;
   font-size: 13px;
-  color: #8a1f1f;
-  background: #fdecec;
-  border: 1px solid #f2b8b8;
+  color: rgb(var(--status-danger));
+  background: rgb(var(--status-danger) / 0.1);
+  border: 1px solid rgb(var(--status-danger) / 0.4);
   border-radius: 4px;
 }
 
@@ -42,28 +42,29 @@
   font-family: ui-monospace, Menlo, Consolas, monospace;
   font-size: 13px;
   line-height: 1.4;
-  background: #f7f8fa;
-  border: 1px solid #c4c9d1;
+  color: rgb(var(--text-primary));
+  background: rgb(var(--bg-base));
+  border: 1px solid rgb(var(--border-subtle));
   border-radius: 4px;
   resize: vertical;
 }
 
 .deck-select-dialog__textarea:focus {
   outline: none;
-  border-color: #5a78c8;
-  box-shadow: 0 0 0 3px rgba(90, 120, 200, 0.15);
+  border-color: rgb(var(--accent-primary));
+  box-shadow: 0 0 0 3px rgb(var(--accent-primary) / 0.2);
 }
 
 .deck-select-dialog__hash {
   margin-top: 10px;
   font-size: 12px;
-  color: #56607a;
+  color: rgb(var(--text-muted));
   font-family: ui-monospace, Menlo, Consolas, monospace;
   word-break: break-all;
 }
 
 .deck-select-dialog__hash--pending {
-  color: #9ea6b8;
+  color: rgb(var(--text-muted));
   font-style: italic;
 }
 
@@ -73,7 +74,7 @@
   justify-content: flex-end;
   margin-top: 16px;
   padding-top: 16px;
-  border-top: 1px solid #e3e6eb;
+  border-top: 1px solid rgb(var(--border-subtle));
 }
 
 .deck-select-dialog__leave {

@@ -1,28 +1,38 @@
-import { AuthGuard, ModGuard } from '@app/components';
+import { useTranslation } from 'react-i18next';
+
+import { AlertDialog } from '@app/dialogs';
+import { StaffConsole, StaffHeader, StaffToolGuard } from '@app/feature-wrappers/staff';
 
 import LogResults from './LogResults';
 import LogSearchForm from './LogSearchForm/LogSearchForm';
 import { useLogs } from './useLogs';
 
-import './Logs.css';
-
-const Logs = () => {
-  const { logs, onSubmit } = useLogs();
+const LogsContent = () => {
+  const { t } = useTranslation();
+  const { developer, logs, notice, dismissNotice, onSubmit } = useLogs();
 
   return (
-    <div className="moderator-logs scrollable">
-      <AuthGuard />
-      <ModGuard />
-
-      <div className="moderator-logs__form">
-        <LogSearchForm onSubmit={onSubmit} />
-      </div>
-
-      <div className="moderator-logs__results">
-        <LogResults logs={logs} />
-      </div>
-    </div>
+    <>
+      <StaffHeader title={t('Logs.pageTitle')} subtitle={t('Logs.subtitle')} />
+      <LogSearchForm onSubmit={onSubmit} developer={developer} />
+      <LogResults logs={logs} />
+      <AlertDialog
+        isOpen={notice !== null}
+        title={notice?.title ?? ''}
+        message={notice?.message ?? ''}
+        severity={notice?.severity}
+        onDismiss={dismissNotice}
+      />
+    </>
   );
 };
+
+const Logs = () => (
+  <StaffConsole>
+    <StaffToolGuard tool="logs">
+      <LogsContent />
+    </StaffToolGuard>
+  </StaffConsole>
+);
 
 export default Logs;

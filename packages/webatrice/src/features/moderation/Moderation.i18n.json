@@ -1,0 +1,116 @@
+{
+  "ModerationPage": {
+    "search": {
+      "placeholder": "User name",
+      "investigate": "Investigate"
+    },
+    "action": {
+      "resetPassword": "Reset password",
+      "removeAvatar": "Remove avatar"
+    },
+    "info": {
+      "title": "User info",
+      "registered": "Registered",
+      "lastLogin": "Last login",
+      "status": "Status",
+      "adminNotes": "Admin notes",
+      "active": "active",
+      "inactive": "inactive",
+      "admin": "admin",
+      "noNotes": "No notes.",
+      "loadError": "Error loading user info.",
+      "drawer": "User details",
+      "noUser": "No user",
+      "hint": "Search for a user name to see their account, alts and sessions.",
+      "reports": "Reports",
+      "warnings": "Warnings",
+      "bans": "Bans"
+    },
+    "alts": {
+      "title": "Alts",
+      "user": "User",
+      "email": "Email",
+      "clientId": "Client ID",
+      "registered": "Registered",
+      "lastLogin": "Last login",
+      "warns": "Warns",
+      "bans": "Bans",
+      "active": "Active",
+      "empty": "No alts found."
+    },
+    "sessions": {
+      "title": "Sessions",
+      "ip": "IP",
+      "clientId": "Client ID",
+      "start": "Start",
+      "end": "End",
+      "type": "Type",
+      "empty": "No sessions found."
+    },
+    "staff": {
+      "title": "Staff last logins",
+      "user": "User",
+      "level": "Level",
+      "lastLogin": "Last login",
+      "refresh": "Refresh",
+      "empty": "No staff logins to show."
+    },
+    "level": {
+      "admin": "Admin",
+      "developer": "Developer",
+      "moderator": "Moderator",
+      "judge": "Judge"
+    },
+    "value": {
+      "unknown": "Unknown",
+      "loading": "Loading...",
+      "yes": "yes",
+      "no": "no",
+      "activeSession": "Active",
+      "noUser": "Search for a user to fill this table."
+    },
+    "confirm": {
+      "resetTitle": "Reset Password",
+      "reset": "Reset the password of {userName}? A temporary password will be generated and shown to you. The user must change it on their first login.",
+      "avatarTitle": "Remove Avatar",
+      "avatar": "Remove the avatar of {userName}? The user will have to upload a new one."
+    },
+    "password": {
+      "title": "Password reset",
+      "for": "Temporary password for {userName}:",
+      "label": "Temporary password",
+      "secureChannel": "Pass it to the user through a secure channel."
+    },
+    "notice": {
+      "errorTitle": "Error",
+      "resetFailed": "Password reset failed.",
+      "avatarRemovedTitle": "Avatar removed",
+      "avatarRemoved": "The avatar of {userName} has been removed.",
+      "avatarFailed": "Could not remove the avatar."
+    },
+    "button": {
+      "ok": "OK",
+      "cancel": "Cancel"
+    },
+    "title": "Moderation",
+    "subtitle": "Look up a user's account, alts and sessions.",
+    "subtitleBasic": "Look up a user's account, warnings and bans.",
+    "needsServer": "Needs server 3.1.",
+    "records": "History",
+    "recordAction": {
+      "warnHistory": "Warn history",
+      "banHistory": "Ban history",
+      "adminNotes": "Admin notes"
+    },
+    "basic": {
+      "hint": "Search for a user name to see their account, warnings and bans.",
+      "role": "Role",
+      "accountAge": "Account age",
+      "realName": "Real name",
+      "country": "Country",
+      "clientId": "Client ID",
+      "address": "IP address",
+      "countsNote": "Report, warning and ban counts, alts and sessions need server 3.1. The histories below work on this server."
+    }
+  }
+}

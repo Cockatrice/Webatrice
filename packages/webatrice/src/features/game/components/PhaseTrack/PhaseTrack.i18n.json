@@ -1,0 +1,7 @@
+{
+  "PhaseTrack": {
+    "label": "Turn phases",
+    "activePlayerOnly": "Only the active player can change phases",
+    "passTitle": "Pass to the next turn"
+  }
+}

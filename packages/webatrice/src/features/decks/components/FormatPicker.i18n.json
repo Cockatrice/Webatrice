@@ -1,0 +1,14 @@
+{
+  "FormatPicker": {
+    "label": "Format",
+    "other": {
+      "dialog": "Other (specify)",
+      "sidebar": "Other"
+    },
+    "placeholder": {
+      "dialog": "e.g. Netrunner, Playtest, Cube",
+      "sidebar": "e.g. Netrunner, Playtest"
+    },
+    "unset": "Not set"
+  }
+}

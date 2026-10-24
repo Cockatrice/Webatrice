@@ -1,0 +1,10 @@
+{
+  "DeckTags": {
+    "label": "Tags",
+    "add": "Add Tag",
+    "placeholder": "Add a new tag (e.g., Aggro)",
+    "remove": "Remove tag {tag}",
+    "empty": "Tag name cannot be empty!",
+    "duplicate": "This tag already exists."
+  }
+}

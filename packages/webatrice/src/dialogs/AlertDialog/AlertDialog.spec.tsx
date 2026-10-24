@@ -1,8 +1,10 @@
-import { useState } from 'react';
-import { screen, fireEvent, act } from '@testing-library/react';
+import { useEffect, useState } from 'react';
+import userEvent from '@testing-library/user-event';
+import { screen, fireEvent, act, waitFor } from '@testing-library/react';
 
 import { renderWithProviders } from '../../__test-utils__';
 import AlertDialog from './AlertDialog';
+import DialogShell from '../DialogShell/DialogShell';
 
 describe('AlertDialog', () => {
   it('renders the title, message, and default OK button', () => {
@@ -167,4 +169,66 @@ describe('AlertDialog', () => {
     );
     expect(screen.getByRole('button', { name: /^ok$/i }).className).toMatch(/colorPrimary/);
   });
+});
+
+it('renders warning severity and keeps optional server details collapsed', () => {
+  renderWithProviders(<AlertDialog isOpen title="Warning" message="Explanation" severity="warning"
+    details="Server supplied details" onDismiss={() => {}} />);
+  expect(screen.getByRole('button', { name: /^ok$/i })).toHaveClass('MuiButton-colorWarning');
+  const details = screen.getByText('Server supplied details').closest('details')!;
+  expect(details.open).toBe(false);
+  expect(screen.getByText('AlertDialog.details').tagName).toBe('SUMMARY');
+  expect(screen.getByText('Server supplied details')).not.toBeVisible();
+  fireEvent.click(screen.getByText('AlertDialog.details'));
+  expect(details.open).toBe(true);
+  expect(screen.getByText('Server supplied details')).toBeVisible();
+});
+
+it('inherits the opener when replacing a loading dialog', async () => {
+  const user = userEvent.setup();
+  function Flow() {
+    const [stage, setStage] = useState('idle');
+    return <>
+      <button type="button" onClick={() => setStage('loading')}>History</button>
+      {stage === 'loading' && <DialogShell isOpen title="Loading">
+        <button type="button" onClick={() => setStage('alert')}>Complete</button>
+      </DialogShell>}
+      <AlertDialog isOpen={stage === 'alert'} title="History" message="Empty" onDismiss={() => setStage('idle')} />
+    </>;
+  }
+  renderWithProviders(<Flow />);
+  const opener = screen.getByRole('button', { name: 'History' });
+  await user.click(opener);
+  await user.keyboard('{Enter}');
+  expect(screen.getByRole('button', { name: 'OK' })).toHaveFocus();
+  await user.keyboard('{Escape}');
+  await waitFor(() => expect(opener).toHaveFocus());
+});
+
+it('retains the opener when the alert takes focus before the loading layer leaves', async () => {
+  const user = userEvent.setup();
+  function Flow() {
+    const [stage, setStage] = useState('idle');
+    const [loading, setLoading] = useState(false);
+    useEffect(() => {
+      if (stage === 'alert') {
+        setLoading(false);
+      }
+    }, [stage]);
+    return <>
+      <button type="button" onClick={() => {
+        setLoading(true); setStage('loading');
+      }}>History</button>
+      {loading && <DialogShell isOpen title="Loading">
+        <button type="button" onClick={() => setStage('alert')}>Complete</button>
+      </DialogShell>}
+      <AlertDialog isOpen={stage === 'alert'} title="History" message="Empty" onDismiss={() => setStage('idle')} />
+    </>;
+  }
+  renderWithProviders(<Flow />);
+  const opener = screen.getByRole('button', { name: 'History' });
+  await user.click(opener);
+  await user.keyboard('{Enter}');
+  await user.keyboard('{Escape}');
+  await waitFor(() => expect(opener).toHaveFocus());
 });

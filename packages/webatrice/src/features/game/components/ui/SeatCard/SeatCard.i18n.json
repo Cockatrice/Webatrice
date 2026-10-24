@@ -1,0 +1,12 @@
+{
+  "SeatCard": {
+    "faceDown": "Face-down card {id}",
+    "tapped": "tapped",
+    "doesntUntap": "doesn't untap",
+    "attached": "attached",
+    "pt": "power and toughness {pt}",
+    "counter": "{count, plural, one {# counter {letter}} other {# counters {letter}}}",
+    "annotation": "note: {text}",
+    "counterBadge": "Counter {letter}: {count}"
+  }
+}

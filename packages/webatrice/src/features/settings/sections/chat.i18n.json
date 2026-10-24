@@ -1,0 +1,75 @@
+{
+  "SettingsChat": {
+    "group": {
+      "chat": "Chat settings",
+      "highlight": "Custom alert words",
+      "macros": "In-game message macros"
+    },
+    "chatMention": {
+      "label": "Enable chat mentions",
+      "description": "Highlights @yourname in room chat and alerts you when someone mentions you."
+    },
+    "chatMentionCompleter": {
+      "label": "Enable mention completer",
+      "description": "Typing @ in a chat suggests the names in the room, game or conversation. Use the arrow keys to choose, Enter or Tab to insert, Escape to close."
+    },
+    "chatMentionColor": {
+      "label": "Mention highlight color"
+    },
+    "invertTextColor": {
+      "label": "Invert text color",
+      "description": "White text on the highlight color. Off uses black text."
+    },
+    "ignoreUnregisteredUsers": {
+      "label": "Ignore chat room messages sent by unregistered users"
+    },
+    "ignoreUnregisteredUserMessages": {
+      "label": "Ignore private messages sent by unregistered users"
+    },
+    "ignoreNonBuddyUserMessages": {
+      "label": "Ignore private messages sent by non-buddy users"
+    },
+    "privateMessageFilter": {
+      "description": "Applies to new conversations only. Moderators and administrators always get through."
+    },
+    "showMessagePopups": {
+      "label": "Enable desktop notifications for private messages"
+    },
+    "showMentionPopups": {
+      "label": "Enable desktop notification for mentions"
+    },
+    "roomHistory": {
+      "label": "Enable room message history on join"
+    },
+    "ignoreAllPrivateMessages": {
+      "label": "Ignore all private messages",
+      "description": "Also silences conversations you already have open. Messages from moderators and administrators still arrive."
+    },
+    "useGameTime": {
+      "label": "Use game time instead of local time in game logs",
+      "description": "Each line shows how long the game had been running when it happened."
+    },
+    "highlightWords": {
+      "label": "Alert words",
+      "description": "Separate words with a space, alphanumeric characters only.",
+      "placeholder": "Word1 Word2 Word3"
+    },
+    "chatHighlightColor": {
+      "label": "Alert word highlight color"
+    },
+    "macros": {
+      "label": "Messages",
+      "description": "Quick messages to send during a game, kept in this order.",
+      "empty": "No messages yet.",
+      "placeholder": "Message",
+      "newLabel": "New message",
+      "editLabel": "Edit message {index}",
+      "add": "Add New Message",
+      "save": "Save",
+      "cancel": "Cancel",
+      "edit": "Edit message \"{message}\"",
+      "remove": "Remove message \"{message}\"",
+      "tooLong": "Messages can be at most {max} characters."
+    }
+  }
+}

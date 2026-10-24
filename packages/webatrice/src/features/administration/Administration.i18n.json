@@ -1,0 +1,58 @@
+{
+  "Administration": {
+    "admin": {
+      "title": "Server",
+      "updateServerMessage": "Update server message",
+      "shutdownServer": "Shut down server",
+      "reloadConfig": "Reload configuration",
+      "updateServerMessageHint": "Re-read the server's welcome message and send it to everyone.",
+      "reloadConfigHint": "Re-read the server's configuration file.",
+      "shutdownServerHint": "Warn everyone and stop the server after a delay.",
+      "adminOnly": "Only administrators can use the server functions."
+    },
+    "moderator": {
+      "title": "Moderator",
+      "replayId": "Replay ID",
+      "grantReplayAccess": "Grant replay access",
+      "userToActivate": "User name",
+      "forceActivateUser": "Force-activate user",
+      "grantReplayAccessHint": "Give yourself access to a replay by its ID.",
+      "forceActivateUserHint": "Activate an account that never confirmed its email."
+    },
+    "shutdown": {
+      "title": "Shut down server",
+      "reason": "Reason for shutdown",
+      "minutes": "Time until shutdown (minutes)",
+      "confirm": "Shut down"
+    },
+    "button": {
+      "unlock": "Unlock functions",
+      "cancel": "Cancel",
+      "ok": "OK"
+    },
+    "result": {
+      "successTitle": "Success",
+      "errorTitle": "Error",
+      "replayAccessGranted": "Replay access granted",
+      "replayIdInvalid": "Unable to grant replay access. Replay ID invalid",
+      "replayAccessInternalError": "Unable to grant replay access. Internal error",
+      "userActivated": "User successfully activated",
+      "activateNameInvalid": "Unable to activate user. Username invalid",
+      "activateAlreadyActive": "Unable to activate user. User already active",
+      "activateInternalError": "Unable to activate user. Internal error",
+      "serverMessageUpdated": "Server message updated",
+      "shutdownScheduled": "Server shutdown scheduled",
+      "configReloaded": "Configuration reloaded",
+      "serverMessageFailed": "Could not update the server message.",
+      "shutdownFailed": "Could not schedule the server shutdown.",
+      "configReloadFailed": "Could not reload the configuration."
+    },
+    "validation": {
+      "minutes": "Enter a whole number of minutes from 0 to {max}",
+      "replayId": "Enter a replay ID (digits only)"
+    },
+    "title": "Administration",
+    "subtitle": "Server and moderator functions. They stay greyed out while functions are locked.",
+    "lockedNotice": "Functions are locked. Unlock them here or in the staff tools list."
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "PlayerBoard": {
+    "seat": "{name}'s seat",
+    "battlefield": "{name}'s battlefield, {count, plural, one {# card} other {# cards}}",
+    "stack": "{name}'s stack, {count, plural, one {# card} other {# cards}}",
+    "hand": "{name}'s hand, {count, plural, one {# card} other {# cards}}",
+    "playerMenu": "Player \"{name}\"",
+    "cardKeys": "Arrow keys move between cards and select; Shift and an arrow extends the selection, Ctrl and an arrow moves without selecting, and Space marks or unmarks a card. Enter plays or taps, M moves to a zone and position you choose, Shift+F10 opens the card menu, hold Z to zoom. Tab is Next phase; F6 moves on to the next control.",
+    "you": "You"
+  }
+}

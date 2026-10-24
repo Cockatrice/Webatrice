@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { SIDEBAR_WIDTH_MAX, SIDEBAR_WIDTH_MIN } from '../../hooks/useSidebarWidth';
 
@@ -13,7 +14,7 @@ interface SidebarResizerProps {
 
 /**
  * 8-px vertical drag handle sitting between the play area and the
- * BattlefieldSidebar. Grabs pointer capture on mousedown so subsequent
+ * GameDock. Grabs pointer capture on mousedown so subsequent
  * moves reach us even when the pointer crosses over other elements
  * (dragging past the play-area's edge, over the game board, etc.).
  *
@@ -21,12 +22,15 @@ interface SidebarResizerProps {
  * a fixed slot for the handle right before the sidebar column.
  */
 export default function SidebarResizer({ width, onResize }: SidebarResizerProps) {
+  const { t } = useTranslation();
   const [dragging, setDragging] = useState(false);
   const dragStateRef = useRef<{ startX: number; startWidth: number } | null>(null);
 
   const handlePointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
     // Left button only; treat other buttons (context menu, middle) as no-ops.
-    if (e.button !== 0) return;
+    if (e.button !== 0) {
+      return;
+    }
     e.preventDefault();
     dragStateRef.current = { startX: e.clientX, startWidth: width };
     setDragging(true);
@@ -37,7 +41,9 @@ export default function SidebarResizer({ width, onResize }: SidebarResizerProps)
 
   const handlePointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
     const state = dragStateRef.current;
-    if (!state) return;
+    if (!state) {
+      return;
+    }
     // Right-anchored: dragging left (negative delta) grows the sidebar,
     // dragging right shrinks it. Matches the resizer's visual position.
     const delta = state.startX - e.clientX;
@@ -45,7 +51,9 @@ export default function SidebarResizer({ width, onResize }: SidebarResizerProps)
   }, [onResize]);
 
   const endDrag = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
-    if (!dragStateRef.current) return;
+    if (!dragStateRef.current) {
+      return;
+    }
     dragStateRef.current = null;
     setDragging(false);
     try {
@@ -60,17 +68,27 @@ export default function SidebarResizer({ width, onResize }: SidebarResizerProps)
   // to the layout preference.
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
     const STEP = 24;
-    if (e.key === 'ArrowLeft') { e.preventDefault(); onResize(width + STEP); return; }
-    if (e.key === 'ArrowRight') { e.preventDefault(); onResize(width - STEP); return; }
-    if (e.key === 'Home') { e.preventDefault(); onResize(SIDEBAR_WIDTH_MAX); return; }
-    if (e.key === 'End') { e.preventDefault(); onResize(SIDEBAR_WIDTH_MIN); return; }
+    if (e.key === 'ArrowLeft') {
+      e.preventDefault(); onResize(width + STEP); return;
+    }
+    if (e.key === 'ArrowRight') {
+      e.preventDefault(); onResize(width - STEP); return;
+    }
+    if (e.key === 'Home') {
+      e.preventDefault(); onResize(SIDEBAR_WIDTH_MAX); return;
+    }
+    if (e.key === 'End') {
+      e.preventDefault(); onResize(SIDEBAR_WIDTH_MIN); return;
+    }
   }, [onResize, width]);
 
   // While dragging, show a col-resize cursor even when the pointer
   // strays off the 8-px handle. body-level class toggle so the whole
   // page reflects it — matches the feel of native window resizers.
   useEffect(() => {
-    if (!dragging) return;
+    if (!dragging) {
+      return;
+    }
     document.body.style.cursor = 'col-resize';
     document.body.style.userSelect = 'none';
     return () => {
@@ -83,7 +101,7 @@ export default function SidebarResizer({ width, onResize }: SidebarResizerProps)
     <div
       role="separator"
       aria-orientation="vertical"
-      aria-label="Resize sidebar"
+      aria-label={t('SidebarResizer.label')}
       aria-valuenow={width}
       aria-valuemin={SIDEBAR_WIDTH_MIN}
       aria-valuemax={SIDEBAR_WIDTH_MAX}
@@ -99,11 +117,11 @@ export default function SidebarResizer({ width, onResize }: SidebarResizerProps)
         'hover:bg-accent/20 focus:outline-none focus:bg-accent/30',
         dragging ? 'bg-accent/30' : '',
       ].join(' ')}
-      title="Drag to resize the sidebar (Arrow keys for keyboard)"
+      title={t('SidebarResizer.title')}
     >
       {/* Thin visual affordance — a 1-px column that lights up on hover.
        *  Kept subtle so the resizer doesn't compete with sidebar content. */}
-      <div className="w-px h-8 bg-border-subtle group-hover:bg-accent transition-colors" />
+      <div className="w-px h-8 bg-border-subtle group-hover:bg-accent board-motion transition-colors" />
     </div>
   );
 }

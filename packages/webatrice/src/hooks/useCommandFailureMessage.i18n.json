@@ -1,0 +1,7 @@
+{
+  "CommandFailure": {
+    "notSent": "You are not connected to the server.",
+    "timeout": "The server did not respond. Please try again.",
+    "disconnected": "The connection to the server has been lost."
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "DebugLogDialog": {
+    "title": "Debug Log",
+    "logLabel": "Client log",
+    "clearOnClose": "Clear log when closing",
+    "clear": "Clear log",
+    "copy": "Copy to clipboard",
+    "copied": "Copied",
+    "copyFailed": "The browser blocked the clipboard. Select the text and copy it instead."
+  }
+}

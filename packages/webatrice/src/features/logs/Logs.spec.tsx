@@ -1,7 +1,13 @@
 import { vi } from 'vitest';
 import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 
-import { renderWithProviders, createMockWebClient, connectedState } from '../../__test-utils__';
+import { ServerInfo_User_UserLevelFlag as Level } from '@cockatrice/sockatrice/generated';
+import { renderWithProviders, createMockWebClient, connected31State, makeUser } from '../../__test-utils__';
+
+const modState = {
+  ...connected31State,
+  server: { ...(connected31State.server as any), user: makeUser({ userLevel: Level.IsUser | Level.IsRegistered | Level.IsModerator }) },
+};
 
 const flush = async () => {
   await act(async () => {
@@ -38,16 +44,44 @@ const makeMessage = (overrides: Record<string, unknown> = {}) =>
   }) as any;
 
 describe('Logs', () => {
-  it('renders the search form and the results tabs', () => {
-    const { container } = renderWithProviders(<Logs />, { preloadedState: connectedState });
+  it('renders nothing and sends nothing for a user who may not read logs', () => {
+    const regular = {
+      ...connected31State,
+      server: { ...(connected31State.server as any), user: makeUser({ userLevel: Level.IsUser | Level.IsRegistered }) },
+    };
+    renderWithProviders(<Logs />, { preloadedState: regular });
 
-    expect(container.querySelector('.moderator-logs')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /LogSearchForm\.button\.search/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('tab', { name: /Logs\.tab\.rooms/ })).not.toBeInTheDocument();
+    expect(hoisted.mockWebClient.request.moderator.viewLogHistory).not.toHaveBeenCalled();
+    expect(hoisted.mockWebClient.request.developer.viewLogHistory).not.toHaveBeenCalled();
+  });
+
+  it('renders nothing for a developer on a server without the developer role', () => {
+    const developerOn30 = {
+      ...modState,
+      server: {
+        ...(modState.server as any),
+        info: { ...(modState.server as any).info, version: '3.0.0 ()' },
+        user: makeUser({ userLevel: Level.IsUser | Level.IsRegistered | Level.IsDeveloper }),
+      },
+    };
+    renderWithProviders(<Logs />, { preloadedState: developerOn30 });
+
+    expect(screen.queryByRole('button', { name: /LogSearchForm\.button\.search/ })).not.toBeInTheDocument();
+  });
+
+  it('renders the search form and the results tabs', () => {
+    renderWithProviders(<Logs />, { preloadedState: modState });
+
+    expect(screen.getByRole('button', { name: /LogSearchForm\.button\.search/ })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /Logs\.tab\.rooms/ })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /LogSearchForm\.button\.search/ })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: /Logs\.tab\.rooms/ })).toBeInTheDocument();
   });
 
   it('dispatches viewLogHistory through the web client when the form is submitted with a userName', async () => {
-    renderWithProviders(<Logs />, { preloadedState: connectedState });
+    renderWithProviders(<Logs />, { preloadedState: modState });
 
     const [userNameInput] = screen.getAllByRole('textbox');
     await act(async () => {
@@ -69,7 +103,7 @@ describe('Logs', () => {
   });
 
   it('does not dispatch viewLogHistory when the form is submitted with no required fields', async () => {
-    renderWithProviders(<Logs />, { preloadedState: connectedState });
+    renderWithProviders(<Logs />, { preloadedState: modState });
 
     await act(async () => {
       fireEvent.submit(
@@ -81,11 +115,23 @@ describe('Logs', () => {
     expect(hoisted.mockWebClient.request.moderator.viewLogHistory).not.toHaveBeenCalled();
   });
 
+  it('lets a developer search without the IP filter', () => {
+    renderWithProviders(<Logs />, {
+      preloadedState: {
+        ...modState,
+        server: { ...(modState.server as any), user: makeUser({ userLevel: Level.IsUser | Level.IsRegistered | Level.IsDeveloper }) },
+      },
+    });
+
+    expect(screen.getByRole('button', { name: /LogSearchForm\.button\.search/ })).toBeInTheDocument();
+    expect(screen.queryByLabelText('LogSearchForm.label.ipAddress')).not.toBeInTheDocument();
+  });
+
   it('renders existing room log rows from the state slice', () => {
     const stateWithLogs = {
-      ...connectedState,
+      ...modState,
       server: {
-        ...(connectedState.server as any),
+        ...(modState.server as any),
         logs: {
           room: [makeMessage({ message: 'pre-loaded-room-entry' })],
           game: [],
@@ -96,14 +142,14 @@ describe('Logs', () => {
     renderWithProviders(<Logs />, { preloadedState: stateWithLogs });
 
     expect(screen.getByText('pre-loaded-room-entry')).toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: /\[1\]/ })).toBeInTheDocument();
+    expect(screen.getAllByRole('tab')[0]).toHaveAccessibleName('Logs.tabWithCount');
   });
 
   it('switches to the games tab and reveals game-tab results', () => {
     const stateWithLogs = {
-      ...connectedState,
+      ...modState,
       server: {
-        ...(connectedState.server as any),
+        ...(modState.server as any),
         logs: {
           room: [],
           game: [makeMessage({ message: 'in-game-log' })],
@@ -113,15 +159,15 @@ describe('Logs', () => {
     };
     renderWithProviders(<Logs />, { preloadedState: stateWithLogs });
 
-    fireEvent.click(screen.getByRole('tab', { name: /Logs\.tab\.games/ }));
+    fireEvent.click(screen.getAllByRole('tab')[1]);
     expect(screen.getByText('in-game-log')).toBeInTheDocument();
   });
 
   it('clears the logs slice when the page unmounts', () => {
     const stateWithLogs = {
-      ...connectedState,
+      ...modState,
       server: {
-        ...(connectedState.server as any),
+        ...(modState.server as any),
         logs: {
           room: [makeMessage({ message: 'leftover' })],
           game: [],

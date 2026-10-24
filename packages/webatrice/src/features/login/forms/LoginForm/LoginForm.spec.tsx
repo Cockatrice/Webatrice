@@ -1,3 +1,5 @@
+import { fireEvent } from '@testing-library/react';
+
 import { renderWithProviders, createMockWebClient, disconnectedState } from '../../../../__test-utils__';
 import { makeSettingsHook, makeSettings } from '../../../../hooks/__mocks__/useSettings';
 import { makeKnownHostsHook, makeHost } from '../../../../feature-widgets/known-hosts/__mocks__/useKnownHosts';
@@ -186,5 +188,98 @@ describe('LoginForm — hashed-password gating', () => {
       { preloadedState: disconnectedState }
     );
     expect(update).toHaveBeenCalledWith({ autoConnect: false });
+  });
+  test('persists settings.autoConnect when the user ticks Auto Connect', () => {
+    const update = vi.fn().mockResolvedValue(undefined);
+    hoisted.mockUseSettings.mockReturnValue(
+      makeSettingsHook({
+        status: LoadingState.READY,
+        value: makeSettings({ autoConnect: false }),
+        update,
+      })
+    );
+    const host = makeHost({ id: 1, supportsHashedPassword: true, lastSelected: true });
+    hoisted.mockUseKnownHosts.mockReturnValue(
+      makeKnownHostsHook({
+        status: LoadingState.READY,
+        value: { hosts: [host], selectedHost: host },
+      })
+    );
+    const { container } = renderWithProviders(
+      <LoginForm onSubmit={vi.fn()} disableSubmitButton={false} onResetPassword={vi.fn()} />,
+      { preloadedState: testedState }
+    );
+
+    fireEvent.click(container.querySelector('input[name="autoConnect"]')!);
+
+    expect(update).toHaveBeenCalledWith({ autoConnect: true });
+    expect(container.querySelector<HTMLInputElement>('input[name="remember"]')!.checked).toBe(true);
+  });
+});
+
+describe('LoginForm — state-aware sign-in button', () => {
+  const host = makeHost({ id: 1, supportsHashedPassword: true, lastSelected: true });
+
+  const renderIn = (
+    server: Record<string, unknown>,
+    props: Partial<{ disableSubmitButton: boolean; failed: boolean }> = {},
+  ) => {
+    hoisted.mockUseSettings.mockReturnValue(
+      makeSettingsHook({ status: LoadingState.READY, value: makeSettings({ autoConnect: false }) })
+    );
+    hoisted.mockUseKnownHosts.mockReturnValue(
+      makeKnownHostsHook({ status: LoadingState.READY, value: { hosts: [host], selectedHost: host } })
+    );
+    return renderWithProviders(
+      <LoginForm
+        onSubmit={vi.fn()}
+        onResetPassword={vi.fn()}
+        disableSubmitButton={props.disableSubmitButton ?? false}
+        failed={props.failed}
+      />,
+      { preloadedState: { ...disconnectedState, server: { ...(disconnectedState.server as any), ...server } } }
+    );
+  };
+
+  test('names the server test while it runs and blocks sign-in', () => {
+    const { getByRole } = renderIn({ testConnectionStatus: 'testing' });
+    expect(getByRole('button', { name: 'LoginForm.phase.testing' })).toBeDisabled();
+    expect(getByRole('list', { name: 'LoginForm.steps.label' })).toHaveTextContent('LoginForm.steps.serverTesting');
+  });
+
+  test('says the server is not reachable when the test fails', () => {
+    const { getByRole } = renderIn({ testConnectionStatus: 'failed' });
+    expect(getByRole('button', { name: 'LoginForm.phase.unreachable' })).toBeDisabled();
+    expect(getByRole('list', { name: 'LoginForm.steps.label' })).toHaveTextContent('LoginForm.steps.serverUnreachable');
+  });
+
+  test('offers "Sign in and play" once the server is reachable', () => {
+    const { getByRole } = renderIn({ testConnectionStatus: 'success' });
+    expect(getByRole('button', { name: 'LoginForm.label.login' })).toBeEnabled();
+  });
+
+  test('shows the connecting step after submit', () => {
+    const { getByRole } = renderIn({ testConnectionStatus: 'success' }, { disableSubmitButton: true });
+    expect(getByRole('button', { name: 'LoginForm.phase.connecting' })).toBeDisabled();
+    const current = getByRole('list', { name: 'LoginForm.steps.label' }).querySelector('[aria-current="step"]');
+    expect(current).toHaveTextContent('LoginForm.steps.signingIn');
+  });
+
+  test('marks the sign-in step failed after a rejected attempt', () => {
+    const { getByRole } = renderIn({ testConnectionStatus: 'success' }, { failed: true });
+    expect(getByRole('list', { name: 'LoginForm.steps.label' })).toHaveTextContent('LoginForm.steps.signInFailed');
+    expect(getByRole('button', { name: 'LoginForm.label.login' })).toBeEnabled();
+  });
+
+  test('reveals and hides the password on request', () => {
+    const { getByLabelText, getByRole } = renderIn({ testConnectionStatus: 'success' });
+    const password = getByLabelText('Common.label.password');
+    expect(password).toHaveAttribute('type', 'password');
+
+    fireEvent.click(getByRole('button', { name: 'LoginForm.label.showPassword' }));
+    expect(password).toHaveAttribute('type', 'text');
+
+    fireEvent.click(getByRole('button', { name: 'LoginForm.label.hidePassword' }));
+    expect(password).toHaveAttribute('type', 'password');
   });
 });

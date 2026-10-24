@@ -12,18 +12,27 @@ import viteConfig from './vite.config';
 // real. There is no real browser and no real Servatrice; tests needing those
 // belong in the e2e suite (`playwright.config.ts`). This suite is not a
 // superset of the unit suite — it deliberately exercises different paths.
+const REAL_DEXIE_SPECS = 'integration/src/services/dexie/**/*.spec.ts';
+
 export default defineConfig({
   ...viteConfig,
   test: {
     ...viteConfig.test,
     setupFiles: ['./integration/src/helpers/setup.ts'],
-    include: ['integration/src/**/*.spec.{ts,tsx}'],
+    include: [],
     exclude: ['node_modules', 'build', 'coverage'],
-    // Sockatrice and Datatrice both use threads for their integration suites
-    // without startup-timeout issues; Webatrice's forks-on-Windows hits Vitest 4's
-    // hardcoded 60s worker-startup timeout intermittently as the integration
-    // setup.ts cold-starts datatrice + sockatrice + protobuf per fork.
-    pool: 'threads',
+    pool: 'vmThreads',
+    execArgv: [],
+    projects: [
+      {
+        extends: true,
+        test: { name: 'integration', include: ['integration/src/**/*.spec.{ts,tsx}'], exclude: [REAL_DEXIE_SPECS] },
+      },
+      {
+        extends: true,
+        test: { name: 'integration-dexie', include: [REAL_DEXIE_SPECS], pool: 'threads' },
+      },
+    ],
     coverage: {
       ...viteConfig.test?.coverage,
       reportsDirectory: './coverage/integration',

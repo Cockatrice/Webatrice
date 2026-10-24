@@ -1,0 +1,13 @@
+{
+  "BuddiesOnline": {
+    "title": "Buddies online",
+    "count": "{online} of {total}",
+    "hosting": "Hosting",
+    "untitledGame": "game #{id}",
+    "online": "Online",
+    "showGames": "Show {name}'s games",
+    "message": "Message {name}",
+    "empty": "{count, plural, one {Your buddy isn't online right now.} other {None of your # buddies is online right now.}}",
+    "allBuddies": "See all buddies"
+  }
+}

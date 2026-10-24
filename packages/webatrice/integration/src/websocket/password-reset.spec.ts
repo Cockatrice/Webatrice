@@ -1,7 +1,14 @@
 import { create } from '@bufbuild/protobuf';
 import { describe, expect, it } from 'vitest';
 
-import { Command_ForgotPasswordChallenge_ext, Command_ForgotPasswordRequest_ext, Command_ForgotPasswordReset_ext, Response_ForgotPasswordRequestSchema, Response_ForgotPasswordRequest_ext, Response_ResponseCode } from '@cockatrice/sockatrice/generated';
+import {
+  Command_ForgotPasswordChallenge_ext,
+  Command_ForgotPasswordRequest_ext,
+  Command_ForgotPasswordReset_ext,
+  Response_ForgotPasswordRequestSchema,
+  Response_ForgotPasswordRequest_ext,
+  Response_ResponseCode,
+} from '@cockatrice/sockatrice/generated';
 import { store } from '../helpers/setup';
 import { WebsocketTypes } from '@cockatrice/sockatrice/types';
 

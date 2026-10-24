@@ -8,7 +8,7 @@ export function listRooms({ roomList }: Event_ListRooms): void {
   if (WebClient.instance.clientOptions.autojoinrooms) {
     roomList.forEach(({ autoJoin, roomId }) => {
       if (autoJoin) {
-        joinRoom(roomId);
+        joinRoom(roomId, false);
       }
     });
   }

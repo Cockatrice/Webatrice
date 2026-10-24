@@ -1,49 +1,55 @@
-import { AriaRole, ReactNode } from 'react';
-import { List, RowComponentProps } from 'react-window';
+import { AriaRole, CSSProperties, ReactNode, Ref } from 'react';
+import { List, ListImperativeAPI, ListProps, RowComponentProps } from 'react-window';
 
 import './VirtualList.css';
 
+type RenderRow<T> = (item: T, index: number, style: CSSProperties) => ReactNode;
+
 interface VirtualRowsData<T> {
   items: T[];
-  renderRow: (item: T, index: number) => ReactNode;
+  renderRow: RenderRow<T>;
+  listItems: boolean;
 }
 
 interface VirtualRowsProps<T> {
   items: T[];
-  rowHeight: number;
+  rowHeight: number | ((index: number, data: VirtualRowsData<T>) => number);
   className?: string;
-  renderRow: (item: T, index: number) => ReactNode;
+  renderRow: RenderRow<T>;
   role?: AriaRole;
+  'aria-label'?: string;
+  defaultHeight?: number;
+  listRef?: Ref<ListImperativeAPI>;
+  onRowsRendered?: ListProps<VirtualRowsData<T>>['onRowsRendered'];
 }
 
-function RowsRow<T>({ index, style, items, renderRow }: RowComponentProps<VirtualRowsData<T>>) {
-  return <div style={style}>{renderRow(items[index], index)}</div>;
+function RowsRow<T>({ ariaAttributes, index, style, items, renderRow, listItems }: RowComponentProps<VirtualRowsData<T>>) {
+  if (!listItems) {
+    return <>{renderRow(items[index], index, style)}</>;
+  }
+  return <div style={style} {...ariaAttributes}>{renderRow(items[index], index, style)}</div>;
 }
 
-/**
- * Windowed list for large live collections — rows built lazily for the visible
- * window only. Pass a referentially stable `renderRow`. See
- * webatrice.instructions.md § Virtualized lists for when to prefer this and why.
- */
-export function VirtualRows<T>({ items, rowHeight, className = '', renderRow, role }: VirtualRowsProps<T>) {
+export function VirtualRows<T>({
+  items, rowHeight, className = '', renderRow, role, listRef, onRowsRendered, ...listProps
+}: VirtualRowsProps<T>) {
   return (
     <div className="virtual-list">
       <List<VirtualRowsData<T>>
+        {...listProps}
         className={`virtual-list__list ${className}`}
-        // Only override when set — passing role={undefined} would spread over
-        // react-window's built-in role="list" and strip it from plain lists.
         {...(role ? { role } : {})}
+        listRef={listRef}
+        onRowsRendered={onRowsRendered}
         rowCount={items.length}
         rowHeight={rowHeight}
         rowComponent={RowsRow}
-        rowProps={{ items, renderRow }}
+        rowProps={{ items, renderRow, listItems: !role }}
       />
     </div>
   );
 }
 
-// Module-level so the renderRow identity stays stable across renders (row
-// memoization) — see webatrice.instructions.md § Virtualized lists.
 const renderNode = (node: ReactNode): ReactNode => node;
 
 interface VirtualListProps {
@@ -52,7 +58,6 @@ interface VirtualListProps {
   size?: number;
 }
 
-/** Thin wrapper for callers that already hold a prebuilt `ReactNode[]`. */
 const VirtualList = ({ items, className = '', size = 30 }: VirtualListProps) => (
   <VirtualRows items={items} rowHeight={size} className={className} renderRow={renderNode} />
 );

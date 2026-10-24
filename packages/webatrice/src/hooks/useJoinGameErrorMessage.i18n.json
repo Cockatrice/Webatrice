@@ -1,0 +1,13 @@
+{
+  "JoinGameError": {
+    "notInRoom": "Please join the appropriate room first.",
+    "notFound": "The game does not exist any more.",
+    "full": "The game is already full.",
+    "wrongPassword": "Wrong password.",
+    "noSpectators": "Spectators are not allowed in this game.",
+    "buddiesOnly": "This game is only open to its creator's buddies.",
+    "registeredOnly": "This game is only open to registered users.",
+    "ignored": "You are being ignored by the creator of this game.",
+    "failed": "Unable to join the game."
+  }
+}

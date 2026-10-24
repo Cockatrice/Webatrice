@@ -1,4 +1,3 @@
-// @critical Must match the production boot order in src/index.tsx. See .github/instructions/webatrice.instructions.md#initialization-order.
 import './polyfills';
 
 import '@testing-library/jest-dom/vitest';
@@ -28,6 +27,9 @@ vi.mock('dexie', () => {
     bulkAdd: () => Promise.resolve(),
     bulkPut: () => Promise.resolve(),
     delete: () => Promise.resolve(),
+    bulkDelete: () => Promise.resolve(),
+    count: () => Promise.resolve(0),
+    clear: () => Promise.resolve(),
     toArray: () => Promise.resolve([]),
     where: () => ({
       equals: () => whereTerminator,
@@ -44,6 +46,10 @@ vi.mock('dexie', () => {
     }
     table() {
       return fakeTable;
+    }
+    transaction(...args: unknown[]) {
+      const work = args[args.length - 1] as () => unknown;
+      return Promise.resolve().then(work);
     }
   }
   return { default: FakeDexie, __esModule: true };

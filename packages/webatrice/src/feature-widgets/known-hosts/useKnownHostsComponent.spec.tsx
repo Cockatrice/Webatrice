@@ -9,8 +9,6 @@ import { WebClientContext } from '@cockatrice/datatrice/react';
 vi.mock('./useKnownHosts');
 vi.mock('react-i18next', async (orig) => {
   const actual = await orig<typeof import('react-i18next')>();
-  // Surface the interpolation `mode` so fire-time content is assertable
-  // (the real ICU string isn't formatted in the test env).
   return {
     ...actual,
     useTranslation: () => ({
@@ -19,7 +17,6 @@ vi.mock('react-i18next', async (orig) => {
   };
 });
 
-// Capture the toast handle so we can assert what content `fireToast` opens with.
 const { openToast } = vi.hoisted(() => ({ openToast: vi.fn() }));
 vi.mock('@app/components', async (orig) => {
   const actual = await orig<typeof import('@app/components')>();
@@ -66,13 +63,83 @@ function setup(args: {
       </Provider>
     );
   }
-  const { result } = renderHook(() => useKnownHostsComponent({ onChange }), {
+  const { result, rerender } = renderHook(() => useKnownHostsComponent({ onChange }), {
     wrapper: Wrapper,
   });
-  return { result, webClient, store, onChange };
+  return { result, rerender, webClient, store, onChange };
 }
 
 describe('useKnownHostsComponent', () => {
+  it('retries when the user deliberately re-picks a host after a failed probe', async () => {
+    const host = makeHost({ id: 4 });
+    const { result, store, webClient, rerender } = setup({ knownHostsOverrides: {
+      value: { hosts: [host], selectedHost: host },
+    } });
+    act(() => {
+      store.dispatch(server.Actions.testConnectionFailed());
+    });
+    await act(async () => result.current.onPick(4));
+    rerender();
+    expect(webClient.request.authentication.testConnection).toHaveBeenCalledTimes(2);
+  });
+
+  it('probes a picked host only once when the selection effect also runs', async () => {
+    const first = makeHost({ id: 1 });
+    const second = makeHost({ id: 2, host: 'second.example' });
+    const select = vi.fn().mockResolvedValue(undefined);
+    const { result, rerender, webClient } = setup({ knownHostsOverrides: {
+      value: { hosts: [first, second], selectedHost: first }, select,
+    } });
+    await act(async () => result.current.onPick(2));
+    vi.mocked(useKnownHosts).mockReturnValue(makeKnownHostsHook({ value: { hosts: [first, second], selectedHost: second }, select }));
+    rerender();
+    expect(webClient.request.authentication.testConnection).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not probe again when the selected host is refreshed with new metadata', () => {
+    const host = makeHost({ id: 4 });
+    const { rerender, webClient } = setup({ knownHostsOverrides: { value: { hosts: [host], selectedHost: host } } });
+    const refreshed = makeHost({ ...host, supportsHashedPassword: true });
+    vi.mocked(useKnownHosts).mockReturnValue(makeKnownHostsHook({ value: { hosts: [refreshed], selectedHost: refreshed } }));
+    rerender();
+    expect(webClient.request.authentication.testConnection).toHaveBeenCalledTimes(1);
+    const changed = makeHost({ ...refreshed, port: '1234' });
+    vi.mocked(useKnownHosts).mockReturnValue(makeKnownHostsHook({ value: { hosts: [changed], selectedHost: changed } }));
+    rerender();
+    expect(webClient.request.authentication.testConnection).toHaveBeenCalledTimes(2);
+  });
+
+  it('selects the host created in the add dialog', async () => {
+    const select = vi.fn().mockResolvedValue(undefined);
+    const add = vi.fn().mockResolvedValue(makeHost({ id: 42 }));
+    const { result } = setup({ knownHostsOverrides: { add, select } });
+    await act(async () => result.current.handleDialogSubmit({ name: 'New', host: 'new.example', port: '443' }));
+    expect(select).toHaveBeenCalledWith(42);
+  });
+
+  it.each([undefined, 5])('persists the submitted desktop port when saving host %s', async (id) => {
+    const add = vi.fn().mockResolvedValue(makeHost());
+    const update = vi.fn().mockResolvedValue(makeHost());
+    const { result } = setup({ knownHostsOverrides: { add, update } });
+    await act(async () => {
+      await result.current.handleDialogSubmit({ id, name: 'TCP', host: 'server.example', port: '443', desktopPort: '4747' });
+    });
+    if (id) {
+      expect(update).toHaveBeenCalledWith(id, expect.objectContaining({ desktopPort: '4747' }));
+    } else {
+      expect(add).toHaveBeenCalledWith(expect.objectContaining({ desktopPort: '4747' }));
+    }
+  });
+
+  it('clears the saved desktop port when the field is emptied', async () => {
+    const update = vi.fn().mockResolvedValue(makeHost());
+    const { result } = setup({ knownHostsOverrides: { update } });
+    await act(async () => {
+      await result.current.handleDialogSubmit({ id: 5, name: 'TCP', host: 'server.example', port: '443', desktopPort: '' });
+    });
+    expect(update).toHaveBeenCalledWith(5, expect.objectContaining({ desktopPort: undefined }));
+  });
+
   beforeEach(() => {
     openToast.mockClear();
   });
@@ -89,9 +156,6 @@ describe('useKnownHostsComponent', () => {
     expect(webClient.request.authentication.testConnection).toHaveBeenCalled();
   });
 
-  // Regression: a disconnect must not re-probe. Each probe is a full WebSocket
-  // that counts against Servatrice's per-IP connection cap (max_users_per_address,
-  // default 4), so re-probing on every disconnect trips "too many connections".
   it('does not re-fire testConnection when the connection drops (disconnected)', () => {
     const host = makeHost();
     const { webClient, store } = setup({
@@ -105,7 +169,6 @@ describe('useKnownHostsComponent', () => {
       store.dispatch(server.Actions.disconnected());
     });
 
-    // A disconnect adds no new probe.
     expect(testConnection).toHaveBeenCalledTimes(beforeDisconnect);
   });
 
@@ -240,7 +303,7 @@ describe('useKnownHostsComponent', () => {
   });
 
   it('fires the toast with the current mode computed at fire time (created / edited / deleted)', async () => {
-    const add = vi.fn().mockResolvedValue(undefined);
+    const add = vi.fn().mockResolvedValue(makeHost({ id: 99 }));
     const update = vi.fn().mockResolvedValue(undefined);
     const remove = vi.fn().mockResolvedValue(undefined);
     const { result } = setup({ knownHostsOverrides: { add, update, remove } });

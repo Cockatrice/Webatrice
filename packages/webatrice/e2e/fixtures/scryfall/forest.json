@@ -1,0 +1,19 @@
+{
+  "object": "card",
+  "id": "00000000-0000-4000-8000-0000000e2e01",
+  "name": "Forest",
+  "layout": "normal",
+  "mana_cost": "",
+  "cmc": 0,
+  "type_line": "Basic Land — Forest",
+  "oracle_text": "({T}: Add {G}.)",
+  "colors": [],
+  "color_identity": ["G"],
+  "set": "e2e",
+  "collector_number": "1",
+  "image_uris": {
+    "small": "https://cards.scryfall.io/small/front/e2e/forest.jpg",
+    "normal": "https://cards.scryfall.io/normal/front/e2e/forest.jpg",
+    "large": "https://cards.scryfall.io/large/front/e2e/forest.jpg"
+  }
+}

@@ -1,14 +1,29 @@
-import { rooms, SortUtil } from '@cockatrice/datatrice';
+import { useCallback } from 'react';
+import { createSelector } from '@reduxjs/toolkit';
+import { rooms, type Game, type GameSortField, type SortDirection } from '@cockatrice/datatrice';
 import { useAppDispatch, useAppSelector } from '@app/store';
-import { Game, GameSortField } from '@cockatrice/datatrice';
+
 export interface OpenGames {
   sortBy: { field: string; order: string };
   games: Game[];
+  gameKeys: string[];
   selectedGameId: number | undefined;
-  handleSort: (sortByField: string) => void;
+  setSort: (field: string, order: SortDirection) => void;
   handleSelect: (gameId: number) => void;
   handleActivate: (gameId: number) => void;
 }
+
+const selectGameKeys = createSelector(
+  [(state: Parameters<typeof rooms.Selectors.getFilteredRoomGames>[0], roomId: number) =>
+    rooms.Selectors.getFilteredRoomGames(state, roomId)],
+  (games) => games.map((game) => String(game.info.gameId)),
+  {
+    memoizeOptions: {
+      resultEqualityCheck: (a: string[], b: string[]) =>
+        a.length === b.length && a.every((key, index) => key === b[index]),
+    },
+  },
+);
 
 export interface UseOpenGamesArgs {
   roomId: number;
@@ -19,21 +34,21 @@ export function useOpenGames({ roomId, onActivateGame }: UseOpenGamesArgs): Open
   const dispatch = useAppDispatch();
   const sortBy = useAppSelector((state) => rooms.Selectors.getSortGamesBy(state));
   const games = useAppSelector((state) => rooms.Selectors.getFilteredRoomGames(state, roomId));
+  const gameKeys = useAppSelector((state) => selectGameKeys(state, roomId));
   const selectedGameId = useAppSelector((state) => rooms.Selectors.getSelectedGameId(state, roomId));
 
-  const handleSort = (sortByField: string) => {
-    const { field, order } = SortUtil.toggleSortBy(sortByField as GameSortField, sortBy);
-    dispatch(rooms.Actions.sortGames({ roomId, field, order }));
-  };
+  const setSort = useCallback((field: string, order: SortDirection) => {
+    dispatch(rooms.Actions.sortGames({ roomId, field: field as GameSortField, order }));
+  }, [dispatch, roomId]);
 
-  const handleSelect = (gameId: number) => {
+  const handleSelect = useCallback((gameId: number) => {
     dispatch(rooms.Actions.selectGame({ roomId, gameId }));
-  };
+  }, [dispatch, roomId]);
 
-  const handleActivate = (gameId: number) => {
+  const handleActivate = useCallback((gameId: number) => {
     dispatch(rooms.Actions.selectGame({ roomId, gameId }));
     onActivateGame?.(gameId);
-  };
+  }, [dispatch, roomId, onActivateGame]);
 
-  return { sortBy, games, selectedGameId, handleSort, handleSelect, handleActivate };
+  return { sortBy, games, gameKeys, selectedGameId, setSort, handleSelect, handleActivate };
 }

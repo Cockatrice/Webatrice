@@ -1,0 +1,41 @@
+{
+  "SettingsGeneral": {
+    "group": {
+      "language": "Language",
+      "version": "Version",
+      "startup": "Startup",
+      "diagnostics": "Diagnostics"
+    },
+    "debugLog": {
+      "label": "Debug log",
+      "description": "Recent client messages, to copy into a bug report. Kept in memory only; passwords are left out.",
+      "button": "View debug log"
+    },
+    "language": {
+      "label": "Language",
+      "description": "The language of menus, dialogs and messages. Missing translations show in English.",
+      "followBrowser": "Use the browser's language"
+    },
+    "notifyAboutMissingFeatures": {
+      "label": "Notify if a feature supported by the server is missing in my client",
+      "description": "Shown once per server each time you open Webatrice."
+    },
+    "startupTab": {
+      "label": "Startup tab",
+      "description": "Where you land after signing in. Reloading the page keeps the page you were on.",
+      "deckStorage": "Deck Storage",
+      "replays": "Game Replays",
+      "server": "Server",
+      "serverRoom": "Server Room"
+    },
+    "startupServer": {
+      "label": "Server",
+      "description": "The room opens when you sign in to this server. Signing in to any other server opens its lobby.",
+      "any": "Any server"
+    },
+    "startupRoom": {
+      "label": "Room",
+      "placeholder": "Room name"
+    }
+  }
+}

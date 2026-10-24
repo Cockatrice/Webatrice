@@ -1,0 +1,34 @@
+{
+  "GameLink": {
+    "anchor": {
+      "plain": "Join game",
+      "withId": "Join game #{gameId} on {hostname}",
+      "withDescription": "Join game \"{description}\" (#{gameId}) on {hostname}"
+    },
+    "confirm": {
+      "title": "Join game",
+      "id": "Join game #{gameId} on {server}?",
+      "idInRoom": "Join game #{gameId} in \"{room}\" on {server}?",
+      "description": "Join game \"{description}\" (#{gameId}) on {server}?",
+      "descriptionInRoom": "Join game \"{description}\" (#{gameId}) in \"{room}\" on {server}?"
+    },
+    "invalid": {
+      "title": "Open game",
+      "hostname": "Missing or empty hostname in the game link",
+      "port": "Invalid or missing port in the game link",
+      "roomId": "Invalid or missing room id in the game link",
+      "gameId": "Invalid or missing game id in the game link"
+    },
+    "otherServer": "This game is on {server}. Log in to that server to join it.",
+    "desktopPortRequired": "To join game links for this server, set its desktop port in the server's settings.",
+    "notFound": "Game {gameId} not found in the room",
+    "full": "The game is full. Join as a spectator instead?",
+    "password": {
+      "id": "Password for game #{gameId}:",
+      "description": "Password for \"{description}\":"
+    },
+    "yes": "Yes",
+    "no": "No",
+    "join": "Join"
+  }
+}

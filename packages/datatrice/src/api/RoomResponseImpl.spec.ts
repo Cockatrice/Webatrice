@@ -4,6 +4,7 @@ import { createStore } from '../store/createStore';
 import { ServerInfo_GameSchema, ServerInfo_RoomSchema, ServerInfo_UserSchema } from '@cockatrice/sockatrice/generated';
 import { Actions as RoomsActions } from '../store/rooms/rooms.actions';
 import { RoomResponseImpl } from './RoomResponseImpl';
+import { WebsocketTypes } from '@cockatrice/sockatrice/types';
 
 function setup() {
   const store = createStore();
@@ -23,6 +24,13 @@ describe('RoomResponseImpl', () => {
     const roomInfo = create(ServerInfo_RoomSchema, { roomId: 1, name: 'Main' });
     impl.joinRoom(roomInfo);
     expect(dispatch).toHaveBeenCalledWith(RoomsActions.joinRoom({ roomInfo }));
+  });
+
+  it('joinRoom carries whether the user asked for the room', () => {
+    const { impl, dispatch } = setup();
+    const roomInfo = create(ServerInfo_RoomSchema, { roomId: 1, name: 'Main' });
+    impl.joinRoom(roomInfo, false);
+    expect(dispatch).toHaveBeenCalledWith(RoomsActions.joinRoom({ roomInfo, userInitiated: false }));
   });
 
   it('leaveRoom dispatches the leaveRoom action', () => {
@@ -45,11 +53,22 @@ describe('RoomResponseImpl', () => {
     expect(dispatch).toHaveBeenCalledWith(RoomsActions.updateGames({ roomId: 2, games }));
   });
 
-  it('addMessage dispatches the addMessage action', () => {
+  it('addMessage dispatches roomSayReceived for the ignore-list listener', () => {
     const { impl, dispatch } = setup();
     const message = { senderName: 'alice', message: 'hi', timeReceived: 123 };
     impl.addMessage(3, message);
-    expect(dispatch).toHaveBeenCalledWith(RoomsActions.addMessage({ roomId: 3, message }));
+    expect(dispatch).toHaveBeenCalledWith(RoomsActions.roomSayReceived({ roomId: 3, message }));
+  });
+
+  it('roomSayFailed dispatches the roomSayFailed action with a receive time', () => {
+    const { impl, dispatch } = setup();
+    impl.roomSayFailed(3, 'hello', 18, WebsocketTypes.CommandFailure.Timeout);
+    expect(dispatch).toHaveBeenCalledWith({
+      type: RoomsActions.roomSayFailed.type,
+      payload: {
+        roomId: 3, message: 'hello', responseCode: 18, failure: WebsocketTypes.CommandFailure.Timeout, timeReceived: expect.any(Number),
+      },
+    });
   });
 
   it('userJoined dispatches the userJoined action', () => {
@@ -93,5 +112,51 @@ describe('RoomResponseImpl', () => {
     const { impl, dispatch } = setup();
     impl.setJoinGameError(404, 'not found');
     expect(dispatch).toHaveBeenCalledWith(RoomsActions.setJoinGameError({ code: 404, message: 'not found' }));
+  });
+
+  it('joinRoomFailed dispatches joinRoomFailed keyed by roomId', () => {
+    const { impl, dispatch } = setup();
+    impl.joinRoomFailed(3, 15);
+    expect(dispatch).toHaveBeenCalledWith(
+      RoomsActions.joinRoomFailed({ roomId: 3, responseCode: 15, failure: undefined, userInitiated: true }),
+    );
+  });
+
+  it('joinRoomFailed carries an autojoin as not user-initiated', () => {
+    const { impl, dispatch } = setup();
+    impl.joinRoomFailed(3, 15, undefined, false);
+    expect(dispatch).toHaveBeenCalledWith(
+      RoomsActions.joinRoomFailed({ roomId: 3, responseCode: 15, failure: undefined, userInitiated: false }),
+    );
+  });
+
+  it('createGameFailed dispatches createGameFailed with the transport reason', () => {
+    const { impl, dispatch } = setup();
+    impl.createGameFailed(3, -1, WebsocketTypes.CommandFailure.Timeout);
+    expect(dispatch).toHaveBeenCalledWith(
+      RoomsActions.createGameFailed({ roomId: 3, responseCode: -1, failure: WebsocketTypes.CommandFailure.Timeout }),
+    );
+  });
+});
+
+describe('join-game request correlation', () => {
+  it('carries a successful request identity on its action', () => {
+    const { impl, dispatch } = setup();
+    impl.joinedGame(3, 42, 'join-a');
+    expect(dispatch).toHaveBeenCalledWith(RoomsActions.joinedGame({ roomId: 3, gameId: 42, requestId: 'join-a' }));
+  });
+
+  it('carries the identity on pending settlement actions', () => {
+    const { impl, dispatch } = setup();
+    impl.setJoinGamePending(false, 'join-a');
+    expect(dispatch).toHaveBeenCalledWith(RoomsActions.setJoinGamePending({ pending: false, requestId: 'join-a' }));
+  });
+
+  it.each([undefined, WebsocketTypes.CommandFailure.Timeout])('carries the identity on a rejection or %s failure', (failure) => {
+    const { impl, dispatch } = setup();
+    impl.setJoinGameError(12, '', failure, 'join-a');
+    expect(dispatch).toHaveBeenCalledWith(RoomsActions.setJoinGameError({
+      code: 12, message: '', ...(failure === undefined ? {} : { failure }), requestId: 'join-a',
+    }));
   });
 });

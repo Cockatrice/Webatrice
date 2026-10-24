@@ -59,6 +59,37 @@ describe('matchesEvent', () => {
   it('rejects on different code', () => {
     expect(matchesEvent('F5', evt({ code: 'F6' }))).toBe(false);
   });
+
+  it('does not let Cmd stand in for Ctrl off macOS', () => {
+    expect(matchesEvent('Ctrl+KeyM', evt({ code: 'KeyM', metaKey: true }), false)).toBe(false);
+  });
+
+  describe('on macOS (Qt maps Ctrl to Cmd)', () => {
+    it('answers a Ctrl binding to Cmd', () => {
+      expect(matchesEvent('Ctrl+KeyM', evt({ code: 'KeyM', metaKey: true }), true)).toBe(true);
+      expect(matchesEvent('Ctrl+Shift+KeyR', evt({ code: 'KeyR', metaKey: true, shiftKey: true }), true)).toBe(true);
+    });
+
+    it('keeps answering a Ctrl binding to Control', () => {
+      expect(matchesEvent('Ctrl+KeyM', evt({ code: 'KeyM', ctrlKey: true }), true)).toBe(true);
+    });
+
+    it('rejects Ctrl and Cmd held together, and a missing or extra modifier', () => {
+      expect(matchesEvent('Ctrl+KeyM', evt({ code: 'KeyM', ctrlKey: true, metaKey: true }), true)).toBe(false);
+      expect(matchesEvent('Ctrl+KeyM', evt({ code: 'KeyM' }), true)).toBe(false);
+      expect(matchesEvent('Ctrl+KeyM', evt({ code: 'KeyM', metaKey: true, altKey: true }), true)).toBe(false);
+    });
+
+    it('does not fire an unmodified binding on Cmd', () => {
+      expect(matchesEvent('KeyM', evt({ code: 'KeyM', metaKey: true }), true)).toBe(false);
+    });
+
+    it('matches a sequence that names Meta exactly', () => {
+      expect(matchesEvent('Meta+KeyM', evt({ code: 'KeyM', metaKey: true }), true)).toBe(true);
+      expect(matchesEvent('Ctrl+Meta+KeyM', evt({ code: 'KeyM', ctrlKey: true, metaKey: true }), true)).toBe(true);
+      expect(matchesEvent('Ctrl+Meta+KeyM', evt({ code: 'KeyM', metaKey: true }), true)).toBe(false);
+    });
+  });
 });
 
 describe('isModifierOnly', () => {

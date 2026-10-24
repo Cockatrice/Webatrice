@@ -9,6 +9,11 @@
 // connection survives a real page, and resources clean up on close. It does
 // NOT re-test protocol correctness or keep-alive — those belong to Sockatrice.
 //
+// Hermetic: the browser reaches only `vite preview` and the docker
+// Servatrice, both on localhost. Specs import `test` from
+// `e2e/fixtures/test.ts`, which stubs or refuses every other host (public
+// game servers, Scryfall, Google Fonts) — see `e2e/fixtures/network.ts`.
+//
 // Coverage is intentionally not collected here; e2e is measured by user-flow
 // coverage (which scenarios are covered), not line %.
 
@@ -54,7 +59,7 @@ export default defineConfig({
     // `npm run build` has been run (the test:e2e orchestrator script does so).
     command: `npm run preview -- --port ${PORT} --strictPort`,
     url: BASE_URL,
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: false,
     timeout: 60_000,
   },
 });

@@ -10,6 +10,8 @@ import type {
   ServerInfo_User,
 } from '@cockatrice/sockatrice/generated';
 import type { ZoneNameValue } from '@cockatrice/sockatrice';
+import type { WebsocketTypes } from '@cockatrice/sockatrice/types';
+import type { LogDescriptor } from './gameLog';
 
 // @critical `info` is the wire snapshot; repeated collections on it go stale. Read normalized siblings.
 // See .github/instructions/datatrice-store.instructions.md#data-structure-invariants.
@@ -29,12 +31,13 @@ export interface Game {
   gameType: string;
 }
 
+export type ChatNotice = 'chatFlood' | 'notSent';
+
 export type Message = Event_RoomSay & {
   timeReceived: number;
-  // Stable, monotonic client id assigned at store ingestion; absent on the
-  // wire-derived message before it's stored. See rooms.reducer.inline.ts for the
-  // rationale (chat rows key on it, not the array index).
   id?: number;
+  notice?: ChatNotice;
+  failure?: WebsocketTypes.CommandFailure;
 };
 
 // @critical `info` = wire snapshot at join time; top-level twins hold live values updated by game events.
@@ -52,6 +55,7 @@ export interface GameEntry {
   activePlayerId: number;
   activePhase: number;
   secondsElapsed: number;
+  secondsElapsedAt?: number;
   reversed: boolean;
 
   players: { [playerId: number]: PlayerEntry };
@@ -60,9 +64,8 @@ export interface GameEntry {
   // order the server sent (full-state syncs) and append-on-join, for board seating
   // and reveal-target lists. See seatedPlayersOf / Selectors.getSeatedPlayers.
   seatOrder: number[];
-  // No ping field here by design: the live ping clock lives out of the game
-  // graph in GamesState.pings — read it via Selectors.getPings / getPlayerPing.
   messages: GameMessage[];
+  replay?: boolean;
 }
 
 export interface PlayerEntry {
@@ -83,7 +86,7 @@ export interface PlayerEntry {
 }
 
 export interface ZoneEntry {
-  name: ZoneNameValue;
+  name: ZoneNameValue | (string & {});
   type: number;
   withCoords: boolean;
   // Hidden zones: cardCount may exceed order.length.
@@ -123,11 +126,11 @@ export interface GameMessage {
    *  player / number tokens independently. Chat lines and pre-segment
    *  legacy events leave this undefined. */
   segments?: LogMessageSegment[];
-  /** Wall-clock ms when the reducer processed this message. Rendered
-   *  as `[HH:MM:SS]` local time before the message body, matching
-   *  Cockatrice desktop's `QDateTime::currentDateTime()` stamp. */
+  descriptor?: LogDescriptor;
   timeReceived: number;
+  gameSeconds?: number;
   kind?: 'chat' | 'event';
+  senderName?: string;
 }
 
 export type LogMessageSegmentKind = 'plain' | 'player' | 'card' | 'number';

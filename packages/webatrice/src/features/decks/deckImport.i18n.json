@@ -1,0 +1,13 @@
+{
+  "DeckImport": {
+    "defaultName": "Imported deck",
+    "error": {
+      "readFailed": "Could not read the selected file",
+      "noCards": "No cards recognised. Check the format — one line per card, like `1 Sol Ring`.",
+      "resolveFailed": "Failed to resolve cards",
+      "notDeckFile": "{name} is not a deck file. Open a .cod, .txt, .dec, .dek or .mwDeck file.",
+      "noCardsInFile": "No cards found in {name}.",
+      "notConnected": "Not connected to the server. Reconnect, then import again."
+    }
+  }
+}

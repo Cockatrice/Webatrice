@@ -1,0 +1,16 @@
+{
+  "CardDetails": {
+    "label": {
+      "name": "Name:",
+      "pt": "P/T:",
+      "cost": "Cost:",
+      "cmc": "CMC:",
+      "identity": "Identity:",
+      "colors": "Color(s):",
+      "mainType": "Main Type:",
+      "type": "Type:",
+      "side": "Side:",
+      "layout": "Layout:"
+    }
+  }
+}

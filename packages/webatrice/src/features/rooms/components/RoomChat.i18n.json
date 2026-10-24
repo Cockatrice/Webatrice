@@ -1,0 +1,12 @@
+{
+  "RoomChat": {
+    "notice": {
+      "chatFlood": "You are flooding the chat. Please wait a couple of seconds.",
+      "notSent": "Message not sent: {reason}"
+    },
+    "log": "{room} chat",
+    "input": "Message {room}",
+    "subtitle": "Room chat",
+    "empty": "No messages yet — say hi."
+  }
+}

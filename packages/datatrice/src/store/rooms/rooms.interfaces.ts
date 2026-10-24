@@ -1,3 +1,4 @@
+import type { WebsocketTypes } from '@cockatrice/sockatrice/types';
 import { App, Enriched } from '../../types';
 
 export interface RoomsState {
@@ -11,12 +12,28 @@ export interface RoomsState {
   gameFilters: RoomsStateGameFilters;
   joinGamePending: boolean;
   joinGameError: JoinGameError | null;
+  joinRoomError: JoinRoomError | null;
+}
+
+export interface RoomCommandFailedPayload {
+  requestId?: string;
+  roomId: number;
+  responseCode: number;
+  failure?: WebsocketTypes.CommandFailure;
+}
+
+export interface JoinRoomFailedPayload extends RoomCommandFailedPayload {
+  userInitiated: boolean;
 }
 
 export interface JoinGameError {
+  requestId?: string;
+  failure?: WebsocketTypes.CommandFailure;
   code: number;
   message: string;
 }
+
+export type JoinRoomError = RoomCommandFailedPayload;
 
 export interface RoomsStateRooms {
   [roomId: number]: Enriched.Room;

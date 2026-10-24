@@ -1,0 +1,14 @@
+{
+  "DeckLegality": {
+    "checking": "Checking legality…",
+    "legal": "Legal in {format}",
+    "illegal": "{count, plural, one {# card isn't} other {# cards aren't}} legal in {format}",
+    "unavailable": "Legality can't be checked for {format}",
+    "unchecked": "{count, plural, one {# card couldn't be checked} other {# cards couldn't be checked}}",
+    "reason": {
+      "banned": "Banned in this format",
+      "notLegal": "Not legal in this format",
+      "tooMany": "Too many copies (at most {max})"
+    }
+  }
+}

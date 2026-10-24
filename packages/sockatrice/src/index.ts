@@ -2,7 +2,7 @@ export * from './commands';
 
 export { WebClient } from './WebClient';
 export type { GameCommandEntry } from './services/ProtobufService';
-export { ZoneName } from './zoneNames';
+export { ZoneName, isBuiltinZone } from './zoneNames';
 export type { ZoneNameValue } from './zoneNames';
 export { moveTargetPlayerId } from './commands/game/bulk';
 export type { CardLocation, BulkMoveDestination, JudgeTarget } from './commands/game/bulk';

@@ -1,0 +1,31 @@
+/* Desktop's decaying washes: 450 ms, linearly to nothing (PlayerCounter / TableZone). */
+.value-flash {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  animation: value-flash 450ms linear forwards;
+}
+
+/* Life counter: 45% at 85% opacity. */
+.value-flash--gain {
+  background: rgb(var(--seat-flash-gain) / 0.38);
+}
+
+.value-flash--loss {
+  background: rgb(var(--seat-flash-loss) / 0.38);
+}
+
+/* Battlefield: a crimson wash at 22%. */
+.value-flash--damage {
+  background: rgb(var(--seat-flash-loss) / 0.22);
+}
+
+@keyframes value-flash {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}

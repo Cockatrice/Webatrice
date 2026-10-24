@@ -1,6 +1,6 @@
 import { CaseReducer, PayloadAction } from '@reduxjs/toolkit';
 import { ServerInfo_PlayerProperties } from '@cockatrice/sockatrice/generated';
-import { GamesState } from './game.interfaces';
+import { GameCommandFailedPayload, GamesState } from './game.interfaces';
 
 export const playerReducers = {
   playerJoined: ((state, action) => {
@@ -27,7 +27,7 @@ export const playerReducers = {
   playerLeft: ((state, action) => {
     const { gameId, playerId } = action.payload;
     const game = state.games[gameId];
-    if (!game) {
+    if (!game?.players[playerId]) {
       return;
     }
     delete game.players[playerId];
@@ -35,9 +35,22 @@ export const playerReducers = {
     delete state.pings[gameId][playerId];
   }) as CaseReducer<GamesState, PayloadAction<{ gameId: number; playerId: number; reason: number; timeReceived: number }>>,
 
+  deckSelected: ((state, action) => {
+    const { gameId, deckList } = action.payload;
+    const game = state.games[gameId];
+    const player = game?.players[game.localPlayerId];
+    if (!player) {
+      return;
+    }
+    player.deckList = deckList;
+  }) as CaseReducer<GamesState, PayloadAction<{ gameId: number; deckList: string; requestId?: string }>>,
+
+  deckSelectFailed: (() => {}) as CaseReducer<GamesState, PayloadAction<GameCommandFailedPayload>>,
+
   playerPropertiesChanged: (() => {}) as CaseReducer<GamesState, PayloadAction<{
     gameId: number;
     playerId: number;
     properties: ServerInfo_PlayerProperties;
+    isDeckSelect?: boolean;
   }>>,
 };

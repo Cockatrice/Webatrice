@@ -1,125 +1,58 @@
-import { useRef, useState } from 'react';
-
+import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
+import { ZoneName } from '@cockatrice/sockatrice';
 import { games } from '@cockatrice/datatrice';
-import { useAppSelector } from '@app/store';
-import { ServerInfo_Card } from '@cockatrice/sockatrice/generated';
-const EMPTY_CARDS: ServerInfo_Card[] = [];
 
-export interface ZoneViewDialog {
-  cards: ServerInfo_Card[];
+import { useAppSelector } from '@app/store';
+
+import {
+  revealedCardsToSeatCards,
+  seatDisplayName,
+  zoneToSeatCards,
+} from '../../components/ui/GameBoardCell/usePlayerSeatViewModel';
+import type { PlayerCardViewModel } from '../../components/ui/PlayerBoard/playerBoard.types';
+import type { ZoneViewTarget } from '../../hooks/dialogs/gameDialogs.types';
+import { zoneLabel } from '../shared/zoneLabels';
+import { isOrderedView } from './zoneViewTarget';
+import { isHiddenZone } from '../../utils/zones';
+
+export interface ZoneViewData {
+  cards: PlayerCardViewModel[];
   count: number;
   title: string;
-  position: { x: number; y: number };
-  handlePointerDown: (e: React.PointerEvent<HTMLDivElement>) => void;
-  handlePointerMove: (e: React.PointerEvent<HTMLDivElement>) => void;
-  handlePointerUp: (e: React.PointerEvent<HTMLDivElement>) => void;
+  isLocal: boolean;
 }
 
-export interface UseZoneViewDialogArgs {
-  gameId: number | undefined;
-  playerId: number | undefined;
-  zoneName: string | undefined;
-  initialPosition: { x: number; y: number };
-}
-
-export function zoneLabel(zoneName: string | undefined): string {
-  switch (zoneName) {
-    case 'grave': return 'Graveyard';
-    case 'rfg': return 'Exile';
-    case 'deck': return 'Library';
-    case 'sb': return 'Sideboard';
-    case 'stack': return 'Stack';
-    case 'hand': return 'Hand';
-    case 'table': return 'Battlefield';
-    default: return zoneName ?? '';
+export function zoneViewTitle(t: TFunction, view: ZoneViewTarget, playerName: string, shownCount: number): string {
+  if (view.zoneName === ZoneName.DECK) {
+    return isOrderedView(view)
+      ? t(view.isReversed ? 'ZoneViewTitle.bottom' : 'ZoneViewTitle.top', { count: shownCount, player: playerName })
+      : t('ZoneViewTitle.library', { player: playerName });
   }
+  return t('ZoneViewTitle.zone', { zone: zoneLabel(t, view.zoneName), player: playerName });
 }
 
-export function useZoneViewDialog({
-  gameId,
-  playerId,
-  zoneName,
-  initialPosition,
-}: UseZoneViewDialogArgs): ZoneViewDialog {
-  const zoneCards = useAppSelector((state) =>
-    gameId != null && playerId != null && zoneName != null
-      ? games.Selectors.getCards(state, gameId, playerId, zoneName)
-      : EMPTY_CARDS,
-  );
-  // Hidden zones (the deck) hold no card data in byId; their face-up contents arrive via
-  // Response_DumpZone and are stored separately. Prefer the revealed snapshot when present.
-  const revealedCards = useAppSelector((state) =>
-    gameId != null && playerId != null && zoneName != null
-      ? games.Selectors.getRevealedCards(state, gameId, playerId, zoneName)
-      : EMPTY_CARDS,
-  );
-  const cards = revealedCards.length > 0 ? revealedCards : zoneCards;
+export function useZoneViewDialog(gameId: number | undefined, view: ZoneViewTarget): ZoneViewData {
+  const { t } = useTranslation();
+  const { playerId, zoneName } = view;
   const zone = useAppSelector((state) =>
-    gameId != null && playerId != null && zoneName != null
-      ? games.Selectors.getZone(state, gameId, playerId, zoneName)
-      : undefined,
+    gameId != null ? games.Selectors.getZone(state, gameId, playerId, zoneName) : undefined,
   );
-  const playerName = useAppSelector((state) => {
-    if (gameId == null || playerId == null) {
-      return undefined;
-    }
-    return games.Selectors.getPlayer(state, gameId, playerId)?.properties.userInfo?.name;
-  });
+  const realName = useAppSelector((state) =>
+    gameId != null ? games.Selectors.getPlayer(state, gameId, playerId)?.properties.userInfo?.name : undefined,
+  );
+  const localPlayerId = useAppSelector((state) =>
+    gameId != null ? games.Selectors.getLocalPlayerId(state, gameId) : undefined,
+  );
+  const isLocal = playerId === localPlayerId;
 
+  const cards = useMemo(
+    () => (isHiddenZone(zone) ? revealedCardsToSeatCards(zone?.revealedCards) : zoneToSeatCards(zone)),
+    [zone],
+  );
   const count = zone?.cardCount ?? cards.length;
-  const title = `${playerName ?? ''} ${zoneLabel(zoneName)} (${count})`.trim();
+  const title = zoneViewTitle(t, view, seatDisplayName(t, realName, isLocal, playerId), cards.length);
 
-  // initialPosition is a caller-provided spawn point; we only honor it on mount.
-  // Later rerenders of the parent must not clobber a user's drag-positioned panel.
-  const [position, setPosition] = useState(initialPosition);
-  const dragStateRef = useRef<{
-    pointerId: number;
-    originX: number;
-    originY: number;
-    panelX: number;
-    panelY: number;
-  } | null>(null);
-
-  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (e.button !== 0) {
-      return;
-    }
-    // Skip drag initiation when the pointer lands on an interactive child
-    // (e.g. the close button). Capturing the pointer on the header would
-    // otherwise swallow the button's click event.
-    if ((e.target as HTMLElement).closest('button')) {
-      return;
-    }
-    const target = e.currentTarget;
-    target.setPointerCapture(e.pointerId);
-    dragStateRef.current = {
-      pointerId: e.pointerId,
-      originX: e.clientX,
-      originY: e.clientY,
-      panelX: position.x,
-      panelY: position.y,
-    };
-  };
-
-  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    const drag = dragStateRef.current;
-    if (!drag || e.pointerId !== drag.pointerId) {
-      return;
-    }
-    setPosition({
-      x: drag.panelX + (e.clientX - drag.originX),
-      y: drag.panelY + (e.clientY - drag.originY),
-    });
-  };
-
-  const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
-    const drag = dragStateRef.current;
-    if (!drag || e.pointerId !== drag.pointerId) {
-      return;
-    }
-    e.currentTarget.releasePointerCapture(e.pointerId);
-    dragStateRef.current = null;
-  };
-
-  return { cards, count, title, position, handlePointerDown, handlePointerMove, handlePointerUp };
+  return { cards, count, title, isLocal };
 }

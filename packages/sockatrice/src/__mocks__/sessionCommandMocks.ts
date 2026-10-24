@@ -41,6 +41,7 @@ export function makeUtilsMock() {
     hashPassword: vi.fn().mockResolvedValue('hashed_pw'),
     generateSalt: vi.fn().mockReturnValue('randSalt'),
     passwordSaltSupported: vi.fn().mockReturnValue(0),
+    passwordHashAvailable: vi.fn().mockReturnValue(true),
   };
 }
 
@@ -63,6 +64,8 @@ export function makeSessionPersistenceMock() {
     deleteServerDeckDir: vi.fn(),
     updateServerDecks: vi.fn(),
     uploadServerDeck: vi.fn(),
+    updateServerDeck: vi.fn(),
+    updateServerDeckFailed: vi.fn(),
     createServerDeckDir: vi.fn(),
     getGamesOfUser: vi.fn(),
     getUserInfo: vi.fn(),

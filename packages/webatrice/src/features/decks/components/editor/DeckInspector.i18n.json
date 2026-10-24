@@ -1,0 +1,19 @@
+{
+  "DeckInspector": {
+    "title": "Selected card",
+    "empty": "Pick a card in the deck or in the search to see it here.",
+    "noImage": "No image available",
+    "price": "${price}",
+    "quantity": "Quantity",
+    "decrease": "Remove one {card}",
+    "increase": "Add one {card}",
+    "add": "Add to deck",
+    "addToSideboard": "Add to sideboard",
+    "changePrinting": "Change printing",
+    "toSideboard": "To sideboard",
+    "toMain": "To main deck",
+    "details": "Details",
+    "remove": "Remove",
+    "removeCommander": "Remove commander"
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "LatencyStatus": {
+    "ping": "Ping: {ms} ms",
+    "detailsName": "Connection latency details",
+    "summary": "Connection quality over the last {count, plural, one {# sample} other {# samples}}:",
+    "last": "Last: {ms} ms",
+    "median": "Median: {ms} ms",
+    "p95": "95th percentile: {ms} ms",
+    "max": "Maximum: {ms} ms",
+    "short": "{ms} ms"
+  }
+}

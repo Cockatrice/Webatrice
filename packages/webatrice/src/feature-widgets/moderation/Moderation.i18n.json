@@ -1,0 +1,87 @@
+{
+  "Moderation": {
+    "menu": {
+      "warnUser": "Warn user",
+      "warnHistory": "View user's warn history",
+      "banUser": "Ban from server",
+      "banHistory": "View user's ban history",
+      "adminNotes": "View admin notes",
+      "investigateUser": "Investigate user",
+      "promoteMod": "Promote user to moderator",
+      "demoteMod": "Demote user from moderator",
+      "promoteJudge": "Promote user to judge",
+      "demoteJudge": "Demote user from judge",
+      "promoteDeveloper": "Promote user to developer",
+      "demoteDeveloper": "Demote user from developer",
+      "self": "You can't use moderator actions on yourself."
+    },
+    "common": {
+      "ok": "OK",
+      "cancel": "Cancel",
+      "close": "Close",
+      "success": "Success",
+      "failed": "Failed",
+      "loading": "Loading…"
+    },
+    "warn": {
+      "title": "Warn user for misconduct",
+      "description": "Which warning would you like to send?",
+      "userName": "User name",
+      "reason": "Warning",
+      "redact": "Redact all messages from this user in all rooms",
+      "withLevel": "{warning} (IL {level})",
+      "errorBlankName": "User name to send a warning to can not be blank, please specify a user to warn.",
+      "errorBlankReason": "Warning to use can not be blank, please select a valid warning to send."
+    },
+    "ban": {
+      "title": "Ban user from server",
+      "banType": "Ban type",
+      "byName": "ban user name",
+      "byIp": "ban IP address",
+      "byClientId": "ban client ID",
+      "duration": "Duration of the ban",
+      "permanent": "permanent ban",
+      "temporary": "temporary ban",
+      "days": "Days",
+      "hours": "Hours",
+      "minutes": "Minutes",
+      "reason": "Please enter the reason for the ban. This is only saved for moderators and cannot be seen by the banned person.",
+      "visibleReason": "Please enter the reason for the ban that will be visible to the banned person.",
+      "redact": "Redact all messages from this user in all rooms",
+      "errorNoType": "You have to select a name-based, IP-based, clientId based, or some combination of the three to place a ban.",
+      "errorBlankName": "You must have a value in the name ban when selecting the name ban checkbox.",
+      "errorBlankIp": "You must have a value in the ip ban when selecting the ip ban checkbox.",
+      "errorBlankClientId": "You must have a value in the clientid ban when selecting the clientid ban checkbox."
+    },
+    "banHistory": {
+      "title": "Ban History",
+      "banTime": "Ban Time",
+      "moderator": "Moderator",
+      "banLength": "Ban Length",
+      "banReason": "Ban Reason",
+      "visibleReason": "Visible Reason",
+      "empty": "User has never been banned.",
+      "failed": "Failed to collect ban information."
+    },
+    "warnHistory": {
+      "title": "Warning History",
+      "warningTime": "Warning Time",
+      "moderator": "Moderator",
+      "userName": "User Name",
+      "reason": "Reason",
+      "empty": "User has never been warned.",
+      "failed": "Failed to collect warning information."
+    },
+    "adminNotes": {
+      "title": "Admin Notes for {userName}",
+      "update": "Update Notes",
+      "failed": "Failed to get admin notes."
+    },
+    "adjustMod": {
+      "promoted": "Successfully promoted user.",
+      "demoted": "Successfully demoted user.",
+      "promoteFailed": "Failed to promote user.",
+      "demoteFailed": "Failed to demote user."
+    }
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "servers": [
+    {
+      "name": "E2E Public Server",
+      "host": "public.e2e.invalid",
+      "port": "4747",
+      "websocketPort": "443",
+      "site": "https://public.e2e.invalid",
+      "location": "Nowhere",
+      "isInactive": false
+    },
+    {
+      "name": "E2E Desktop-Only Server",
+      "host": "desktop.e2e.invalid",
+      "port": "4747",
+      "location": "Nowhere",
+      "isInactive": false
+    },
+    {
+      "name": "E2E Retired Server",
+      "host": "retired.e2e.invalid",
+      "port": "4747",
+      "websocketPort": "443",
+      "isInactive": true
+    }
+  ]
+}

@@ -1,0 +1,59 @@
+{
+  "CardDatabaseOverview": {
+    "summary": "{cards} cards, {sets} sets, {tokens} tokens, {formats} formats loaded.",
+    "empty": "No card database loaded yet. Import Oracle's cards.xml to get started.",
+    "sources": "Loaded files (in load order)",
+    "column": {
+      "file": "File",
+      "kind": "Kind",
+      "origin": "Source",
+      "contents": "Contents",
+      "imported": "Imported"
+    },
+    "kind": {
+      "main": "Card database",
+      "legacy": "Card database (earlier import)",
+      "tokens": "Tokens",
+      "spoiler": "Spoilers",
+      "custom": "Custom set",
+      "user-tokens": "Custom tokens"
+    },
+    "origin": {
+      "file": "Local file",
+      "url": "Downloaded",
+      "editor": "Token editor",
+      "migration": "Earlier import"
+    },
+    "contents": "{cards} cards, {sets} sets, {tokens} tokens",
+    "version": "version {version}",
+    "lastCheck": "Last checked for card updates: {date}",
+    "button": {
+      "reload": "Reload card database",
+      "addCustom": "Add custom sets/cards",
+      "remove": "Remove",
+      "updateTokens": "Update tokens",
+      "updateSpoilers": "Update spoilers",
+      "checkCards": "Check for card updates"
+    },
+    "newSets": {
+      "title": "New sets found",
+      "text": "{count, plural, one {# new set found} other {# new sets found}} in the card database. Set code(s): {codes}. Do you want to enable it/them?",
+      "yes": "Yes",
+      "yesAlways": "Yes, always enable",
+      "no": "No",
+      "view": "View sets"
+    },
+    "message": {
+      "reloaded": "Card database reloaded: {cards} cards, {sets} sets, {tokens} tokens.",
+      "allSetsEnabled": "All sets have been enabled. Use Manage sets to change which sets are used and their art priority.",
+      "spoilersUpToDate": "Spoilers already up to date.",
+      "spoilerSeasonEnded": "Spoiler season has ended.",
+      "spoilerSeasonEndedRemoved": "Spoiler season has ended; spoiler.xml was removed. Import a fresh cards.xml from Oracle.",
+      "cardUpdateAvailable": "A newer card database ({latest}) is available; yours is {installed}. Run Oracle in desktop Cockatrice, then import the new cards.xml.",
+      "cardsUpToDate": "Your card database is up to date ({version}).",
+      "offline": "Could not reach {url}. Check your connection; nothing was changed.",
+      "httpError": "{url} answered HTTP {status}; nothing was changed.",
+      "failed": "The update failed and nothing was changed: {error}"
+    }
+  }
+}

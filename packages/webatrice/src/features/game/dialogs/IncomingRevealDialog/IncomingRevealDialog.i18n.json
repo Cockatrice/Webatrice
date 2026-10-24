@@ -1,0 +1,7 @@
+{
+  "IncomingRevealDialog": {
+    "title": "{player} reveals their {zone}",
+    "titleUnknownSender": "A player reveals their {zone}",
+    "moveLent": "Move {name} to a battlefield"
+  }
+}

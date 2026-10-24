@@ -1,38 +1,29 @@
-import type { ZoneNameValue } from '@cockatrice/sockatrice';
-import { create } from '@bufbuild/protobuf';
+import { create, isFieldSet } from '@bufbuild/protobuf';
 import { Enriched } from '../../types';
 import {
+  CardAttribute,
+  Event_AttachCard,
+  Event_CreateToken,
+  Event_GameStateChanged,
+  Event_GameStateChangedSchema,
   ServerInfo_Arrow,
   ServerInfo_Card,
+  ServerInfo_CardCounter,
+  ServerInfo_CardCounterSchema,
   ServerInfo_CardSchema,
   ServerInfo_Counter,
   ServerInfo_Player,
 } from '@cockatrice/sockatrice/generated';
 import { cloneWith } from '../../common';
-import type { LogEntry } from './messageLog';
+import type { LogDescriptor, LogEntry } from '../../types/gameLog';
 
 export const MAX_GAME_MESSAGES = 1000;
 
-const LEAVE_REASON_MESSAGES: Record<number, string> = {
-  1: 'reason unknown',
-  2: 'kicked by game host or moderator',
-  3: 'player left the game',
-  4: 'player disconnected from server',
-};
-
-export function formatLeaveMessage(playerName: string, reason: number): LogEntry {
-  const reasonText = LEAVE_REASON_MESSAGES[reason] ?? LEAVE_REASON_MESSAGES[1];
-  return {
-    text: `${playerName} has left the game (${reasonText}).`,
-    segments: [
-      { text: playerName, kind: 'player' },
-      { text: ` has left the game (${reasonText}).`, kind: 'plain' },
-    ],
-  };
-}
-
-export function eventTimestamp(): number {
-  return Date.now();
+export function gameSecondsNow(game: Enriched.GameEntry, now: number): number {
+  if (game.secondsElapsedAt === undefined) {
+    return game.secondsElapsed;
+  }
+  return game.secondsElapsed + Math.max(0, Math.floor((now - game.secondsElapsedAt) / 1000));
 }
 
 /**
@@ -45,6 +36,7 @@ export function pushEventMessage(
   game: Enriched.GameEntry,
   playerId: number,
   message: string | LogEntry | null | undefined,
+  timeReceived: number,
 ): void {
   if (!message) {
     return;
@@ -57,11 +49,16 @@ export function pushEventMessage(
   if (game.messages.length >= MAX_GAME_MESSAGES) {
     game.messages = game.messages.slice(game.messages.length - MAX_GAME_MESSAGES + 1);
   }
+  const descriptor = typeof message !== 'string' && message.kind && message.params
+    ? { kind: message.kind, params: message.params } as LogDescriptor
+    : undefined;
   game.messages.push({
     playerId,
     message: text,
     segments,
-    timeReceived: eventTimestamp(),
+    ...(descriptor ? { descriptor } : {}),
+    timeReceived,
+    gameSeconds: gameSecondsNow(game, timeReceived),
     kind: 'event',
   });
 }
@@ -80,7 +77,7 @@ export function normalizePlayers(playerList: ServerInfo_Player[]): { [playerId: 
         byId[card.id] = card;
       }
       zones[zone.name] = {
-        name: zone.name as ZoneNameValue,
+        name: zone.name,
         type: zone.type,
         withCoords: zone.withCoords,
         cardCount: zone.cardCount,
@@ -165,4 +162,115 @@ export function clearZoneKnownCards(zone: Enriched.ZoneEntry): void {
   zone.byId = {};
   delete zone.revealedCards;
   delete zone.topRevealedCard;
+}
+
+export function cardAttrFields(attribute: CardAttribute, attrValue: string): Partial<ServerInfo_Card> | undefined {
+  switch (attribute) {
+    case CardAttribute.AttrTapped:
+      return { tapped: attrValue === '1' };
+    case CardAttribute.AttrAttacking:
+      return { attacking: attrValue === '1' };
+    case CardAttribute.AttrFaceDown:
+      return { faceDown: attrValue === '1' };
+    case CardAttribute.AttrColor:
+      return { color: attrValue };
+    case CardAttribute.AttrPT:
+      return { pt: attrValue };
+    case CardAttribute.AttrAnnotation:
+      return { annotation: attrValue };
+    case CardAttribute.AttrDoesntUntap:
+      return { doesntUntap: attrValue === '1' };
+    default:
+      return undefined;
+  }
+}
+
+export function mergeCardCounter(
+  counterList: ServerInfo_CardCounter[],
+  counterId: number,
+  counterValue: number,
+): ServerInfo_CardCounter[] {
+  if (counterValue <= 0) {
+    return counterList.filter(c => c.id !== counterId);
+  }
+  const idx = counterList.findIndex(c => c.id === counterId);
+  if (idx < 0) {
+    return [...counterList, create(ServerInfo_CardCounterSchema, { id: counterId, value: counterValue })];
+  }
+  return counterList.map((c, i) => (i === idx ? cloneWith(ServerInfo_CardCounterSchema, c, { value: counterValue }) : c));
+}
+
+// Unattach is an Event_AttachCard with an empty targetZone (proto3 can't tell the
+// unset numerics from player 0 / card 0), written as the explicit -1 / '' / -1
+// sentinels `isAttachedChild` checks for.
+// See .github/instructions/datatrice-game.instructions.md#servatrice-game-event-quirks.
+export function cardAttachFields(data: Event_AttachCard): Pick<ServerInfo_Card, 'attachPlayerId' | 'attachZone' | 'attachCardId'> {
+  const { targetPlayerId, targetZone, targetCardId } = data;
+  return targetZone
+    ? { attachPlayerId: targetPlayerId, attachZone: targetZone, attachCardId: targetCardId }
+    : { attachPlayerId: -1, attachZone: '', attachCardId: -1 };
+}
+
+export function buildTokenCard(data: Event_CreateToken): ServerInfo_Card {
+  const { cardId, cardName, x, y, faceDown, color, pt, annotation, destroyOnZoneChange, cardProviderId } = data;
+  return create(ServerInfo_CardSchema, {
+    id: cardId, name: cardName, x, y, faceDown,
+    tapped: false, attacking: false, color, pt, annotation, destroyOnZoneChange,
+    doesntUntap: false, counterList: [],
+    attachPlayerId: -1, attachZone: '', attachCardId: -1, providerId: cardProviderId,
+  });
+}
+
+// A gameStateChanged resync rebuilds every player from the wire, which omits two
+// things the client already holds: `userInfo` (Servatrice resyncs with
+// withUserInfo=false, server_game.cpp:280) and any open "View library" snapshot
+// (`revealedCards` is local-only). Copies both from `previous` into the freshly
+// normalized `next` in place (it is fresh from normalizePlayers, so nothing else holds
+// it), so names and open zone views survive a mid-game resync.
+// See .github/instructions/datatrice-game.instructions.md#servatrice-game-event-quirks.
+export function carryForwardResyncState(
+  previous: { [playerId: number]: Enriched.PlayerEntry },
+  next: { [playerId: number]: Enriched.PlayerEntry },
+): void {
+  for (const idStr of Object.keys(next)) {
+    const id = Number(idStr);
+    const prevPlayer = previous[id];
+    const prevUserInfo = prevPlayer?.properties.userInfo;
+    if (prevUserInfo && !next[id].properties.userInfo) {
+      next[id].properties.userInfo = prevUserInfo;
+    }
+    if (prevPlayer) {
+      for (const zoneName of Object.keys(next[id].zones)) {
+        const prevRevealed = prevPlayer.zones[zoneName]?.revealedCards;
+        if (prevRevealed) {
+          next[id].zones[zoneName].revealedCards = prevRevealed;
+        }
+      }
+    }
+  }
+}
+
+export interface GameInfoUpdate {
+  gameStarted?: boolean;
+  activePlayerId?: number;
+  activePhase?: number;
+  secondsElapsed?: number;
+}
+
+export function gameInfoUpdateFrom(data: Event_GameStateChanged): GameInfoUpdate | null {
+  const { field } = Event_GameStateChangedSchema;
+  const update: GameInfoUpdate = {};
+  if (isFieldSet(data, field.gameStarted)) {
+    update.gameStarted = data.gameStarted;
+  }
+  if (isFieldSet(data, field.activePlayerId)) {
+    update.activePlayerId = data.activePlayerId;
+  }
+  if (isFieldSet(data, field.activePhase)) {
+    update.activePhase = data.activePhase;
+  }
+  if (isFieldSet(data, field.secondsElapsed)) {
+    update.secondsElapsed = data.secondsElapsed;
+  }
+  return Object.keys(update).length > 0 ? update : null;
 }

@@ -16,6 +16,7 @@ import {
   Event_DumpZoneSchema,
   Event_FlipCardSchema,
   Event_GameJoinedSchema,
+  Event_GameLogNotice_NoticeType,
   Event_GameStateChangedSchema,
   Event_MoveCardSchema,
   Event_RevealCardsSchema,
@@ -117,6 +118,20 @@ function tableCard(id: number, name: string, overrides: Partial<ServerInfo_Card>
 // --- lifecycle -----------------------------------------------------------
 
 describe('integration: game lifecycle', () => {
+  it('logs undo draw failures and drops unknown notices or games', () => {
+    const { store, response } = seedGame();
+    const before = store.getState().games.games[GAME_ID].messages;
+    response.game.gameLogNotice!(GAME_ID, 1, Event_GameLogNotice_NoticeType.UNDO_DRAW_FAILED);
+    const messages = store.getState().games.games[GAME_ID].messages;
+    expect(messages).toHaveLength(before.length + 1);
+    expect(messages.at(-1)).toMatchObject({ kind: 'event', playerId: 1, message: 'Alice failed to undo their last draw.' });
+    const state = store.getState();
+    response.game.gameLogNotice!(GAME_ID, 1, 99 as Event_GameLogNotice_NoticeType);
+    expect(store.getState()).toBe(state);
+    response.game.gameLogNotice!(999, 1, Event_GameLogNotice_NoticeType.UNDO_DRAW_FAILED);
+    expect(store.getState()).toBe(state);
+  });
+
   it('gameJoined seeds a GameEntry the selectors can read', () => {
     const store = createStore();
     const response = attachResponseHandlers(store);
@@ -182,6 +197,24 @@ describe('integration: game lifecycle', () => {
     expect(games.Selectors.getPlayer(state, GAME_ID, 1)?.properties.conceded).toBe(true);
     const messages = games.Selectors.getMessages(state, GAME_ID);
     expect(messages.some(m => m.message === 'Alice has conceded the game.')).toBe(true);
+  });
+
+  it('playerPropertiesChanged from a SetPlaymat sets the player\'s playmat without a log line', () => {
+    const { store, response } = seedGame();
+    const before = games.Selectors.getMessages(store.getState(), GAME_ID).length;
+    response.game.playerPropertiesChanged(GAME_ID, 2, create(ServerInfo_PlayerPropertiesSchema, {
+      sideboardLocked: games.Selectors.getPlayer(store.getState(), GAME_ID, 2)!.properties.sideboardLocked,
+      deckHash: games.Selectors.getPlayer(store.getState(), GAME_ID, 2)!.properties.deckHash,
+      playmatParams: { cardName: 'Island', cardProviderId: 'uuid-1', zoom: 9 },
+    }));
+
+    const state = store.getState();
+    expect(games.Selectors.getPlayerPlaymat(state, GAME_ID, 2)).toEqual({
+      cardName: 'Island',
+      cardProviderId: 'uuid-1',
+      params: { marginPctL: 0.07, marginPctR: 0.07, verticalOffset: 0.33, zoom: 4 },
+    });
+    expect(games.Selectors.getMessages(state, GAME_ID)).toHaveLength(before);
   });
 
   it('gameHostChanged updates hostId', () => {
@@ -351,6 +384,28 @@ describe('integration: game chat and table events', () => {
     const messages = games.Selectors.getMessages(state, GAME_ID);
     // Intent: enabling alwaysRevealTopCard emits a log line about the top card.
     expect(messages.some(m => /top card/i.test(m.message))).toBe(true);
+  });
+});
+
+describe('integration: pre-game deck', () => {
+  it('deckSelected stores the server deck on the local player; a resync keeps the server copy', () => {
+    const store = createStore();
+    const response = attachResponseHandlers(store);
+    response.session.gameJoined(makeJoinedData());
+    response.game.gameStateChanged(GAME_ID, create(Event_GameStateChangedSchema, {
+      playerList: [playerWithZones(1, 'Alice'), playerWithZones(2, 'Bob')],
+    }));
+
+    const deck = '<cockatrice_deck version="1"><zone name="main"><card number="1" name="Forest"/></zone></cockatrice_deck>';
+    response.game.deckSelected?.(GAME_ID, deck);
+    expect(games.Selectors.getLocalPlayer(store.getState(), GAME_ID)?.deckList).toBe(deck);
+
+    const resynced = playerWithZones(1, 'Alice');
+    resynced.deckList = deck.replace('Forest', 'Island');
+    response.game.gameStateChanged(GAME_ID, create(Event_GameStateChangedSchema, {
+      playerList: [resynced, playerWithZones(2, 'Bob')],
+    }));
+    expect(games.Selectors.getLocalPlayer(store.getState(), GAME_ID)?.deckList).toContain('Island');
   });
 });
 
@@ -647,12 +702,20 @@ describe('integration: counters, arrows, turn state', () => {
 
   it('turnReversed flips the reversed flag and logs it', () => {
     const { store, response } = seedGame();
-    response.game.turnReversed(GAME_ID, true);
+    response.game.turnReversed(GAME_ID, true, 2);
     const state = store.getState();
     expect(games.Selectors.isReversed(state, GAME_ID)).toBe(true);
     const messages = games.Selectors.getMessages(state, GAME_ID);
-    // Intent: reversing the turn order emits a log line about turn order.
-    expect(messages.some(m => /turn order/i.test(m.message))).toBe(true);
+    expect(messages.some(m => m.message === 'Bob reversed turn order, now it\'s reversed.')).toBe(true);
+  });
+
+  it('turnReversed with no actor flips the flag but logs nothing, like desktop', () => {
+    const { store, response } = seedGame();
+    const before = games.Selectors.getMessages(store.getState(), GAME_ID).length;
+    response.game.turnReversed(GAME_ID, true);
+    const state = store.getState();
+    expect(games.Selectors.isReversed(state, GAME_ID)).toBe(true);
+    expect(games.Selectors.getMessages(state, GAME_ID)).toHaveLength(before);
   });
 
   it('ignores events for unknown games without throwing', () => {

@@ -1,11 +1,26 @@
 import { create } from '@bufbuild/protobuf';
 import { describe, expect, it, vi } from 'vitest';
 
-import { Command_Activate_ext, Command_ListRooms_ext, Command_ListUsers_ext, Command_Login_ext, Command_Register_ext, Command_RequestPasswordSalt_ext, Response_LoginSchema, Response_Login_ext, Response_PasswordSaltSchema, Response_PasswordSalt_ext, Response_ResponseCode, ServerInfo_User, ServerInfo_UserSchema, ServerInfo_User_UserLevelFlag } from '@cockatrice/sockatrice/generated';
+import {
+  Command_Activate_ext,
+  Command_ListRooms_ext,
+  Command_ListUsers_ext,
+  Command_Login_ext,
+  Command_Register_ext,
+  Command_RequestPasswordSalt_ext,
+  Response_LoginSchema,
+  Response_Login_ext,
+  Response_PasswordSaltSchema,
+  Response_PasswordSalt_ext,
+  Response_ResponseCode,
+  ServerInfo_User,
+  ServerInfo_UserSchema,
+  ServerInfo_User_UserLevelFlag,
+} from '@cockatrice/sockatrice/generated';
 import { store } from '../helpers/setup';
 import { WebsocketTypes } from '@cockatrice/sockatrice/types';
 
-import { connectAndHandshake, connectAndHandshakeWithSalt } from '../helpers/setup';
+import { connectAndHandshake, connectAndHandshakeWithSalt, getWebClient } from '../helpers/setup';
 import {
   buildResponse,
   buildResponseMessage,
@@ -110,6 +125,22 @@ describe('authentication', () => {
   });
 
   describe('activate', () => {
+    it('forwards a password-salt timeout to the activation failure signal', () => {
+      const failed = vi.spyOn(getWebClient().response.session, 'accountActivationFailed');
+      try {
+        connectAndHandshakeWithSalt({
+          reason: WebsocketTypes.WebSocketConnectReason.ACTIVATE_ACCOUNT,
+          userName: 'alice', token: 'abc-123', password: 'secret',
+        });
+        expect(findLastSessionCommand(Command_RequestPasswordSalt_ext).value.userName).toBe('alice');
+        vi.advanceTimersByTime(18_001);
+        expect(failed).toHaveBeenCalledWith(WebsocketTypes.CommandFailure.Timeout);
+        expect(() => findLastSessionCommand(Command_Activate_ext)).toThrow();
+      } finally {
+        failed.mockRestore();
+      }
+    });
+
     it('auto-logs-in on RespActivationAccepted', () => {
       connectAndHandshake({
         reason: WebsocketTypes.WebSocketConnectReason.ACTIVATE_ACCOUNT as const,
@@ -130,6 +161,17 @@ describe('authentication', () => {
 
       const login = findLastSessionCommand(Command_Login_ext);
       expect(login.value.userName).toBe('alice');
+      expect(login.value.password).toBe('secret');
+
+      deliverMessage(buildResponseMessage(buildResponse({
+        cmdId: login.cmdId,
+        responseCode: Response_ResponseCode.RespOk,
+        ext: Response_Login_ext,
+        value: create(Response_LoginSchema, { userInfo: makeUser('alice') }),
+      })));
+
+      expect(store.getState().server.status.state).toBe(WebsocketTypes.StatusEnum.LOGGED_IN);
+      expect(store.getState().server.user?.name).toBe('alice');
     });
   });
 

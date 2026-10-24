@@ -1,0 +1,35 @@
+{
+  "NotificationCentre": {
+    "bell": {
+      "label": "Notifications",
+      "labelUnread": "Notifications, {count} new"
+    },
+    "drawer": {
+      "title": "Notifications",
+      "new": "{count} new",
+      "markAllRead": "Mark all read",
+      "close": "Close notifications",
+      "filters": "Show",
+      "sectionNew": "New",
+      "sectionEarlier": "Earlier this session",
+      "empty": "Nothing yet this session. Messages, mentions, buddies coming online, games filling up and report updates will collect here.",
+      "emptyFiltered": "Nothing of this kind yet this session.",
+      "unread": "Unread",
+      "settings": "Notification settings"
+    },
+    "filter": {
+      "all": "All",
+      "message": "Messages",
+      "mention": "Mentions",
+      "game": "Games",
+      "buddy": "Buddies",
+      "report": "Reports"
+    },
+    "permission": {
+      "granted": "Browser notifications are on",
+      "default": "Browser notifications are off",
+      "denied": "Browser notifications are blocked",
+      "unsupported": "Browser notifications are not supported here"
+    }
+  }
+}

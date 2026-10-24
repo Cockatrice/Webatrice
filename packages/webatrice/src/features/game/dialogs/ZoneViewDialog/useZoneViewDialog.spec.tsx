@@ -1,5 +1,6 @@
 import { ZoneName } from '@cockatrice/sockatrice';
-import { act, renderHook } from '@testing-library/react';
+import { ServerInfo_Zone_ZoneType } from '@cockatrice/sockatrice/generated';
+import { renderHook } from '@testing-library/react';
 import { combineReducers } from '@reduxjs/toolkit';
 
 import { games, type GamesState } from '@cockatrice/datatrice';
@@ -13,7 +14,16 @@ import {
 } from '@cockatrice/datatrice/testing';
 
 import { makeReduxHookWrapper } from '../../../../__test-utils__/makeHookWrapper';
-import { useZoneViewDialog, zoneLabel } from './useZoneViewDialog';
+import { catalogT } from '../../__test-utils__/catalogT';
+import type { ZoneViewTarget } from '../../hooks/dialogs/gameDialogs.types';
+import gameLogText from '../../../../feature-widgets/replay-player/formatLogDescriptor.i18n.json';
+import zoneLabels from '../shared/zoneLabels.i18n.json';
+import zoneViewTitles from './useZoneViewDialog.i18n.json';
+import { useZoneViewDialog, zoneViewTitle } from './useZoneViewDialog';
+
+const englishT = catalogT(zoneLabels, zoneViewTitles, gameLogText);
+
+vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: englishT }) }));
 
 function setup(zoneArgs: Parameters<typeof makeZoneEntry>[0]) {
   const game = makeGameEntry({
@@ -38,171 +48,99 @@ function setup(zoneArgs: Parameters<typeof makeZoneEntry>[0]) {
   );
 }
 
-describe('useZoneViewDialog', () => {
-  it('zoneLabel maps short codes to human-readable names', () => {
-    expect(zoneLabel('grave')).toBe('Graveyard');
-    expect(zoneLabel('rfg')).toBe('Exile');
-    expect(zoneLabel('deck')).toBe('Library');
-    expect(zoneLabel(undefined)).toBe('');
+function render(view: ZoneViewTarget, wrapper: ReturnType<typeof setup>['Wrapper'], gameId: number | undefined) {
+  return renderHook(() => useZoneViewDialog(gameId, view), { wrapper }).result.current;
+}
+
+describe('zoneViewTitle', () => {
+  it.each([
+    [{ zoneName: ZoneName.DECK }, 'P1\'s library'],
+    [{ zoneName: ZoneName.DECK, numberCards: 3 }, 'Top 3 cards — P1'],
+    [{ zoneName: ZoneName.DECK, numberCards: 3, isReversed: true }, 'Bottom 3 cards — P1'],
+    [{ zoneName: ZoneName.GRAVE }, 'Graveyard — P1'],
+    [{ zoneName: ZoneName.EXILE }, 'Exile — P1'],
+    [{ zoneName: ZoneName.HAND }, 'Hand — P1'],
+    [{ zoneName: ZoneName.SIDEBOARD }, 'Sideboard — P1'],
+  ])('%o reads %s', (view, title) => {
+    expect(zoneViewTitle(englishT, { playerId: 1, ...view }, 'P1', 3)).toBe(title);
   });
 
-  it('builds a title from the player name, zone label, and card count', () => {
+  it('translates each title as one message, so a language can reorder it', () => {
+    const germanT = catalogT({
+      ZoneLabel: { title: { grave: 'Friedhof' } },
+      ZoneViewTitle: { zone: '{zone} von {player}', library: 'Bibliothek von {player}', top: 'Oberste {count} Karten von {player}' },
+    });
+    expect(zoneViewTitle(germanT, { playerId: 1, zoneName: ZoneName.GRAVE }, 'P1', 3)).toBe('Friedhof von P1');
+    expect(zoneViewTitle(germanT, { playerId: 1, zoneName: ZoneName.DECK }, 'P1', 3)).toBe('Bibliothek von P1');
+    expect(zoneViewTitle(germanT, { playerId: 1, zoneName: ZoneName.DECK, numberCards: 3 }, 'P1', 3)).toBe('Oberste 3 Karten von P1');
+  });
+});
+
+describe('useZoneViewDialog', () => {
+  it('uses the dump snapshot for a hidden custom zone', () => {
+    const { Wrapper } = setup({
+      name: 'vault', type: ServerInfo_Zone_ZoneType.HiddenZone, cardCount: 3,
+      cards: [makeCard({ id: 8, name: 'Stale card' })],
+      revealedCards: [makeCard({ id: 0, name: 'Opt' })],
+    });
+    expect(render({ playerId: 1, zoneName: 'vault' }, Wrapper, 1).cards.map((card) => card.name)).toEqual(['Opt']);
+  });
+
+  it('lists a public zone bottom to top, as the seat projects it', () => {
     const { Wrapper } = setup({
       name: ZoneName.GRAVE,
-      cards: [makeCard({ id: 1 }), makeCard({ id: 2 })],
+      cards: [makeCard({ id: 1, name: 'Opt', providerId: 'p1' }), makeCard({ id: 2, name: 'Duress' })],
       cardCount: 2,
     });
 
-    const { result } = renderHook(
-      () =>
-        useZoneViewDialog({
-          gameId: 1,
-          playerId: 1,
-          zoneName: ZoneName.GRAVE,
-          initialPosition: { x: 0, y: 0 },
-        }),
-      { wrapper: Wrapper },
-    );
+    const view = render({ playerId: 1, zoneName: ZoneName.GRAVE }, Wrapper, 1);
 
-    expect(result.current.count).toBe(2);
-    expect(result.current.cards).toHaveLength(2);
-    expect(result.current.title).toBe('Trajer Graveyard (2)');
+    expect(view.cards.map((c) => [c.id, c.name])).toEqual([['1', 'Opt'], ['2', 'Duress']]);
+    expect(view.cards[0].scryfallId).toBe('p1');
+    expect(view.count).toBe(2);
+    expect(view.title).toBe('Graveyard — Trajer');
+    expect(view.isLocal).toBe(true);
   });
 
-  it('prefers the revealed dump snapshot over the zone byId cards (hidden deck)', () => {
+  it('lists a custom zone\'s cards under its own name', () => {
+    const { Wrapper } = setup({ name: 'command', cards: [makeCard({ id: 7, name: 'Kenrith' })], cardCount: 1 });
+
+    const view = render({ playerId: 1, zoneName: 'command' }, Wrapper, 1);
+
+    expect(view.cards.map((c) => c.name)).toEqual(['Kenrith']);
+    expect(view.count).toBe(1);
+    expect(view.title).toBe('command — Trajer');
+  });
+
+  it('shows only the count of a hidden custom zone', () => {
+    const { Wrapper } = setup({ name: 'vault', cards: [], cardCount: 3 });
+    const view = render({ playerId: 1, zoneName: 'vault' }, Wrapper, 1);
+    expect(view.cards).toEqual([]);
+    expect(view.count).toBe(3);
+  });
+
+  it('lists the revealed dump snapshot of a hidden zone, not its byId cards', () => {
     const { Wrapper } = setup({
       name: ZoneName.DECK,
+      type: ServerInfo_Zone_ZoneType.HiddenZone,
       cards: [],
-      cardCount: 3,
-      revealedCards: [makeCard({ id: 0, name: 'Forest' }), makeCard({ id: 1, name: 'Island' })],
+      cardCount: 40,
+      revealedCards: [makeCard({ id: 0, name: 'Island' }), makeCard({ id: 1, name: 'Ponder' })],
     });
 
-    const { result } = renderHook(
-      () =>
-        useZoneViewDialog({
-          gameId: 1,
-          playerId: 1,
-          zoneName: ZoneName.DECK,
-          initialPosition: { x: 0, y: 0 },
-        }),
-      { wrapper: Wrapper },
-    );
+    const view = render({ playerId: 1, zoneName: ZoneName.DECK }, Wrapper, 1);
 
-    expect(result.current.cards.map(c => c.name)).toEqual(['Forest', 'Island']);
-    // Count still reflects the server-reported zone size.
-    expect(result.current.count).toBe(3);
+    expect(view.cards.map((c) => c.name)).toEqual(['Island', 'Ponder']);
+    expect(view.count).toBe(40);
+    expect(view.title).toBe('Trajer\'s library');
   });
 
-  it('falls back to an empty result when gameId or playerId is undefined (no current game)', () => {
-    const { Wrapper } = setup({ name: ZoneName.GRAVE, cardCount: 0 });
+  it('is empty without a current game', () => {
+    const { Wrapper } = setup({ name: ZoneName.GRAVE, cards: [makeCard({ id: 1 })], cardCount: 1 });
 
-    const { result } = renderHook(
-      () =>
-        useZoneViewDialog({
-          gameId: undefined,
-          playerId: undefined,
-          zoneName: ZoneName.GRAVE,
-          initialPosition: { x: 10, y: 20 },
-        }),
-      { wrapper: Wrapper },
-    );
+    const view = render({ playerId: 1, zoneName: ZoneName.GRAVE }, Wrapper, undefined);
 
-    expect(result.current.cards).toEqual([]);
-    expect(result.current.count).toBe(0);
-    expect(result.current.title).toMatch(/Graveyard/);
-  });
-
-  it('honors initialPosition on mount and updates position when the user drags the header', () => {
-    const { Wrapper } = setup({ name: ZoneName.GRAVE, cardCount: 0 });
-
-    const { result } = renderHook(
-      () =>
-        useZoneViewDialog({
-          gameId: 1,
-          playerId: 1,
-          zoneName: ZoneName.GRAVE,
-          initialPosition: { x: 100, y: 50 },
-        }),
-      { wrapper: Wrapper },
-    );
-
-    expect(result.current.position).toEqual({ x: 100, y: 50 });
-
-    const setPointerCapture = vi.fn();
-    const releasePointerCapture = vi.fn();
-    const target = { setPointerCapture, closest: () => null } as unknown as HTMLElement;
-
-    act(() => {
-      result.current.handlePointerDown({
-        button: 0,
-        pointerId: 7,
-        clientX: 200,
-        clientY: 200,
-        target,
-        currentTarget: target,
-      } as unknown as React.PointerEvent<HTMLDivElement>);
-    });
-
-    act(() => {
-      result.current.handlePointerMove({
-        pointerId: 7,
-        clientX: 230,
-        clientY: 240,
-      } as unknown as React.PointerEvent<HTMLDivElement>);
-    });
-
-    expect(result.current.position).toEqual({ x: 130, y: 90 });
-
-    act(() => {
-      result.current.handlePointerUp({
-        pointerId: 7,
-        currentTarget: { releasePointerCapture } as unknown as HTMLElement,
-      } as unknown as React.PointerEvent<HTMLDivElement>);
-    });
-
-    expect(releasePointerCapture).toHaveBeenCalledWith(7);
-  });
-
-  it('ignores pointerdown when the pointer originates on an interactive child (button)', () => {
-    const { Wrapper } = setup({ name: ZoneName.GRAVE, cardCount: 0 });
-
-    const { result } = renderHook(
-      () =>
-        useZoneViewDialog({
-          gameId: 1,
-          playerId: 1,
-          zoneName: ZoneName.GRAVE,
-          initialPosition: { x: 0, y: 0 },
-        }),
-      { wrapper: Wrapper },
-    );
-
-    const setPointerCapture = vi.fn();
-    const target = {
-      setPointerCapture,
-      closest: (sel: string) => (sel === 'button' ? ({} as HTMLElement) : null),
-    } as unknown as HTMLElement;
-
-    act(() => {
-      result.current.handlePointerDown({
-        button: 0,
-        pointerId: 7,
-        clientX: 200,
-        clientY: 200,
-        target,
-        currentTarget: target,
-      } as unknown as React.PointerEvent<HTMLDivElement>);
-    });
-
-    act(() => {
-      result.current.handlePointerMove({
-        pointerId: 7,
-        clientX: 230,
-        clientY: 240,
-      } as unknown as React.PointerEvent<HTMLDivElement>);
-    });
-
-    expect(setPointerCapture).not.toHaveBeenCalled();
-    expect(result.current.position).toEqual({ x: 0, y: 0 });
+    expect(view.cards).toEqual([]);
+    expect(view.count).toBe(0);
   });
 });

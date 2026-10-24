@@ -1,6 +1,6 @@
 import { Host } from '@app/types';
 
-import { getHostPort } from './HostService';
+import { getHostKey, getHostPort } from './HostService';
 
 describe('getHostPort', () => {
   it('returns the host and port verbatim', () => {
@@ -17,8 +17,6 @@ describe('getHostPort', () => {
   });
 
   it('ignores legacy localHost/localPort left on stale IndexedDB records', () => {
-    // Older seeds persisted localHost/localPort; those fields are gone from the
-    // type but may still exist as inert properties on a user's stored records.
     const stale = {
       name: 'Rooster',
       host: 'server.cockatrice.us/servatrice',
@@ -35,5 +33,12 @@ describe('getHostPort', () => {
 
   it('returns empty strings when no host is provided', () => {
     expect(getHostPort(undefined as unknown as Host)).toEqual({ host: '', port: '' });
+  });
+});
+
+describe('getHostKey', () => {
+  it('joins the address and port', () => {
+    const host = { name: 'Rooster', host: 'server.cockatrice.us/servatrice', port: '4748', editable: false } as Host;
+    expect(getHostKey(host)).toBe('server.cockatrice.us/servatrice:4748');
   });
 });

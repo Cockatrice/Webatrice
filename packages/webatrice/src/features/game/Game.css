@@ -1,38 +1,22 @@
-/* Shell layout — 4-column grid.
- *
- * Column widths match the components inside them:
- *   • var(--phase-track-width) — either 8px (default, PhaseTrack is
- *     an auto-collapsing HUD that floats over the play area on
- *     hover) or 112px (pinned mode — the track always takes real
- *     width and the play area shrinks accordingly). Set inline on
- *     `.game` from Game.tsx based on `usePhaseTrackPinned`.
- *   • 1fr — play area (`.game__board`), auto-placed into column 2.
- *   • 8px — SidebarResizer drag handle (fixed width, hover-lights).
- *   • var(--sidebar-width) — BattlefieldSidebar, user-resizable
- *     between SIDEBAR_WIDTH_MIN and SIDEBAR_WIDTH_MAX (see
- *     useSidebarWidth.ts). Width is set inline on `.game` from
- *     Game.tsx and persists to localStorage.
- *
- * Colors + typography use the shared design tokens (--bg-base /
- * --text-primary) so the shell reads as the same dark purple
- * aesthetic as the lobby and My Decks pages. */
 .game {
   position: relative;
   display: grid;
-  grid-template-columns: var(--phase-track-width, 8px) minmax(0, 1fr) 8px var(--sidebar-width, 288px);
-  grid-template-rows: 1fr;
+  grid-template-columns: minmax(0, 1fr) var(--dock-resizer-width, 8px) var(--dock-width, 288px);
+  grid-template-rows: auto minmax(0, 1fr) auto;
   height: 100%;
   min-height: 0;
   background: rgb(var(--bg-base));
   color: rgb(var(--text-primary));
 }
 
-/* Play area — the middle column. `overflow: auto` (not `hidden`) so
- * 3+ player games can scroll horizontally to fit wider board cells,
- * matching fancy webatrice's `flex-1 overflow-auto` middle region. The
- * subtle `/30` tint against the shell's bg-base gives the play area a
- * softly-inset feel. */
+.game__turnbar {
+  grid-column: 1;
+  grid-row: 1;
+}
+
 .game__board {
+  grid-column: 1;
+  grid-row: 2;
   position: relative;
   display: flex;
   flex-direction: column;
@@ -42,9 +26,27 @@
   background: rgb(var(--bg-base) / 0.3);
 }
 
-/* Adaptive board grid: one cell per seated player. grid-template-columns/rows are
-   set inline from the layout (1 column for ≤3 players, 2 for ≥4). Each cell's own
-   styles live with the GameBoardCell component. */
+.game__tray {
+  grid-column: 1;
+  grid-row: 3;
+  min-width: 0;
+  --tray-h: clamp(140px, 18vh, 190px);
+  height: var(--tray-h);
+  --card-height: var(--tray-card-height, calc(var(--tray-h) - 46px));
+  --card-width: var(--tray-card-width, calc(var(--card-height) * 72 / 102));
+}
+
+.game__resizer {
+  grid-column: 2;
+  grid-row: 1 / span 3;
+}
+
+.game__dock {
+  grid-column: 3;
+  grid-row: 1 / span 3;
+  min-height: 0;
+}
+
 .game__board-grid {
   flex: 1;
   min-height: 0;
@@ -61,39 +63,21 @@
   font-style: italic;
 }
 
-/* Box-select surfaces: never let a drag start a native text selection. */
-[data-zone-box-select] {
-  user-select: none;
-}
-
-/* End-step attention flash. Applied to the End step's phase bar for
- * ~1.5 s whenever the active phase transitions INTO end step
- * (typically an opponent's end step, since your own phase changes
- * are already visible via the click you initiated). Three quick
- * pulses at 500 ms each — long enough to notice, short enough not
- * to be a distraction. Uses an amber/yellow glow to differentiate
- * from the green tint the End bar normally carries.
- *
- * The `opacity` bump beats the collapsed bar's baseline 0.45 so the
- * bar fully lights up even while inactive-styled. Once the animation
- * finishes it drops back and the parent's `isActive` styling takes
- * over.
- */
 @keyframes phase-endstep-flash {
   0%, 100% {
-    box-shadow: 0 0 0 0 rgba(250, 204, 21, 0);
+    box-shadow: 0 0 0 0 rgb(var(--status-warning) / 0);
     opacity: 1;
   }
   25% {
-    box-shadow: 0 0 16px 4px rgba(250, 204, 21, 0.9);
+    box-shadow: 0 0 16px 4px rgb(var(--status-warning) / 0.9);
     opacity: 1;
   }
   50% {
-    box-shadow: 0 0 6px 2px rgba(250, 204, 21, 0.5);
+    box-shadow: 0 0 6px 2px rgb(var(--status-warning) / 0.5);
     opacity: 0.7;
   }
   75% {
-    box-shadow: 0 0 16px 4px rgba(250, 204, 21, 0.9);
+    box-shadow: 0 0 16px 4px rgb(var(--status-warning) / 0.9);
     opacity: 1;
   }
 }
@@ -101,16 +85,12 @@
   animation: phase-endstep-flash 1.5s ease-in-out;
 }
 
-.card-slot:focus-visible,
-.zone-stack:focus-visible,
-.battlefield__row:focus-visible,
-.hand-zone:focus-visible,
-.game-log__input:focus-visible,
-.turn-controls__btn:focus-visible,
-.phase-bar__btn:focus-visible,
-.player-info-panel__counter[role='button']:focus-visible,
-.player-info-panel__name--interactive:focus-visible {
-  outline: 2px solid var(--color-highlight-yellow);
-  outline-offset: 2px;
-  border-radius: 2px;
+.game--with-footer {
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
+}
+
+.game__footer {
+  grid-column: 1 / -1;
+  grid-row: 4;
+  min-width: 0;
 }

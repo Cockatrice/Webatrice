@@ -35,7 +35,11 @@ import {
   Command_Shuffle_ext,
   Command_UndoDraw_ext,
   Command_Unconcede_ext,
+  Command_SetPlaymat_ext,
+  Response_DeckDownload_ext,
+  Response_ResponseCode,
 } from '../../generated';
+import { CommandFailure } from '../../types/CommandFailure';
 
 import { attachCard } from './attachCard';
 import { changeZoneProperties } from './changeZoneProperties';
@@ -65,9 +69,11 @@ import { setActivePhase } from './setActivePhase';
 import { setCardAttr } from './setCardAttr';
 import { setCardCounter } from './setCardCounter';
 import { setCounter } from './setCounter';
+import { setPlaymat } from './setPlaymat';
 import { setSideboardLock } from './setSideboardLock';
 import { setSideboardPlan } from './setSideboardPlan';
 import { shuffle } from './shuffle';
+import { moveCardAndShuffle } from './moveCardAndShuffle';
 import { undoDraw } from './undoDraw';
 import { unconcede } from './unconcede';
 
@@ -114,10 +120,33 @@ describe('Game commands — delegate to WebClient.instance.protobuf.sendGameComm
     );
   });
 
-  it('deckSelect sends Command_DeckSelect', () => {
+  it('deckSelect sends Command_DeckSelect with a Response_DeckDownload handler', () => {
     deckSelect(gameId, { deckId: 5 });
     expect(WebClient.instance.protobuf.sendGameCommand).toHaveBeenCalledWith(
-      gameId, Command_DeckSelect_ext, expect.objectContaining({ deckId: 5 })
+      gameId,
+      Command_DeckSelect_ext,
+      expect.objectContaining({ deckId: 5 }),
+      expect.objectContaining({ responseExt: Response_DeckDownload_ext, onSuccess: expect.any(Function) }),
+    );
+  });
+
+  it('deckSelect onSuccess routes the server deck list to response.game.deckSelected', () => {
+    deckSelect(gameId, { deck: '<cockatrice_deck/>' });
+    const calls = vi.mocked(WebClient.instance.protobuf.sendGameCommand).mock.calls;
+    const options = calls[calls.length - 1][3] as { onSuccess: (resp: unknown) => void };
+    options.onSuccess({ deck: '<cockatrice_deck version="1"/>' });
+    expect(WebClient.instance.response.game.deckSelected).toHaveBeenCalledWith(gameId, '<cockatrice_deck version="1"/>');
+  });
+
+  it('deckSelect onError reports the failure with gameId, code and transport reason', () => {
+    deckSelect(gameId, { deckId: 5 });
+    const calls = vi.mocked(WebClient.instance.protobuf.sendGameCommand).mock.calls;
+    const options = calls[calls.length - 1][3] as {
+      onError: (responseCode: number, raw: unknown, failure?: CommandFailure) => void;
+    };
+    options.onError(Response_ResponseCode.RespNotConnected, {}, CommandFailure.Timeout);
+    expect(WebClient.instance.response.game.deckSelectFailed).toHaveBeenCalledWith(
+      gameId, Response_ResponseCode.RespNotConnected, CommandFailure.Timeout,
     );
   });
 
@@ -220,13 +249,23 @@ describe('Game commands — delegate to WebClient.instance.protobuf.sendGameComm
 
   it('nextTurn sends Command_NextTurn with empty object', () => {
     nextTurn(gameId);
-    expect(WebClient.instance.protobuf.sendGameCommand).toHaveBeenCalledWith(gameId, Command_NextTurn_ext, expect.any(Object));
+    expect(WebClient.instance.protobuf.sendGameCommand).toHaveBeenCalledWith(
+      gameId, Command_NextTurn_ext, expect.any(Object),
+      expect.objectContaining({ onSuccess: expect.any(Function), onError: expect.any(Function) }),
+    );
   });
 
   it('readyStart sends Command_ReadyStart', () => {
     readyStart(gameId, { ready: true });
     expect(WebClient.instance.protobuf.sendGameCommand).toHaveBeenCalledWith(
       gameId, Command_ReadyStart_ext, expect.objectContaining({ ready: true })
+    );
+  });
+
+  it('readyStart carries force_start alongside ready (desktop DeckViewContainer::forceStart)', () => {
+    readyStart(gameId, { ready: true, forceStart: true });
+    expect(WebClient.instance.protobuf.sendGameCommand).toHaveBeenCalledWith(
+      gameId, Command_ReadyStart_ext, expect.objectContaining({ ready: true, forceStart: true })
     );
   });
 
@@ -271,6 +310,15 @@ describe('Game commands — delegate to WebClient.instance.protobuf.sendGameComm
     );
   });
 
+  it('setPlaymat sends Command_SetPlaymat with the playmat params', () => {
+    setPlaymat(gameId, { playmatParams: { cardName: 'Island', cardProviderId: 'abc', zoom: 1.5 } });
+    expect(WebClient.instance.protobuf.sendGameCommand).toHaveBeenCalledWith(
+      gameId,
+      Command_SetPlaymat_ext,
+      expect.objectContaining({ playmatParams: expect.objectContaining({ cardName: 'Island', cardProviderId: 'abc', zoom: 1.5 }) })
+    );
+  });
+
   it('setSideboardLock sends Command_SetSideboardLock', () => {
     setSideboardLock(gameId, { locked: true });
     expect(WebClient.instance.protobuf.sendGameCommand).toHaveBeenCalledWith(
@@ -290,6 +338,29 @@ describe('Game commands — delegate to WebClient.instance.protobuf.sendGameComm
     expect(WebClient.instance.protobuf.sendGameCommand).toHaveBeenCalledWith(
       gameId, Command_Shuffle_ext, expect.objectContaining({ zoneName: 'hand' })
     );
+  });
+
+  it('moveCardAndShuffle sends Command_Shuffle then Command_MoveCard in one container', () => {
+    moveCardAndShuffle(
+      gameId,
+      {
+        startPlayerId: 1,
+        startZone: 'hand',
+        cardsToMove: { card: [{ cardId: 4 }, { cardId: 9 }] },
+        targetPlayerId: 1,
+        targetZone: 'deck',
+        x: 0,
+        y: 0,
+      },
+      { zoneName: 'deck', start: 0, end: 1 },
+    );
+    expect(WebClient.instance.protobuf.sendGameCommands).toHaveBeenCalledTimes(1);
+    const [sentGameId, entries] = vi.mocked(WebClient.instance.protobuf.sendGameCommands).mock.calls[0];
+    expect(sentGameId).toBe(gameId);
+    expect(entries.map((e) => e.ext)).toEqual([Command_Shuffle_ext, Command_MoveCard_ext]);
+    expect(entries[0].value).toEqual(expect.objectContaining({ zoneName: 'deck', start: 0, end: 1 }));
+    expect(entries[1].value).toEqual(expect.objectContaining({ startZone: 'hand', targetZone: 'deck', x: 0 }));
+    expect(entries.every((e) => e.judgeTargetId === undefined)).toBe(true);
   });
 
   it('undoDraw sends Command_UndoDraw with empty object', () => {

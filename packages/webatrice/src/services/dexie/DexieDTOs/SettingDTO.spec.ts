@@ -10,7 +10,10 @@ vi.mock('../DexieService', () => ({
   dexieService: { settings: settingsTable },
 }));
 
+import { PREFERENCE_DEFAULTS, SETTINGS_VERSION } from '@app/types';
 import { SettingDTO } from './SettingDTO';
+
+const mapToClassCalls = [...settingsTable.mapToClass.mock.calls];
 
 describe('SettingDTO', () => {
   beforeEach(() => {
@@ -19,14 +22,20 @@ describe('SettingDTO', () => {
   });
 
   it('registers itself with the settings table on import', () => {
-    expect(settingsTable.mapToClass).toHaveBeenCalledWith(SettingDTO);
+    expect(mapToClassCalls).toEqual([[SettingDTO]]);
   });
 
-  it('constructs with the given user and default flags', () => {
+  it('constructs with the given user, the current schema version and every preference default', () => {
     const setting = new SettingDTO('alice');
     expect(setting.user).toBe('alice');
-    expect(setting.autoConnect).toBe(false);
-    expect(setting.invertVerticalCoordinate).toBe(false);
+    expect(setting.version).toBe(SETTINGS_VERSION);
+    expect(setting).toMatchObject(PREFERENCE_DEFAULTS);
+  });
+
+  it('does not share array defaults between instances', () => {
+    const a = new SettingDTO('a');
+    (a.messageMacros as string[]).push('gg');
+    expect(new SettingDTO('b').messageMacros).toEqual([]);
   });
 
   it('save() puts the instance into the settings table', async () => {

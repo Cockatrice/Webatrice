@@ -2,6 +2,7 @@ import { create } from '@bufbuild/protobuf';
 
 import { attachResponseHandlers, createStore, rooms } from '../../src';
 import {
+  Event_RoomSay_RoomMessageType,
   ServerInfo_Game,
   ServerInfo_GameSchema,
   ServerInfo_GameTypeSchema,
@@ -78,9 +79,6 @@ describe('integration: room lifecycle', () => {
     response.room.joinRoom(makeRoom(1, 'Main'));
 
     const before = rooms.Selectors.getRoom(store.getState(), 1);
-    // A full-room re-broadcast must value-compare as a no-op (normalizeGametypeMap
-    // allocates a fresh map, so a reference check never matches) and leave the
-    // room ref untouched — see datatrice-store.instructions.md § UPDATE_ROOMS.
     response.room.updateRooms([makeRoom(1, 'Main')]);
 
     expect(rooms.Selectors.getRoom(store.getState(), 1)).toBe(before);
@@ -196,6 +194,23 @@ describe('integration: room games', () => {
     // setJoinGameError also clears the pending flag.
     expect(rooms.Selectors.getJoinGamePending(state)).toBe(false);
   });
+
+  it('joinRoomFailed exposes the rejected room and response code until cleared', () => {
+    const store = createStore();
+    const response = attachResponseHandlers(store);
+    response.room.joinRoomFailed(3, 15);
+    expect(rooms.Selectors.getJoinRoomError(store.getState())).toEqual({ roomId: 3, responseCode: 15, failure: undefined });
+
+    store.dispatch(rooms.Actions.clearJoinRoomError());
+    expect(rooms.Selectors.getJoinRoomError(store.getState())).toBeNull();
+  });
+
+  it('joinRoomFailed for an autojoin leaves no join error, as desktop shows none', () => {
+    const store = createStore();
+    const response = attachResponseHandlers(store);
+    response.room.joinRoomFailed(3, 15, undefined, false);
+    expect(rooms.Selectors.getJoinRoomError(store.getState())).toBeNull();
+  });
 });
 
 // --- chat + users --------------------------------------------------------
@@ -212,6 +227,38 @@ describe('integration: room chat and users', () => {
     const messages = rooms.Selectors.getRoomMessages(store.getState(), 1);
     expect(messages).toHaveLength(2);
     expect(messages[1]).toMatchObject({ senderName: 'bob', message: 'hi' });
+  });
+
+  it('drops messages from ignored senders as they arrive, history included', () => {
+    const store = createStore();
+    const response = attachResponseHandlers(store);
+    response.room.joinRoom(makeRoom(1, 'Main'));
+    response.room.addMessage(1, { name: 'troll', message: 'before', timeReceived: 1 });
+
+    response.session.addToIgnoreList(makeRoomUser('troll'));
+    response.room.addMessage(1, { name: 'troll', message: 'live', timeReceived: 2 });
+    response.room.addMessage(1, {
+      name: 'troll', message: 'old', messageType: Event_RoomSay_RoomMessageType.ChatHistory, timeOf: 5n, timeReceived: 3,
+    });
+    response.room.addMessage(1, { name: 'alice', message: 'hi', timeReceived: 4 });
+
+    expect(rooms.Selectors.getRoomMessages(store.getState(), 1).map(m => m.message))
+      .toEqual(['troll: before', 'alice: hi']);
+
+    response.session.removeFromIgnoreList('troll');
+    response.room.addMessage(1, { name: 'troll', message: 'after', timeReceived: 5 });
+    expect(rooms.Selectors.getRoomMessages(store.getState(), 1).map(m => m.message))
+      .toEqual(['troll: before', 'alice: hi', 'troll: after']);
+  });
+
+  it('roomSayFailed appends a chatFlood notice to the room chat', () => {
+    const store = createStore();
+    const response = attachResponseHandlers(store);
+    response.room.joinRoom(makeRoom(1, 'Main'));
+
+    response.room.roomSayFailed(1, 'too fast', 18);
+    const [notice] = rooms.Selectors.getRoomMessages(store.getState(), 1);
+    expect(notice).toMatchObject({ notice: 'chatFlood', message: '' });
   });
 
   it('removeMessages drops the most recent N messages from a sender', () => {
@@ -255,4 +302,17 @@ describe('integration: room chat and users', () => {
       response.room.updateGames(999, [makeGame(1)]);
     }).not.toThrow();
   });
+});
+
+it('retains each join error identity through the response bridge and shared-store selector', () => {
+  const store = createStore();
+  const response = attachResponseHandlers(store);
+  response.room.setJoinGamePending(true, 'join-old');
+  response.room.setJoinGamePending(true, 'join-new');
+  response.room.setJoinGameError(12, '', undefined, 'join-new');
+  const acceptedError = rooms.Selectors.getJoinGameError(store.getState());
+  expect(acceptedError).toEqual({ code: 12, message: '', requestId: 'join-new' });
+  response.room.setJoinGameError(12, '', undefined, 'join-old');
+  expect(rooms.Selectors.getJoinGameError(store.getState())).toEqual({ code: 12, message: '', requestId: 'join-old' });
+  expect(acceptedError?.requestId).toBe('join-new');
 });

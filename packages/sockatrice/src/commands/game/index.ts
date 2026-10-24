@@ -8,6 +8,7 @@ export { nextTurn } from './nextTurn';
 export { setActivePhase } from './setActivePhase';
 export { reverseTurn } from './reverseTurn';
 export { moveCard } from './moveCard';
+export { moveCardAndShuffle } from './moveCardAndShuffle';
 export { sendGameCommands } from './sendGameCommands';
 export {
   bulkTap,
@@ -42,5 +43,6 @@ export { changeZoneProperties } from './changeZoneProperties';
 export { deckSelect } from './deckSelect';
 export { setSideboardPlan } from './setSideboardPlan';
 export { setSideboardLock } from './setSideboardLock';
+export { setPlaymat } from './setPlaymat';
 export { mulligan } from './mulligan';
 export { rollDie } from './rollDie';

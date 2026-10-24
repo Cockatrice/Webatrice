@@ -1,7 +1,15 @@
 import { fromBinary, getExtension, hasExtension } from '@bufbuild/protobuf';
 import type { GenExtension } from '@bufbuild/protobuf/codegenv2';
 
-import { AdminCommand, CommandContainer, CommandContainerSchema, GameCommand, ModeratorCommand, RoomCommand, SessionCommand } from '@cockatrice/sockatrice/generated';
+import {
+  AdminCommand,
+  CommandContainer,
+  CommandContainerSchema,
+  GameCommand,
+  ModeratorCommand,
+  RoomCommand,
+  SessionCommand,
+} from '@cockatrice/sockatrice/generated';
 import { getMockWebSocket } from './setup';
 
 type SessionCmd = SessionCommand;
@@ -48,6 +56,20 @@ export function findLastSessionCommand<V>(
   throw new Error(
     `No outbound session command with extension ${ext.typeName} has been sent.`
   );
+}
+
+export function findAllSessionCommands<V>(
+  ext: GenExtension<SessionCmd, V>
+): Array<{ container: CommandContainer; value: V; cmdId: number }> {
+  const matches: Array<{ container: CommandContainer; value: V; cmdId: number }> = [];
+  for (const container of captureAllOutbound()) {
+    for (const sessionCmd of container.sessionCommand ?? []) {
+      if (hasExtension(sessionCmd, ext)) {
+        matches.push({ container, value: getExtension(sessionCmd, ext), cmdId: Number(container.cmdId) });
+      }
+    }
+  }
+  return matches;
 }
 
 export function findLastRoomCommand<V>(

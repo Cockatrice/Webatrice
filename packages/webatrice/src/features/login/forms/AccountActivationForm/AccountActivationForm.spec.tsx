@@ -3,6 +3,7 @@ import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import { renderWithProviders, disconnectedState } from '../../../../__test-utils__';
 import AccountActivationForm from './AccountActivationForm';
 import { server } from '@cockatrice/datatrice';
+import { WebsocketTypes } from '@cockatrice/sockatrice/types';
 
 describe('AccountActivationForm', () => {
   test('renders the token field and the activate button', () => {
@@ -55,6 +56,16 @@ describe('AccountActivationForm', () => {
       store.dispatch({ type: server.Types.ACCOUNT_ACTIVATION_FAILED, payload: {} });
     });
     expect(screen.getByText('AccountActivationForm.error.failed')).toBeTruthy();
+  });
+
+  test('explains an activation the server never answered with the transport reason', () => {
+    const { store } = renderWithProviders(<AccountActivationForm onSubmit={vi.fn()} />, {
+      preloadedState: disconnectedState,
+    });
+    act(() => {
+      store.dispatch(server.Actions.accountActivationFailed({ failure: WebsocketTypes.CommandFailure.Timeout }));
+    });
+    expect(screen.getByText('CommandFailure.timeout')).toBeTruthy();
   });
 
   test('clears the failure message on a subsequent valid submit', async () => {

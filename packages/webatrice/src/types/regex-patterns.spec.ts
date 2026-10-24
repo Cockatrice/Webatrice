@@ -69,6 +69,10 @@ describe('RegEx', () => {
       expect('@mention trailing'.match(MENTION_REGEX)[0]).toBe('@mention');
     });
 
+    it('should run over the punctuation Servatrice allows in usernames', () => {
+      expect('hi @foo.bar-baz_1 there'.match(MENTION_REGEX)[0]).toBe(' @foo.bar-baz_1');
+    });
+
     it('should not match preceded by character', () => {
       const test = [
         'leading@mention',

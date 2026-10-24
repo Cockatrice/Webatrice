@@ -1,16 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { screen } from '@testing-library/react';
+import { fireEvent, screen, within } from '@testing-library/react';
 
 import { Settings } from '@app/features/settings';
 
 import { renderFeatureScreen, simulateLoggedIn } from './helpers';
-
-// ShortcutsTab needs a ShortcutProvider context that AppShell wires in
-// production. Stubbing it scopes this spec to Settings' own behaviour
-// (the tabs + AuthGuard) — feature-widgets/shortcuts has its own coverage.
-vi.mock('@app/feature-widgets/shortcuts', () => ({
-  ShortcutsTab: () => <div data-testid="shortcuts-tab" />,
-}));
 
 beforeEach(() => {
   vi.useRealTimers();
@@ -18,12 +11,15 @@ beforeEach(() => {
 });
 
 describe('Settings (integration)', () => {
-  it('renders the shortcuts tab when the user is logged in', () => {
+  it('shows every settings section on one page when the user is logged in, and links to Shortcuts', () => {
     renderFeatureScreen(<Settings />);
 
-    expect(
-      screen.getByRole('tab', { name: /Settings\.tab\.shortcuts/ }),
-    ).toBeInTheDocument();
-    expect(screen.getByTestId('shortcuts-tab')).toBeInTheDocument();
+    const nav = screen.getByRole('navigation', { name: /Settings\.jumpTo/ });
+    expect(within(nav).getByRole('button', { name: /Settings\.section\.general/ })).toHaveAttribute('aria-current', 'location');
+    expect(screen.getByRole('region', { name: /^Settings\.section\.storage$/ })).toBeInTheDocument();
+
+    fireEvent.click(within(nav).getByRole('button', { name: /Settings\.section\.shortcuts/ }));
+
+    expect(screen.getByRole('button', { name: /Settings\.shortcuts\.open/ })).toBeInTheDocument();
   });
 });

@@ -155,4 +155,45 @@ describe('VirtualList', () => {
     );
     expect(container.querySelector('.virtual-list__list')).toHaveAttribute('role', 'rowgroup');
   });
+
+  it('makes each row of a plain list a listitem placed in the whole list', () => {
+    const { container } = render(
+      <VirtualRows items={['a', 'b', 'c']} rowHeight={20} renderRow={(n) => <span>{n}</span>} />,
+    );
+    emitSize(findListContainer(container), 100);
+
+    const rows = container.querySelectorAll('[role="listitem"]');
+    expect(rows).toHaveLength(3);
+    expect(rows[1]).toHaveAttribute('aria-posinset', '2');
+    expect(rows[1]).toHaveAttribute('aria-setsize', '3');
+  });
+
+  it('leaves row semantics to the caller when it sets the list role', () => {
+    const { container } = render(
+      <VirtualRows items={[1]} rowHeight={20} role="rowgroup" renderRow={(n) => <div role="row">{n}</div>} />,
+    );
+    emitSize(findListContainer(container), 100);
+
+    expect(container.querySelector('[role="listitem"]')).not.toBeInTheDocument();
+    expect(container.querySelector('[role="row"]')).toBeInTheDocument();
+  });
+
+  it('renders a caller-roled list\'s rows as its direct children, positioned by the row itself', () => {
+    const { container } = render(
+      <VirtualRows
+        items={[1, 2]}
+        rowHeight={20}
+        role="rowgroup"
+        renderRow={(n, _, style) => <div role="row" style={style}>{n}</div>}
+      />,
+    );
+    emitSize(findListContainer(container), 100);
+
+    const rows = container.querySelectorAll('[role="row"]');
+    expect(rows).toHaveLength(2);
+    for (const row of rows) {
+      expect(row.parentElement).toHaveAttribute('role', 'rowgroup');
+    }
+    expect((rows[1] as HTMLElement).style.transform).toContain('20px');
+  });
 });

@@ -1,0 +1,21 @@
+{
+  "Game": {
+    "empty": "No active game. Join a game from a room to see the board.",
+    "confirm": {
+      "concede": {
+        "message": "Are you sure you want to concede this game?"
+      },
+      "unconcede": {
+        "title": "Unconcede",
+        "message": "You have already conceded.  Do you want to return to this game?"
+      },
+      "leave": {
+        "message": "Are you sure you want to leave this game?"
+      }
+    },
+    "toast": {
+      "kicked": "You were kicked from the game",
+      "closed": "The game was closed by the host"
+    }
+  }
+}

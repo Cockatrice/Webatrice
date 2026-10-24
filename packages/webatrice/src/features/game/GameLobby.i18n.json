@@ -1,0 +1,51 @@
+{
+  "GameLobby": {
+    "loadingGame": "Loading game…",
+    "gameNumber": "Game #{id}",
+    "fromMyDecks": "From My Decks",
+    "loadingDecks": "Loading your decks…",
+    "noDecks": "No decks yet — create one from the My Decks page, or upload a .cod below.",
+    "watching": {
+      "judge": "Watching as judge",
+      "spectator": "Watching as spectator"
+    },
+    "upload": {
+      "heading": "Upload a .cod file"
+    },
+    "deckCategory": {
+      "other": "Other",
+      "unknown": "Unknown format"
+    },
+    "player": {
+      "readyWithDeck": "Ready · {name}",
+      "waitingWithDeck": "{name} · waiting to ready",
+      "deckSubmittedWaiting": "Deck submitted · waiting to ready",
+      "choosingDeck": "Choosing a deck…",
+      "kick": "Kick",
+      "waiting": "Waiting for player…",
+      "bracketTitle": "Commander Bracket {level} (from the deck's cached assessment)",
+      "bracketBadge": "B{level}",
+      "ready": "Ready"
+    },
+    "action": {
+      "unloadDeck": "Unload deck",
+      "readyStart": "Ready to start",
+      "sideboardLocked": "Sideboard locked",
+      "sideboardUnlocked": "Sideboard unlocked",
+      "forceStart": "Force start"
+    },
+    "deck": {
+      "heading": "Your deck",
+      "maindeck": "Maindeck: {count}",
+      "sideboard": "Sideboard: {count}",
+      "moveToSideboard": "Move {name} to the sideboard",
+      "moveToMaindeck": "Move {name} to the maindeck",
+      "lockedHint": "Unlock the sideboard to change which cards you play this game."
+    },
+    "forceStart": {
+      "title": "Are you sure you want to force start?",
+      "message": "This will kick all non-ready players from the game."
+    },
+    "deckSelectFailed": "The server did not accept this deck."
+  }
+}

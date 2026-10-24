@@ -1,0 +1,12 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    "types": ["node"],
+    "noEmit": true,
+    // Fixtures reuse src modules (DefaultHosts); map the app aliases those reach.
+    "paths": {
+      "@app/types": ["../src/types/index.ts"]
+    }
+  },
+  "include": ["./**/*.ts", "../playwright.config.ts"]
+}

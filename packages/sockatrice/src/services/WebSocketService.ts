@@ -17,8 +17,6 @@ export interface WebSocketServiceConfig {
   onConnectionFailed: () => void;
   onConnectionUnreachable?: () => void;
   onMessage: (message: MessageEvent) => void;
-  /** Keepalive health: missedPongs > 0 while pings go unanswered, 0 on recovery.
-   *  The keepalive never closes the connection — see KeepAliveService. */
   onConnectionHealth?: (missedPongs: number, silentForMs: number) => void;
   /** Opt-in automatic reconnect on unexpected socket close. */
   reconnect?: ReconnectConfig;
@@ -37,6 +35,7 @@ export class WebSocketService {
 
   private intentionalDisconnect = false;
   private reconnectAttempts = 0;
+  private clearConnectionTimer: (() => void) | undefined;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   /**
    * True after first successful `onopen`; gates reconnect.
@@ -54,6 +53,10 @@ export class WebSocketService {
         this.config.onConnectionHealth?.(missedPongs, silentForMs);
       },
     );
+  }
+
+  public get target(): ConnectTarget | null {
+    return this.lastTarget;
   }
 
   public connect(target: ConnectTarget): void {
@@ -76,8 +79,18 @@ export class WebSocketService {
     this.closeActiveSocket(false);
   }
 
+  public dispose(): void {
+    this.intentionalDisconnect = true;
+    this.clearReconnectTimer();
+    this.closeActiveSocket(true);
+  }
+
   public checkReadyState(state: number): boolean {
     return this.socket?.readyState === state;
+  }
+
+  public get connectedEndpoint(): string | null {
+    return this.socket?.readyState === WebSocket.OPEN ? this.socket.url : null;
   }
 
   public send(message: Uint8Array): void {
@@ -96,13 +109,9 @@ export class WebSocketService {
     const socket = new WebSocket(url);
     socket.binaryType = 'arraybuffer';
 
-    // Raw close (not WebSocketService.terminate) on purpose: this fires only when
-    // the socket never opened within `keepalive` ms — a genuinely stuck/refused
-    // connect that established nothing to strand — and its onclose is what drives
-    // the DISCONNECTED / reconnect path. Deferring the close (terminate) would
-    // wait for an onopen that never comes and hang reconnect.
     const connectionTimer = setTimeout(() => socket.close(), this.keepalive);
     const clearConnectionTimer = (): void => clearTimeout(connectionTimer);
+    this.clearConnectionTimer = clearConnectionTimer;
 
     socket.onopen = () => {
       this.hasEverOpened = true;
@@ -125,8 +134,6 @@ export class WebSocketService {
         return;
       }
 
-      // Current socket closed without ever opening — never reached the server.
-      // Identity-gated so a retired socket's late onclose can't fire this.
       if (this.socket === socket && !this.hasEverOpened) {
         this.config.onConnectionUnreachable?.();
       }
@@ -201,31 +208,23 @@ export class WebSocketService {
   }
 
   private closeActiveSocket(retiringForReconnect: boolean): void {
+    this.clearConnectionTimer?.();
+    this.clearConnectionTimer = undefined;
+    this.keepAliveService.endPingLoop();
     if (!this.socket) {
       return;
     }
     const socket = this.socket;
     this.socket = null;
 
-    // Detach onmessage always — late buffered frames from a socket we no longer
-    // own must not re-enter after teardown.
     socket.onmessage = null;
 
-    // A still-CONNECTING socket is retired via terminateSocket (defers a clean
-    // close to onopen instead of aborting into a stranded half-open). But that
-    // deferred open→close would otherwise fire this orphan's onopen (CONNECTED +
-    // ping loop) and onclose (DISCONNECTED / reconnect) — so silence its lifecycle
-    // handlers first. terminateSocket re-arms onopen to the clean close.
     if (socket.readyState === WebSocket.CONNECTING) {
       socket.onopen = null;
       socket.onclose = null;
       socket.onerror = null;
     } else if (retiringForReconnect) {
-      // OPEN socket cycled out by a fresh connect(): detach its lifecycle handlers
-      // so a late onclose/onerror can't tear down the replacement's keepalive,
-      // emit DISCONNECTED, or corrupt hasReportedError against the live replacement.
-      // Not done on an intentional disconnect(), whose onclose must still emit
-      // DISCONNECTED. terminateSocket owns close timing only.
+      socket.onopen = null;
       socket.onclose = null;
       socket.onerror = null;
     }

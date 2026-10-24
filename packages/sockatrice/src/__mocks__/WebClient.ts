@@ -57,17 +57,23 @@ const session = {
   accountEditChanged: vi.fn(),
   accountImageChanged: vi.fn(),
   getUserInfo: vi.fn(),
+  getUserInfoFailed: vi.fn(),
   getGamesOfUser: vi.fn(),
+  getGamesOfUserPending: vi.fn(),
+  getGamesOfUserFailed: vi.fn(),
   gameJoined: vi.fn(),
   notifyUser: vi.fn(),
   playerPropertiesChanged: vi.fn(),
   serverShutdown: vi.fn(),
   userMessage: vi.fn(),
+  privateMessageFailed: vi.fn(),
   addToList: vi.fn(),
   removeFromList: vi.fn(),
   deleteServerDeck: vi.fn(),
   updateServerDecks: vi.fn(),
   uploadServerDeck: vi.fn(),
+  updateServerDeck: vi.fn(),
+  updateServerDeckFailed: vi.fn(),
   downloadServerDeck: vi.fn(),
   createServerDeckDir: vi.fn(),
   deleteServerDeckDir: vi.fn(),
@@ -76,6 +82,22 @@ const session = {
   replayModifyMatch: vi.fn(),
   replayDeleteMatch: vi.fn(),
   replayDownloaded: vi.fn(),
+  deckShareCreated: vi.fn(),
+  deckShareListed: vi.fn(),
+  deckShareDownloaded: vi.fn(),
+  deckSharesMine: vi.fn(),
+  deckShareRemoved: vi.fn(),
+  otherUserDecks: vi.fn(),
+  deckVisibilityChanged: vi.fn(),
+  publicDeckDownloaded: vi.fn(),
+  reportMyList: vi.fn(),
+  reportDetails: vi.fn(),
+  commandFailed: vi.fn(),
+  deckListFailed: vi.fn(),
+  deckDownloadFailed: vi.fn(),
+  deckUploadFailed: vi.fn(),
+  deckNewDirFailed: vi.fn(),
+  replayListFailed: vi.fn(),
 };
 
 const room = {
@@ -85,6 +107,7 @@ const room = {
   updateRooms: vi.fn(),
   updateGames: vi.fn(),
   addMessage: vi.fn(),
+  roomSayFailed: vi.fn(),
   userJoined: vi.fn(),
   userLeft: vi.fn(),
   removeMessages: vi.fn(),
@@ -92,6 +115,8 @@ const room = {
   joinedGame: vi.fn(),
   setJoinGamePending: vi.fn(),
   setJoinGameError: vi.fn(),
+  joinRoomFailed: vi.fn(),
+  createGameFailed: vi.fn(),
 };
 
 const game = {
@@ -126,6 +151,11 @@ const game = {
   turnReversed: vi.fn(),
   zoneDumped: vi.fn(),
   zonePropertiesChanged: vi.fn(),
+  gameLogNotice: vi.fn(),
+  deckSelected: vi.fn(),
+  deckSelectFailed: vi.fn(),
+  nextTurnAnswered: vi.fn(),
+  nextTurnFailed: vi.fn(),
 };
 
 const admin = {
@@ -133,9 +163,11 @@ const admin = {
   reloadConfig: vi.fn(),
   shutdownServer: vi.fn(),
   updateServerMessage: vi.fn(),
+  commandFailed: vi.fn(),
 };
 
 const moderator = {
+  commandFailed: vi.fn(),
   banFromServer: vi.fn(),
   banHistory: vi.fn(),
   viewLogs: vi.fn(),
@@ -146,6 +178,25 @@ const moderator = {
   forceActivateUser: vi.fn(),
   getAdminNotes: vi.fn(),
   updateAdminNotes: vi.fn(),
+  cardArtRules: vi.fn(),
+  cardArtRuleAdded: vi.fn(),
+  cardArtRuleRemoved: vi.fn(),
+  userSessions: vi.fn(),
+  userAlts: vi.fn(),
+  moderatorLastLogins: vi.fn(),
+  userAvatarRemoved: vi.fn(),
+  reportList: vi.fn(),
+  reportAssigned: vi.fn(),
+  reportResolved: vi.fn(),
+  reportUserInfo: vi.fn(),
+  reportStats: vi.fn(),
+  replayDownloadByGameIdPending: vi.fn(),
+  replayDownloadedByGameId: vi.fn(),
+};
+
+const developer = {
+  serverStats: vi.fn(),
+  commandFailed: vi.fn(),
 };
 
 export const WebClient = {
@@ -155,6 +206,9 @@ export const WebClient = {
     testConnect: vi.fn(),
     disconnect: vi.fn(),
     updateStatus: vi.fn(),
+    replayGameEventContainer: vi.fn(),
+    loadReplayGame: vi.fn(),
+    unloadReplayGame: vi.fn(),
     status: 0 as number,
     clientConfig: {
       clientid: 'test-clientid',
@@ -166,6 +220,7 @@ export const WebClient = {
       keepalive: 5000,
     },
     protocolVersion: 14,
+    serverSupportsPasswordHash: false,
     protobuf: {
       sendSessionCommand: vi.fn(),
       sendRoomCommand: vi.fn(),
@@ -173,9 +228,10 @@ export const WebClient = {
       sendGameCommands: vi.fn(),
       sendAdminCommand: vi.fn(),
       sendModeratorCommand: vi.fn(),
+      sendDeveloperCommand: vi.fn(),
       resetCommands: vi.fn(),
     },
-    response: { session, room, game, admin, moderator },
+    response: { session, room, game, admin, moderator, developer },
   },
 };
 

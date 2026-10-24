@@ -12,6 +12,8 @@ import {
   Response_DeckListSchema,
   Response_GetGamesOfUserSchema,
   Response_ReplayDownloadSchema,
+  ServerInfo_DeckShareSummarySchema,
+  ServerInfo_DeckStorage_FileSchema,
   ServerInfo_DeckStorage_FolderSchema,
   ServerInfo_DeckStorage_TreeItemSchema,
   ServerInfo_GameSchema,
@@ -61,12 +63,13 @@ describe('integration: session connection lifecycle', () => {
     const store = createStore();
     const response = attachResponseHandlers(store);
 
-    response.session.updateInfo('Cockatrice Server', '2.11');
+    response.session.updateInfo('Cockatrice Server', '2.11', true);
     response.session.serverMessage('Welcome!');
 
     const state = store.getState();
     expect(server.Selectors.getName(state)).toBe('Cockatrice Server');
     expect(server.Selectors.getVersion(state)).toBe('2.11');
+    expect(server.Selectors.getSupportsPasswordHash(state)).toBe(true);
     expect(server.Selectors.getMessage(state)).toBe('Welcome!');
   });
 
@@ -87,14 +90,10 @@ describe('integration: session connection lifecycle', () => {
     const store = createStore();
     const response = attachResponseHandlers(store);
 
-    // `updateConnectionHealth` is optional on ISessionResponse (hence the `!`);
-    // the concrete SessionResponseImpl always implements it.
     response.session.updateConnectionHealth!(2, 10000);
     expect(server.Selectors.getConnectionHealth(store.getState())).toEqual({ missedPongs: 2, silentForMs: 10000 });
     expect(server.Selectors.getIsServerUnresponsive(store.getState())).toBe(true);
 
-    // Any socket lifecycle transition is a fresh start; stale degraded health
-    // must not survive it.
     response.session.updateStatus(WebsocketTypes.StatusEnum.CONNECTED, 'reconnected');
     expect(server.Selectors.getIsServerUnresponsive(store.getState())).toBe(false);
     expect(server.Selectors.getConnectionHealth(store.getState())).toEqual({ missedPongs: 0, silentForMs: 0 });
@@ -270,6 +269,27 @@ describe('integration: session messaging and notifications', () => {
     expect(store.getState().server.messages['bob']).toHaveLength(1);
   });
 
+  it('a private conversation records delivery failures and the partner presence in order', () => {
+    const store = createStore();
+    const response = attachResponseHandlers(store);
+    response.session.updateUser(makeUser('alice'));
+    response.session.updateUsers([makeUser('bob')]);
+
+    response.session.userMessage(create(Event_UserMessageSchema, {
+      senderName: 'alice', receiverName: 'bob', message: 'hi bob',
+    }));
+    response.session.privateMessageFailed('bob', 'too fast', 18);
+    response.session.userLeft('bob');
+    expect(server.Selectors.getIsUserOnline(store.getState(), 'bob')).toBe(false);
+    response.session.privateMessageFailed('bob', 'are you there?', 6);
+    response.session.userJoined(makeUser('bob'));
+
+    const rows = server.Selectors.getPrivateConversation(store.getState(), 'bob')
+      .map((e) => (e.type === 'message' ? e.message.message : e.notice.kind));
+    expect(rows).toEqual(['hi bob', 'chatFlood', 'userLeft', 'recipientOffline', 'userJoined']);
+    expect(server.Selectors.getIsUserOnline(store.getState(), 'bob')).toBe(true);
+  });
+
   it('notifyUser appends a notification', () => {
     const store = createStore();
     const response = attachResponseHandlers(store);
@@ -298,6 +318,24 @@ describe('integration: session messaging and notifications', () => {
     // With no playerProperties on the payload the handler short-circuits.
     expect(() => response.session.playerPropertiesChanged(99, 1,
       create(Event_PlayerPropertiesChangedSchema, {}))).not.toThrow();
+  });
+
+  it('getGamesOfUser request lifecycle: pending, then failed or loaded', () => {
+    const store = createStore();
+    const response = attachResponseHandlers(store);
+
+    response.session.getGamesOfUserPending('alice');
+    expect(server.Selectors.getGamesOfUserStatus(store.getState(), 'alice')).toEqual({ state: 'loading' });
+    response.session.getGamesOfUserFailed('alice', 16);
+    expect(server.Selectors.getGamesOfUserStatus(store.getState(), 'alice'))
+      .toEqual({ state: 'failed', responseCode: 16, failure: undefined });
+
+    response.session.getGamesOfUserPending('alice');
+    response.session.getGamesOfUser('alice', create(Response_GetGamesOfUserSchema, {
+      roomList: [], gameList: [create(ServerInfo_GameSchema, { gameId: 7, description: 'casual' })],
+    }));
+    expect(server.Selectors.getGamesOfUserStatus(store.getState(), 'alice')).toEqual({ state: 'loaded' });
+    expect(server.Selectors.getGamesOfUser(store.getState(), 'alice').map((g) => g.info.description)).toEqual(['casual']);
   });
 
   it('getGamesOfUser stores normalized games keyed by username', () => {
@@ -368,6 +406,56 @@ describe('integration: session server decks', () => {
   });
 });
 
+describe('integration: session deck sharing', () => {
+  function withStoredDecks() {
+    const store = createStore();
+    const response = attachResponseHandlers(store);
+    response.session.updateServerDecks(create(Response_DeckListSchema, {
+      root: create(ServerInfo_DeckStorage_FolderSchema, {
+        items: [
+          create(ServerInfo_DeckStorage_TreeItemSchema, {
+            id: 1, name: 'Burn', file: create(ServerInfo_DeckStorage_FileSchema, { creationTime: 5 }),
+          }),
+          create(ServerInfo_DeckStorage_TreeItemSchema, {
+            name: 'Cube', folder: create(ServerInfo_DeckStorage_FolderSchema, { items: [] }),
+          }),
+        ],
+      }),
+    }));
+    return { store, response };
+  }
+
+  it('deckVisibilityChanged republishes the stored (frozen) tree with the new bits', () => {
+    const { store, response } = withStoredDecks();
+    response.session.deckVisibilityChanged!({ deckId: 1, isPublic: true });
+    response.session.deckVisibilityChanged!({ folderPath: 'Cube', isPublic: true });
+    const [deck, folder] = server.Selectors.getBackendDecks(store.getState())!.root!.items;
+    expect(deck.file!.isPublic).toBe(true);
+    expect(deck.file!.creationTime).toBe(5);
+    expect(folder.folder!.isPublic).toBe(true);
+  });
+
+  it('deckSharesMine lists the caller\'s links and deckShareRemoved drops one', () => {
+    const store = createStore();
+    const response = attachResponseHandlers(store);
+    response.session.deckSharesMine!([
+      create(ServerInfo_DeckShareSummarySchema, { id: 1, name: 'A' }),
+      create(ServerInfo_DeckShareSummarySchema, { id: 2, name: 'B' }),
+    ]);
+    response.session.deckShareRemoved!(1);
+    expect(server.Selectors.getDeckSharesMine(store.getState())!.map((share) => share.name)).toEqual(['B']);
+  });
+
+  it('otherUserDecks stores the public tree under the user\'s name', () => {
+    const store = createStore();
+    const response = attachResponseHandlers(store);
+    const deckList = create(Response_DeckListSchema, { root: create(ServerInfo_DeckStorage_FolderSchema, { items: [] }) });
+    response.session.otherUserDecks!('bob', deckList);
+    expect(server.Selectors.getPublicDecks(store.getState(), 'bob')?.root).toBeDefined();
+    expect(server.Selectors.getPublicDecks(store.getState(), 'alice')).toBeUndefined();
+  });
+});
+
 // --- replays -------------------------------------------------------------
 
 describe('integration: session replays', () => {
@@ -410,4 +498,51 @@ describe('integration: session replays', () => {
     response.session.replayDownloaded(4, create(Response_ReplayDownloadSchema, { replayData: bytes }));
     expect(server.Selectors.getDownloadedReplay(store.getState())).toEqual({ replayId: 4, replayData: bytes });
   });
+});
+
+describe('account auth bridge regressions', () => {
+  it('preserves omitted profile fields and evicts only the cached self profile', () => {
+    const store = createStore();
+    const response = attachResponseHandlers(store);
+    const alice = create(ServerInfo_UserSchema, { name: 'alice', realName: 'Old', email: 'alice@example.com', country: 'AU' });
+    const bob = makeUser('bob');
+    response.session.updateUser(alice);
+    response.session.getUserInfo(alice);
+    response.session.getUserInfo(bob);
+    const before = store.getState().server;
+    expect(before.userInfo.alice).toEqual(alice);
+    expect(before.userInfo.bob).toEqual(bob);
+    response.session.accountEditChanged('', undefined, 'NZ');
+    const after = store.getState().server;
+    expect(after.user).toEqual(create(ServerInfo_UserSchema, { ...alice, realName: '', country: 'NZ' }));
+    expect(after.userInfo.alice).toBeUndefined();
+    expect(after.userInfo.bob).toEqual(bob);
+    expect(before.userInfo.alice).toEqual(alice);
+    expect(before.user).toEqual(alice);
+  });
+
+  it('clears a previously advertised hash capability when the next report omits it', () => {
+    const store = createStore();
+    const response = attachResponseHandlers(store);
+    response.session.updateInfo('First', '1', true);
+    expect(store.getState().server.info.supportsPasswordHash).toBe(true);
+    response.session.updateInfo('Next', '2');
+    expect(store.getState().server.info).toEqual({ name: 'Next', version: '2', message: null, supportsPasswordHash: undefined });
+  });
+
+  it.each([undefined, WebsocketTypes.CommandFailure.Timeout, WebsocketTypes.CommandFailure.Disconnected])(
+    'dispatches the exact activation failure action for %s', (failure) => {
+      const store = createStore();
+      const response = attachResponseHandlers(store);
+      const dispatch = vi.spyOn(store, 'dispatch');
+      try {
+        response.session.accountActivationFailed(failure);
+        expect(dispatch).toHaveBeenCalledExactlyOnceWith({
+          type: 'server/accountActivationFailed', payload: failure === undefined ? undefined : { failure },
+        });
+      } finally {
+        dispatch.mockRestore();
+      }
+    },
+  );
 });

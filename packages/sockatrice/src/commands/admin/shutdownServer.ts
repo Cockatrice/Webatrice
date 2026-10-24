@@ -9,6 +9,9 @@ export function shutdownServer(reason: string, minutes: number): void {
       onSuccess: () => {
         WebClient.instance.response.admin.shutdownServer();
       },
+      onError: (responseCode, _raw, failure) => {
+        WebClient.instance.response.admin.commandFailed?.('shutdownServer', responseCode, '', failure);
+      },
     }
   );
 }

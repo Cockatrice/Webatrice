@@ -1,5 +1,6 @@
 export * as Enriched from './enriched';
 export * as App from './app';
+export type { LogDescriptor, LogEntry, LogKind, LogParamsByKind, LogPlayer, LogSegment, LogSegmentKind, LogTone } from './gameLog';
 
 // Store-domain types — the normalized shapes the slices maintain. Consumers
 // reach for these alongside `@cockatrice/sockatrice/generated` proto types to describe
@@ -12,6 +13,7 @@ export type {
   ZoneEntry,
   GameMessage,
   Message,
+  ChatNotice,
   GametypeMap,
 } from './enriched';
 

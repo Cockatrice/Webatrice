@@ -1,4 +1,5 @@
 import { NavLink, generatePath } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 
 import { Images } from '@app/images';
 import { ServerInfo_User } from '@cockatrice/sockatrice/generated';
@@ -14,13 +15,12 @@ interface UserDisplayProps {
 }
 
 const UserDisplay = ({ user }: UserDisplayProps) => {
+  const { t } = useTranslation();
   const { name, country, userLevel } = user;
   const {
-    position,
+    menu,
     isABuddy,
     isIgnored,
-    handleClick,
-    handleClose,
     onAddBuddy,
     onRemoveBuddy,
     onAddIgnore,
@@ -29,19 +29,24 @@ const UserDisplay = ({ user }: UserDisplayProps) => {
 
   return (
     <div className="user-display">
-      <NavLink to={generatePath(RouteEnum.PLAYER, { name })} className="plain-link">
-        <div className="user-display__details" onContextMenu={handleClick}>
-          <img className="user-display__country" src={Images.Countries[country]} alt={country} />
+      <NavLink to={generatePath(RouteEnum.PLAYER, { name })} className="plain-link" {...menu.getTriggerProps()}>
+        <div className="user-display__details">
+          <img
+            className="user-display__country"
+            src={Images.Countries[country]}
+            alt={country ? t(`Common.countries.${country.toUpperCase()}`, { defaultValue: country }) : ''}
+          />
           <div className="user-display__name single-line-ellipsis">{name}</div>
           <UserBadges userLevel={userLevel} size={12} className="ml-1" />
         </div>
       </NavLink>
-      {position && (
+      {menu.anchor && (
         <UserActionsMenu
-          x={position.x}
-          y={position.y}
-          onClose={handleClose}
+          anchor={menu.anchor}
+          triggerRef={menu.triggerRef}
+          onClose={menu.close}
           name={name}
+          userLevel={userLevel}
           isABuddy={isABuddy}
           isIgnored={isIgnored}
           onAddBuddy={onAddBuddy}

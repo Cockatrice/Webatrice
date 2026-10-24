@@ -1,0 +1,10 @@
+{
+  "DeckLink": {
+    "label": "Load deck from online service",
+    "placeholder": "Paste a link to a deck on Archidekt, Deckstats, Moxfield or TappedOut",
+    "unsupported": "Not a supported deck link. (Archidekt, Deckstats, Moxfield, and TappedOut are supported.)",
+    "copyText": "Browsers can't read decks from {provider} directly. Open its text export, copy the list and paste it below.",
+    "copyFromPage": "Browsers can't read decks from {provider} directly. Open the deck, use its Export option to copy the list, and paste it below.",
+    "open": "Open on {provider}"
+  }
+}

@@ -1,6 +1,6 @@
 import { CaseReducer, PayloadAction } from '@reduxjs/toolkit';
 import { Event_GameStateChanged } from '@cockatrice/sockatrice/generated';
-import { GamesState } from './game.interfaces';
+import { GameCommandFailedPayload, GamesState } from './game.interfaces';
 
 export const turnReducers = {
   gameHostChanged: ((state, action) => {
@@ -29,11 +29,14 @@ export const turnReducers = {
     game.activePhase = action.payload.phase;
   }) as CaseReducer<GamesState, PayloadAction<{ gameId: number; phase: number }>>,
 
+  nextTurnAnswered: (() => {}) as CaseReducer<GamesState, PayloadAction<{ gameId: number; requestId?: string }>>,
+  nextTurnFailed: (() => {}) as CaseReducer<GamesState, PayloadAction<GameCommandFailedPayload>>,
+
   turnReversed: ((state, action) => {
     const game = state.games[action.payload.gameId];
     if (!game) {
       return;
     }
     game.reversed = action.payload.reversed;
-  }) as CaseReducer<GamesState, PayloadAction<{ gameId: number; reversed: boolean }>>,
+  }) as CaseReducer<GamesState, PayloadAction<{ gameId: number; reversed: boolean; playerId?: number }>>,
 };

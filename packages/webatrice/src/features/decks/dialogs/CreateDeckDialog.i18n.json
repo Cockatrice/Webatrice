@@ -1,0 +1,8 @@
+{
+  "CreateDeckDialog": {
+    "title": "Create a deck",
+    "deckName": "Deck name",
+    "namePlaceholder": "Untitled Deck",
+    "format": "Format"
+  }
+}

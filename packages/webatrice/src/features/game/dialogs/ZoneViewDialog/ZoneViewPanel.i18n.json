@@ -1,0 +1,9 @@
+{
+  "ZoneViewPanel": {
+    "expand": "Expand the card view",
+    "close": "Close the card view",
+    "search": "Search the cards",
+    "shuffleOnClose": "shuffle when closing",
+    "noMatch": "No cards match the current filter."
+  }
+}

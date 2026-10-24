@@ -1,0 +1,165 @@
+.cardDatabase-overview,
+.cardDatabase-manageSets,
+.cardDatabase-sources {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cardDatabase-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.cardDatabase-actions.is-end {
+  justify-content: flex-end;
+}
+
+.cardDatabase-muted {
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+.cardDatabase-empty {
+  padding: 24px 0;
+  opacity: 0.7;
+}
+
+.cardDatabase-note,
+.cardDatabase-hints {
+  font-size: 13px;
+}
+
+.cardDatabase-sourceTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.cardDatabase-sourceTable caption {
+  text-align: left;
+  font-weight: 600;
+  padding-bottom: 4px;
+}
+
+.cardDatabase-sourceTable th,
+.cardDatabase-sourceTable td {
+  text-align: left;
+  padding: 4px 8px;
+  border-bottom: 1px solid rgb(var(--border-subtle));
+  vertical-align: top;
+}
+
+.cardDatabase-toolbar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.cardDatabase-setsBody {
+  display: flex;
+  gap: 4px;
+}
+
+.cardDatabase-moves {
+  display: flex;
+  flex-direction: column;
+}
+
+.cardDatabase-setTable {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  height: 360px;
+  border: 1px solid rgb(var(--border-strong));
+  min-width: 0;
+}
+
+.cardDatabase-setRow {
+  display: grid;
+  grid-template-columns: 64px 80px minmax(0, 1fr) 110px 110px;
+  align-items: center;
+  height: 32px;
+  font-size: 13px;
+  cursor: default;
+  user-select: none;
+}
+
+.cardDatabase-setRow.is-header {
+  font-weight: 600;
+  border-bottom: 1px solid rgb(var(--border-strong));
+}
+
+.cardDatabase-setRow.is-selected {
+  background: rgb(var(--accent-primary) / 0.18);
+}
+
+.cardDatabase-setCell {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 0 4px;
+}
+
+.cardDatabase-sortButton {
+  font: inherit;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: inherit;
+}
+
+.cardDatabase-tokens {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 16px;
+}
+
+.cardDatabase-tokenList ul,
+.cardDatabase-templateList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 240px;
+  overflow-y: auto;
+  border: 1px solid rgb(var(--border-strong));
+}
+
+.cardDatabase-tokenList li,
+.cardDatabase-templateList li {
+  padding: 4px 8px;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+
+.cardDatabase-tokenList li.is-selected,
+.cardDatabase-templateList li.is-selected {
+  background: rgb(var(--accent-primary) / 0.18);
+}
+
+.cardDatabase-tokenList li:focus-visible,
+.cardDatabase-templateList li:focus-visible,
+.cardDatabase-setTable:focus-visible .cardDatabase-setRow.is-active {
+  outline: 2px solid rgb(var(--accent-primary));
+  outline-offset: -2px;
+}
+
+.cardDatabase-setTable:focus-visible {
+  outline: none;
+}
+
+.cardDatabase-tokenForm,
+.cardDatabase-addToken,
+.cardDatabase-templateForm {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.cardDatabase-error {
+  color: rgb(var(--status-danger));
+}

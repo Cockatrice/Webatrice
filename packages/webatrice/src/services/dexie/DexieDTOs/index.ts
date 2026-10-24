@@ -5,3 +5,7 @@ export * from './TokenDTO';
 export * from './HostDTO';
 export * from './FormatDTO';
 export * from './InfoDTO';
+export * from './ReplayFileDTO';
+export * from './CardSourceDTO';
+export * from './SetPreferenceDTO';
+export * from './CardDataSettingsDTO';

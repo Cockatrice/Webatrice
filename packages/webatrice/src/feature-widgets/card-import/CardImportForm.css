@@ -1,5 +1,6 @@
 .cardImportForm {
   width: 550px;
+  max-width: 100%;
 }
 
 .cardImportForm-content.done {
@@ -18,28 +19,28 @@
 }
 
 .cardImportForm-error {
-  color: red;
+  color: rgb(var(--status-danger));
 }
 
 .card-import-list {
   height: 300px;
   line-height: 1;
-  border: 1px solid lightgrey;
+  border: 1px solid rgb(var(--border-subtle));
   padding: 10px;
 }
 
 .cardImportForm-dropzone {
-  border: 2px dashed lightgrey;
+  border: 2px dashed rgb(var(--border-strong));
   border-radius: 4px;
   padding: 24px;
   text-align: center;
-  background: #fafafa;
+  background: rgb(var(--bg-elevated));
   cursor: pointer;
 }
 
 .cardImportForm-dropzone.is-active {
-  border-color: #1976d2;
-  background: #e3f2fd;
+  border-color: rgb(var(--accent-primary));
+  background: rgb(var(--accent-primary) / 0.12);
 }
 
 .cardImportForm-dropzone input[type="file"] {
@@ -48,13 +49,13 @@
 
 .cardImportForm-help {
   font-size: 12px;
-  color: #555;
+  color: rgb(var(--text-secondary));
   margin-top: 12px;
   line-height: 1.4;
 }
 
 .cardImportForm-help code {
-  background: #f0f0f0;
+  background: rgb(var(--bg-elevated));
   padding: 1px 4px;
   border-radius: 3px;
 }
@@ -65,7 +66,7 @@
 }
 
 .cardImportForm-fileList .skipped {
-  color: #b00020;
+  color: rgb(var(--status-warning));
 }
 
 .loading {
@@ -73,4 +74,15 @@
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
+}
+
+.cardImportForm-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px 0;
+}
+
+.cardImportForm-summary .problem {
+  color: rgb(var(--status-warning));
 }

@@ -9,12 +9,23 @@ import { ActionId, ShortcutGroupId, ShortcutScope } from '../types';
 import SequenceEdit from './SequenceEdit';
 import ShortcutsRow from './ShortcutsRow';
 
-// Display order; matches Cockatrice's group ordering pattern (Game → Editor).
 const GROUP_ORDER: ShortcutGroupId[] = [
-  'game',
+  'gameCardCounters',
+  'gamePlayerCounters',
+  'gamePowerToughness',
   'gamePhases',
+  'gamePlayingArea',
+  'gameMoveSelected',
+  'gameView',
+  'gameMoveTop',
+  'gameMoveBottom',
+  'gameplay',
+  'gameDrawing',
+  'gameHand',
+  'game',
   'deckEditor',
   'room',
+  'replays',
 ];
 
 const ShortcutsTab = () => {
@@ -124,7 +135,7 @@ const ShortcutsTab = () => {
           placeholder={t('ShortcutsTab.search')}
           aria-label={t('ShortcutsTab.search')}
           className={[
-            'w-full bg-bg-base border border-border-subtle rounded-md',
+            'w-full bg-bg-base border border-border-control rounded-md',
             'px-3 py-2 text-sm text-text-primary placeholder:text-text-muted',
             'focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent',
           ].join(' ')}

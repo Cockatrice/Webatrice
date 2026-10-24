@@ -1,7 +1,7 @@
 import { create } from '@bufbuild/protobuf';
 import { ServerInfo_RoomSchema } from '@cockatrice/sockatrice/generated';
 import { GameSortField, SortDirection, UserSortField } from '@cockatrice/datatrice';
-import { makeUser as makeUpstreamUser } from '@cockatrice/datatrice/testing';
+import { makeReportsState, makeUser as makeUpstreamUser } from '@cockatrice/datatrice/testing';
 import { WebsocketTypes } from '@cockatrice/sockatrice/types';
 import type { RootState } from '../store';
 
@@ -11,6 +11,7 @@ const makeUser: typeof makeUpstreamUser = (overrides = {}) =>
 export const disconnectedState: Partial<RootState> = {
   server: {
     initialized: false,
+    sessionEpoch: 0,
     testConnectionStatus: null,
     buddyList: {},
     ignoreList: {},
@@ -20,7 +21,9 @@ export const disconnectedState: Partial<RootState> = {
       description: null,
     },
     connectionHealth: { missedPongs: 0, silentForMs: 0 },
+    latency: { stats: { lastMs: 0, medianMs: 0, p95Ms: 0, maxMs: 0, sampleCount: 0 }, samplesMs: [] },
     connectUnreachable: false,
+    loginFailureCode: null,
     info: { message: null, name: null, version: null },
     logs: { room: [], game: [], chat: [] },
     user: null,
@@ -28,6 +31,7 @@ export const disconnectedState: Partial<RootState> = {
     sortUsersBy: { field: UserSortField.NAME, order: SortDirection.ASC },
     locale: undefined,
     messages: {},
+    privateChatNotices: {},
     userInfo: {},
     notifications: [],
     serverShutdown: null,
@@ -40,9 +44,15 @@ export const disconnectedState: Partial<RootState> = {
     replays: {},
     backendDecks: null,
     downloadedDeck: null,
+    deckSharesMine: null,
+    publicDecks: {},
     downloadedReplay: null,
     gamesOfUser: {},
+    gamesOfUserRoomNames: {},
+    gamesOfUserStatus: {},
     registrationError: null,
+    staff: { investigation: null, moderatorLastLogins: null, cardArtRules: null, serverStats: null },
+    reports: makeReportsState(),
   },
   rooms: {
     rooms: {},
@@ -55,6 +65,7 @@ export const disconnectedState: Partial<RootState> = {
     gameFilters: {},
     joinGamePending: false,
     joinGameError: null,
+    joinRoomError: null,
   },
   games: { games: {}, pings: {} },
   action: { type: null, payload: null, meta: null, error: false, count: 0 },
@@ -79,6 +90,14 @@ export const connectedState: Partial<RootState> = {
     users: {
       testUser: makeUser(),
     },
+  },
+};
+
+export const connected31State: Partial<RootState> = {
+  ...connectedState,
+  server: {
+    ...(connectedState.server as any),
+    info: { ...(connectedState.server as any).info, version: '3.1.0 (2026-05-08)' },
   },
 };
 

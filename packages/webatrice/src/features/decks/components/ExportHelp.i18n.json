@@ -1,0 +1,27 @@
+{
+  "ExportHelp": {
+    "title": "How to copy a deck from another site or app",
+    "source": {
+      "moxfield": {
+        "name": "Moxfield",
+        "steps": "Open the deck, choose Export, copy the list as text (the Arena or plain-text option), and paste it below."
+      },
+      "archidekt": {
+        "name": "Archidekt",
+        "steps": "Open the deck, choose Export from the deck menu, copy the text, and paste it below. Categories and tags are fine."
+      },
+      "arena": {
+        "name": "MTG Arena",
+        "steps": "In Decks, select the deck and click Export. It is copied to your clipboard; paste it below."
+      },
+      "mtgo": {
+        "name": "MTGO",
+        "steps": "Save the deck as a .dek or .txt file and open it here, or paste its text below."
+      },
+      "cockatrice": {
+        "name": "Cockatrice",
+        "steps": "Open a .cod or .txt file from your Cockatrice decks folder. To bring over every deck at once, use Import from Cockatrice on the Decks page."
+      }
+    }
+  }
+}

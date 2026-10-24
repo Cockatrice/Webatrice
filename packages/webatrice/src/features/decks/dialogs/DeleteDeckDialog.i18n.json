@@ -1,0 +1,6 @@
+{
+  "DeleteDeckDialog": {
+    "title": "Delete deck?",
+    "message": "<name>{name}</name> will be permanently removed from the server. This can''t be undone."
+  }
+}

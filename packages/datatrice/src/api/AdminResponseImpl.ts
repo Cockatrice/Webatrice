@@ -6,8 +6,8 @@ import { Actions as ServerActions } from '../store/server/server.actions';
 export class AdminResponseImpl implements WebsocketTypes.IAdminResponse {
   constructor(private store: Store) {}
 
-  adjustMod(userName: string, shouldBeMod: boolean, shouldBeJudge: boolean): void {
-    this.store.dispatch(ServerActions.adjustMod({ userName, shouldBeMod, shouldBeJudge }));
+  adjustMod(userName: string, shouldBeMod?: boolean, shouldBeJudge?: boolean, shouldBeDeveloper?: boolean, requestId?: string): void {
+    this.store.dispatch(ServerActions.adjustMod({ userName, shouldBeMod, shouldBeJudge, shouldBeDeveloper, requestId }));
   }
 
   reloadConfig(): void {
@@ -20,5 +20,15 @@ export class AdminResponseImpl implements WebsocketTypes.IAdminResponse {
 
   updateServerMessage(): void {
     this.store.dispatch(ServerActions.updateServerMessage());
+  }
+
+  commandFailed(
+    command: WebsocketTypes.AdminCommandName,
+    responseCode: number,
+    target: string,
+    failure?: WebsocketTypes.CommandFailure,
+    requestId?: string,
+  ): void {
+    this.store.dispatch(ServerActions.adminCommandFailed({ command, responseCode, target, failure, requestId }));
   }
 }

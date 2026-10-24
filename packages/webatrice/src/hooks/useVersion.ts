@@ -7,7 +7,7 @@ export function useVersion(): string | null {
   const [version, setVersion] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch('/version.txt')
+    fetch(`${import.meta.env.BASE_URL}version.txt`)
       .then(r => (r.ok ? r.text() : null))
       .then(t => setVersion(t?.trim() ?? null))
       .catch(() => setVersion(null));

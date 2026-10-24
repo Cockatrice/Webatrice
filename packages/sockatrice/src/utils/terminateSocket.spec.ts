@@ -22,11 +22,9 @@ describe('terminateSocket', () => {
 
     terminateSocket(socket as unknown as WebSocket);
 
-    // Not aborted synchronously (that would fail the connection abnormally).
     expect(socket.close).not.toHaveBeenCalled();
     expect(typeof socket.onopen).toBe('function');
 
-    // Once the handshake completes, it closes cleanly.
     socket.onopen?.();
     expect(socket.close).toHaveBeenCalledTimes(1);
     restore();

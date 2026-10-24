@@ -3,8 +3,18 @@ import { WebClient } from '../../WebClient';
 import { StatusEnum } from '../../types/StatusEnum';
 import { consumePendingOptions } from '../../utils/connectionState';
 import { WebSocketConnectReason } from '../../types/ConnectOptions';
-import { generateSalt, hashPassword, passwordSaltSupported } from '../../utils';
+import { generateSalt, hashPassword, passwordHashAvailable, passwordSaltSupported } from '../../utils';
 import * as SessionCommands from '../../commands/session';
+import { CommandFailure } from '../../types/CommandFailure';
+
+function onSaltFailure(settle: (failure?: CommandFailure) => void) {
+  return (failure?: CommandFailure) => {
+    settle(failure);
+    if (failure !== CommandFailure.Disconnected) {
+      SessionCommands.disconnect();
+    }
+  };
+}
 
 export async function serverIdentification(info: Event_ServerIdentification): Promise<void> {
   const { serverName, serverVersion, protocolVersion, serverOptions } = info;
@@ -16,14 +26,12 @@ export async function serverIdentification(info: Event_ServerIdentification): Pr
     return;
   }
 
-  const getPasswordSalt = passwordSaltSupported(serverOptions);
+  const serverSupportsPasswordHash = passwordSaltSupported(serverOptions);
+  WebClient.instance.serverSupportsPasswordHash = serverSupportsPasswordHash;
+  const getPasswordSalt = serverSupportsPasswordHash && passwordHashAvailable();
   const options = consumePendingOptions();
 
   if (!options) {
-    // Reached on a transport-level reconnect: pending options are single-use
-    // and were consumed by the original login, and the app retains no
-    // credentials to resume the session with. Land the user on the login page
-    // with an honest message instead of a cryptic internal error.
     SessionCommands.updateStatus(StatusEnum.DISCONNECTED, 'Connection lost — please log in again');
     SessionCommands.disconnect();
     return;
@@ -45,9 +53,7 @@ export async function serverIdentification(info: Event_ServerIdentification): Pr
               SessionCommands.login(rest, password);
             }
           },
-          () => {
-            response.session.loginFailed(); SessionCommands.disconnect();
-          },
+          onSaltFailure(() => response.session.loginFailed()),
         );
       } else {
         SessionCommands.login(rest, password);
@@ -73,9 +79,7 @@ export async function serverIdentification(info: Event_ServerIdentification): Pr
             const hashedPassword = salt ? await hashPassword(salt, password) : undefined;
             SessionCommands.activate(rest, password, hashedPassword);
           },
-          () => {
-            response.session.accountActivationFailed(); SessionCommands.disconnect();
-          },
+          onSaltFailure((failure) => response.session.accountActivationFailed(failure)),
         );
       } else {
         SessionCommands.activate(rest, password);
@@ -100,9 +104,7 @@ export async function serverIdentification(info: Event_ServerIdentification): Pr
               SessionCommands.forgotPasswordReset(rest, newPassword);
             }
           },
-          () => {
-            response.session.resetPasswordFailed(); SessionCommands.disconnect();
-          },
+          onSaltFailure(() => response.session.resetPasswordFailed()),
         );
       } else {
         SessionCommands.forgotPasswordReset(rest, newPassword);
@@ -116,5 +118,5 @@ export async function serverIdentification(info: Event_ServerIdentification): Pr
     }
   }
 
-  response.session.updateInfo(serverName, serverVersion);
+  response.session.updateInfo(serverName, serverVersion, serverSupportsPasswordHash);
 }

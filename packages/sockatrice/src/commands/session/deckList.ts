@@ -11,5 +11,8 @@ export function deckList(): void {
         WebClient.instance.response.session.updateServerDecks(response);
       }
     },
+    onError: (responseCode, _raw, failure) => {
+      WebClient.instance.response.session.deckListFailed?.(responseCode, failure);
+    },
   });
 }

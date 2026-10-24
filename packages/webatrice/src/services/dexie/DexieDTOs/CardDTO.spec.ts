@@ -13,6 +13,8 @@ vi.mock('../DexieService', () => ({
 
 import { CardDTO } from './CardDTO';
 
+const mapToClassCalls = [...cardsTable.mapToClass.mock.calls];
+
 describe('CardDTO', () => {
   beforeEach(() => {
     cardsTable.put.mockClear();
@@ -21,7 +23,7 @@ describe('CardDTO', () => {
   });
 
   it('registers itself with the cards table on import', () => {
-    expect(cardsTable.mapToClass).toHaveBeenCalledWith(CardDTO);
+    expect(mapToClassCalls).toEqual([[CardDTO]]);
   });
 
   it('save() puts the instance into the cards table', async () => {

@@ -1,0 +1,26 @@
+{
+  "RoomUsers": {
+    "title": "People",
+    "count": "{count, plural, other {# in {room}}}",
+    "search": "Find a player",
+    "list": "People in {room}",
+    "online": "{count, plural, other {# online}}",
+    "section": {
+      "buddies": "Buddies",
+      "offline": "Offline buddies",
+      "staff": "Staff here",
+      "everyone": "Everyone in {room}"
+    },
+    "hosting": "Hosting {game}",
+    "untitledGame": "Game #{id}",
+    "inRoom": "In {room}",
+    "elsewhere": "Online, not in this room",
+    "showGames": "Show {name}’s games",
+    "message": "Message {name}",
+    "preview": "{count, plural, =0 {{names}. Show everyone} other {{names} and # more. Show everyone}}",
+    "empty": {
+      "buddies": "None of your buddies are online.",
+      "search": "No one here matches."
+    }
+  }
+}

@@ -1,4 +1,4 @@
-﻿import { Actions } from './server.actions';
+import { Actions } from './server.actions';
 import {
   Event_NotifyUserSchema,
   Event_ServerShutdownSchema,
@@ -242,7 +242,9 @@ describe('Actions', () => {
 
   it('userMessage', () => {
     const messageData = create(Event_UserMessageSchema, { senderName: 'Alice', receiverName: 'Bob', message: 'hey' });
-    expect(Actions.userMessage({ messageData })).toEqual({ type: Types.USER_MESSAGE, payload: { messageData } });
+    expect(Actions.userMessage({ messageData, timeReceived: 123 })).toEqual({
+      type: Types.USER_MESSAGE, payload: { messageData, timeReceived: 123 },
+    });
   });
 
   it('addToList', () => {
@@ -291,10 +293,45 @@ describe('Actions', () => {
     });
   });
 
+  it('getUserInfoFailed', () => {
+    expect(Actions.getUserInfoFailed({ userName: 'Ned', responseCode: 34 })).toEqual({
+      type: Types.GET_USER_INFO_FAILED,
+      payload: { userName: 'Ned', responseCode: 34 },
+    });
+  });
+
+  it('moderatorCommandFailed', () => {
+    expect(Actions.moderatorCommandFailed({ command: 'banHistory', responseCode: 18, target: 'Ned' })).toEqual({
+      type: Types.MODERATOR_COMMAND_FAILED,
+      payload: { command: 'banHistory', responseCode: 18, target: 'Ned' },
+    });
+  });
+
+  it('adminCommandFailed', () => {
+    expect(Actions.adminCommandFailed({ command: 'adjustMod', responseCode: 18, target: 'Ned' })).toEqual({
+      type: Types.ADMIN_COMMAND_FAILED,
+      payload: { command: 'adjustMod', responseCode: 18, target: 'Ned' },
+    });
+  });
+
   it('forceActivateUser', () => {
     expect(Actions.forceActivateUser({ usernameToActivate: 'Ned', moderatorName: 'Moe' })).toEqual({
       type: Types.FORCE_ACTIVATE_USER,
       payload: { usernameToActivate: 'Ned', moderatorName: 'Moe' },
+    });
+  });
+
+  it('moderatorCommandFailed', () => {
+    expect(Actions.moderatorCommandFailed({ command: 'reportList', responseCode: 13, target: '' })).toEqual({
+      type: Types.MODERATOR_COMMAND_FAILED,
+      payload: { command: 'reportList', responseCode: 13, target: '' },
+    });
+  });
+
+  it('sessionCommandFailed', () => {
+    expect(Actions.sessionCommandFailed({ command: 'reportDetails', responseCode: 13, target: '4' })).toEqual({
+      type: Types.SESSION_COMMAND_FAILED,
+      payload: { command: 'reportDetails', responseCode: 13, target: '4' },
     });
   });
 
@@ -354,6 +391,21 @@ describe('Actions', () => {
     expect(Actions.deckUpload({ path: 'a/b', treeItem })).toEqual({
       type: Types.DECK_UPLOAD,
       payload: { path: 'a/b', treeItem },
+    });
+  });
+
+  it('deckUpdated', () => {
+    const treeItem = makeDeckTreeItem({ id: 7 });
+    expect(Actions.deckUpdated({ deckId: 7, treeItem })).toEqual({
+      type: Types.DECK_UPDATED,
+      payload: { deckId: 7, treeItem },
+    });
+  });
+
+  it('deckUpdateFailed', () => {
+    expect(Actions.deckUpdateFailed({ deckId: 7, responseCode: 19 })).toEqual({
+      type: Types.DECK_UPDATE_FAILED,
+      payload: { deckId: 7, responseCode: 19 },
     });
   });
 

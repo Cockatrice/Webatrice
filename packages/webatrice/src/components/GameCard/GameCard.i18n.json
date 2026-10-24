@@ -1,0 +1,32 @@
+{
+  "GameCard": {
+    "untitled": "Game #{id}, no description",
+    "hostedBy": "Hosted by",
+    "moreFormats": "+{count}",
+    "players": "{taken} / {max} players",
+    "restriction": {
+      "none": "Anyone can join",
+      "password": "Password",
+      "buddiesOnly": "Buddies only",
+      "registeredOnly": "Registered users",
+      "openDecklists": "Open decklists"
+    },
+    "spectators": {
+      "notAllowed": "Spectators not allowed",
+      "watching": "{count} watching",
+      "canChat": "can chat",
+      "seeHands": "see hands",
+      "password": "password"
+    },
+    "blocked": {
+      "started": "This game has started",
+      "full": "Every seat is taken"
+    },
+    "join": "Join",
+    "spectate": "Spectate",
+    "joinLabel": "Join {name}",
+    "joinPasswordLabel": "Join {name} (asks for the password)",
+    "joinBlockedLabel": "Join {name}: {reason}",
+    "spectateLabel": "Spectate {name}"
+  }
+}

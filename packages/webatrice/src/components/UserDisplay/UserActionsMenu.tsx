@@ -1,14 +1,22 @@
-import { useEffect, useRef } from 'react';
-import { createPortal } from 'react-dom';
+import type { RefObject } from 'react';
+import { useTranslation } from 'react-i18next';
 import { NavLink, generatePath } from 'react-router-dom';
-import { MessageSquare, UserRoundPlus, UserRoundMinus, VolumeX, Volume2 } from 'lucide-react';
+import { Flag, Library, MessageSquare, UserRoundPlus, UserRoundMinus, VolumeX, Volume2 } from 'lucide-react';
 
+import { server, ServerCapability } from '@cockatrice/datatrice';
+import { ServerInfo_User_UserLevelFlag } from '@cockatrice/sockatrice/generated';
+import { useReportUser } from '@app/dialogs';
+import { useOpenChat } from '@app/hooks';
+import { useAppSelector } from '@app/store';
 import { RouteEnum } from '@app/types';
+import { Menu, MenuItem, MenuSeparator, MENU_ITEM_CLASS, type MenuAnchor } from '../Menu';
+import { useUserMenuSlot } from './UserMenuSlot';
 
 interface UserActionsMenuProps {
-  x: number;
-  y: number;
+  anchor: MenuAnchor;
+  triggerRef?: RefObject<HTMLElement | null>;
   name: string;
+  userLevel?: number;
   isABuddy: boolean;
   isIgnored: boolean;
   onClose: () => void;
@@ -18,21 +26,11 @@ interface UserActionsMenuProps {
   onRemoveIgnore: () => void;
 }
 
-/**
- * Portalled right-click context menu for a user name — shared between
- * `UserDisplay` (buddies / players-online lists) and any chat surface
- * that wants to expose the same actions on message-author names (see
- * `Message.PlayerLink`). Cockatrice-parity items: Private chat (opens
- * the Player page's chat panel), buddy toggle, ignore toggle.
- *
- * Closes on outside click, Escape, or after any option is chosen.
- * Portalled into `document.body` so it isn't clipped by ancestors with
- * `overflow: hidden` (chat log containers scroll internally).
- */
 export default function UserActionsMenu({
-  x,
-  y,
+  anchor,
+  triggerRef,
   name,
+  userLevel,
   isABuddy,
   isIgnored,
   onClose,
@@ -41,94 +39,82 @@ export default function UserActionsMenu({
   onAddIgnore,
   onRemoveIgnore,
 }: UserActionsMenuProps) {
-  const ref = useRef<HTMLDivElement>(null);
+  const Slot = useUserMenuSlot();
+  const { t } = useTranslation();
+  const { reportingAvailable, canReportUser, openReportUser } = useReportUser();
+  const ownUser = useAppSelector(server.Selectors.getUser);
+  const deckSharing = useAppSelector((state) => server.Selectors.supports(state, ServerCapability.DECK_SHARING));
+  const showPublicDecks = deckSharing && ((userLevel ?? 0) & ServerInfo_User_UserLevelFlag.IsRegistered) !== 0;
+  const isSelf = name === ownUser?.name;
+  const canChangeLists = !isSelf && ((userLevel ?? 0) & ServerInfo_User_UserLevelFlag.IsRegistered) !== 0
+    && ((ownUser?.userLevel ?? 0) & ServerInfo_User_UserLevelFlag.IsRegistered) !== 0;
+  const isOnline = useAppSelector((state) => server.Selectors.getIsUserOnline(state, name));
+  const canChat = !isSelf && isOnline && !isIgnored;
+  const openChat = useOpenChat();
 
-  useEffect(() => {
-    const onDocClick = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        onClose();
-      }
-    };
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    // Delay attaching the outside-click listener by a tick so the
-    // contextmenu event that opened us doesn't immediately close us.
-    const raf = requestAnimationFrame(() => {
-      document.addEventListener('mousedown', onDocClick);
-    });
-    document.addEventListener('keydown', onKey);
-    return () => {
-      cancelAnimationFrame(raf);
-      document.removeEventListener('mousedown', onDocClick);
-      document.removeEventListener('keydown', onKey);
-    };
-  }, [onClose]);
-
-  // Clamp the menu inside the viewport so a click near the bottom or
-  // right edge doesn't spawn a menu that runs off-screen.
-  const MENU_W = 200;
-  const MENU_H = 160;
-  const left = Math.min(x, window.innerWidth - MENU_W - 8);
-  const top = Math.min(y, window.innerHeight - MENU_H - 8);
-
-  return createPortal(
-    <div
-      ref={ref}
-      role="menu"
-      style={{ left, top }}
-      className="fixed z-[9999] w-[200px] rounded-md bg-bg-surface border border-border-subtle shadow-glow py-1 select-none"
-    >
-      <NavLink
-        to={generatePath(RouteEnum.PLAYER, { name })}
-        onClick={onClose}
-        className="flex items-center gap-2 px-3 py-1.5 text-sm text-text-secondary hover:text-text-primary hover:bg-bg-elevated transition-colors"
-        role="menuitem"
+  return (
+    <Menu anchor={anchor} label={t('UserActionsMenu.label', { name })} onClose={onClose} triggerRef={triggerRef}>
+      <MenuItem
+        disabled={!canChat}
+        onSelect={() => openChat(name)}
+        icon={<MessageSquare size={14} />}
       >
-        {/* Cockatrice-parity label. Opens the Player page which hosts
-         *  the PrivateChat panel for this user. */}
-        <MessageSquare size={14} /> Private chat
-      </NavLink>
-      <div className="my-1 border-t border-border-subtle" />
+        {t('UserActionsMenu.privateChat')}
+      </MenuItem>
+      {showPublicDecks && isSelf && (
+        <MenuItem
+          onSelect={onClose}
+          disabled
+          disabledReason={t('UserActionsMenu.viewPublicDecksSelf')}
+          icon={<Library size={14} />}
+        >
+          {t('UserActionsMenu.viewPublicDecks')}
+        </MenuItem>
+      )}
+      {showPublicDecks && !isSelf && (
+        <NavLink
+          to={generatePath(RouteEnum.PUBLIC_DECKS, { userName: name })}
+          onClick={onClose}
+          className={MENU_ITEM_CLASS}
+          role="menuitem"
+          tabIndex={-1}
+        >
+          <Library size={14} /> {t('UserActionsMenu.viewPublicDecks')}
+        </NavLink>
+      )}
+      <MenuSeparator />
       {!isABuddy ? (
-        <button
-          type="button"
-          onClick={onAddBuddy}
-          className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-left text-text-secondary hover:text-text-primary hover:bg-bg-elevated transition-colors"
-          role="menuitem"
-        >
-          <UserRoundPlus size={14} /> Add to Buddy List
-        </button>
+        <MenuItem disabled={!canChangeLists} onSelect={onAddBuddy} icon={<UserRoundPlus size={14} />}>
+          {t('UserActionsMenu.addBuddy')}
+        </MenuItem>
       ) : (
-        <button
-          type="button"
-          onClick={onRemoveBuddy}
-          className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-left text-text-secondary hover:text-text-primary hover:bg-bg-elevated transition-colors"
-          role="menuitem"
-        >
-          <UserRoundMinus size={14} /> Remove from Buddy List
-        </button>
+        <MenuItem disabled={!canChangeLists} onSelect={onRemoveBuddy} icon={<UserRoundMinus size={14} />}>
+          {t('UserActionsMenu.removeBuddy')}
+        </MenuItem>
       )}
       {!isIgnored ? (
-        <button
-          type="button"
-          onClick={onAddIgnore}
-          className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-left text-text-secondary hover:text-text-primary hover:bg-bg-elevated transition-colors"
-          role="menuitem"
-        >
-          <VolumeX size={14} /> Add to Ignore List
-        </button>
+        <MenuItem disabled={!canChangeLists} onSelect={onAddIgnore} icon={<VolumeX size={14} />}>
+          {t('UserActionsMenu.addIgnore')}
+        </MenuItem>
       ) : (
-        <button
-          type="button"
-          onClick={onRemoveIgnore}
-          className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-left text-text-secondary hover:text-text-primary hover:bg-bg-elevated transition-colors"
-          role="menuitem"
-        >
-          <Volume2 size={14} /> Remove from Ignore List
-        </button>
+        <MenuItem disabled={!canChangeLists} onSelect={onRemoveIgnore} icon={<Volume2 size={14} />}>
+          {t('UserActionsMenu.removeIgnore')}
+        </MenuItem>
       )}
-    </div>,
-    document.body,
+      {reportingAvailable && (
+        <MenuItem
+          onSelect={() => {
+            openReportUser({ userName: name });
+            onClose();
+          }}
+          disabled={!canReportUser(name)}
+          disabledReason={t('ReportUserDialog.menuItemSelf')}
+          icon={<Flag size={14} />}
+        >
+          {t('ReportUserDialog.menuItem')}
+        </MenuItem>
+      )}
+      {Slot && <Slot userName={name} userLevel={userLevel} onClose={onClose} />}
+    </Menu>
   );
 }

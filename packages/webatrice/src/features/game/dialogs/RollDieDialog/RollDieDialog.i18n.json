@@ -1,0 +1,11 @@
+{
+  "RollDieDialog": {
+    "title": "Roll Dice",
+    "sides": "Number of sides",
+    "count": "Number of dice",
+    "roll": "Roll",
+    "validation": {
+      "positiveInteger": "Enter an integer ≥ 1"
+    }
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "ZoneLabel": {
+    "title": {
+      "table": "Battlefield",
+      "grave": "Graveyard",
+      "rfg": "Exile",
+      "hand": "Hand",
+      "deck": "Library",
+      "sb": "Sideboard",
+      "stack": "Stack"
+    },
+    "inline": {
+      "table": "battlefield",
+      "grave": "graveyard",
+      "rfg": "exile",
+      "hand": "hand",
+      "deck": "library",
+      "sb": "sideboard",
+      "stack": "stack"
+    }
+  }
+}

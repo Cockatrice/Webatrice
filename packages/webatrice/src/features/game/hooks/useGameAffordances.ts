@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 
+import { useGameReadOnly } from '../components/ui/GameReadOnlyContext';
 import { useCurrentGame } from './useCurrentGame';
 
 export interface GameAffordances {
@@ -8,6 +9,7 @@ export interface GameAffordances {
   isConceded: boolean;
   isStarted: boolean;
   canPassTurn: boolean;
+  canReverseTurn: boolean;
   canAdvancePhase: boolean;
   canConcede: boolean;
   canUnconcede: boolean;
@@ -16,13 +18,16 @@ export interface GameAffordances {
 
 export function useGameAffordances(gameId: number | undefined): GameAffordances {
   const { game, localPlayer, isSpectator, isJudge, isStarted } = useCurrentGame(gameId);
+  const readOnly = useGameReadOnly();
 
   return useMemo<GameAffordances>(() => {
-    const hasLiveGame = gameId != null && game != null;
+    const hasLiveGame = !readOnly && gameId != null && game != null;
     const isParticipant = hasLiveGame && !isSpectator;
     const isConceded = localPlayer?.properties.conceded ?? false;
     const canPassTurn =
       hasLiveGame && isStarted && !isConceded && (isJudge || isParticipant);
+    const canReverseTurn =
+      hasLiveGame && isStarted && (isJudge || (isParticipant && !isConceded));
     const canAdvancePhase =
       hasLiveGame && isStarted && (isJudge || game.activePlayerId === game.localPlayerId);
     const canConcede = isParticipant && !isConceded;
@@ -35,10 +40,11 @@ export function useGameAffordances(gameId: number | undefined): GameAffordances 
       isConceded,
       isStarted,
       canPassTurn,
+      canReverseTurn,
       canAdvancePhase,
       canConcede,
       canUnconcede,
       canRoll,
     };
-  }, [gameId, game, localPlayer, isSpectator, isJudge, isStarted]);
+  }, [readOnly, gameId, game, localPlayer, isSpectator, isJudge, isStarted]);
 }

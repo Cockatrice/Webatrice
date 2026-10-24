@@ -1,0 +1,12 @@
+{
+  "CommandFailureNotices": {
+    "createGame": {
+      "title": "Could not create game",
+      "serverError": "Server error."
+    },
+    "deckUpload": {
+      "title": "Could not save deck",
+      "serverError": "Failed to upload deck to server"
+    }
+  }
+}

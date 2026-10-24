@@ -1,7 +1,8 @@
 import { vi } from 'vitest';
 import { fireEvent, screen, within } from '@testing-library/react';
 import { Route, Routes } from 'react-router-dom';
-import { ServerInfo_User_UserLevelFlag } from '@cockatrice/sockatrice/generated';
+import { Event_UserMessageSchema, ServerInfo_User_UserLevelFlag } from '@cockatrice/sockatrice/generated';
+import { create } from '@bufbuild/protobuf';
 
 import { renderWithProviders, createMockWebClient, connectedState, makeUser } from '../../__test-utils__';
 
@@ -12,7 +13,14 @@ vi.mock('@cockatrice/datatrice/react', async (importOriginal) => {
   return { ...actual, useWebClient: () => hoisted.mockWebClient };
 });
 
+import { ModerationProvider } from '@app/feature-widgets/moderation';
+import { UserGamesProvider } from '@app/feature-widgets/user-games';
 import Player from './Player';
+import { setAdminLocked } from '@app/hooks';
+
+beforeEach(() => setAdminLocked(false));
+afterEach(() => setAdminLocked(false));
+import { ReportUserProvider } from '../../dialogs';
 
 beforeAll(() => {
   hoisted.mockWebClient = createMockWebClient();
@@ -20,9 +28,13 @@ beforeAll(() => {
 
 function renderPlayer(preloadedState: any, name = 'alice') {
   return renderWithProviders(
-    <Routes>
-      <Route path="/player/:name" element={<Player />} />
-    </Routes>,
+    <ModerationProvider>
+      <UserGamesProvider>
+        <Routes>
+          <Route path="/player/:name" element={<Player />} />
+        </Routes>
+      </UserGamesProvider>
+    </ModerationProvider>,
     { preloadedState, route: `/player/${name}` },
   );
 }
@@ -39,6 +51,13 @@ const stateWithPlayer = (user: ReturnType<typeof makeUser>, overrides = {}) => (
 });
 
 describe('Player', () => {
+  it('shares developer, privilege and calendar-age formatting with Account', () => {
+    const user = makeUser({ name: 'alice', userLevel: ServerInfo_User_UserLevelFlag.IsDeveloper
+      | ServerInfo_User_UserLevelFlag.IsRegistered | ServerInfo_User_UserLevelFlag.IsJudge, privlevel: 'GOLD', accountageSecs: 0n });
+    renderPlayer(stateWithPlayer(user));
+    expect(screen.getAllByText('Account.level.developer | Account.level.judge | GOLD')).toHaveLength(2);
+    expect(screen.getByText('Account.age.unknown')).toBeInTheDocument();
+  });
   it('shows the not-found message when the player is unknown', () => {
     renderPlayer(connectedState, 'ghost');
     expect(screen.getByText('Player.action.notFound')).toBeInTheDocument();
@@ -63,6 +82,16 @@ describe('Player', () => {
     expect(hoisted.mockWebClient.request.session.addToBuddyList).toHaveBeenCalledWith('alice');
   });
 
+  it('offers the games action for another user, enabled only while they are online', () => {
+    const alice = makeUser({ name: 'alice' });
+    const { unmount } = renderPlayer(stateWithPlayer(alice));
+    expect(screen.getByRole('button', { name: 'UserGamesDialog.menu.showGames' })).toBeDisabled();
+    unmount();
+
+    renderPlayer(stateWithPlayer(alice, { users: { alice } }));
+    expect(screen.getByRole('button', { name: 'UserGamesDialog.menu.showGames' })).toBeEnabled();
+  });
+
   it('hides action buttons when viewing your own profile', () => {
     const user = makeUser({ name: 'testUser', userLevel: 0 });
     renderPlayer(stateWithPlayer(user), 'testUser');
@@ -79,8 +108,29 @@ describe('Player', () => {
       },
     };
     renderPlayer(state, 'alice');
-    expect(screen.getByRole('button', { name: /Player\.action\.warn/ })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Player\.action\.ban/ })).toBeInTheDocument();
+    const moderation = screen.getByRole('group', { name: 'Player.moderation' });
+    expect(within(moderation).getByRole('button', { name: 'Moderation.menu.warnUser' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Moderation.menu.banHistory' })).toBeEnabled();
+    expect(screen.queryByRole('button', { name: 'Moderation.menu.promoteMod' })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Moderation.menu.warnUser' }));
+    expect(hoisted.mockWebClient.request.session.getUserInfo).toHaveBeenCalledWith('alice');
+  });
+
+  it('hides moderator actions from regular users', () => {
+    const user = makeUser({ name: 'alice', userLevel: 0 });
+    renderPlayer(stateWithPlayer(user), 'alice');
+    expect(screen.queryByRole('button', { name: 'Moderation.menu.warnUser' })).not.toBeInTheDocument();
+  });
+
+  it('shows moderator actions disabled on your own profile', () => {
+    const self = makeUser({ name: 'testUser', userLevel: ServerInfo_User_UserLevelFlag.IsModerator });
+    const state = {
+      ...stateWithPlayer(self),
+      server: { ...(stateWithPlayer(self).server as any), user: self },
+    };
+    renderPlayer(state, 'testUser');
+    expect(screen.getByRole('button', { name: 'Moderation.menu.warnUser' })).toBeDisabled();
   });
 
   it('renders the remove-buddy label when the player is already a buddy', () => {
@@ -93,13 +143,13 @@ describe('Player', () => {
   it('labels a registered (non-mod, non-admin) user as Registered', () => {
     const user = makeUser({ name: 'alice', userLevel: ServerInfo_User_UserLevelFlag.IsRegistered });
     renderPlayer(stateWithPlayer(user), 'alice');
-    expect(screen.getAllByText(/Player\.level\.registered/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Account\.level\.registered/).length).toBeGreaterThan(0);
   });
 
   it('labels an admin user as Administrator', () => {
     const user = makeUser({ name: 'alice', userLevel: ServerInfo_User_UserLevelFlag.IsAdmin });
     renderPlayer(stateWithPlayer(user), 'alice');
-    expect(screen.getAllByText(/Player\.level\.administrator/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Account\.level\.administrator/).length).toBeGreaterThan(0);
   });
 
   it('marks a judge user with the Judge label alongside the base level', () => {
@@ -109,8 +159,8 @@ describe('Player', () => {
         ServerInfo_User_UserLevelFlag.IsRegistered | ServerInfo_User_UserLevelFlag.IsJudge,
     });
     renderPlayer(stateWithPlayer(user), 'alice');
-    expect(screen.getAllByText(/Player\.level\.judge/).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/Player\.level\.registered/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Account\.level\.judge/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Account\.level\.registered/).length).toBeGreaterThan(0);
   });
 
   it('shows the privlevel suffix on the level badge when it is set and not NONE', () => {
@@ -120,7 +170,7 @@ describe('Player', () => {
       privlevel: 'GOLD',
     });
     renderPlayer(stateWithPlayer(user), 'alice');
-    expect(screen.getByText(/\|\s*GOLD$/)).toBeInTheDocument();
+    expect(screen.getAllByText('Account.level.registered | GOLD')).toHaveLength(2);
   });
 
   it('renders the Unknown account-age text when accountageSecs is missing on a registered user', () => {
@@ -130,7 +180,7 @@ describe('Player', () => {
       accountageSecs: 0n,
     });
     renderPlayer(stateWithPlayer(user), 'alice');
-    expect(screen.getByText(/Player\.age\.unknown/)).toBeInTheDocument();
+    expect(screen.getByText(/Account\.age\.unknown/)).toBeInTheDocument();
   });
 
   it('formats account age with years and days when over one year', () => {
@@ -141,7 +191,7 @@ describe('Player', () => {
       accountageSecs: oneYearAndOneDay,
     });
     renderPlayer(stateWithPlayer(user), 'alice');
-    expect(screen.getByText(/Player\.age\.daysWithYears/)).toBeInTheDocument();
+    expect(screen.getByText(/Account\.age\.yearsAndDays/)).toBeInTheDocument();
   });
 
   it('renders an inline avatar img when the user has an avatar bitmap', () => {
@@ -153,5 +203,47 @@ describe('Player', () => {
     renderPlayer(stateWithPlayer(user), 'alice');
     const img = screen.getByAltText('alice') as HTMLImageElement;
     expect(img.src).toContain('data:image/png;base64,');
+  });
+});
+
+describe('Player report user (#7091)', () => {
+  it('prefills the latest 50 private messages from both senders using receipt times', () => {
+    const state = withServer('3.1.0 ()');
+    state.server.messages = { alice: Array.from({ length: 52 }, (_, index) => Object.assign(
+      create(Event_UserMessageSchema, { senderName: index % 2 ? 'testUser' : 'alice', message: `message ${index}` }),
+      { timeReceived: new Date(2026, 0, 1, 9, 5, index).getTime() },
+    )) };
+    renderWithProviders(<ReportUserProvider><Routes>
+      <Route path="/player/:name" element={<Player />} />
+    </Routes></ReportUserProvider>, { preloadedState: state, route: '/player/alice' });
+    fireEvent.click(screen.getByRole('button', { name: 'ReportUserDialog.menuItem' }));
+    const lines = (screen.getByLabelText('ReportUserDialog.chatGroup') as HTMLTextAreaElement).value.split('\n');
+    expect(lines).toHaveLength(50);
+    expect(lines[0]).toBe('[09:05:02] alice: message 2');
+    expect(lines[49]).toBe('[09:05:51] testUser: message 51');
+  });
+
+  const withServer = (version: string) => stateWithPlayer(makeUser({ name: 'alice', userLevel: 0 }), {
+    info: { message: null, name: 'Test Server', version },
+    user: makeUser({ name: 'testUser', userLevel: ServerInfo_User_UserLevelFlag.IsRegistered }),
+  });
+
+  it('opens the report dialog for this user, with no game or chat attached', () => {
+    renderWithProviders(
+      <ReportUserProvider>
+        <Routes>
+          <Route path="/player/:name" element={<Player />} />
+        </Routes>
+      </ReportUserProvider>,
+      { preloadedState: withServer('3.1.0 ()'), route: '/player/alice' },
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'ReportUserDialog.menuItem' }));
+    expect(screen.getByTestId('report-reported-user').textContent).toBe('alice');
+    expect((screen.getByLabelText('ReportUserDialog.chatGroup') as HTMLTextAreaElement).value).toBe('');
+  });
+
+  it('hides the action on a 3.0 server', () => {
+    renderPlayer(withServer('3.0.0 ()'), 'alice');
+    expect(screen.queryByRole('button', { name: 'ReportUserDialog.menuItem' })).toBeNull();
   });
 });

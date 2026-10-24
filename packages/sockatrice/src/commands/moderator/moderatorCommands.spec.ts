@@ -1,6 +1,7 @@
 ﻿vi.mock('../../WebClient');
 
 import { makeCallbackHelpers } from '../../testing/callback-helpers';
+import { CommandFailure } from '../../types/CommandFailure';
 import { WebClient } from '../../WebClient';
 import {
   Command_BanFromServer_ext,
@@ -38,7 +39,7 @@ import { warnUser } from './warnUser';
 import { create } from '@bufbuild/protobuf';
 import { Mock } from 'vitest';
 
-const { invokeOnSuccess, invokeOnError } = makeCallbackHelpers(
+const { invokeOnSuccess, invokeOnError, invokeResponseCode } = makeCallbackHelpers(
   WebClient.instance.protobuf.sendModeratorCommand as Mock,
   2
 );
@@ -70,10 +71,13 @@ describe('forceActivateUser', () => {
     );
   });
 
-  it('onSuccess calls response.moderator.forceActivateUser', () => {
+  it('reports RespOk as a failure instead of claiming activation succeeded', () => {
     forceActivateUser('alice', 'mod1');
-    invokeOnSuccess();
-    expect(WebClient.instance.response.moderator.forceActivateUser).toHaveBeenCalledWith('alice', 'mod1');
+    invokeOnSuccess({}, { responseCode: Response_ResponseCode.RespOk });
+    expect(WebClient.instance.response.moderator.forceActivateUser).not.toHaveBeenCalled();
+    expect(WebClient.instance.response.moderator.commandFailed).toHaveBeenCalledWith(
+      'forceActivateUser', Response_ResponseCode.RespOk, 'alice',
+    );
   });
 });
 
@@ -335,5 +339,39 @@ describe('warnUser', () => {
     warnUser('alice', 'bad behavior', 'cid');
     invokeOnSuccess();
     expect(WebClient.instance.response.moderator.warnUser).toHaveBeenCalledWith('alice');
+  });
+});
+
+describe('failure reporting', () => {
+  const { commandFailed } = WebClient.instance.response.moderator as unknown as { commandFailed: Mock };
+
+  it.each([
+    ['banHistory', () => getBanHistory('alice'), 'alice'],
+    ['warnHistory', () => getWarnHistory('alice'), 'alice'],
+    ['warnList', () => getWarnList('mod1', 'alice', 'cid'), 'alice'],
+    ['getAdminNotes', () => getAdminNotes('alice'), 'alice'],
+    ['viewLogHistory', () => viewLogHistory(create(Command_ViewLogHistorySchema, { userName: 'alice', dateRange: 24 })), 'alice'],
+    ['grantReplayAccess', () => grantReplayAccess(42, 'mod1'), '42'],
+    ['forceActivateUser', () => forceActivateUser('alice', 'mod1'), 'alice'],
+  ])('reports a failed %s with its response code and target', (command, send, target) => {
+    send();
+    invokeOnError(Response_ResponseCode.RespContextError);
+    expect(commandFailed).toHaveBeenCalledWith(command, Response_ResponseCode.RespContextError, target, undefined);
+  });
+
+  it('passes the transport reason when the server never answered', () => {
+    viewLogHistory(create(Command_ViewLogHistorySchema, { userName: 'alice', dateRange: 24 }));
+    invokeOnError(Response_ResponseCode.RespNotConnected, {}, CommandFailure.Timeout);
+    expect(commandFailed).toHaveBeenCalledWith(
+      'viewLogHistory', Response_ResponseCode.RespNotConnected, 'alice', CommandFailure.Timeout,
+    );
+  });
+});
+
+describe('forceActivateUser success code', () => {
+  it('treats RespActivationAccepted as success, as Servatrice answers it from cmdActivateAccount', () => {
+    forceActivateUser('alice', 'mod1');
+    invokeResponseCode(Response_ResponseCode.RespActivationAccepted);
+    expect(WebClient.instance.response.moderator.forceActivateUser).toHaveBeenCalledWith('alice', 'mod1');
   });
 });

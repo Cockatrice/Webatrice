@@ -1,6 +1,6 @@
 import { ZoneName } from '@cockatrice/sockatrice';
 import { ReactNode } from 'react';
-import { renderHook } from '@testing-library/react';
+import { act, renderHook } from '@testing-library/react';
 import { combineReducers } from '@reduxjs/toolkit';
 import { Provider } from 'react-redux';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
@@ -80,7 +80,7 @@ function setup(opts: SetupOpts = {}) {
     ...game,
     info: { ...game.info, gameId: 1, spectatorsOmniscient },
   };
-  const gamesState: GamesState = { games: { 1: withInfo }, pings: {} };
+  const gamesState: GamesState = { games: { 1: withInfo, 2: { ...withInfo, info: { ...withInfo.info, gameId: 2 } } }, pings: {} };
 
   const webClient = createMockWebClient();
   const reducer = combineReducers({ games: games.gamesReducer });
@@ -106,8 +106,10 @@ function setup(opts: SetupOpts = {}) {
     );
   }
 
-  const { result } = renderHook(() => useGame(), { wrapper: Wrapper });
-  return { result, webClient };
+  const hook = renderHook(({ gameId }: { gameId?: number }) => useGame({ gameId }), {
+    wrapper: Wrapper, initialProps: { gameId: undefined },
+  });
+  return { ...hook, webClient, Wrapper, store };
 }
 
 describe('useGame', () => {
@@ -120,6 +122,24 @@ describe('useGame', () => {
     expect(result.current.localPlayer).toBeDefined();
     expect(result.current.boardRef.current).toBeNull();
     expect(result.current.sensors).toBeDefined();
+  });
+
+  it('retains each game rotation across switches and route remounts', () => {
+    const { result, rerender, unmount, Wrapper } = setup();
+    const original = result.current.layout.cells.map((cell) => cell.playerId);
+    act(() => result.current.rotateView(1));
+    const rotated = result.current.layout.cells.map((cell) => cell.playerId);
+    expect(rotated).not.toEqual(original);
+
+    rerender({ gameId: 2 });
+    expect(result.current.layout.cells.map((cell) => cell.playerId)).toEqual(original);
+    act(() => result.current.rotateView(-1));
+    rerender({ gameId: 1 });
+    expect(result.current.layout.cells.map((cell) => cell.playerId)).toEqual(rotated);
+
+    unmount();
+    const remounted = renderHook(() => useGame({ gameId: 1 }), { wrapper: Wrapper });
+    expect(remounted.result.current.layout.cells.map((cell) => cell.playerId)).toEqual(rotated);
   });
 
   // The deck-select open predicate moved into useDeckSelectDialog (so the dialog

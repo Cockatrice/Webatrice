@@ -1,9 +1,13 @@
 {
   "KnownHostForm": {
-    "help": "Need help adding a new host?",
     "label": {
       "add": "Add Host",
-      "find": "Find Host"
+      "find": "Find Host",
+      "desktopPort": "Desktop port (optional)"
+    },
+    "desktopPortHelp": "Optional TCP port used by desktop clients. Set this to open desktop share links and send game invites for this server.",
+    "validation": {
+      "desktopPort": "Enter a whole number from 1 to 65535, or leave this empty."
     }
   }
 }

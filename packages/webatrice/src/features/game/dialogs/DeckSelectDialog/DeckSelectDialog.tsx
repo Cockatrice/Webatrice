@@ -5,6 +5,7 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
 import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
+import { useTranslation } from 'react-i18next';
 
 import { useGameId } from '../../components/ui/GameIdContext';
 import { useDeckSelectDialog } from './useDeckSelectDialog';
@@ -20,7 +21,7 @@ const classes = {
 const StyledDialog = styled(Dialog)(({ theme }) => ({
   [`&.${classes.root}`]: {
     '& .dialog-title__wrapper': {
-      borderColor: theme.palette.grey[300],
+      borderColor: theme.palette.divider,
     },
   },
 }));
@@ -30,6 +31,7 @@ const StyledDialog = styled(Dialog)(({ theme }) => ({
 // before a game starts, so the dialog has no backdrop-dismiss close handler — the
 // user leaves via the in-dialog "Leave Game" button.
 function DeckSelectDialog() {
+  const { t } = useTranslation();
   const gameId = useGameId();
   const {
     isOpen,
@@ -57,13 +59,12 @@ function DeckSelectDialog() {
     >
       <DialogTitle className="dialog-title">
         <div className="dialog-title__wrapper">
-          Select Deck
+          {t('DeckSelectDialog.title')}
         </div>
       </DialogTitle>
       <DialogContent className="dialog-content">
         <Typography className="dialog-content__subtitle" variant="subtitle1">
-          Pick a .cod file from your computer or paste its XML below, then click
-          Submit Deck. After the server accepts the deck, the Ready button unlocks.
+          {t('DeckSelectDialog.instructions')}
         </Typography>
 
         <div className="deck-select-dialog__file-row">
@@ -71,7 +72,7 @@ function DeckSelectDialog() {
             ref={fileInputRef}
             type="file"
             accept=".cod"
-            aria-label="deck file"
+            aria-label={t('DeckSelectDialog.deckFile')}
             style={{ display: 'none' }}
             onChange={(e) => {
               const file = e.target.files?.[0] ?? null;
@@ -84,15 +85,15 @@ function DeckSelectDialog() {
             size="small"
             onClick={() => fileInputRef.current?.click()}
           >
-            Choose .cod file
+            {t('DeckSelectDialog.chooseFile')}
           </Button>
           <span className="deck-select-dialog__file-name">
-            {fileName ?? 'No file selected'}
+            {fileName ?? t('DeckSelectDialog.noFile')}
           </span>
         </div>
 
         <Typography className="deck-select-dialog__divider" variant="caption">
-          — or paste XML below —
+          {t('DeckSelectDialog.pasteDivider')}
         </Typography>
 
         <textarea
@@ -100,8 +101,8 @@ function DeckSelectDialog() {
           rows={10}
           value={deckText}
           onChange={(e) => setDeckText(e.target.value)}
-          placeholder={'<?xml version="1.0"?>\n<cockatrice_deck version="1">\n  ...\n</cockatrice_deck>'}
-          aria-label="deck list"
+          placeholder={t('DeckSelectDialog.deckListPlaceholder')}
+          aria-label={t('DeckSelectDialog.deckList')}
         />
 
         {validationError != null && (
@@ -111,7 +112,7 @@ function DeckSelectDialog() {
         )}
 
         <div className="deck-select-dialog__hash">
-          Deck hash: {deckHash.length > 0 ? deckHash : <span className="deck-select-dialog__hash--pending">—</span>}
+          {t('DeckSelectDialog.deckHash', { hash: deckHash.length > 0 ? deckHash : '—' })}
         </div>
 
         <div className="deck-select-dialog__actions">
@@ -121,14 +122,14 @@ function DeckSelectDialog() {
             color="error"
             onClick={handleLeave}
           >
-            Leave Game
+            {t('DeckSelectDialog.leave')}
           </Button>
           <Button
             variant="outlined"
             onClick={handleSubmitDeck}
             disabled={!canSubmit}
           >
-            Submit Deck
+            {t('DeckSelectDialog.submit')}
           </Button>
           <Button
             variant="contained"
@@ -136,7 +137,7 @@ function DeckSelectDialog() {
             onClick={handleToggleReady}
             disabled={!canToggleReady}
           >
-            {isReady ? 'Unready' : 'Ready'}
+            {isReady ? t('DeckSelectDialog.unready') : t('DeckSelectDialog.ready')}
           </Button>
         </div>
       </DialogContent>

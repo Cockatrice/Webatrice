@@ -1,114 +1,101 @@
-import { RefObject, useCallback, useMemo, useRef, useState } from 'react';
+import { RefObject, useEffect, useMemo, useRef } from 'react';
 import { useParams } from 'react-router-dom';
-import { KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { useSensor, useSensors } from '@dnd-kit/core';
 
-import { ServerInfo_Card } from '@cockatrice/sockatrice/generated';
+import { usePreference } from '@app/hooks';
+import { createCardPreviewStore, type CardPreviewStore } from '../components/ui/CardPreviewContext';
+import { createSeatShortcutRegistry, type SeatShortcutRegistry } from '../components/ui/SeatShortcutsContext';
+import { useMoveCard } from '../components/ui/GameBoardCell/useMoveCard';
+import { GamePointerSensor } from './gamePointerSensor';
 import { createCardRegistry, type CardRegistry } from '../utils/CardRegistry/CardRegistryContext';
-import { resolveSelectedCards, type SelectedCard } from '../utils/selection';
 import { useCurrentGame, type CurrentGame } from './useCurrentGame';
 import { useGameAccess, type GameAccess } from './useGameAccess';
 import { useGameArrowInteractions, type GameArrowInteractions } from './useGameArrowInteractions';
-import { useGameBoxSelection, type BoxSelectPreview } from './useGameBoxSelection';
 import { useGameDialogs, type GameDialogs } from './useGameDialogs';
 import { useGameDnd, type GameDnd } from './useGameDnd';
 import { useJudgeTarget } from './useJudgeTarget';
 import { useGameLifecycleNavigation } from './useGameLifecycleNavigation';
-import { useGameBoardLayout, type GameBoardLayout } from './useGameBoardLayout';
+import { useGameBoardLayout, type GameBoardLayout, type RotationStep } from './useGameBoardLayout';
 import { useGameSelection, type GameSelection } from './useGameSelection';
 import { useGameShortcuts } from './useGameShortcuts';
+import { useGameRotation } from './useGameRotation';
 
 export interface Game extends CurrentGame {
   boardRef: RefObject<HTMLDivElement>;
   gameRef: RefObject<HTMLDivElement>;
   cardRegistry: CardRegistry;
   sensors: ReturnType<typeof useSensors>;
-  hoveredCard: ServerInfo_Card | null;
-  setHoveredCard: (card: ServerInfo_Card | null) => void;
-  previewCard: ServerInfo_Card | null;
+  previewStore: CardPreviewStore;
+  seatShortcuts: SeatShortcutRegistry;
   selectedCardKeys: ReadonlySet<string>;
-  selectedCards: readonly SelectedCard[];
-  onCardFocus: (ownerPlayerId: number | undefined, zone: string | undefined, card: ServerInfo_Card) => void;
-  onCardBlur: (ownerPlayerId: number | undefined, zone: string | undefined, card: ServerInfo_Card) => void;
-  collapseUnlessSelected: GameSelection['collapseUnlessSelected'];
-  handleGameMouseDown: (e: React.MouseEvent<HTMLDivElement>) => void;
-  boxSelectPreview: BoxSelectPreview | null;
+  setSelectedCardKeys: GameSelection['setSelectedCardKeys'];
   localAccess: GameAccess;
   layout: GameBoardLayout;
+  rotateView: (step: RotationStep) => void;
   arrows: GameArrowInteractions;
   dialogs: GameDialogs;
   dnd: GameDnd;
 }
 
-export function useGame(): Game {
+export interface UseGameOptions {
+  gameId?: number;
+  readOnly?: boolean;
+}
+
+const NO_SENSORS: ReturnType<typeof useSensors> = [];
+
+export function useGame({ gameId: boardGameId, readOnly = false }: UseGameOptions = {}): Game {
   const params = useParams<{ gameId?: string }>();
   const parsed = params.gameId != null ? Number(params.gameId) : NaN;
   const routeGameId = Number.isFinite(parsed) ? parsed : undefined;
-  const current = useCurrentGame(routeGameId);
+  const current = useCurrentGame(boardGameId ?? routeGameId);
   const { gameId, game, isSpectator } = current;
 
-  useGameLifecycleNavigation(gameId);
+  useGameLifecycleNavigation(readOnly ? undefined : gameId);
 
   const boardRef = useRef<HTMLDivElement>(null);
   const gameRef = useRef<HTMLDivElement>(null);
   const cardRegistry = useMemo(() => createCardRegistry(), []);
+  const pointerSensors = useMemo(() => new Set<GamePointerSensor>(), []);
+  useEffect(() => () => {
+    for (const sensor of pointerSensors) {
+      sensor.dispose();
+    }
+  }, [pointerSensors, gameId, readOnly]);
   // See .github/instructions/webatrice-game.instructions.md#pointer--click-vs-drag.
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 0 } }),
-    useSensor(KeyboardSensor),
-  );
-  const [hoveredCard, setHoveredCard] = useState<ServerInfo_Card | null>(null);
+  // Pointer only: seat drags hand dnd-kit just their pointerdown, so a
+  // keyboard sensor never activated. The keyboard moves cards through the
+  // card menu's "Move to" and the zone shortcuts instead.
+  const sensors = useSensors(useSensor(GamePointerSensor, { activationDistance: 0, instances: pointerSensors }));
+  const previewStore = useMemo(() => createCardPreviewStore(), []);
+  const seatShortcuts = useMemo(() => createSeatShortcutRegistry(), []);
   const selection = useGameSelection();
-  const previewCard = selection.focused?.card ?? hoveredCard;
-  const selectedCards = useMemo(
-    () => (game ? resolveSelectedCards(game, selection.selectedCardKeys) : []),
-    [game, selection.selectedCardKeys],
-  );
-  // Call-time getter for the live selection. Lets the dialog/dnd hooks read the
-  // current multi-selection without taking `selectedCards` as a dep (which would
-  // churn their memoized callbacks on every selection change). Mirrors the
-  // readGame/readLocalPlayer store-read pattern in useGameDialogs.
-  const selectedCardsRef = useRef(selectedCards);
-  selectedCardsRef.current = selectedCards;
-  const getSelectedCards = useCallback(() => selectedCardsRef.current, []);
 
-  const layout = useGameBoardLayout(game);
+  const { rotationSteps, rotateView } = useGameRotation(gameId);
+  const layout = useGameBoardLayout(game, rotationSteps, usePreference('minPlayersForMultiColumnLayout'));
   const localAccess = useGameAccess(gameId, game?.localPlayerId);
   const judgeTarget = useJudgeTarget(gameId);
 
   const arrows = useGameArrowInteractions({
     gameId,
-    game,
     containerRef: gameRef,
     cardRegistry,
-    selectedCards,
-    collapseUnlessSelected: selection.collapseUnlessSelected,
   });
-  const box = useGameBoxSelection({
-    selectedCardKeys: selection.selectedCardKeys,
-    setSelectedCardKeys: selection.setSelectedCardKeys,
-    clearSelection: selection.clearSelection,
-    clearFocused: selection.clearFocused,
-    pendingActive: arrows.pending,
-  });
-  const dialogs = useGameDialogs({
-    gameId,
-    localAccess,
-    isSpectator,
-    startPendingArrow: arrows.startPendingArrow,
-    startPendingAttach: arrows.startPendingAttach,
-    collapseUnlessSelected: selection.collapseUnlessSelected,
-    getSelectedCards,
-  });
+  const dialogs = useGameDialogs({ gameId, isSpectator });
+  const moveCard = useMoveCard(gameId);
   const dnd = useGameDnd({
     gameId,
     judgeTarget,
+    isJudge: localAccess.isJudge,
     cancelPendingArrow: arrows.cancelPendingOnDragStart,
-    collapseUnlessSelected: selection.collapseUnlessSelected,
-    getSelectedCards,
+    clearSelection: selection.clearSelection,
+    moveCard,
   });
 
   useGameShortcuts({
     gameId,
+    seatShortcuts,
+    onRotateView: rotateView,
     onRequestConcede: dialogs.openConcede,
     onRequestDrawMultiple: dialogs.handleRequestDrawN,
     onRequestUndoDraw: dialogs.handleRequestUndoDraw,
@@ -126,7 +113,9 @@ export function useGame(): Game {
     // shortcut handler can decide to preventDefault or fall through.
     onCloseRecentZoneView: () => {
       const top = dialogs.zoneViews[dialogs.zoneViews.length - 1];
-      if (!top) return false;
+      if (!top) {
+        return false;
+      }
       dialogs.handleCloseZoneView(top.playerId, top.zoneName);
       return true;
     },
@@ -137,19 +126,14 @@ export function useGame(): Game {
     boardRef,
     gameRef,
     cardRegistry,
-    sensors,
-    hoveredCard,
-    setHoveredCard,
-    previewCard,
+    sensors: readOnly ? NO_SENSORS : sensors,
+    previewStore,
+    seatShortcuts,
     selectedCardKeys: selection.selectedCardKeys,
-    selectedCards,
-    onCardFocus: selection.onCardFocus,
-    onCardBlur: selection.onCardBlur,
-    collapseUnlessSelected: selection.collapseUnlessSelected,
-    handleGameMouseDown: box.handleGameMouseDown,
-    boxSelectPreview: box.previewRect,
+    setSelectedCardKeys: selection.setSelectedCardKeys,
     localAccess,
     layout,
+    rotateView,
     arrows,
     dialogs,
     dnd,

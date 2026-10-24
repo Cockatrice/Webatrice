@@ -14,6 +14,8 @@ import {
   ServerInfo_GameSchema,
   ServerInfo_ReplayMatch,
   ServerInfo_ReplayMatchSchema,
+  ServerInfo_Report,
+  ServerInfo_ReportSchema,
   ServerInfo_User,
   ServerInfo_UserSchema,
   ServerInfo_Warning,
@@ -23,8 +25,8 @@ import { WebsocketTypes } from '@cockatrice/sockatrice/types';
 import type { MessageInitShape } from '@bufbuild/protobuf';
 
 import { create } from '@bufbuild/protobuf';
-import { ServerState } from '../../store/server/server.interfaces';
-import { HEALTHY_CONNECTION_HEALTH } from '../../store/server/server.reducer.connection';
+import { ServerState, ServerStateReports } from '../../store/server/server.interfaces';
+import { EMPTY_LATENCY, HEALTHY_CONNECTION_HEALTH } from '../../store/server/server.reducer.connection';
 
 export function makeUser(
   overrides: MessageInitShape<typeof ServerInfo_UserSchema> = {}
@@ -161,6 +163,7 @@ export function makePendingActivationContext(
 export function makeServerState(overrides: Partial<ServerState> = {}): ServerState {
   return {
     initialized: false,
+    sessionEpoch: 0,
     testConnectionStatus: null,
     buddyList: {},
     ignoreList: {},
@@ -170,7 +173,9 @@ export function makeServerState(overrides: Partial<ServerState> = {}): ServerSta
       description: null,
     },
     connectionHealth: HEALTHY_CONNECTION_HEALTH,
+    latency: EMPTY_LATENCY,
     connectUnreachable: false,
+    loginFailureCode: null,
     info: {
       message: null,
       name: null,
@@ -189,6 +194,7 @@ export function makeServerState(overrides: Partial<ServerState> = {}): ServerSta
     },
     locale: undefined,
     messages: {},
+    privateChatNotices: {},
     userInfo: {},
     notifications: [],
     serverShutdown: null,
@@ -201,9 +207,44 @@ export function makeServerState(overrides: Partial<ServerState> = {}): ServerSta
     replays: {},
     backendDecks: null,
     downloadedDeck: null,
+    deckSharesMine: null,
+    publicDecks: {},
     downloadedReplay: null,
     gamesOfUser: {},
+    gamesOfUserRoomNames: {},
+    gamesOfUserStatus: {},
     registrationError: null,
+    staff: { investigation: null, moderatorLastLogins: null, cardArtRules: null, serverStats: null },
+    reports: makeReportsState(),
+    ...overrides,
+  };
+}
+
+export function makeReport(
+  overrides: MessageInitShape<typeof ServerInfo_ReportSchema> = {}
+): ServerInfo_Report {
+  return create(ServerInfo_ReportSchema, {
+    reportId: 1,
+    reporterName: 'reporter',
+    reportedUserName: 'reported',
+    category: 'harassment',
+    status: 'open',
+    description: 'description',
+    reportTime: 1_700_000_000n,
+    ...overrides,
+  });
+}
+
+export function makeReportsState(overrides: Partial<ServerStateReports> = {}): ServerStateReports {
+  return {
+    mine: null,
+    queue: null,
+    queueTotalCount: 0,
+    byId: {},
+    details: {},
+    stats: null,
+    replay: null,
+    lastNotice: null,
     ...overrides,
   };
 }

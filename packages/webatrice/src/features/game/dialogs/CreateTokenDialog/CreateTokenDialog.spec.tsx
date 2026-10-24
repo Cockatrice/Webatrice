@@ -17,13 +17,13 @@ describe('CreateTokenDialog', () => {
     const handleCreateTokenSubmit = vi.fn();
     render({ handleCreateTokenSubmit });
 
-    fireEvent.change(screen.getByLabelText('Token name'), {
+    fireEvent.change(screen.getByLabelText('Name'), {
       target: { value: '  Goblin  ' },
     });
-    fireEvent.change(screen.getByLabelText('Token power/toughness'), {
+    fireEvent.change(screen.getByLabelText('P/T'), {
       target: { value: '1/1' },
     });
-    fireEvent.change(screen.getByLabelText('Token annotation'), {
+    fireEvent.change(screen.getByLabelText('Annotation'), {
       target: { value: 'ETB' },
     });
     fireEvent.click(screen.getByRole('button', { name: /create/i }));
@@ -36,6 +36,7 @@ describe('CreateTokenDialog', () => {
       annotation: 'ETB',
       destroyOnZoneChange: true,
       faceDown: false,
+      providerId: '',
     });
   });
 
@@ -52,7 +53,7 @@ describe('CreateTokenDialog', () => {
   it('caps the name input at the desktop max (255 chars)', () => {
     render();
 
-    const input = screen.getByLabelText('Token name') as HTMLInputElement;
+    const input = screen.getByLabelText('Name') as HTMLInputElement;
     const longInput = 'x'.repeat(300);
     fireEvent.change(input, { target: { value: longInput } });
 
@@ -63,11 +64,11 @@ describe('CreateTokenDialog', () => {
     const handleCreateTokenSubmit = vi.fn();
     render({ handleCreateTokenSubmit });
 
-    fireEvent.change(screen.getByLabelText('Token name'), {
+    fireEvent.change(screen.getByLabelText('Name'), {
       target: { value: 'Persistent' },
     });
     fireEvent.click(
-      screen.getByRole('checkbox', { name: /destroy when it leaves the table/i }),
+      screen.getByRole('checkbox', { name: /destroy token when it leaves the table/i }),
     );
     fireEvent.click(screen.getByRole('button', { name: /create/i }));
 

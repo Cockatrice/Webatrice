@@ -41,12 +41,9 @@ type Store = ReturnType<typeof createStore>;
 const GAME_ID = 42;
 
 function expectWriteThrows(fn: () => void): void {
-  // Frozen writes throw in strict mode, which all ESM specs are.
   expect(fn).toThrow(TypeError);
 }
 
-// Recursively collect paths of reachable protobuf messages that are NOT
-// frozen — mirrors the middleware's own walk. Empty result = guard held.
 function findUnfrozenMessages(
   value: unknown,
   path: string,
@@ -68,8 +65,6 @@ function findUnfrozenMessages(
   }
   return out;
 }
-
-// --- fixtures ------------------------------------------------------------
 
 function playerWithCards(playerId: number, name: string): ServerInfo_Player {
   return create(ServerInfo_PlayerSchema, {
@@ -94,8 +89,6 @@ function playerWithCards(playerId: number, name: string): ServerInfo_Player {
   });
 }
 
-/** Seeds a started game for Alice (player 1) holding deck card 100 ('Forest')
- *  and hand card 101 ('Lightning Bolt'). */
 function seedGame(): { store: Store; response: WebsocketTypes.IWebClientResponse } {
   const store = createStore();
   const response = attachResponseHandlers(store);
@@ -132,8 +125,6 @@ function moveCard(
   }));
 }
 
-// Omitting cardId leaves the proto2 field unset — Cockatrice's bulk sentinel
-// (untap-all) that routes to cardFieldsUpdatedBulk.
 function setCardAttr(
   response: WebsocketTypes.IWebClientResponse,
   params: { cardId?: number; zoneName: string; attribute: CardAttribute; attrValue: string },
@@ -149,8 +140,6 @@ function setCardAttr(
 function player1(store: Store) {
   return store.getState().games.games[GAME_ID].players[1];
 }
-
-// --- game flows ----------------------------------------------------------
 
 describe('freeze guard (bridge → store seam)', () => {
   it('freezes the full game graph landed by the join snapshot', () => {
@@ -214,7 +203,6 @@ describe('freeze guard (bridge → store seam)', () => {
     expect(after.tapped).toBe(true);
     expect(after).not.toBe(before);
     expect(Object.isFrozen(after)).toBe(true);
-    // The clone-and-reassign convention left the prior message untouched.
     expect(before.tapped).toBe(false);
   });
 
@@ -248,9 +236,6 @@ describe('freeze guard (bridge → store seam)', () => {
   it('freezes revealed-card clones and the auto-reveal topRevealedCard slot', () => {
     const { store, response } = seedGame();
 
-    // Flag the deck as always-reveal-top BEFORE the reveal, mirroring
-    // Cockatrice's server event order — this routes the single-card reveal
-    // into the persistent topRevealedCard slot as well.
     response.game.zonePropertiesChanged(GAME_ID, 1, create(Event_ChangeZonePropertiesSchema, {
       zoneName: 'deck',
       alwaysRevealTopCard: true,
@@ -299,13 +284,9 @@ describe('freeze guard (bridge → store seam)', () => {
     expect(Object.isFrozen(properties.userInfo)).toBe(true);
   });
 
-  // --- optimistic echo ---------------------------------------------------
-
   it('freezes the migrated card when a server echo re-keys an optimistic move', () => {
     const { store, response } = seedGame();
 
-    // Mimic the client's optimistic drag (webatrice GameBoardCell):
-    // plain-spread card into the target zone, then the pending marker.
     const sourceCard = player1(store).zones.hand.byId[101];
     store.dispatch(games.Actions.cardMovedBetweenZones({
       gameId: GAME_ID,
@@ -318,8 +299,6 @@ describe('freeze guard (bridge → store seam)', () => {
     }));
     games.beginOptimistic(games.moveOpKey(1, 101), () => {});
 
-    // Server echo re-keys the card: the listener migrates the frozen
-    // optimistic entry to the new id via cloneWith — remove-then-insert.
     moveCard(response, { cardId: 101, fromZone: 'hand', x: 50, y: 60, newCardId: 505 });
 
     const table = player1(store).zones.table;
@@ -346,8 +325,6 @@ describe('freeze guard (bridge → store seam)', () => {
     games.beginOptimistic(games.moveOpKey(1, 101), () => {});
     const optimistic = player1(store).zones.table.byId[101];
 
-    // Same id, corrected position → cardFieldsUpdated patch over the
-    // optimistic entry (Servatrice stack sub-slot bump).
     moveCard(response, { cardId: 101, fromZone: 'hand', x: 13, y: 20 });
 
     const patched = player1(store).zones.table.byId[101];
@@ -356,8 +333,6 @@ describe('freeze guard (bridge → store seam)', () => {
     expect(Object.isFrozen(patched)).toBe(true);
     expect(games.isOptimisticPending(games.moveOpKey(1, 101))).toBe(false);
   });
-
-  // --- rooms + server ingestion -------------------------------------------
 
   it('freezes merged room-game info through the updateGames batch path', () => {
     const store = createStore();
@@ -372,8 +347,6 @@ describe('freeze guard (bridge → store seam)', () => {
     const first = store.getState().rooms.rooms[1].games[7].info;
     expect(Object.isFrozen(first)).toBe(true);
 
-    // Sparse follow-up: set fields win, unset fields survive via the
-    // cloneWith merge (rooms.listeners upsert path).
     response.room.updateGames(1, [
       create(ServerInfo_GameSchema, { gameId: 7, playerCount: 2 }),
     ]);
@@ -393,8 +366,6 @@ describe('freeze guard (bridge → store seam)', () => {
     })]);
     const before = store.getState().rooms.rooms[1].info;
 
-    // Cockatrice's addClient/removeClient broadcast: only roomId +
-    // playerCount populated. mergeSetFields onto a fresh clone.
     response.room.updateRooms([create(ServerInfo_RoomSchema, { roomId: 1, playerCount: 5 })]);
 
     const after = store.getState().rooms.rooms[1].info;
@@ -440,8 +411,6 @@ describe('freeze guard (bridge → store seam)', () => {
       bob.name = 'mallory';
     });
   });
-
-  // --- full-graph sweep ----------------------------------------------------
 
   it('leaves no unfrozen message reachable in the whole store after a combined flow', () => {
     const { store, response } = seedGame();

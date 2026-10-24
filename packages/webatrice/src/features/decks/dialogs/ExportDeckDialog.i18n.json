@@ -1,0 +1,20 @@
+{
+  "ExportDeckDialog": {
+    "title": "Export deck",
+    "download": "Download .{extension}",
+    "format": {
+      "plain": {
+        "label": "Plain text",
+        "description": "Simple list, grouped by section. Works with most tools."
+      },
+      "arena": {
+        "label": "MTG Arena",
+        "description": "Includes set + collector. Works for Arena, Moxfield, Archidekt imports."
+      },
+      "cockatrice": {
+        "label": "Cockatrice (.cod)",
+        "description": "XML deck file for Cockatrice — preserves everything."
+      }
+    }
+  }
+}

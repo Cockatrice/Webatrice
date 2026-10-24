@@ -37,7 +37,7 @@ function stateWith(
 
 function pickFile(contents: string, name = 'deck.cod') {
   const file = new File([contents], name, { type: 'application/xml' });
-  const input = screen.getByLabelText('deck file') as HTMLInputElement;
+  const input = screen.getByLabelText('Deck file') as HTMLInputElement;
   fireEvent.change(input, { target: { files: [file] } });
 }
 
@@ -53,8 +53,8 @@ describe('DeckSelectDialog', () => {
   it('renders textarea, file picker, Submit Deck, Ready, and Leave Game controls when open', () => {
     renderWithProviders(<DeckSelectDialog />, { preloadedState: stateWith() });
 
-    expect(screen.getByLabelText('deck list')).toBeInTheDocument();
-    expect(screen.getByLabelText('deck file')).toBeInTheDocument();
+    expect(screen.getByLabelText('Deck list')).toBeInTheDocument();
+    expect(screen.getByLabelText('Deck file')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /choose \.cod file/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /submit deck/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /^ready$/i })).toBeInTheDocument();
@@ -76,7 +76,7 @@ describe('DeckSelectDialog', () => {
     const submit = screen.getByRole('button', { name: /submit deck/i });
     expect(submit).toBeDisabled();
 
-    fireEvent.change(screen.getByLabelText('deck list'), {
+    fireEvent.change(screen.getByLabelText('Deck list'), {
       target: { value: VALID_COD_XML },
     });
     expect(submit).not.toBeDisabled();
@@ -86,7 +86,7 @@ describe('DeckSelectDialog', () => {
     const webClient = createMockWebClient();
     renderWithProviders(<DeckSelectDialog />, { preloadedState: stateWith(), webClient });
 
-    fireEvent.change(screen.getByLabelText('deck list'), {
+    fireEvent.change(screen.getByLabelText('Deck list'), {
       target: { value: VALID_COD_XML },
     });
     fireEvent.click(screen.getByRole('button', { name: /submit deck/i }));
@@ -100,7 +100,7 @@ describe('DeckSelectDialog', () => {
     const webClient = createMockWebClient();
     renderWithProviders(<DeckSelectDialog />, { preloadedState: stateWith(), webClient });
 
-    fireEvent.change(screen.getByLabelText('deck list'), {
+    fireEvent.change(screen.getByLabelText('Deck list'), {
       target: { value: '4 Lightning Bolt\n20 Mountain' },
     });
     fireEvent.click(screen.getByRole('button', { name: /submit deck/i }));
@@ -113,7 +113,7 @@ describe('DeckSelectDialog', () => {
     const webClient = createMockWebClient();
     renderWithProviders(<DeckSelectDialog />, { preloadedState: stateWith(), webClient });
 
-    fireEvent.change(screen.getByLabelText('deck list'), {
+    fireEvent.change(screen.getByLabelText('Deck list'), {
       target: { value: '<?xml version="1.0"?><not_a_deck/>' },
     });
     fireEvent.click(screen.getByRole('button', { name: /submit deck/i }));
@@ -161,7 +161,7 @@ describe('DeckSelectDialog', () => {
       expect(screen.getByText('my-deck.cod')).toBeInTheDocument();
     });
 
-    fireEvent.change(screen.getByLabelText('deck list'), {
+    fireEvent.change(screen.getByLabelText('Deck list'), {
       target: { value: VALID_COD_XML },
     });
 

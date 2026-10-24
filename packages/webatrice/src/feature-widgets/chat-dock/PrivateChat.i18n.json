@@ -1,0 +1,24 @@
+{
+  "PrivateChat": {
+    "presence": {
+      "online": "Online",
+      "offline": "Offline"
+    },
+    "blocked": {
+      "ignoring": "You have ignored {name}; your messages are not delivered.",
+      "offline": "{name} is offline; messages cannot be delivered."
+    },
+    "notice": {
+      "ignoredByRecipient": "This user is ignoring you, they cannot see your messages in main chat and you cannot join their games.",
+      "recipientOffline": "Message not sent — {name} is offline.",
+      "chatFlood": "You are flooding the chat. Please wait a couple of seconds.",
+      "userLeft": "{name} has left the server.",
+      "userJoined": "{name} has joined the server.",
+      "notSent": "Message not sent: {reason}"
+    },
+    "log": "Private chat with {name}",
+    "input": "Message {name}",
+    "subtitle": "private chat",
+    "empty": "No messages yet — say hi."
+  }
+}

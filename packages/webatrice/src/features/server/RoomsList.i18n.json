@@ -1,0 +1,20 @@
+{
+  "RoomsList": {
+    "joinError": {
+      "title": "Error",
+      "notFound": "Failed to join the server room: it doesn't exist on the server.",
+      "contextError": "The server thinks you are in the server room but your client is unable to display it. Try restarting your client.",
+      "userLevelTooLow": "You do not have the required permission to join this server room.",
+      "unknown": "Failed to join the server room due to an unknown error: {code}."
+    },
+    "title": "Rooms",
+    "count": "{count, plural, other {# on this server}}",
+    "summary": "{games, plural, one {# game} other {# games}} · {people, plural, one {# person} other {# people}}",
+    "restricted": "Restricted: {level}",
+    "joined": "Joined",
+    "empty": "No rooms available.",
+    "open": "Open",
+    "openLabel": "Open {room}",
+    "joinLabel": "Join {room}"
+  }
+}

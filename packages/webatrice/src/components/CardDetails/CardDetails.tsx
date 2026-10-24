@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next';
+
 import { CardDTO } from '@app/services';
 
 import Card from '../Card/Card';
@@ -9,6 +11,7 @@ interface CardProps {
 }
 
 const CardDetails = ({ card }: CardProps) => {
+  const { t } = useTranslation();
   const props = card?.prop?.value;
   const manacost = props?.manacost?.value;
   const cmc = props?.cmc?.value;
@@ -31,69 +34,69 @@ const CardDetails = ({ card }: CardProps) => {
           <div>
             <div className='cardDetails-attributes'>
               <div className='cardDetails-attribute'>
-                <span className='cardDetails-attribute__label'>Name:</span>
+                <span className='cardDetails-attribute__label'>{t('CardDetails.label.name')}</span>
                 <span className='cardDetails-attribute__value'>{card.name?.value}</span>
               </div>
 
               {pt && (
                 <div className='cardDetails-attribute'>
-                  <span className='cardDetails-attribute__label'>P/T:</span>
+                  <span className='cardDetails-attribute__label'>{t('CardDetails.label.pt')}</span>
                   <span className='cardDetails-attribute__value'>{pt}</span>
                 </div>
               )}
 
               {manacost && (
                 <div className='cardDetails-attribute'>
-                  <span className='cardDetails-attribute__label'>Cost:</span>
+                  <span className='cardDetails-attribute__label'>{t('CardDetails.label.cost')}</span>
                   <span className='cardDetails-attribute__value'>{manacost.replace(/\{|\}/g, '')}</span>
                 </div>
               )}
 
               {cmc && (
                 <div className='cardDetails-attribute'>
-                  <span className='cardDetails-attribute__label'>CMC:</span>
+                  <span className='cardDetails-attribute__label'>{t('CardDetails.label.cmc')}</span>
                   <span className='cardDetails-attribute__value'>{cmc}</span>
                 </div>
               )}
 
               {coloridentity && (
                 <div className='cardDetails-attribute'>
-                  <span className='cardDetails-attribute__label'>Identity:</span>
+                  <span className='cardDetails-attribute__label'>{t('CardDetails.label.identity')}</span>
                   <span className='cardDetails-attribute__value'>{coloridentity}</span>
                 </div>
               )}
 
               {colors && (
                 <div className='cardDetails-attribute'>
-                  <span className='cardDetails-attribute__label'>Color(s):</span>
+                  <span className='cardDetails-attribute__label'>{t('CardDetails.label.colors')}</span>
                   <span className='cardDetails-attribute__value'>{colors}</span>
                 </div>
               )}
 
               {maintype && (
                 <div className='cardDetails-attribute'>
-                  <span className='cardDetails-attribute__label'>Main Type:</span>
+                  <span className='cardDetails-attribute__label'>{t('CardDetails.label.mainType')}</span>
                   <span className='cardDetails-attribute__value'>{maintype}</span>
                 </div>
               )}
 
               {type && (
                 <div className='cardDetails-attribute'>
-                  <span className='cardDetails-attribute__label'>Type:</span>
+                  <span className='cardDetails-attribute__label'>{t('CardDetails.label.type')}</span>
                   <span className='cardDetails-attribute__value'>{type}</span>
                 </div>
               )}
 
               {side && (
                 <div className='cardDetails-attribute'>
-                  <span className='cardDetails-attribute__label'>Side:</span>
+                  <span className='cardDetails-attribute__label'>{t('CardDetails.label.side')}</span>
                   <span className='cardDetails-attribute__value'>{side}</span>
                 </div>
               )}
 
               {layout && (
                 <div className='cardDetails-attribute'>
-                  <span className='cardDetails-attribute__label'>Layout:</span>
+                  <span className='cardDetails-attribute__label'>{t('CardDetails.label.layout')}</span>
                   <span className='cardDetails-attribute__value'>{layout}</span>
                 </div>
               )}

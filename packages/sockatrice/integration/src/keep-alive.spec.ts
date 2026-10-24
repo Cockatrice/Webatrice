@@ -1,4 +1,3 @@
-﻿// KeepAliveService timing scenarios — ping loop, pong correlation, silence policy.
 
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
@@ -91,13 +90,10 @@ describe('keep-alive', () => {
     expect(first.cmdId).toBeGreaterThan(0);
     expect(getWebClient().status).toBe(WebsocketTypes.StatusEnum.CONNECTED);
 
-    // The keepalive never closes the connection under sustained silence — see
-    // sockatrice-transport.instructions.md § keep-alive worker.
     vi.advanceTimersByTime(5000 * 6);
 
     expect(getMockWebSocket().close).not.toHaveBeenCalled();
     expect(getWebClient().status).toBe(WebsocketTypes.StatusEnum.CONNECTED);
-    // Pings keep flowing so a recovering server still hears from us.
     const last = findLastSessionCommand(Data.Command_Ping_ext);
     expect(last.cmdId).toBeGreaterThan(first.cmdId);
   });

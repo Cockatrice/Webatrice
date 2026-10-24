@@ -1,4 +1,4 @@
-import { fireEvent, screen } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 
 import { renderWithProviders } from '../../__test-utils__';
 
@@ -16,9 +16,9 @@ const baseHook = {
     { key: 'reviewAndSave', label: 'CardImportForm.steps.reviewAndSave' },
     { key: 'finished', label: 'CardImportForm.steps.finished' },
   ],
-  importedCards: [] as never[],
-  importedSets: [] as never[],
-  ingest: null as never,
+  review: null as never,
+  result: null as never,
+  answerUnknownSets: vi.fn(),
   error: null as string | null,
   handleBack: vi.fn(),
   handleLocalFiles: vi.fn(),
@@ -26,10 +26,15 @@ const baseHook = {
 };
 
 describe('CardImportForm', () => {
-  it('renders the dropzone import step first', () => {
+  it('renders the dropzone import step first, with the desktop data folders', () => {
     hoisted.useCardImportForm.mockReturnValue({ ...baseHook });
 
     renderWithProviders(<CardImportForm onSubmit={vi.fn()} />);
+
+    expect(screen.getByText('%LOCALAPPDATA%\\Cockatrice\\Cockatrice')).toBeInTheDocument();
+    expect(screen.getByText('~/Library/Application Support/Cockatrice/Cockatrice')).toBeInTheDocument();
+    expect(screen.getByText('~/.local/share/Cockatrice/Cockatrice')).toBeInTheDocument();
+    expect(screen.getByText('CardImportForm.message.customSetsHelp')).toBeInTheDocument();
 
     expect(screen.getByText('CardImportForm.message.dropzone')).toBeInTheDocument();
     expect(
@@ -49,19 +54,18 @@ describe('CardImportForm', () => {
     hoisted.useCardImportForm.mockReturnValue({
       ...baseHook,
       activeStep: 1,
-      importedCards: [{}, {}] as never,
-      importedSets: [
-        { name: { value: 'SET' }, longname: { value: 'A Set' } },
-      ] as never,
-      ingest: {
-        tokens: [],
-        formats: [],
-        acceptedFiles: ['cards.xml'],
-        skippedFiles: ['bad.xml'],
-      } as never,
+      review: {
+        cards: 2, sets: 1, tokens: 0, formats: 0,
+        setNames: ['A Set'],
+        files: [{ name: 'cards.xml', kind: 'main' }, { name: 'Cube.xml', kind: 'custom' }],
+        problems: ['ImportSummary.problem.unsupported.cardFiles'],
+      },
     });
 
     renderWithProviders(<CardImportForm onSubmit={vi.fn()} />);
+
+    expect(screen.getByText('CardImportForm.message.acceptedFiles')).toBeInTheDocument();
+    expect(screen.getByText('ImportSummary.problem.unsupported.cardFiles')).toBeInTheDocument();
 
     expect(
       screen.getByRole('button', { name: 'CardImportForm.button.save' }),
@@ -77,7 +81,6 @@ describe('CardImportForm', () => {
     hoisted.useCardImportForm.mockReturnValue({
       ...baseHook,
       activeStep: 1,
-      ingest: {} as never,
       handleBack,
       handleLocalSave,
     });
@@ -90,14 +93,41 @@ describe('CardImportForm', () => {
     expect(handleBack).toHaveBeenCalled();
   });
 
-  it('renders the finished step and wires the done button to onSubmit', () => {
-    hoisted.useCardImportForm.mockReturnValue({ ...baseHook, activeStep: 2 });
+  it('renders the finished step with the import summary and wires the done button to onSubmit', () => {
+    hoisted.useCardImportForm.mockReturnValue({
+      ...baseHook,
+      activeStep: 2,
+      result: {
+        text: { headline: 'Imported 1 card file.', problems: ['Not XML files, skipped: notes.txt'], severity: 'warning' },
+        unknownSets: [],
+      },
+    });
     const onSubmit = vi.fn();
 
     renderWithProviders(<CardImportForm onSubmit={onSubmit} />);
 
+    expect(screen.getByText('Imported 1 card file.')).toBeInTheDocument();
+    expect(screen.getByText('Not XML files, skipped: notes.txt')).toBeInTheDocument();
+
     fireEvent.click(screen.getByRole('button', { name: 'CardImportForm.button.done' }));
     expect(onSubmit).toHaveBeenCalled();
+  });
+
+  it('asks about new sets after saving and hands "View sets" to the host', async () => {
+    const answerUnknownSets = vi.fn().mockResolvedValue(undefined);
+    hoisted.useCardImportForm.mockReturnValue({
+      ...baseHook,
+      activeStep: 2,
+      result: { text: { headline: '', problems: [], severity: 'info' }, unknownSets: ['NEO'] },
+      answerUnknownSets,
+    });
+    const onViewSets = vi.fn();
+
+    renderWithProviders(<CardImportForm onSubmit={vi.fn()} onViewSets={onViewSets} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'CardDatabaseOverview.newSets.view' }));
+    await waitFor(() => expect(onViewSets).toHaveBeenCalled());
+    expect(answerUnknownSets).toHaveBeenCalledWith('keep-disabled');
   });
 
   it('shows the loading spinner when loading', () => {

@@ -6,5 +6,8 @@ export function reloadConfig(): void {
     onSuccess: () => {
       WebClient.instance.response.admin.reloadConfig();
     },
+    onError: (responseCode, _raw, failure) => {
+      WebClient.instance.response.admin.commandFailed?.('reloadConfig', responseCode, '', failure);
+    },
   });
 }

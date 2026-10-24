@@ -1,0 +1,41 @@
+{
+  "CardArtRules": {
+    "title": "Card art rules",
+    "label": {
+      "card": "Card",
+      "cardPlaceholder": "Type a card name...",
+      "providerId": "Printing (provider ID)",
+      "mode": "Mode",
+      "reason": "Reason"
+    },
+    "column": {
+      "card": "Card",
+      "providerId": "Provider ID",
+      "mode": "Mode",
+      "reason": "Reason"
+    },
+    "button": {
+      "add": "Add rule",
+      "remove": "Remove rule",
+      "refresh": "Refresh",
+      "dismiss": "Dismiss"
+    },
+    "error": {
+      "list": "Failed to load card art rules.",
+      "add": "Failed to add the card art rule.",
+      "remove": "Failed to remove the card art rule."
+    },
+    "validation": {
+      "tooLong": "At most {max} characters"
+    },
+    "subtitle": "Allow or deny the art of a card printing for everyone on this server.",
+    "empty": "No rules yet.",
+    "count": "{count, plural, one {# rule} other {# rules}}",
+    "drawer": "Rule details",
+    "noSelection": "No rule selected",
+    "noSelectionHint": "Pick a rule to remove it, or add one below.",
+    "anyPrinting": "Every printing",
+    "noReason": "No reason given.",
+    "addTitle": "Add a rule"
+  }
+}

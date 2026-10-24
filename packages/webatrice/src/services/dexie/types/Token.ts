@@ -7,5 +7,6 @@ export class Token {
   set?: CardInSet | CardInSet[];
   related?: RelatedCard[];
   'reverse-related'?: RelatedCard[];
+  token?: XmlNode<string>;
   tablerow?: XmlNode<string>;
 }

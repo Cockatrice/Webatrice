@@ -1,10 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ChevronLeft } from 'lucide-react';
 
-import { CardImage, CardRelatedLinks } from '@app/components';
-import type { PreviewMode } from '../BattlefieldSidebar/BattlefieldSidebar';
-import type { HoveredCard } from '../PlayerBox/hoveredCard';
-import { ManaSymbols, SymbolText } from '../PlayerBox/ManaSymbols';
+import { ScryfallImageSize } from '@cockatrice/datatrice';
+
+import { CardRelatedLinks, ManaSymbols, SymbolText } from '@app/components';
+import { getScryfallUrlByIdOrExactName } from '@app/services';
+import type { PreviewMode } from '../CardPreviewPane/useCardPreviewPane';
+import type { PreviewCard } from '../ui/CardPreviewContext';
+import PreviewCardImage from '../ui/PreviewCardImage/PreviewCardImage';
 import {
   postCardPreviewMessage,
   subscribeToCardPreviewChannel,
@@ -38,7 +42,8 @@ const HEARTBEAT_TIMEOUT_MS = 5_000;
  *     re-opens the main window, the next broadcast pulls us back.
  */
 export default function CardPreviewPopupPage() {
-  const [card, setCard] = useState<HoveredCard | null>(null);
+  const { t } = useTranslation();
+  const [card, setCard] = useState<PreviewCard | null>(null);
   const [mode, setMode] = useState<PreviewMode>('image');
   const [detail, setDetail] = useState<CardPreviewDetail | null>(null);
   const [fetchState, setFetchState] = useState<CardPreviewFetchState>('idle');
@@ -86,9 +91,7 @@ export default function CardPreviewPopupPage() {
   const imageUrl = card
     ? card.imageUri
       ? card.imageUri
-      : card.scryfallId
-        ? `https://api.scryfall.com/cards/${card.scryfallId}?format=image&version=png`
-        : `https://api.scryfall.com/cards/named?exact=${encodeURIComponent(card.name)}&format=image&version=png`
+      : getScryfallUrlByIdOrExactName(card, ScryfallImageSize.Png)
     : null;
 
   // Prefer the face matching the hovered card's name — mirrors the
@@ -119,18 +122,18 @@ export default function CardPreviewPopupPage() {
        *  webatrice preview vs. any other tab/window the user opens. */}
       <div className="shrink-0 px-3 py-1.5 flex items-center justify-between border-b border-border-subtle bg-bg-surface">
         <span className="text-[10px] font-semibold uppercase tracking-widest text-text-muted">
-          Card Preview
+          {t('CardPreviewPopup.title')}
         </span>
         <span
           className={[
             'text-[10px] font-medium',
-            connected ? 'text-emerald-400' : 'text-yellow-400',
+            connected ? 'text-success' : 'text-warning',
           ].join(' ')}
           title={connected
-            ? 'Receiving updates from the main window.'
-            : 'Waiting for the main window to reconnect…'}
+            ? t('CardPreviewPopup.receiving')
+            : t('CardPreviewPopup.reconnectingDescription')}
         >
-          {connected ? '● Live' : '○ Reconnecting…'}
+          {connected ? t('CardPreviewPopup.live') : t('CardPreviewPopup.reconnecting')}
         </span>
       </div>
 
@@ -166,10 +169,9 @@ export default function CardPreviewPopupPage() {
             ].join(' ')}
           >
             {imageUrl ? (
-              <CardImage
+              <PreviewCardImage
                 src={imageUrl}
                 name={card?.name}
-                draggable={false}
                 className={[
                   'shadow-glow rounded-lg shrink-0',
                   // `both`: fit within the 48.75% slot height,
@@ -179,7 +181,6 @@ export default function CardPreviewPopupPage() {
                   // Single-pane: keep image full-width.
                   mode === 'both' ? 'h-full max-h-full w-auto max-w-full' : 'max-w-full',
                 ].join(' ')}
-                style={{ aspectRatio: '5 / 7' }}
               />
             ) : (
               <div
@@ -198,8 +199,8 @@ export default function CardPreviewPopupPage() {
                 style={{ aspectRatio: '5 / 7' }}
               >
                 {connected
-                  ? 'Hover a card in the main window to preview it here'
-                  : 'Waiting for the main window to reconnect…'}
+                  ? t('CardPreviewPane.hoverToPreview')
+                  : t('CardPreviewPopup.reconnectingDescription')}
               </div>
             )}
           </div>
@@ -229,13 +230,13 @@ export default function CardPreviewPopupPage() {
                   className={[
                     'self-start inline-flex items-center gap-1',
                     'text-xs font-medium text-text-secondary',
-                    'hover:text-text-primary transition-colors',
+                    'hover:text-text-primary board-motion transition-colors',
                   ].join(' ')}
-                  title={`Back to ${previousName}`}
+                  title={t('CardPreviewPane.backTo', { name: previousName })}
                 >
                   <ChevronLeft size={14} />
                   <span className="truncate max-w-[20rem]">
-                    Back to {previousName}
+                    {t('CardPreviewPane.backTo', { name: previousName })}
                   </span>
                 </button>
               )}
@@ -245,7 +246,7 @@ export default function CardPreviewPopupPage() {
                 </span>
                 {displayMana && (
                   <span className="shrink-0">
-                    <ManaSymbols cost={displayMana} />
+                    <ManaSymbols cost={displayMana} size={16} />
                   </span>
                 )}
               </div>
@@ -282,7 +283,7 @@ export default function CardPreviewPopupPage() {
                 </div>
               )}
               {fetchState === 'loading' && (
-                <div className="text-text-muted italic">Loading…</div>
+                <div className="text-text-muted italic">{t('CardPreviewPane.loading')}</div>
               )}
               {detail && (
                 // Related-card links (DFC faces, tokens, meld/combo
@@ -309,10 +310,15 @@ export default function CardPreviewPopupPage() {
             // text is the sole pane. In `both` mode the image pane
             // above already carries that prompt.
             mode === 'text' && (
-              <div className="w-full max-w-md rounded-md border border-dashed border-border-subtle bg-bg-surface flex items-center justify-center text-sm text-text-muted italic p-4 text-center">
+              <div
+                className={[
+                  'w-full max-w-md rounded-md border border-dashed border-border-subtle',
+                  'bg-bg-surface flex items-center justify-center text-sm text-text-muted italic p-4 text-center',
+                ].join(' ')}
+              >
                 {connected
-                  ? 'Hover a card in the main window to preview it here'
-                  : 'Waiting for the main window to reconnect…'}
+                  ? t('CardPreviewPane.hoverToPreview')
+                  : t('CardPreviewPopup.reconnectingDescription')}
               </div>
             )
           )

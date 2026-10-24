@@ -1,0 +1,12 @@
+{
+  "HomeHero": {
+    "online": "{count, plural, other {# online}}",
+    "games": "{count, plural, one {# game} other {# games}}",
+    "welcome": "Welcome back, {name}",
+    "usualRoomJoined": "{room}, your usual room, has {games, plural, one {# game} other {# games}}; {open, plural, =0 {none has an open seat right now} one {# has an open seat right now} other {# have open seats right now}}.",
+    "usualRoom": "{room}, your usual room, has {games, plural, one {# game} other {# games}}.",
+    "noRooms": "This server has no rooms yet.",
+    "play": "Play in {room}",
+    "createGame": "Create game"
+  }
+}

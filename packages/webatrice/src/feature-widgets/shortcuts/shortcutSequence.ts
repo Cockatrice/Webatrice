@@ -33,15 +33,30 @@ export function parseSequence(sequence: string): ParsedSequence {
   };
 }
 
-export function matchesEvent(sequence: string, event: KeyboardEvent): boolean {
+export function isMacPlatform(): boolean {
+  if (typeof navigator === 'undefined') {
+    return false;
+  }
+  return /Mac|iPod|iPhone|iPad/.test(navigator.platform);
+}
+
+export function matchesEvent(
+  sequence: string,
+  event: KeyboardEvent,
+  isMac: boolean = isMacPlatform(),
+): boolean {
   const parsed = parseSequence(sequence);
-  return (
-    parsed.code === event.code &&
-    parsed.ctrl === event.ctrlKey &&
-    parsed.alt === event.altKey &&
-    parsed.shift === event.shiftKey &&
-    parsed.meta === event.metaKey
-  );
+  if (
+    parsed.code !== event.code ||
+    parsed.alt !== event.altKey ||
+    parsed.shift !== event.shiftKey
+  ) {
+    return false;
+  }
+  if (isMac && parsed.ctrl && !parsed.meta) {
+    return event.ctrlKey !== event.metaKey;
+  }
+  return parsed.ctrl === event.ctrlKey && parsed.meta === event.metaKey;
 }
 
 // Pure modifier presses (Ctrl, Shift alone) shouldn't trigger or get captured.

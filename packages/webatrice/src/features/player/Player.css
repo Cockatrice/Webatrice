@@ -30,7 +30,7 @@
   height: 160px;
   border-radius: 8px;
   object-fit: cover;
-  background-color: var(--bg-subtle, #eee);
+  background-color: rgb(var(--bg-elevated));
 }
 
 .player-view__name {
@@ -41,7 +41,7 @@
 .player-view__level-badge {
   text-align: center;
   margin-bottom: 16px;
-  color: var(--text-muted, #666);
+  color: rgb(var(--text-muted));
 }
 
 .player-view__details {
@@ -71,5 +71,5 @@
 
 .player-view__empty {
   text-align: center;
-  color: var(--text-muted, #666);
+  color: rgb(var(--text-muted));
 }

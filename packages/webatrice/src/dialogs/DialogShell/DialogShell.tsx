@@ -1,12 +1,17 @@
-import { useEffect, type ReactNode } from 'react';
+import { useId, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
+import { useTranslation } from 'react-i18next';
 import { X } from 'lucide-react';
+
+import { useDialogFocus, useDialogReturnFocus, type ReturnFocusTo } from '@app/hooks';
 
 export interface DialogShellProps {
   isOpen: boolean;
   handleClose?: () => void;
   title: string;
+  description?: ReactNode;
   children: ReactNode;
+  footer?: ReactNode;
   className?: string;
   contentClassName?: string;
   /** Tailwind max-width class, e.g. "max-w-lg". Defaults to "max-w-md"
@@ -14,43 +19,40 @@ export interface DialogShellProps {
    *  want the pre-redo `xs`/`sm`/`md` breakpoints should pass the
    *  matching Tailwind class. */
   maxWidth?: string;
+  returnFocusTo?: ReturnFocusTo;
 }
 
-/**
- * Reusable Tailwind modal shell. Replaces the pre-redo MUI Dialog +
- * DialogTitle + DialogContent + IconButton wrapper. Backdrop click
- * and Escape close the modal (only when `handleClose` is provided —
- * matching MUI's behavior where an omitted `onClose` prop kept the
- * modal open). Same public prop contract so every existing caller
- * (KnownHostDialog, Registration, Reset flows) keeps working.
- */
 const DialogShell = ({
   isOpen,
   handleClose,
   title,
+  description,
   children,
+  footer,
   className,
   contentClassName,
   maxWidth = 'max-w-md',
+  returnFocusTo,
 }: DialogShellProps) => {
-  useEffect(() => {
-    if (!isOpen || !handleClose) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') handleClose();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [isOpen, handleClose]);
+  const { t } = useTranslation();
+  const titleId = useId();
+  const descriptionId = useId();
+  const inheritedReturnFocusTo = useDialogReturnFocus();
+  const { getDialogProps } = useDialogFocus({
+    isOpen,
+    isolate: true,
+    onEscape: handleClose,
+    returnFocusTo: returnFocusTo ?? inheritedReturnFocusTo,
+  });
 
-  if (!isOpen) return null;
+  if (!isOpen) {
+    return null;
+  }
 
   return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      role="dialog"
-      aria-modal="true"
-      aria-label={title}
-      // @critical React bubbles synthetic submit events along the React tree
+      data-modal-layer
+      className="fixed inset-0 z-[1300] flex items-center justify-center p-4"
       onSubmit={(e) => e.stopPropagation()}
     >
       <div
@@ -58,27 +60,39 @@ const DialogShell = ({
         onClick={handleClose}
       />
       <div
+        {...getDialogProps()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        aria-describedby={description ? descriptionId : undefined}
         className={[
-          'relative z-10 w-full max-h-[90vh] flex flex-col rounded-xl bg-bg-surface border border-border-subtle shadow-glow overflow-hidden',
+          'relative z-10 w-full max-h-[90vh] flex flex-col overflow-hidden focus:outline-none',
+          'rounded-xl bg-bg-surface border border-border-subtle shadow-glow',
           maxWidth,
           className ?? '',
         ].join(' ')}
       >
-        <header className="shrink-0 flex items-center justify-between px-5 py-4 border-b border-border-subtle">
-          <h2 className="font-modern text-lg font-semibold text-text-primary">{title}</h2>
+        <header className="shrink-0 flex items-start justify-between gap-3 px-5 py-4 border-b border-border-subtle">
+          <div className="min-w-0">
+            <h2 id={titleId} className="font-modern text-lg font-semibold text-text-primary">{title}</h2>
+            {description && (
+              <p id={descriptionId} className="mt-1 text-xs text-text-secondary">{description}</p>
+            )}
+          </div>
           {handleClose && (
             <button
               type="button"
               onClick={handleClose}
               className="p-1 rounded text-text-muted hover:text-text-primary hover:bg-bg-elevated transition-colors"
-              title="Close"
-              aria-label="Close"
+              title={t('Common.action.close')}
+              aria-label={t('Common.action.close')}
             >
               <X size={16} />
             </button>
           )}
         </header>
         <div
+          data-dialog-content
           className={[
             'flex-1 min-h-0 overflow-y-auto px-5 py-4 text-sm text-text-secondary',
             contentClassName ?? '',
@@ -86,6 +100,11 @@ const DialogShell = ({
         >
           {children}
         </div>
+        {footer && (
+          <footer className="shrink-0 flex items-center justify-end gap-2 px-5 py-3 border-t border-border-subtle">
+            {footer}
+          </footer>
+        )}
       </div>
     </div>,
     document.body,

@@ -43,5 +43,6 @@ export function useReduxEffect<P = unknown>(
 
     const unsubscribe = store.subscribe(check);
     return (): void => unsubscribe();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- caller-supplied deps, as with useEffect; `store` is stable
   }, deps);
 }

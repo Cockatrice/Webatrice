@@ -1,11 +1,38 @@
 import { create } from '@bufbuild/protobuf';
 import { describe, expect, it } from 'vitest';
 
-import { Command_CreateGame_ext, Command_JoinGame_ext, Command_JoinRoom_ext, Command_LeaveRoom_ext, Command_RoomSay_ext, Event_JoinRoomSchema, Event_JoinRoom_ext, Event_LeaveRoomSchema, Event_LeaveRoom_ext, Event_ListGamesSchema, Event_ListGames_ext, Event_ListRoomsSchema, Event_ListRooms_ext, Event_RoomSaySchema, Event_RoomSay_RoomMessageType, Event_RoomSay_ext, Response_JoinRoomSchema, Response_JoinRoom_ext, Response_ResponseCode, ServerInfo_GameSchema, ServerInfo_Room, ServerInfo_RoomSchema, ServerInfo_UserSchema } from '@cockatrice/sockatrice/generated';
+import {
+  Command_CreateGame_ext,
+  Command_JoinGame_ext,
+  Command_JoinRoom_ext,
+  Command_LeaveRoom_ext,
+  Command_RoomSay_ext,
+  Event_JoinRoomSchema,
+  Event_JoinRoom_ext,
+  Event_LeaveRoomSchema,
+  Event_LeaveRoom_ext,
+  Event_ListGamesSchema,
+  Event_ListGames_ext,
+  Event_ListRoomsSchema,
+  Event_ListRooms_ext,
+  Event_AddToListSchema,
+  Event_AddToList_ext,
+  Event_RoomSaySchema,
+  Event_RoomSay_RoomMessageType,
+  Event_RoomSay_ext,
+  Response_JoinRoomSchema,
+  Response_JoinRoom_ext,
+  Response_ResponseCode,
+  ServerInfo_GameSchema,
+  ServerInfo_Room,
+  ServerInfo_RoomSchema,
+  ServerInfo_UserSchema,
+} from '@cockatrice/sockatrice/generated';
 import { store } from '../helpers/setup';
-import { RoomCommands } from '@cockatrice/sockatrice';
+import { WebsocketTypes } from '@cockatrice/sockatrice/types';
+import { RoomCommands, SessionCommands } from '@cockatrice/sockatrice';
 
-import { connectAndHandshake } from '../helpers/setup';
+import { connectAndHandshake, getMockWebSocket } from '../helpers/setup';
 import {
   buildResponse,
   buildResponseMessage,
@@ -14,7 +41,7 @@ import {
   deliverMessage,
 } from '../helpers/protobuf-builders';
 import { findLastSessionCommand, findLastRoomCommand, captureAllOutbound } from '../helpers/command-capture';
-import { fromBinary, hasExtension, getExtension } from '@bufbuild/protobuf';
+import { hasExtension, getExtension } from '@bufbuild/protobuf';
 
 function makeRoom(overrides: Partial<{
   roomId: number;
@@ -225,5 +252,126 @@ describe('rooms', () => {
     })));
 
     expect(store.getState().rooms.joinedGameIds[1]?.[99]).toBe(true);
+  });
+
+  it('records a rejected user-initiated join and leaves the room unjoined', () => {
+    connectAndHandshake();
+    deliverMessage(buildSessionEventMessage(
+      Event_ListRooms_ext,
+      create(Event_ListRoomsSchema, { roomList: [makeRoom({ roomId: 3 })] })
+    ));
+
+    SessionCommands.joinRoom(3);
+    const join = findLastSessionCommand(Command_JoinRoom_ext);
+    deliverMessage(buildResponseMessage(buildResponse({
+      cmdId: join.cmdId,
+      responseCode: Response_ResponseCode.RespUserLevelTooLow,
+    })));
+
+    const { joinRoomError, joinedRoomIds } = store.getState().rooms;
+    expect(joinRoomError).toEqual({ roomId: 3, responseCode: Response_ResponseCode.RespUserLevelTooLow, failure: undefined });
+    expect(joinedRoomIds[3]).toBeUndefined();
+  });
+
+  it('keeps a rejected auto-join silent', () => {
+    connectAndHandshake();
+    deliverMessage(buildSessionEventMessage(
+      Event_ListRooms_ext,
+      create(Event_ListRoomsSchema, { roomList: [makeRoom({ roomId: 1, autoJoin: true })] })
+    ));
+    const join = findLastSessionCommand(Command_JoinRoom_ext);
+    deliverMessage(buildResponseMessage(buildResponse({
+      cmdId: join.cmdId,
+      responseCode: Response_ResponseCode.RespNameNotFound,
+    })));
+
+    expect(store.getState().rooms.joinRoomError).toBeNull();
+  });
+
+  it('heals a RespContextError join by leaving and rejoining the room', () => {
+    connectAndHandshake();
+    SessionCommands.joinRoom(1);
+    const firstJoin = findLastSessionCommand(Command_JoinRoom_ext);
+    deliverMessage(buildResponseMessage(buildResponse({
+      cmdId: firstJoin.cmdId,
+      responseCode: Response_ResponseCode.RespContextError,
+    })));
+
+    const leave = findLastRoomCommand(Command_LeaveRoom_ext);
+    expect(leave.roomId).toBe(1);
+    const rejoin = findLastSessionCommand(Command_JoinRoom_ext);
+    expect(rejoin.cmdId).toBeGreaterThan(leave.cmdId);
+
+    deliverMessage(buildResponseMessage(buildResponse({ cmdId: leave.cmdId })));
+    deliverMessage(buildResponseMessage(buildResponse({
+      cmdId: rejoin.cmdId,
+      responseCode: Response_ResponseCode.RespOk,
+      ext: Response_JoinRoom_ext,
+      value: create(Response_JoinRoomSchema, { roomInfo: makeRoom({ roomId: 1 }) }),
+    })));
+
+    expect(store.getState().rooms.joinedRoomIds[1]).toBe(true);
+    expect(store.getState().rooms.joinRoomError).toBeNull();
+  });
+
+  it('appends a flood notice when the server rejects Command_RoomSay with RespChatFlood', () => {
+    connectAndHandshake();
+    setupJoinedRoom(1);
+
+    RoomCommands.roomSay(1, 'spam');
+    const say = findLastRoomCommand(Command_RoomSay_ext);
+    deliverMessage(buildResponseMessage(buildResponse({
+      cmdId: say.cmdId,
+      responseCode: Response_ResponseCode.RespChatFlood,
+    })));
+
+    const messages = store.getState().rooms.messages[1];
+    expect(messages).toHaveLength(1);
+    expect(messages[0]).toMatchObject({ notice: 'chatFlood', message: '' });
+  });
+
+  it('drops live chat from ignored users but retains history with an embedded sender', () => {
+    connectAndHandshake();
+    setupJoinedRoom(1);
+    deliverMessage(buildSessionEventMessage(Event_AddToList_ext, create(Event_AddToListSchema, {
+      listName: 'ignore',
+      userInfo: create(ServerInfo_UserSchema, { name: 'troll' }),
+    })));
+
+    deliverMessage(buildRoomEventMessage(1, Event_RoomSay_ext, create(Event_RoomSaySchema, {
+      name: 'troll', message: 'live', messageType: Event_RoomSay_RoomMessageType.UserMessage,
+    })));
+    deliverMessage(buildRoomEventMessage(1, Event_RoomSay_ext, create(Event_RoomSaySchema, {
+      message: 'troll: old', messageType: Event_RoomSay_RoomMessageType.ChatHistory, timeOf: 1n,
+    })));
+    deliverMessage(buildRoomEventMessage(1, Event_RoomSay_ext, create(Event_RoomSaySchema, {
+      message: 'bob: from history', messageType: Event_RoomSay_RoomMessageType.ChatHistory,
+      timeOf: 1791000000000n,
+    })));
+
+    const messages = store.getState().rooms.messages[1];
+    expect(messages.map((m) => m.message)).toEqual(['troll: old', 'bob: from history']);
+    expect(messages[0].name).toBeUndefined();
+    expect(messages[1].timeOf).toBe(1791000000000n);
+  });
+
+  it('leaves no failure from commands pending at a disconnect in the reset store', () => {
+    connectAndHandshake();
+    setupJoinedRoom(1);
+    RoomCommands.roomSay(1, 'unanswered');
+    SessionCommands.message('bob', 'unanswered');
+    SessionCommands.joinRoom(3);
+    SessionCommands.getGamesOfUser('bob');
+
+    const mock = getMockWebSocket();
+    mock.onerror?.(new Event('error'));
+    mock.onclose?.({ code: 1006, reason: '', wasClean: false } as CloseEvent);
+
+    const state = store.getState();
+    expect(state.server.status.state).toBe(WebsocketTypes.StatusEnum.DISCONNECTED);
+    expect(state.rooms.messages).toEqual({});
+    expect(state.rooms.joinRoomError).toBeNull();
+    expect(state.server.privateChatNotices).toEqual({});
+    expect(state.server.gamesOfUserStatus).toEqual({});
   });
 });

@@ -1,0 +1,23 @@
+{
+  "GamesList": {
+    "heading": "Games in {room}",
+    "empty": "No games open right now. Create one to start playing.",
+    "emptyFiltered": "No games match your filters.",
+    "column": {
+      "game": "Game · {sort}",
+      "seats": "Seats",
+      "watching": "Watching",
+      "actions": "Actions"
+    },
+    "action": {
+      "spectate": "Spectate",
+      "judge": "Join as judge",
+      "judgeSpectate": "Spectate as judge",
+      "info": "Game info",
+      "copyLink": "Copy game link"
+    },
+    "error": {
+      "title": "Error"
+    }
+  }
+}

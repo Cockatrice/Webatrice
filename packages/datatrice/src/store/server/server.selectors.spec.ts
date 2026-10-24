@@ -1,4 +1,4 @@
-﻿import { Selectors } from './server.selectors';
+import { Selectors } from './server.selectors';
 import { ServerState } from './server.interfaces';
 import {
   makeBanHistoryItem,
@@ -7,10 +7,20 @@ import {
   makeServerState,
   makeUser,
   makeWarnHistoryItem,
+  makeWarnListItem,
 } from '../../testing/fixtures/server';
-import { ServerInfo_User_UserLevelFlag } from '@cockatrice/sockatrice/generated';
+import { create } from '@bufbuild/protobuf';
+import {
+  Event_NotifyUser_NotificationType,
+  Event_NotifyUserSchema,
+  Event_ServerShutdownSchema,
+  Response_ResponseCode,
+  ServerInfo_DeckShareSummarySchema,
+  ServerInfo_User_UserLevelFlag,
+} from '@cockatrice/sockatrice/generated';
+import { ServerCapability } from './server.capabilities';
 import { WebsocketTypes } from '@cockatrice/sockatrice/types';
-import { HEALTHY_CONNECTION_HEALTH } from './server.reducer.connection';
+import { EMPTY_LATENCY, HEALTHY_CONNECTION_HEALTH } from './server.reducer.connection';
 
 function rootState(server: ServerState) {
   return { server };
@@ -30,6 +40,12 @@ describe('Selectors', () => {
   it('getName → returns info.name', () => {
     const state = makeServerState({ info: { message: null, name: 'Servatrice', version: null } });
     expect(Selectors.getName(rootState(state))).toBe('Servatrice');
+  });
+
+  it('getSupportsPasswordHash → returns info.supportsPasswordHash, undefined until reported', () => {
+    expect(Selectors.getSupportsPasswordHash(rootState(makeServerState()))).toBeUndefined();
+    const state = makeServerState({ info: { message: null, name: null, version: null, supportsPasswordHash: true } });
+    expect(Selectors.getSupportsPasswordHash(rootState(state))).toBe(true);
   });
 
   it('getVersion → returns info.version', () => {
@@ -68,6 +84,38 @@ describe('Selectors', () => {
     expect(Selectors.getConnectUnreachable(rootState(state))).toBe(false);
   });
 
+  it('getLoginFailureCode → returns the rejecting response code', () => {
+    const state = makeServerState({ loginFailureCode: Response_ResponseCode.RespPasswordChangeRequired });
+    expect(Selectors.getLoginFailureCode(rootState(state))).toBe(Response_ResponseCode.RespPasswordChangeRequired);
+  });
+
+  it('getLoginFailureCode → falls back to null for a partial state missing the field', () => {
+    const state = { ...makeServerState(), loginFailureCode: undefined } as unknown as ServerState;
+    expect(Selectors.getLoginFailureCode(rootState(state))).toBeNull();
+  });
+
+  it('supports → true for a 3.1 capability on a 3.1 server', () => {
+    const state = makeServerState({ info: { message: null, name: 'Rooster', version: '3.1.0-beta.15 (2026-09-27)' } });
+    expect(Selectors.supports(rootState(state), ServerCapability.REPORTS)).toBe(true);
+  });
+
+  it('supports → false for a 3.1 capability on a 3.0 server', () => {
+    const state = makeServerState({ info: { message: null, name: 'Rooster', version: '3.0.0 (2026-05-08)' } });
+    expect(Selectors.supports(rootState(state), ServerCapability.REPORTS)).toBe(false);
+  });
+
+  it('supports → false before the server has identified itself', () => {
+    expect(Selectors.supports(rootState(makeServerState()), ServerCapability.PLAYMATS)).toBe(false);
+  });
+
+  it('getIsUserDeveloper → reads the IsDeveloper bit of the local user', () => {
+    const developer = makeServerState({ user: makeUser({ userLevel: ServerInfo_User_UserLevelFlag.IsDeveloper }) });
+    const plain = makeServerState({ user: makeUser({ userLevel: ServerInfo_User_UserLevelFlag.IsRegistered }) });
+    expect(Selectors.getIsUserDeveloper(rootState(developer))).toBe(true);
+    expect(Selectors.getIsUserDeveloper(rootState(plain))).toBe(false);
+    expect(Selectors.getIsUserDeveloper(rootState(makeServerState({ user: null })))).toBe(false);
+  });
+
   it('getTestConnectionStatus → returns testConnectionStatus', () => {
     const state = makeServerState({ testConnectionStatus: 'success' });
     expect(Selectors.getTestConnectionStatus(rootState(state))).toBe('success');
@@ -82,6 +130,16 @@ describe('Selectors', () => {
   it('getConnectionHealth → falls back to the healthy baseline for a partial state missing the field', () => {
     const state = { ...makeServerState(), connectionHealth: undefined } as unknown as ServerState;
     expect(Selectors.getConnectionHealth(rootState(state))).toBe(HEALTHY_CONNECTION_HEALTH);
+  });
+
+  it('getLatency → returns the stored latency', () => {
+    const latency = { stats: { lastMs: 25, medianMs: 25, p95Ms: 25, maxMs: 25, sampleCount: 1 }, samplesMs: [25] };
+    expect(Selectors.getLatency(rootState(makeServerState({ latency })))).toBe(latency);
+  });
+
+  it('getLatency → falls back to the empty window for a partial state missing the field', () => {
+    const state = { ...makeServerState(), latency: undefined } as unknown as ServerState;
+    expect(Selectors.getLatency(rootState(state))).toBe(EMPTY_LATENCY);
   });
 
   it('getIsServerUnresponsive → true when missedPongs > 0', () => {
@@ -190,6 +248,19 @@ describe('Selectors', () => {
     expect(Selectors.getDownloadedDeck(rootState(state))).toEqual(downloadedDeck);
   });
 
+  it('getDeckSharesMine → null until listed, then the share summaries', () => {
+    expect(Selectors.getDeckSharesMine(rootState(makeServerState()))).toBeNull();
+    const shares = [create(ServerInfo_DeckShareSummarySchema, { id: 3 })];
+    expect(Selectors.getDeckSharesMine(rootState(makeServerState({ deckSharesMine: shares })))).toBe(shares);
+  });
+
+  it('getPublicDecks → the named user\'s public deck tree', () => {
+    const deckList = makeDeckList();
+    const state = makeServerState({ publicDecks: { bob: deckList } });
+    expect(Selectors.getPublicDecks(rootState(state), 'bob')).toBe(deckList);
+    expect(Selectors.getPublicDecks(rootState(state), 'alice')).toBeUndefined();
+  });
+
   it('getDownloadedReplay → returns downloadedReplay', () => {
     const downloadedReplay = { replayId: 99, replayData: new Uint8Array([1, 2, 3]) };
     const state = makeServerState({ downloadedReplay });
@@ -199,6 +270,19 @@ describe('Selectors', () => {
   it('getRegistrationError → returns registrationError', () => {
     const state = makeServerState({ registrationError: 'bad input' });
     expect(Selectors.getRegistrationError(rootState(state))).toBe('bad input');
+  });
+
+  it('getNotifications → returns the stored Event_NotifyUser list in arrival order', () => {
+    const first = create(Event_NotifyUserSchema, { type: Event_NotifyUser_NotificationType.PROMOTED });
+    const second = create(Event_NotifyUserSchema, { type: Event_NotifyUser_NotificationType.WARNING, warningReason: 'spam' });
+    const state = makeServerState({ notifications: [first, second] });
+    expect(Selectors.getNotifications(rootState(state))).toEqual([first, second]);
+  });
+
+  it('getServerShutdown → returns the pending shutdown, or null', () => {
+    const shutdown = create(Event_ServerShutdownSchema, { reason: 'maintenance', minutes: 10 });
+    expect(Selectors.getServerShutdown(rootState(makeServerState({ serverShutdown: shutdown })))).toBe(shutdown);
+    expect(Selectors.getServerShutdown(rootState(makeServerState()))).toBeNull();
   });
 
 
@@ -302,7 +386,9 @@ describe('Selectors', () => {
   it('getPrivateMessagesForUser → returns the stored conversation for that user', () => {
     // The reducer keys both sent + received under the OTHER user's
     // name, so a single lookup returns the full conversation.
-    const msg = { $typeName: 'Event_UserMessage' as const, senderName: 'Bob', receiverName: 'Alice', message: 'gg' } as never;
+    const msg = {
+      $typeName: 'Event_UserMessage' as const, senderName: 'Bob', receiverName: 'Alice', message: 'gg', timeReceived: 123,
+    } as never;
     const state = makeServerState({ messages: { Bob: [msg] } });
     expect(Selectors.getPrivateMessagesForUser(rootState(state), 'Bob')).toEqual([msg]);
   });
@@ -315,6 +401,54 @@ describe('Selectors', () => {
     const b = Selectors.getPrivateMessagesForUser(rootState(state), 'Carol');
     expect(a).toEqual([]);
     expect(a).toBe(b);
+  });
+
+  it('getPrivateConversation → slots notices between messages by position', () => {
+    const m = (message: string) =>
+      ({ $typeName: 'Event_UserMessage' as const, senderName: 'Bob', receiverName: 'Alice', message, timeReceived: 123 }) as never;
+    const [a, b] = [m('a'), m('b')];
+    const state = makeServerState({
+      messages: { Bob: [a, b] },
+      privateChatNotices: {
+        Bob: [
+          { id: 1, kind: 'userJoined', position: 0 },
+          { id: 2, kind: 'chatFlood', position: 1 },
+          { id: 3, kind: 'userLeft', position: 2 },
+        ],
+      },
+    });
+    const entries = Selectors.getPrivateConversation(rootState(state), 'Bob');
+    expect(entries.map((e) => (e.type === 'message' ? e.message : e.notice.kind))).toEqual(
+      ['userJoined', a, 'chatFlood', b, 'userLeft'],
+    );
+    expect(Selectors.getPrivateConversation(rootState(state), 'Bob')).toBe(entries);
+  });
+
+  it('getPrivateConversation → lists notices of a conversation without messages', () => {
+    const state = makeServerState({ privateChatNotices: { Bob: [{ id: 1, kind: 'recipientOffline', position: 0 }] } });
+    expect(Selectors.getPrivateConversation(rootState(state), 'Bob')).toEqual([
+      { type: 'notice', notice: { id: 1, kind: 'recipientOffline', position: 0 } },
+    ]);
+  });
+
+  it('getGamesOfUser → lists the stored games and a stable empty array otherwise', () => {
+    const game = { info: { gameId: 7 }, gameType: 'Standard' } as never;
+    const state = makeServerState({ gamesOfUser: { bob: { 7: game } } });
+    expect(Selectors.getGamesOfUser(rootState(state), 'bob')).toEqual([game]);
+    expect(Selectors.getGamesOfUser(rootState(state), 'bob')).toBe(Selectors.getGamesOfUser(rootState(state), 'bob'));
+    expect(Selectors.getGamesOfUser(rootState(state), 'carol')).toEqual([]);
+  });
+
+  it('getGamesOfUserStatus → returns the request lifecycle for a user', () => {
+    const state = makeServerState({ gamesOfUserStatus: { bob: { state: 'failed', responseCode: 6 } } });
+    expect(Selectors.getGamesOfUserStatus(rootState(state), 'bob')).toEqual({ state: 'failed', responseCode: 6 });
+    expect(Selectors.getGamesOfUserStatus(rootState(state), 'carol')).toBeUndefined();
+  });
+
+  it('getIsUserOnline → reflects the online user list', () => {
+    const state = makeServerState({ users: { Bob: makeUser({ name: 'Bob' }) } });
+    expect(Selectors.getIsUserOnline(rootState(state), 'Bob')).toBe(true);
+    expect(Selectors.getIsUserOnline(rootState(state), 'Carol')).toBe(false);
   });
 
   it('getSortedBuddyList → returns EMPTY_USERS for empty map', () => {
@@ -363,6 +497,13 @@ describe('Selectors', () => {
   it('getAdminNotesByUser → returns the stored admin note for that user', () => {
     const state = makeServerState({ adminNotes: { Alice: 'watch this account' } });
     expect(Selectors.getAdminNotesByUser(rootState(state), 'Alice')).toBe('watch this account');
+  });
+
+  it('getWarnListForUser → returns the warn list the server echoed for that user', () => {
+    const forAlice = makeWarnListItem({ warning: ['Spamming'], userName: 'Alice', userClientid: 'cid' });
+    const state = makeServerState({ warnListOptions: [forAlice] });
+    expect(Selectors.getWarnListForUser(rootState(state), 'Alice')).toBe(forAlice);
+    expect(Selectors.getWarnListForUser(rootState(state), 'Bob')).toBeUndefined();
   });
 
   it('getSortUsersBy → returns sortUsersBy', () => {
@@ -416,4 +557,11 @@ describe('Selectors', () => {
     const b = Selectors.getReplaysList(root);
     expect(a).toBe(b);
   });
+});
+
+it('returns an empty conversation when neither messages nor notices exist', () => {
+  const state = rootState(makeServerState());
+  expect(Selectors.getPrivateConversation(state, 'unknown')).toEqual([]);
+  expect(state.server.messages.unknown).toBeUndefined();
+  expect(state.server.privateChatNotices.unknown).toBeUndefined();
 });

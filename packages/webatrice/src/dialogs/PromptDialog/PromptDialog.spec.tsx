@@ -31,9 +31,19 @@ describe('PromptDialog', () => {
     );
 
     expect(screen.getByText('Set P/T')).toBeInTheDocument();
-    expect(screen.getByLabelText('P/T')).toBeInTheDocument();
+    expect(screen.getByLabelText('P/T')).toHaveAttribute('type', 'text');
     expect(screen.getByRole('button', { name: /ok/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /cancel/i })).toBeInTheDocument();
+  });
+
+  it('masks passwords and submits their unchanged value', () => {
+    const onSubmit = vi.fn();
+    render(<PromptDialog isOpen title="Join" label="Password" type="password" onSubmit={onSubmit} onCancel={vi.fn()} />);
+    const input = screen.getByLabelText('Password');
+    expect(input).toHaveAttribute('type', 'password');
+    fireEvent.change(input, { target: { value: 'hunter2' } });
+    fireEvent.submit(input);
+    expect(onSubmit).toHaveBeenCalledWith('hunter2');
   });
 
   it('seeds the input with initialValue', () => {
@@ -290,5 +300,75 @@ describe('PromptDialog', () => {
     });
 
     expect(trigger).toHaveFocus();
+  });
+
+  it('shows a description line and a placeholder', () => {
+    render(
+      <PromptDialog
+        isOpen
+        title="Set annotation"
+        label="Annotation"
+        description="Llanowar Elves"
+        placeholder="Leave blank to clear"
+        onSubmit={() => {}}
+        onCancel={() => {}}
+      />,
+    );
+
+    expect(screen.getByText('Llanowar Elves')).toBeInTheDocument();
+    expect(screen.getByLabelText('Annotation')).toHaveAttribute('placeholder', 'Leave blank to clear');
+  });
+
+  it('shows the live preview until a validation error replaces it', () => {
+    render(
+      <PromptDialog
+        isOpen
+        title="Set life"
+        label="Life"
+        initialValue="40"
+        helperText="hint"
+        preview={(v) => (v.includes('+') ? `= ${v.split('+').map(Number).reduce((a, b) => a + b)}` : null)}
+        validate={(v) => (v === 'x' ? 'bad' : null)}
+        onSubmit={() => {}}
+        onCancel={() => {}}
+      />,
+    );
+
+    const input = screen.getByLabelText('Life');
+    expect(screen.getByText('hint')).toBeInTheDocument();
+    fireEvent.change(input, { target: { value: '40+5' } });
+    expect(screen.getByText('= 45')).toBeInTheDocument();
+    fireEvent.change(input, { target: { value: 'x' } });
+    fireEvent.submit(input.closest('form')!);
+    expect(screen.getByText('bad')).toBeInTheDocument();
+  });
+
+  it('selects the seeded value on focus when asked, and sets the input mode', () => {
+    render(
+      <PromptDialog
+        isOpen
+        title="How many?"
+        label="Count"
+        initialValue="12"
+        selectOnFocus
+        inputMode="numeric"
+        onSubmit={() => {}}
+        onCancel={() => {}}
+      />,
+    );
+
+    const input = screen.getByLabelText('Count') as HTMLInputElement;
+    fireEvent.focus(input);
+    expect(input).toHaveAttribute('inputmode', 'numeric');
+    expect(input.selectionStart).toBe(0);
+    expect(input.selectionEnd).toBe(2);
+  });
+
+  it('renders a number input when asked', () => {
+    render(
+      <PromptDialog isOpen title="Draw" label="Cards" type="number" initialValue="2" onSubmit={() => {}} onCancel={() => {}} />,
+    );
+
+    expect(screen.getByRole('spinbutton', { name: 'Cards' })).toHaveValue(2);
   });
 });

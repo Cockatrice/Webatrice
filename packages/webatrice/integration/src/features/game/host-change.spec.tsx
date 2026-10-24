@@ -1,4 +1,4 @@
-import { act, waitFor, screen, within } from '@testing-library/react';
+import { act, fireEvent, waitFor, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
 import { store } from '../../helpers/setup';
@@ -11,10 +11,11 @@ import { buildEventGameJoined, buildEventGameStateChanged, registerGameBoardHook
 registerGameBoardHooks();
 
 // PlayerList rewrite replaced the `.player-list__host-badge` className with a
-// lucide Crown icon carrying `aria-label="Host"`. The seat row still exposes
+// lucide Crown icon carrying `aria-label={t('PlayerList.host')}` (the test i18n
+// answers with the key). The seat row still exposes
 // `data-testid="player-list-item-N"`.
 function findHostBadge(row: HTMLElement) {
-  return within(row).queryByLabelText('Host');
+  return within(row).queryByLabelText('PlayerList.host');
 }
 
 describe('Game host change', () => {
@@ -26,6 +27,12 @@ describe('Game host change', () => {
       store.dispatch(games.Actions.gameStateChanged({ gameId: 42, data: buildEventGameStateChanged([1, 2], 1), }));
     });
 
+    const playersTab = await waitFor(() => {
+      const tab = document.querySelector<HTMLElement>('[data-dock-tab="players"]');
+      expect(tab).not.toBeNull();
+      return tab!;
+    });
+    fireEvent.click(playersTab);
     await waitFor(() => {
       expect(screen.getByTestId('player-list-item-1')).toBeInTheDocument();
     });

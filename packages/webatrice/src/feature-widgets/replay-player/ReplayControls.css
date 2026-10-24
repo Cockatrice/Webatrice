@@ -1,0 +1,103 @@
+.replay-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border-top: 1px solid rgb(var(--border-subtle));
+  background: rgb(var(--bg-surface));
+  color: rgb(var(--text-primary));
+}
+
+.replay-controls .MuiIconButton-root {
+  color: inherit;
+}
+
+.replay-controls .MuiIconButton-root[aria-pressed='true'] {
+  color: rgb(var(--accent-primary));
+}
+
+.replay-controls__time {
+  flex-shrink: 0;
+  min-width: 96px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  color: rgb(var(--text-secondary));
+}
+
+.replay-controls__settings {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  min-width: 220px;
+}
+
+/* Timeline: event-density silhouette with the played portion tinted, as on
+ * desktop's ReplayTimelineWidget. */
+.replay-timeline__frame {
+  position: relative;
+  flex: 1;
+  min-width: 120px;
+  margin: 0 8px;
+}
+
+.replay-timeline {
+  position: relative;
+  height: 36px;
+  border: 1px solid rgb(var(--border-strong));
+  border-radius: 4px;
+  overflow: hidden;
+  cursor: pointer;
+  background: rgb(var(--bg-base));
+}
+
+.replay-timeline__histogram {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.replay-timeline__histogram path {
+  fill: rgb(var(--text-muted) / 0.6);
+}
+
+.replay-timeline__progress {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: rgb(var(--accent-primary) / 0.35);
+  pointer-events: none;
+}
+
+.replay-timeline__tick {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: rgb(var(--border-strong));
+  pointer-events: none;
+}
+
+.replay-timeline__turns {
+  position: relative;
+  height: 14px;
+  margin: 2px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.replay-timeline__turn {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-variant-numeric: tabular-nums;
+  color: rgb(var(--text-muted));
+}
+
+.replay-timeline__turn--played {
+  color: rgb(var(--text-secondary));
+}
+

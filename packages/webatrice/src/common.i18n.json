@@ -1,6 +1,5 @@
 {
   "Common": {
-    "language": "English",
     "disconnect": "Disconnect",
     "label": {
       "confirmEmail": "Confirm Email",
@@ -17,7 +16,8 @@
       "realName": "Real Name",
       "saveChanges": "Save Changes",
       "token": "Token",
-      "username": "Username"
+      "username": "Username",
+      "none": "None"
     },
     "validation": {
       "emailsMustMatch": "Emails don't match",
@@ -278,11 +278,37 @@
       "ZW": "Zimbabwe",
       "EU": "European Union"
     },
+    "languagePicker": "Language",
     "languages": {
-      "en-US": "English - US",
+      "en_US": "English - US",
+      "de": "German",
+      "es": "Spanish",
+      "fi": "Finnish",
       "fr": "French",
+      "it": "Italian",
       "nl": "Dutch",
-      "pt_BR": "Portuguese - Brazil"
+      "pl": "Polish",
+      "pt_BR": "Portuguese - Brazil",
+      "ru": "Russian",
+      "tok": "Toki Pona",
+      "yue": "Cantonese"
+    },
+    "action": {
+      "cancel": "Cancel",
+      "close": "Close",
+      "create": "Create",
+      "send": "Send",
+      "reset": "Reset",
+      "join": "Join",
+      "dismiss": "Dismiss",
+      "delete": "Delete",
+      "remove": "Remove",
+      "copy": "Copy",
+      "back": "Back"
+    },
+    "status": {
+      "loading": "Loading…",
+      "copied": "Copied"
     }
-  } 
+  }
 }

@@ -1,0 +1,7 @@
+{
+  "PendingTargetAnnouncer": {
+    "arrow": "Choose a target for the arrow from {name}: press Enter on a card, or on a player's life. Escape cancels.",
+    "attach": "Choose a battlefield card to attach {name} to, and press Enter on it. Escape cancels.",
+    "thisCard": "this card"
+  }
+}

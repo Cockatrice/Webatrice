@@ -10,7 +10,7 @@ export const replayReducers = {
       replays[match.gameId] = match;
     }
     state.replays = replays;
-  }) as CaseReducer<ServerState, PayloadAction<{ matchList: ServerInfo_ReplayMatch[] }>>,
+  }) as CaseReducer<ServerState, PayloadAction<{ matchList: ServerInfo_ReplayMatch[]; requestId?: string }>>,
 
   replayAdded: ((state, action) => {
     const { matchInfo } = action.payload;

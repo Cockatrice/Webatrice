@@ -3,7 +3,19 @@ import { create } from '@bufbuild/protobuf';
 import { useLocation } from 'react-router-dom';
 import { afterEach, beforeEach, vi } from 'vitest';
 
-import { Event_GameJoined, Event_GameJoinedSchema, Event_GameStateChanged, Event_GameStateChangedSchema, ServerInfo_CardSchema, ServerInfo_GameSchema, ServerInfo_PlayerPropertiesSchema, ServerInfo_PlayerSchema, ServerInfo_UserSchema, ServerInfo_ZoneSchema } from '@cockatrice/sockatrice/generated';
+import {
+  Event_GameJoined,
+  Event_GameJoinedSchema,
+  Event_GameStateChanged,
+  Event_GameStateChangedSchema,
+  ServerInfo_CardSchema,
+  ServerInfo_GameSchema,
+  ServerInfo_PlayerPropertiesSchema,
+  ServerInfo_PlayerSchema,
+  ServerInfo_UserSchema,
+  ServerInfo_ZoneSchema,
+  type ServerInfo_Zone,
+} from '@cockatrice/sockatrice/generated';
 import { games, server } from '@cockatrice/datatrice';
 import { WebsocketTypes } from '@cockatrice/sockatrice/types';
 
@@ -50,6 +62,7 @@ export interface BuildGameStateOptions {
   // Seed the named player's `table` zone with cards (default: empty zones, so
   // the board-rendering flows stay behavior-equivalent to the pre-split spec).
   tableCardsByPlayer?: Record<number, TableCardSeed[]>;
+  extraZonesByPlayer?: Record<number, ServerInfo_Zone[]>;
 }
 
 export function buildEventGameStateChanged(
@@ -118,6 +131,7 @@ export function buildEventGameStateChanged(
             cardCount: 0,
             cardList: [],
           }),
+          ...(opts.extraZonesByPlayer?.[pid] ?? []),
         ],
         counterList: [],
         arrowList: [],

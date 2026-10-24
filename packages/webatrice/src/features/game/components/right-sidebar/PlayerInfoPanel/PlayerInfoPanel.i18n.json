@@ -1,0 +1,18 @@
+{
+  "PlayerInfoPanel": {
+    "life": "{name}'s life",
+    "lifeHint": "Click or Up arrow: gain 1. Right-click or Down arrow: lose 1. Enter or Ctrl+L: set.",
+    "manaPool": "Mana pool",
+    "playerMenu": "{name}'s player menu",
+    "commander": "Commander: {name}",
+    "mana": {
+      "W": "White",
+      "U": "Blue",
+      "B": "Black",
+      "R": "Red",
+      "G": "Green",
+      "C": "Colorless",
+      "O": "Other"
+    }
+  }
+}

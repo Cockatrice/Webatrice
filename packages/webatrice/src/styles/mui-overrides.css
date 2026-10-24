@@ -36,7 +36,7 @@ body .MuiDialogTitle-root {
   color: rgb(var(--text-primary));
   font-family: 'Inter', system-ui, sans-serif;
   font-weight: 700;
-  font-size: 18px;
+  font-size: calc(18px * var(--fs-scale, 1));
   padding: 20px 24px 12px;
   border-bottom: 1px solid rgb(var(--border-subtle));
 }
@@ -68,7 +68,7 @@ body .MuiTypography-subtitle1 {
 }
 body .MuiTypography-subtitle2 {
   color: rgb(var(--text-muted));
-  font-size: 12px;
+  font-size: calc(12px * var(--fs-scale, 1));
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -92,7 +92,7 @@ body .MuiButton-text:hover {
 }
 body .MuiButton-contained {
   background-color: rgb(var(--accent-primary));
-  color: white;
+  color: rgb(var(--text-on-accent));
   box-shadow: 0 0 24px -4px rgb(var(--accent-primary) / 0.35);
 }
 body .MuiButton-contained:hover {
@@ -121,10 +121,10 @@ body .MuiOutlinedInput-root {
   border-radius: 8px;
 }
 body .MuiOutlinedInput-notchedOutline {
-  border-color: rgb(var(--border-subtle));
+  border-color: rgb(var(--border-control));
 }
 body .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline {
-  border-color: rgb(var(--border-strong));
+  border-color: rgb(var(--text-muted));
 }
 body .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline {
   border-color: rgb(var(--accent-primary));
@@ -143,7 +143,7 @@ body .MuiFormHelperText-root {
   color: rgb(var(--text-muted));
 }
 body .MuiFormHelperText-root.Mui-error {
-  color: #f87171;
+  color: rgb(var(--status-danger));
 }
 body .MuiSelect-icon {
   color: rgb(var(--text-muted));
@@ -152,7 +152,7 @@ body .MuiSelect-icon {
 /* --- Checkbox + Radio --- */
 body .MuiCheckbox-root,
 body .MuiRadio-root {
-  color: rgb(var(--border-strong));
+  color: rgb(var(--border-control));
 }
 body .MuiCheckbox-root.Mui-checked,
 body .MuiRadio-root.Mui-checked {
@@ -163,12 +163,12 @@ body .MuiRadio-root.Mui-checked {
    different design element. */
 body .MuiCheckbox-root.Mui-disabled,
 body .MuiRadio-root.Mui-disabled {
-  color: rgb(var(--border-strong));
+  color: rgb(var(--border-control));
   opacity: 1;
 }
 body .MuiFormControlLabel-label {
   color: rgb(var(--text-secondary));
-  font-size: 14px;
+  font-size: calc(14px * var(--fs-scale, 1));
   font-family: 'Inter', system-ui, sans-serif;
 }
 body .MuiFormControlLabel-label.Mui-disabled {
@@ -187,7 +187,7 @@ body .MuiPopover-paper {
 body .MuiMenuItem-root {
   color: rgb(var(--text-secondary));
   font-family: 'Inter', system-ui, sans-serif;
-  font-size: 14px;
+  font-size: calc(14px * var(--fs-scale, 1));
 }
 body .MuiMenuItem-root:hover,
 body .MuiMenuItem-root.Mui-focusVisible {

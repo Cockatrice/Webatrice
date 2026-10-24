@@ -1,0 +1,25 @@
+{
+  "GameInfoDialog": {
+    "title": "Game info",
+    "gameName": "Game {id}",
+    "noDescription": "(no description)",
+    "none": "(none)",
+    "yes": "Yes",
+    "no": "No",
+    "players": "Players",
+    "row": {
+      "gameId": "Game ID",
+      "name": "Name",
+      "description": "Description",
+      "started": "Started",
+      "elapsed": "Elapsed",
+      "host": "Host"
+    },
+    "tag": {
+      "host": "host",
+      "spectator": "spectator",
+      "judge": "judge",
+      "you": "you"
+    }
+  }
+}

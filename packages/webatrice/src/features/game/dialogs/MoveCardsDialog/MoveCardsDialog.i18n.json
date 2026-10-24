@@ -1,0 +1,25 @@
+{
+  "MoveCardsDialog": {
+    "title": "Move {count, plural, one {{name}} other {# cards}}",
+    "destination": "To",
+    "battlefieldOf": "{name}'s battlefield",
+    "zone": {
+      "hand": "Hand",
+      "stack": "Stack",
+      "library": "Library",
+      "graveyard": "Graveyard",
+      "exile": "Exile"
+    },
+    "row": "Row",
+    "rows": {
+      "lands": "Lands row",
+      "creatures": "Creatures row",
+      "other": "Other permanents row"
+    },
+    "column": "Column (1 to {max})",
+    "position": "Position (1 to {max}; {max} is the end)",
+    "libraryPosition": "Position from the top (1 to {max})",
+    "move": "Move",
+    "cancel": "Cancel"
+  }
+}

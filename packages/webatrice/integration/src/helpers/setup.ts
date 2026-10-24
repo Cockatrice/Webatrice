@@ -1,4 +1,5 @@
 import '@testing-library/jest-dom/vitest';
+import { webcrypto } from 'node:crypto';
 import '../../../src/polyfills';
 // @critical fake-indexeddb must precede any module that opens a Dexie database.
 import 'fake-indexeddb/auto';
@@ -15,6 +16,9 @@ if (typeof globalThis.ResizeObserver === 'undefined') {
 }
 if (typeof Element !== 'undefined' && !Element.prototype.scrollIntoView) {
   Element.prototype.scrollIntoView = function scrollIntoView() {};
+}
+if (!globalThis.crypto?.subtle) {
+  Object.defineProperty(globalThis, 'crypto', { value: webcrypto, configurable: true });
 }
 
 import { create } from '@bufbuild/protobuf';

@@ -1,0 +1,24 @@
+{
+  "ChatDock": {
+    "region": "Private chats",
+    "window": "Chat with {name}",
+    "showProfile": "{name}: show profile",
+    "minimise": "Minimise chat with {name}",
+    "close": "Close chat with {name}",
+    "open": "Open chat with {name}",
+    "openUnread": "Open chat with {name}, {count} unread",
+    "buddy": "buddy",
+    "profile": {
+      "label": "{name} profile",
+      "loading": "Loading profile…",
+      "more": "More",
+      "moreLabel": "More actions for {name}",
+      "openPage": "Profile page",
+      "addBuddy": "Add buddy",
+      "removeBuddy": "Remove buddy",
+      "ignore": "Ignore",
+      "unignore": "Unignore",
+      "report": "Report"
+    }
+  }
+}

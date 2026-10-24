@@ -66,6 +66,7 @@ export function createE2EResponse(): E2EWebClientResponse {
     game: makeSpyBag<WebsocketTypes.IWebClientResponse['game']>(),
     admin: makeSpyBag<WebsocketTypes.IWebClientResponse['admin']>(),
     moderator: makeSpyBag<WebsocketTypes.IWebClientResponse['moderator']>(),
+    developer: makeSpyBag<WebsocketTypes.IDeveloperResponse>(),
   };
 }
 

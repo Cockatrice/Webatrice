@@ -29,13 +29,8 @@ function freezeNewMessages(value: unknown, insideMessage: boolean): void {
   }
   seen.add(obj);
   if (obj instanceof Uint8Array) {
-    // Object.freeze throws on non-empty typed arrays (bytes fields).
     return;
   }
-  // Freeze the message and everything inside it (nested messages, repeated
-  // and map fields — an in-place `msg.list.push(...)` is the same hazard).
-  // Plain containers outside a message subtree are only traversed: those are
-  // Immer-drafted and already auto-frozen by Immer itself.
   const nowInside = insideMessage || isMessage(obj);
   if (nowInside && !Object.isFrozen(obj)) {
     Object.freeze(obj);
@@ -53,11 +48,6 @@ const freezeMessages: Middleware = ({ getState }) => (next) => (action) => {
   return result;
 };
 
-// Bare `process.env.NODE_ENV` on purpose (the RTK convention): app bundlers
-// statically replace the whole expression, and Node reads the real global. A
-// `typeof process` guard would defeat the static replacement and leave the
-// middleware active in production browser builds. Declared locally so the
-// lib's types don't depend on @types/node.
 declare const process: { env: { NODE_ENV?: string } };
 
 export const freezeMessagesMiddleware: Middleware = process.env.NODE_ENV === 'production'

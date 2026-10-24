@@ -1,4 +1,5 @@
-﻿import { create } from '@bufbuild/protobuf';
+import { WebsocketTypes } from '@cockatrice/sockatrice/types';
+import { create } from '@bufbuild/protobuf';
 import { configureStore, PayloadAction } from '@reduxjs/toolkit';
 import { App } from '../../types';
 import { ServerInfo_Game, ServerInfo_GameTypeSchema, ServerInfo_RoomSchema } from '@cockatrice/sockatrice/generated';
@@ -28,7 +29,6 @@ function dispatchThroughStore<P>(
   return store.getState().rooms;
 }
 
-
 describe('Initialisation', () => {
   it('returns initialState when called with undefined state', () => {
     const result = roomsReducer(undefined, { type: '@@INIT' });
@@ -49,7 +49,6 @@ describe('Initialisation', () => {
     expect(result).toEqual(state);
   });
 });
-
 
 describe('UPDATE_ROOMS', () => {
   it('creates RoomEntry with empty normalized games/users for new room', () => {
@@ -99,8 +98,6 @@ describe('UPDATE_ROOMS', () => {
   });
 
   it('no-op re-broadcast leaves the room entry untouched by reference', () => {
-    // Steady-state Event_ListRooms re-broadcasts must not flip room refs — see
-    // datatrice-store.instructions.md § UPDATE_ROOMS.
     const state = makeRoomsState({ rooms: {} });
     const room = makeRoom({ roomId: 1, name: 'Main Hall' }).info;
     const first = dispatchThroughStore(state, Actions.updateRooms({ rooms: [room] }));
@@ -157,7 +154,6 @@ describe('UPDATE_ROOMS', () => {
   });
 });
 
-
 describe('JOIN_ROOM', () => {
   it('normalizes raw room into keyed games/users maps and marks joined', () => {
     const state = makeRoomsState({ rooms: {}, joinedRoomIds: {} });
@@ -176,7 +172,6 @@ describe('JOIN_ROOM', () => {
   });
 });
 
-
 describe('LEAVE_ROOM', () => {
   it('removes joinedRoomIds entry and messages for roomId', () => {
     const state = makeRoomsState({
@@ -188,7 +183,6 @@ describe('LEAVE_ROOM', () => {
     expect(result.messages[1]).toBeUndefined();
   });
 });
-
 
 describe('ADD_MESSAGE', () => {
   it('appends message preserving the timeReceived from the event handler', () => {
@@ -220,9 +214,6 @@ describe('ADD_MESSAGE', () => {
   });
 
   it('keeps each surviving message\'s id across the cap trim (chat rows key on id)', () => {
-    // Chat rows key on message.id, not the array index. When the head is
-    // trimmed at the cap, every survivor must keep the id it was stored with —
-    // otherwise the keys shift and React remounts the whole scrollback.
     const seeded = Array.from({ length: MAX_ROOM_MESSAGES }, (_, i) =>
       makeMessage({ message: `msg-${i}`, id: i })
     );
@@ -267,6 +258,22 @@ describe('ADD_MESSAGE', () => {
   });
 });
 
+describe('ROOM_SAY_FAILED', () => {
+  it('appends a sender-less chatFlood notice without the unsent text', () => {
+    const state = makeRoomsState({ messages: { 1: [makeMessage({ message: 'earlier', id: 1 })] } });
+    const result = roomsReducer(state, Actions.roomSayFailed({ roomId: 1, message: 'too fast', responseCode: 18, timeReceived: 99 }));
+    const notice = result.messages[1][1];
+    expect(notice).toMatchObject({ name: '', message: '', notice: 'chatFlood', timeReceived: 99 });
+    expect(notice.id).toBeTypeOf('number');
+  });
+
+  it('appends a notSent notice with the reason when the server never answered', () => {
+    const result = roomsReducer(makeRoomsState(), Actions.roomSayFailed({
+      roomId: 1, message: 'hello', responseCode: 4, failure: WebsocketTypes.CommandFailure.Disconnected, timeReceived: 1,
+    }));
+    expect(result.messages[1][0]).toMatchObject({ notice: 'notSent', failure: WebsocketTypes.CommandFailure.Disconnected });
+  });
+});
 
 describe('UPDATE_GAMES', () => {
   it('removes closed games from the keyed games map', () => {
@@ -345,7 +352,6 @@ describe('UPDATE_GAMES', () => {
   });
 });
 
-
 describe('USER_JOINED', () => {
   it('inserts user into the keyed users map', () => {
     const room = makeRoom({ roomId: 1, users: { Zane: makeUser({ name: 'Zane' }) } });
@@ -370,7 +376,6 @@ describe('USER_LEFT', () => {
   });
 });
 
-
 describe('SORT_GAMES', () => {
   it('updates sortGamesBy on state (sorting itself is now derived in selectors)', () => {
     const state = makeRoomsState({ rooms: {} });
@@ -382,7 +387,6 @@ describe('SORT_GAMES', () => {
     expect(result.sortGamesBy).toEqual({ field: App.GameSortField.START_TIME, order: App.SortDirection.ASC });
   });
 });
-
 
 describe('REMOVE_MESSAGES', () => {
   it('removes messages starting with "name:" up to amount, in reverse scan order', () => {
@@ -425,8 +429,6 @@ describe('REMOVE_MESSAGES', () => {
   });
 });
 
-
-
 describe('JOINED_GAME', () => {
   it('sets joinedGameIds[roomId][gameId] = true', () => {
     const state = makeRoomsState({ joinedGameIds: {} });
@@ -441,7 +443,6 @@ describe('JOINED_GAME', () => {
     expect(result.joinedGameIds[1][5]).toBe(true);
   });
 });
-
 
 describe('SELECT_GAME', () => {
   it('records the selected gameId for the room', () => {
@@ -462,7 +463,6 @@ describe('SELECT_GAME', () => {
     expect(result.selectedGameIds[2]).toBe(11);
   });
 });
-
 
 describe('UPDATE_GAMES \u2014 selection lifecycle', () => {
   it('clears selectedGameIds[roomId] when the selected game is closed', () => {
@@ -486,7 +486,6 @@ describe('UPDATE_GAMES \u2014 selection lifecycle', () => {
   });
 });
 
-
 describe('LEAVE_ROOM \u2014 selection and filters', () => {
   it('clears selectedGameIds and gameFilters for the leaving room', () => {
     const state = makeRoomsState({
@@ -499,7 +498,6 @@ describe('LEAVE_ROOM \u2014 selection and filters', () => {
     expect(result.gameFilters[1]).toBeUndefined();
   });
 });
-
 
 describe('JoinGame error state', () => {
   it('SET_JOIN_GAME_PENDING toggles joinGamePending', () => {
@@ -521,6 +519,24 @@ describe('JoinGame error state', () => {
     expect(result.joinGameError).toBeNull();
   });
 
+  it('JOIN_ROOM_FAILED records the room, response code and transport reason', () => {
+    const result = roomsReducer(makeRoomsState(), Actions.joinRoomFailed({
+      roomId: 3, responseCode: 6, failure: WebsocketTypes.CommandFailure.Timeout, userInitiated: true,
+    }));
+    expect(result.joinRoomError).toEqual({ roomId: 3, responseCode: 6, failure: WebsocketTypes.CommandFailure.Timeout });
+  });
+
+  it('JOIN_ROOM_FAILED leaves a failed autojoin silent, as desktop does', () => {
+    const result = roomsReducer(makeRoomsState(), Actions.joinRoomFailed({ roomId: 3, responseCode: 6, userInitiated: false }));
+    expect(result.joinRoomError).toBeNull();
+  });
+
+  it('CLEAR_JOIN_ROOM_ERROR nulls the error', () => {
+    const state = makeRoomsState({ joinRoomError: { roomId: 3, responseCode: 6 } });
+    const result = roomsReducer(state, Actions.clearJoinRoomError());
+    expect(result.joinRoomError).toBeNull();
+  });
+
   it('CLEAR_STORE resets joinGame error state', () => {
     const state = makeRoomsState({
       joinGamePending: true,
@@ -531,7 +547,6 @@ describe('JoinGame error state', () => {
     expect(result.joinGameError).toBeNull();
   });
 });
-
 
 describe('SET_GAME_FILTERS / CLEAR_GAME_FILTERS', () => {
   it('SET_GAME_FILTERS stores filter state for the room', () => {
@@ -549,7 +564,6 @@ describe('SET_GAME_FILTERS / CLEAR_GAME_FILTERS', () => {
     expect(result.gameFilters[1]).toEqual(DEFAULT_GAME_FILTERS);
   });
 });
-
 
 describe('Cross-slice cleanup on game removal', () => {
   it('GAME_LEFT strips the gameId from joinedGameIds across rooms', () => {
@@ -593,7 +607,6 @@ describe('Cross-slice cleanup on game removal', () => {
   });
 });
 
-
 describe('malformed input', () => {
   it('reducer with an unrecognized action type → identical state reference', () => {
     const state = makeRoomsState();
@@ -629,4 +642,25 @@ describe('malformed input', () => {
     const result = roomsReducer(state, Actions.joinedGame({ roomId: 5, gameId: 11 }));
     expect(result.joinedGameIds[5]?.[11]).toBe(true);
   });
+});
+
+it.each(['Alice', ''])('stores room chat from %s when no server slice is installed', (name) => {
+  const message = makeMessage({ name, message: 'hello', timeReceived: 123 });
+  const result = dispatchThroughStore(makeRoomsState(), Actions.roomSayReceived({ roomId: 7, message }));
+  expect(result.messages[7]).toEqual([{ ...message, message: name ? 'Alice: hello' : 'hello', id: expect.any(Number) }]);
+});
+
+it.each([false, true])('filters a named room sender when ignored: %s', (ignored) => {
+  const message = makeMessage({ name: 'Alice', message: 'hello', timeReceived: 123 });
+  const store = configureStore({
+    reducer: {
+      rooms: roomsReducer,
+      server: () => ({ ignoreList: ignored ? { Alice: makeUser({ name: 'Alice' }) } : {} }),
+    },
+    middleware: (getDefault) => getDefault().prepend(listenerMiddleware.middleware),
+  });
+  store.dispatch(Actions.roomSayReceived({ roomId: 7, message }));
+  expect(store.getState().rooms.messages[7]).toEqual(ignored ? undefined : [
+    { ...message, message: 'Alice: hello', id: expect.any(Number) },
+  ]);
 });

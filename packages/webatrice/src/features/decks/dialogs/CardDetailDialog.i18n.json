@@ -1,0 +1,15 @@
+{
+  "CardDetailDialog": {
+    "noImage": "No image",
+    "cmc": "CMC {cmc}",
+    "backTo": "Back to {name}",
+    "actions": "Actions",
+    "addToDeck": "Add to deck",
+    "buy": "Buy @ TCGplayer",
+    "quantity": "Quantity",
+    "removed": "removed from deck",
+    "decrease": "Decrease quantity",
+    "increase": "Increase quantity",
+    "removeFromDeck": "Remove from deck"
+  }
+}

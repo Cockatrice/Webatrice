@@ -17,7 +17,7 @@ describe('AddUserForm', () => {
     });
     // MUI renders the label twice (visible label + notched-outline legend).
     expect(screen.getAllByText('Add to Buddies').length).toBeGreaterThan(0);
-    expect(screen.getByRole('button', { name: 'Add' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Account.addUser.submit' })).toBeInTheDocument();
   });
 
   it('submits the typed user name and then resets the field', async () => {
@@ -31,7 +31,7 @@ describe('AddUserForm', () => {
       fireEvent.change(input, { target: { value: 'someUser' } });
     });
     await act(async () => {
-      fireEvent.submit(screen.getByRole('button', { name: 'Add' }).closest('form')!);
+      fireEvent.submit(screen.getByRole('button', { name: 'Account.addUser.submit' }).closest('form')!);
     });
     await flush();
 

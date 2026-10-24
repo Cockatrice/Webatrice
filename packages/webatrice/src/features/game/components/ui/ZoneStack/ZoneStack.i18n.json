@@ -1,0 +1,10 @@
+{
+  "ZoneStack": {
+    "library": "Library",
+    "graveyard": "Graveyard",
+    "exile": "Exile",
+    "pile": "{zone}, {count, plural, one {# card} other {# cards}}",
+    "pileWithTop": "{zone}, {count, plural, one {# card} other {# cards}}, top: {top}",
+    "hand": "Hand, {count, plural, one {# card} other {# cards}}"
+  }
+}

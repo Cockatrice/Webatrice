@@ -1,37 +1,31 @@
 import { ZoneName } from '@cockatrice/sockatrice';
+import { ServerInfo_Zone_ZoneType } from '@cockatrice/sockatrice/generated';
 import { act, renderHook } from '@testing-library/react';
 import { combineReducers } from '@reduxjs/toolkit';
 
 import { games, type GamesState } from '@cockatrice/datatrice';
 import {
-  makeCard,
   makeGameEntry,
   makePlayerEntry,
   makePlayerProperties,
   makeZoneEntry,
 } from '@cockatrice/datatrice/testing';
-import type { CardLocation } from '@cockatrice/sockatrice';
 
 import { makeReduxWebClientHookWrapper } from '../../../__test-utils__/makeHookWrapper';
 
 vi.mock('../../../hooks/useSettings');
 
 import { useGameDialogs } from './useGameDialogs';
-import type { GameAccess } from './useGameAccess';
 
 interface SetupOpts {
   localPlayerId?: number;
   isSpectator?: boolean;
-  canAct?: boolean;
-  cardId?: number;
   judge?: boolean;
-  selectedCards?: readonly CardLocation[];
 }
 
 function setup(opts: SetupOpts = {}) {
   const localPlayerId = opts.localPlayerId ?? 1;
   const isSpectator = opts.isSpectator ?? false;
-  const canAct = opts.canAct ?? true;
   const judge = opts.judge ?? false;
 
   const localPlayer = makePlayerEntry({
@@ -45,6 +39,7 @@ function setup(opts: SetupOpts = {}) {
       }),
       [ZoneName.DECK]: makeZoneEntry({
         name: ZoneName.DECK,
+        type: ServerInfo_Zone_ZoneType.HiddenZone,
         cardCount: 60,
       }),
       [ZoneName.TABLE]: makeZoneEntry({ name: ZoneName.TABLE }),
@@ -73,45 +68,17 @@ function setup(opts: SetupOpts = {}) {
     preloadedState: { games: gamesState },
   });
 
-  const localAccess: GameAccess = {
-    canAct,
-    canView: true,
-    isLocalPlayer: true,
-    isJudge: judge,
-    localPlayerId: 1,
-  };
-  const startPendingArrow = vi.fn();
-  const startPendingAttach = vi.fn();
-
   const { result } = renderHook(
     () =>
-      useGameDialogs({
-        gameId: 1,
-        localAccess,
-        isSpectator,
-        startPendingArrow,
-        startPendingAttach,
-        collapseUnlessSelected: vi.fn(),
-        getSelectedCards: () => opts.selectedCards ?? [],
-      }),
+      useGameDialogs({ gameId: 1, isSpectator }),
     { wrapper: Wrapper },
   );
 
   return {
     result,
     webClient,
-    startPendingArrow,
-    startPendingAttach,
     localPlayerId,
   };
-}
-
-function makeMouseEvent(): React.MouseEvent {
-  return {
-    preventDefault: vi.fn(),
-    clientX: 100,
-    clientY: 200,
-  } as unknown as React.MouseEvent;
 }
 
 describe('useGameDialogs', () => {
@@ -135,130 +102,6 @@ describe('useGameDialogs', () => {
     expect(result.current.lastDieCount).toBe(3);
   });
 
-  it('opens the card menu on right-click and clears it via closeCardMenu', () => {
-    const { result } = setup();
-    const card = makeCard({ id: 5 });
-    const event = makeMouseEvent();
-
-    act(() => {
-      result.current.handleCardContextMenu(1, ZoneName.TABLE, card, event);
-    });
-
-    expect(event.preventDefault).toHaveBeenCalled();
-    expect(result.current.cardMenu).not.toBeNull();
-    expect(result.current.cardMenu?.card.id).toBe(5);
-    expect(result.current.cardMenu?.anchorPosition).toEqual({ top: 200, left: 100 });
-
-    act(() => {
-      result.current.closeCardMenu();
-    });
-    expect(result.current.cardMenu).toBeNull();
-  });
-
-  it('opens a set-PT prompt from the card menu and dispatches bulkSetPT on submit', () => {
-    const { result, webClient } = setup();
-    const card = makeCard({ id: 5, pt: '2/2' });
-
-    act(() => {
-      result.current.handleCardContextMenu(1, ZoneName.TABLE, card, makeMouseEvent());
-    });
-    act(() => {
-      result.current.handleRequestSetPT();
-    });
-
-    expect(result.current.prompt).not.toBeNull();
-    expect(result.current.prompt?.title).toBe('Set power/toughness');
-    expect(result.current.prompt?.initialValue).toBe('2/2');
-
-    act(() => {
-      result.current.prompt!.onSubmit('3/3');
-    });
-
-    // No multi-selection → the bulk dispatcher acts on just the menu card (n=1).
-    expect(webClient.request.game.bulkSetPT).toHaveBeenCalledWith(
-      1,
-      [expect.objectContaining({ ownerPlayerId: 1, zone: ZoneName.TABLE, card: expect.objectContaining({ id: 5 }) })],
-      '3/3',
-      expect.any(Function), // judge resolver forwarded; own card resolves bare
-    );
-    expect(result.current.prompt).toBeNull();
-  });
-
-  it('applies set-PT to the whole selection when the menu card is part of a ≥2 selection', () => {
-    const a = makeCard({ id: 5, pt: '2/2' });
-    const b = makeCard({ id: 6, pt: '1/1' });
-    const selectedCards: CardLocation[] = [
-      { ownerPlayerId: 1, zone: ZoneName.TABLE, card: a },
-      { ownerPlayerId: 1, zone: ZoneName.TABLE, card: b },
-    ];
-    const { result, webClient } = setup({ selectedCards });
-
-    act(() => {
-      result.current.handleCardContextMenu(1, ZoneName.TABLE, a, makeMouseEvent());
-    });
-    act(() => {
-      result.current.handleRequestSetPT();
-    });
-    act(() => {
-      result.current.prompt!.onSubmit('3/3');
-    });
-
-    const [, targets, value] = vi.mocked(webClient.request.game.bulkSetPT).mock.calls.at(-1)!;
-    expect(targets.map((t: CardLocation) => t.card.id)).toEqual([5, 6]);
-    expect(value).toBe('3/3');
-  });
-
-  it('move-to-library-at on an OWN card targets self and sends bare', () => {
-    const { result, webClient } = setup();
-    const card = makeCard({ id: 9 });
-
-    act(() => {
-      result.current.handleCardContextMenu(1, ZoneName.GRAVE, card, makeMouseEvent());
-    });
-    act(() => {
-      result.current.handleRequestMoveToLibraryAt();
-    });
-    act(() => {
-      result.current.prompt!.onSubmit('2');
-    });
-
-    expect(webClient.request.game.moveCard).toHaveBeenCalledWith(
-      1,
-      expect.objectContaining({
-        startPlayerId: 1,
-        targetPlayerId: 1,
-        targetZone: ZoneName.DECK,
-        x: 1, // 1-indexed prompt → 0-indexed wire
-      }),
-      undefined, // own card → no Command_Judge wrap
-    );
-  });
-
-  it('move-to-library-at on an opponent card (judge) routes to the owner deck, wrapped', () => {
-    const { result, webClient } = setup({ judge: true });
-    const card = makeCard({ id: 10 });
-
-    act(() => {
-      result.current.handleCardContextMenu(2, ZoneName.GRAVE, card, makeMouseEvent());
-    });
-    act(() => {
-      result.current.handleRequestMoveToLibraryAt();
-    });
-    act(() => {
-      result.current.prompt!.onSubmit('1');
-    });
-
-    expect(webClient.request.game.moveCard).toHaveBeenCalledWith(
-      1,
-      expect.objectContaining({
-        startPlayerId: 2,
-        targetPlayerId: 2, // owner tree, not the judge
-        targetZone: ZoneName.DECK,
-      }),
-      2, // judge wrap target = owner
-    );
-  });
-
   it('routes the concede flow through confirmConcede → webClient.game.concede', () => {
     const { result, webClient } = setup();
 
@@ -277,68 +120,11 @@ describe('useGameDialogs', () => {
     expect(result.current.concedeConfirm).toBeNull();
   });
 
-  it('ignores zone right-clicks on unsupported zones and on remote players', () => {
-    const { result } = setup({ localPlayerId: 1 });
-
-    act(() => {
-      result.current.handleZoneContextMenu(1, ZoneName.TABLE, makeMouseEvent());
-    });
-    expect(result.current.zoneMenu).toBeNull();
-
-    act(() => {
-      result.current.handleZoneContextMenu(2, ZoneName.GRAVE, makeMouseEvent());
-    });
-    expect(result.current.zoneMenu).toBeNull();
-
-    act(() => {
-      result.current.handleZoneContextMenu(1, ZoneName.GRAVE, makeMouseEvent());
-    });
-    expect(result.current.zoneMenu?.zoneName).toBe(ZoneName.GRAVE);
-  });
-
-  it('blocks the player and hand context menus for spectators', () => {
-    const { result } = setup({ isSpectator: true });
-
-    act(() => {
-      result.current.handlePlayerContextMenu(makeMouseEvent());
-    });
-    expect(result.current.playerMenu).toBeNull();
-
-    act(() => {
-      result.current.handleHandContextMenu(makeMouseEvent());
-    });
-    expect(result.current.handMenu).toBeNull();
-  });
-
-  it('opens a reveal dialog from the deck zone and dispatches revealCards on submit', () => {
-    const { result, webClient } = setup();
-
-    act(() => {
-      result.current.handleRequestRevealTopN();
-    });
-    expect(result.current.revealState?.zoneName).toBe(ZoneName.DECK);
-    expect(result.current.revealState?.showCountInput).toBe(true);
-
-    act(() => {
-      result.current.revealState!.onSubmit({ targetPlayerId: 1, topCards: 3 });
-    });
-
-    expect(webClient.request.game.revealCards).toHaveBeenCalledWith(
-      1,
-      expect.objectContaining({
-        zoneName: ZoneName.DECK,
-        playerId: 1,
-        topCards: 3,
-      }),
-    );
-    expect(result.current.revealState).toBeNull();
-  });
-
   it('opening the local library view dumps the deck (numberCards -1) to reveal its cards', () => {
     const { result, webClient } = setup({ localPlayerId: 1 });
 
     act(() => {
-      result.current.handleZoneClick(1, ZoneName.DECK);
+      result.current.openZoneView({ playerId: 1, zoneName: ZoneName.DECK });
     });
 
     expect(result.current.zoneViews).toEqual([{ playerId: 1, zoneName: ZoneName.DECK }]);
@@ -352,10 +138,10 @@ describe('useGameDialogs', () => {
     const { result, webClient } = setup({ localPlayerId: 1 });
 
     act(() => {
-      result.current.handleZoneClick(1, ZoneName.DECK);
+      result.current.openZoneView({ playerId: 1, zoneName: ZoneName.DECK });
     });
     act(() => {
-      result.current.handleZoneClick(1, ZoneName.DECK);
+      result.current.openZoneView({ playerId: 1, zoneName: ZoneName.DECK });
     });
 
     expect(result.current.zoneViews).toHaveLength(1);
@@ -366,7 +152,7 @@ describe('useGameDialogs', () => {
     const { result, webClient } = setup({ localPlayerId: 1 });
 
     act(() => {
-      result.current.handleZoneClick(1, ZoneName.GRAVE);
+      result.current.openZoneView({ playerId: 1, zoneName: ZoneName.GRAVE });
     });
 
     expect(result.current.zoneViews).toHaveLength(1);
@@ -378,7 +164,7 @@ describe('useGameDialogs', () => {
     const dispatchSpy = vi.spyOn(games.Actions, 'zoneViewCleared');
 
     act(() => {
-      result.current.handleZoneClick(1, ZoneName.DECK);
+      result.current.openZoneView({ playerId: 1, zoneName: ZoneName.DECK });
     });
     act(() => {
       result.current.handleCloseZoneView(1, ZoneName.DECK, true);
@@ -397,7 +183,7 @@ describe('useGameDialogs', () => {
     const { result, webClient } = setup({ localPlayerId: 1 });
 
     act(() => {
-      result.current.handleZoneClick(1, ZoneName.DECK);
+      result.current.openZoneView({ playerId: 1, zoneName: ZoneName.DECK });
     });
     act(() => {
       result.current.handleCloseZoneView(1, ZoneName.DECK, false);
@@ -411,7 +197,7 @@ describe('useGameDialogs', () => {
     const dispatchSpy = vi.spyOn(games.Actions, 'zoneViewCleared');
 
     act(() => {
-      result.current.handleZoneClick(1, ZoneName.GRAVE);
+      result.current.openZoneView({ playerId: 1, zoneName: ZoneName.GRAVE });
     });
     act(() => {
       result.current.handleCloseZoneView(1, ZoneName.GRAVE, true);

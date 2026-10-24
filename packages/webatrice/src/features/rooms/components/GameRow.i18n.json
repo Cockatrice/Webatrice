@@ -1,0 +1,34 @@
+{
+  "GameRow": {
+    "untitled": "Game #{id}, no description",
+    "passwordIcon": "Password",
+    "age": {
+      "new": "<1 min",
+      "minutes": "{count} min",
+      "hours": "{count} h"
+    },
+    "restriction": {
+      "buddiesOnly": "Buddies only",
+      "registeredOnly": "Registered users",
+      "openDecklists": "Open decklists"
+    },
+    "watching": {
+      "label": "{count} watching",
+      "none": "None",
+      "chat": "chat",
+      "hands": "hands"
+    },
+    "blocked": {
+      "pending": "Joining another game…",
+      "started": "This game has started",
+      "full": "Every seat is taken",
+      "notAllowed": "Spectators not allowed"
+    },
+    "join": "Join {game}",
+    "joinWithPassword": "Join {game} (asks for the password)",
+    "joinBlocked": "Join {game}: {reason}",
+    "spectate": "Spectate {game}",
+    "spectateBlocked": "Spectate {game}: {reason}",
+    "more": "More for {game}"
+  }
+}

@@ -1,0 +1,47 @@
+{
+  "ZoneView": {
+    "groupBy": {
+      "label": "Group by",
+      "none": "Ungrouped",
+      "type": "Group by Type",
+      "cmc": "Group by Mana Value",
+      "color": "Group by Color"
+    },
+    "sortBy": {
+      "label": "Sort by",
+      "none": "Unsorted",
+      "name": "Sort by Name",
+      "cmc": "Sort by Mana Cost",
+      "type": "Sort by Type",
+      "color": "Sort by Colors",
+      "set": "Sort by Set",
+      "pt": "Sort by P/T"
+    },
+    "pileView": "pile view",
+    "pileViewRequiresGrouping": "Pile view requires a grouping",
+    "pileViewDescription": "Stack cards within each group",
+    "searchPlaceholder": "Search by card name (or search expressions)",
+    "position": {
+      "top": "Top",
+      "bottom": "Bottom"
+    },
+    "status": {
+      "writeAccess": "write access granted (drag a card onto your battlefield)",
+      "loadingCardDetails": "Loading card details…",
+      "noCards": "No cards to show."
+    },
+    "group": {
+      "creature": "Creature",
+      "planeswalker": "Planeswalker",
+      "battle": "Battle",
+      "instant": "Instant",
+      "sorcery": "Sorcery",
+      "enchantment": "Enchantment",
+      "artifact": "Artifact",
+      "land": "Land",
+      "other": "Other",
+      "mana": "Mana {value}",
+      "colorless": "Colorless"
+    }
+  }
+}

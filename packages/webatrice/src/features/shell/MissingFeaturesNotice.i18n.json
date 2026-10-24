@@ -1,0 +1,6 @@
+{
+  "MissingFeaturesNotice": {
+    "title": "Information",
+    "message": "This server supports additional features that your client doesn't have.\nThis is most likely not a problem, but this message might mean there is a new version of Webatrice available or this server is running a custom or pre-release version.\n\nTo update your client, reload the page."
+  }
+}

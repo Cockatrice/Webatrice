@@ -26,7 +26,7 @@ beforeEach(() => {
 });
 
 describe('Room (integration)', () => {
-  it('renders the room view, game-selector header and chat input when joined', () => {
+  it('renders the room frame: games header with Create game, the people column and the chat input', () => {
     const { container } = renderFeatureScreen(
       <Routes>
         <Route path="/room/:roomId" element={<Room />} />
@@ -35,10 +35,11 @@ describe('Room (integration)', () => {
     );
 
     expect(container.querySelector('.room-view')).toBeInTheDocument();
-    // Side pane is now RoomUsers with Buddies + Players Online cards; the
-    // old "Users in this room:" copy was replaced by these headings.
-    expect(screen.getByRole('heading', { name: 'Players Online' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Send' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'Room.title' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Room.createGame' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'RoomUsers.title' })).toBeInTheDocument();
+    expect(screen.getByRole('list', { name: 'RoomUsers.list' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Common.action.send' })).toBeInTheDocument();
   });
 
   it('renders nothing when the route param does not match a joined room', () => {

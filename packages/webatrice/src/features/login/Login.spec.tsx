@@ -1,5 +1,11 @@
 import { act, fireEvent, waitFor } from '@testing-library/react';
 
+import { server } from '@cockatrice/datatrice';
+import { WebsocketTypes } from '@cockatrice/sockatrice/types';
+import { SessionScope } from '../../SessionScope';
+
+import { Response_ResponseCode } from '@cockatrice/sockatrice/generated';
+
 import { renderWithProviders, createMockWebClient, disconnectedState } from '../../__test-utils__';
 
 const flushEffects = async (): Promise<void> => {
@@ -11,6 +17,7 @@ import { makeSettings, makeSettingsHook } from '../../hooks/__mocks__/useSetting
 import { makeHost, makeKnownHostsHook } from '../../feature-widgets/known-hosts/__mocks__/useKnownHosts';
 import { autoLoginGate } from './useAutoLogin';
 import { LoadingState } from '@app/hooks';
+import { PREFERENCE_DEFAULTS, RouteEnum, type PreferenceKey } from '@app/types';
 import Login from './Login';
 
 const hoisted = vi.hoisted(() => ({
@@ -18,11 +25,13 @@ const hoisted = vi.hoisted(() => ({
   getSettings: vi.fn(),
   getKnownHosts: vi.fn(),
   useSettings: vi.fn(),
+  usePreference: vi.fn(),
   useKnownHosts: vi.fn(),
 }));
 
 vi.mock('../../hooks/useSettings', () => ({
   useSettings: hoisted.useSettings,
+  usePreference: hoisted.usePreference,
   getSettings: hoisted.getSettings,
 }));
 vi.mock('@app/feature-widgets/known-hosts', () => ({
@@ -56,6 +65,7 @@ beforeEach(() => {
   hoisted.getKnownHosts.mockReset();
   hoisted.useSettings.mockReset();
   hoisted.useKnownHosts.mockReset();
+  hoisted.usePreference.mockImplementation((key: PreferenceKey) => PREFERENCE_DEFAULTS[key]);
 
   const defaultHost = makeHost({
     id: 1,
@@ -96,6 +106,18 @@ const armAutoConnect = () => {
   hoisted.getSettings.mockResolvedValue(makeSettings({ autoConnect: true }));
   hoisted.getKnownHosts.mockResolvedValue({ hosts: [host], selectedHost: host });
 };
+
+describe('Login — debug log', () => {
+  test('opens "View debug log" before signing in, as desktop\'s Help menu does', () => {
+    const { getByRole, queryByRole } = renderWithProviders(<Login />, { preloadedState: disconnectedState });
+    expect(queryByRole('dialog', { name: /DebugLogDialog\.title/ })).not.toBeInTheDocument();
+
+    fireEvent.click(getByRole('button', { name: /Login\.footer\.debugLog/ }));
+
+    expect(getByRole('dialog', { name: /DebugLogDialog\.title/ })).toBeInTheDocument();
+    expect(getByRole('textbox', { name: /DebugLogDialog\.logLabel/ })).toBeInTheDocument();
+  });
+});
 
 describe('Login — auto-connect cold start', () => {
   test('fires login when settings + host say go', async () => {
@@ -205,6 +227,55 @@ describe('Login — refresh cycle', () => {
   });
 });
 
+describe('Login — signed-out actions', () => {
+  test('offers an offline entry point to the replay library', () => {
+    const { getByRole } = renderWithProviders(<Login />, { preloadedState: disconnectedState });
+
+    expect(getByRole('link', { name: 'Login.action.watchReplay' })).toHaveAttribute('href', RouteEnum.REPLAYS);
+  });
+
+  test('opens the registration dialog from the "Create an account" card, naming the selected server', () => {
+    const { getByRole, queryByRole } = renderWithProviders(<Login />, { preloadedState: disconnectedState });
+    const register = getByRole('button', { name: 'Login.action.register' });
+    expect(register).toHaveAccessibleDescription('Login.action.registerOn');
+    expect(queryByRole('dialog', { name: /RegistrationDialog\.title/ })).not.toBeInTheDocument();
+
+    fireEvent.click(register);
+
+    expect(getByRole('dialog', { name: /RegistrationDialog\.title/ })).toBeInTheDocument();
+  });
+
+  test('shows card art with its name, and shuffles to a different card', () => {
+    const { container, getByRole } = renderWithProviders(<Login />, { preloadedState: disconnectedState });
+    const firstSrc = container.querySelector('img[src*="art_crop"]')?.getAttribute('src');
+    expect(firstSrc).toBeTruthy();
+
+    fireEvent.click(getByRole('button', { name: 'Login.art.shuffle' }));
+
+    expect(container.querySelector('img[src*="art_crop"]')?.getAttribute('src')).not.toBe(firstSrc);
+  });
+
+  test('never requests remote art when "Card art on the sign-in screen" is off', () => {
+    hoisted.useSettings.mockReturnValue(
+      makeSettingsHook({ status: LoadingState.READY, value: makeSettings({ signInCardArt: false }) })
+    );
+    const { container, queryByRole } = renderWithProviders(<Login />, { preloadedState: disconnectedState });
+
+    expect(container.querySelector('img[src*="scryfall"]')).toBeNull();
+    expect(container.querySelector('.login-art-fallback')).not.toBeNull();
+    expect(queryByRole('button', { name: 'Login.art.shuffle' })).toBeNull();
+  });
+
+  test('falls back to the bundled gradient when the art cannot load', () => {
+    const { container, getByRole } = renderWithProviders(<Login />, { preloadedState: disconnectedState });
+    fireEvent.error(container.querySelector('img[src*="art_crop"]')!);
+
+    expect(container.querySelector('img[src*="art_crop"]')).toBeNull();
+    expect(container.querySelector('.login-art-fallback')).not.toBeNull();
+    expect(getByRole('button', { name: 'Login.art.shuffle' })).toBeEnabled();
+  });
+});
+
 describe('Login — LOGIN_SUCCESSFUL → knownHosts persistence', () => {
   const armWithUpdate = () => {
     const update = vi.fn().mockResolvedValue(undefined);
@@ -288,4 +359,59 @@ describe('Login — LOGIN_SUCCESSFUL → knownHosts persistence', () => {
       hashedPassword: null,
     });
   });
+});
+
+describe('Login — password change required', () => {
+  test('points the user to the password reset, since the server refuses the login until it is done', async () => {
+    const { getByRole, findByText } = renderWithProviders(<Login />, {
+      preloadedState: {
+        ...disconnectedState,
+        server: {
+          ...(disconnectedState.server as any),
+          connectionAttemptMade: true,
+          loginFailureCode: Response_ResponseCode.RespPasswordChangeRequired,
+        },
+      },
+    });
+    await flushEffects();
+
+    await findByText('Login.status.passwordChangeRequired');
+    fireEvent.click(getByRole('button', { name: 'Login.status.passwordChangeRequiredAction' }));
+
+    expect(await findByText('RequestPasswordResetDialog.title')).toBeTruthy();
+  });
+
+  test('shows no reset action for other login rejections', async () => {
+    const { queryByRole } = renderWithProviders(<Login />, {
+      preloadedState: {
+        ...disconnectedState,
+        server: {
+          ...(disconnectedState.server as any),
+          connectionAttemptMade: true,
+          loginFailureCode: Response_ResponseCode.RespServerFull,
+        },
+      },
+    });
+    await flushEffects();
+
+    expect(queryByRole('button', { name: 'Login.status.passwordChangeRequiredAction' })).toBeNull();
+  });
+});
+
+test('keeps a connection-closed ban reason visible after DISCONNECTED and CLEAR_STORE', async () => {
+  const { store, getByText } = renderWithProviders(<SessionScope><Login /></SessionScope>, {
+    preloadedState: disconnectedState,
+  });
+  await flushEffects();
+  act(() => {
+    store.dispatch(server.Actions.updateStatus({
+      status: { state: WebsocketTypes.StatusEnum.DISCONNECTED, description: 'You are banned until tomorrow' },
+    }));
+  });
+  expect(getByText('You are banned until tomorrow')).toBeVisible();
+  act(() => {
+    store.dispatch(server.Actions.disconnected());
+    store.dispatch(server.Actions.clearStore());
+  });
+  expect(getByText('You are banned until tomorrow')).toBeVisible();
 });

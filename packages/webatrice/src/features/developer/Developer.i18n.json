@@ -1,0 +1,63 @@
+{
+  "Developer": {
+    "timings": {
+      "title": "Load timings",
+      "description": "Milliseconds since boot. Home data is the first room list received; route ready is the current route's React commit (background requests may still be running)."
+    },
+    "table": {
+      "stats": "Server statistics",
+      "commands": "Command statistics"
+    },
+    "column": {
+      "command": "Command",
+      "count": "Count",
+      "totalMs": "Total ms",
+      "avgMs": "Avg ms"
+    },
+    "stat": {
+      "usersOnline": "Registered users online",
+      "modsOnline": "Moderators online",
+      "gamesRunning": "Games running",
+      "trafficSent": "Traffic sent (last tick)",
+      "trafficReceived": "Traffic received (last tick)",
+      "uptime": "Server uptime",
+      "snapshot": "Snapshot taken",
+      "liveMetrics": "Live Metrics",
+      "cardsInGames": "Cards in live games",
+      "totalCommands": "Total commands processed",
+      "avgCommandTime": "Avg command time",
+      "activeCommandTypes": "Active command types",
+      "stalls": "Event loop stalls",
+      "lastStall": "Last stall overshoot",
+      "worstStall": "Worst stall overshoot",
+      "gameStarts": "Game starts",
+      "avgGameStart": "Avg game start time"
+    },
+    "unit": {
+      "gib": "{value} GiB",
+      "mib": "{value} MiB",
+      "kib": "{value} KiB",
+      "bytes": "{value} bytes",
+      "seconds": "{value} s",
+      "milliseconds": "{value} ms",
+      "uptimeDays": "{days}d {hours}h {minutes}m",
+      "uptimeHours": "{hours}h {minutes}m"
+    },
+    "autoRefresh": {
+      "label": "Auto-refresh",
+      "tooltip": "Automatically request fresh server statistics at a fixed interval.",
+      "interval": "Every (seconds)",
+      "intervalTooltip": "Seconds between automatic refreshes."
+    },
+    "status": {
+      "updated": "Updated {time}",
+      "unavailable": "No server statistics available yet.",
+      "idle": "Server statistics, on request."
+    },
+    "button": {
+      "refresh": "Refresh server stats"
+    },
+    "title": "Developer",
+    "empty": "No statistics yet. Refresh to ask the server."
+  }
+}

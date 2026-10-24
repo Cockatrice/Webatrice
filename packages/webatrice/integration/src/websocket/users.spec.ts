@@ -3,7 +3,25 @@
 import { create } from '@bufbuild/protobuf';
 import { describe, expect, it } from 'vitest';
 
-import { Command_ListUsers_ext, Event_AddToListSchema, Event_AddToList_ext, Event_UserJoinedSchema, Event_UserJoined_ext, Event_UserLeftSchema, Event_UserLeft_ext, Event_UserMessageSchema, Event_UserMessage_ext, Response_ListUsersSchema, Response_ListUsers_ext, Response_ResponseCode, ServerInfo_User, ServerInfo_UserSchema, ServerInfo_User_UserLevelFlag } from '@cockatrice/sockatrice/generated';
+import { SessionCommands } from '@cockatrice/sockatrice';
+import {
+  Command_ListUsers_ext,
+  Command_Message_ext,
+  Event_AddToListSchema,
+  Event_AddToList_ext,
+  Event_UserJoinedSchema,
+  Event_UserJoined_ext,
+  Event_UserLeftSchema,
+  Event_UserLeft_ext,
+  Event_UserMessageSchema,
+  Event_UserMessage_ext,
+  Response_ListUsersSchema,
+  Response_ListUsers_ext,
+  Response_ResponseCode,
+  ServerInfo_User,
+  ServerInfo_UserSchema,
+  ServerInfo_User_UserLevelFlag,
+} from '@cockatrice/sockatrice/generated';
 import { store } from '../helpers/setup';
 
 import { connectAndLogin } from '../helpers/setup';
@@ -116,5 +134,21 @@ describe('users', () => {
     const { messages } = store.getState().server;
     expect(messages.bob).toHaveLength(1);
     expect(messages.bob[0].message).toBe('hey bob');
+  });
+
+  it.each([
+    [Response_ResponseCode.RespInIgnoreList, 'ignoredByRecipient'],
+    [Response_ResponseCode.RespNameNotFound, 'recipientOffline'],
+    [Response_ResponseCode.RespChatFlood, 'chatFlood'],
+  ])('records a %i Command_Message rejection as a %s notice in the conversation', (code, kind) => {
+    connectAndLogin();
+
+    SessionCommands.message('bob', 'hello');
+    const sent = findLastSessionCommand(Command_Message_ext);
+    deliverMessage(buildResponseMessage(buildResponse({ cmdId: sent.cmdId, responseCode: code })));
+
+    expect(store.getState().server.privateChatNotices['bob']).toEqual([
+      { id: expect.any(Number), kind, position: 0 },
+    ]);
   });
 });

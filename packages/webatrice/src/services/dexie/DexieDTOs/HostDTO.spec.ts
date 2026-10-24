@@ -16,6 +16,8 @@ vi.mock('../DexieService', () => ({
 
 import { HostDTO } from './HostDTO';
 
+const mapToClassCalls = [...hostsTable.mapToClass.mock.calls];
+
 describe('HostDTO', () => {
   beforeEach(() => {
     hostsTable.put.mockClear();
@@ -27,7 +29,7 @@ describe('HostDTO', () => {
   });
 
   it('registers itself with the hosts table on import', () => {
-    expect(hostsTable.mapToClass).toHaveBeenCalledWith(HostDTO);
+    expect(mapToClassCalls).toEqual([[HostDTO]]);
   });
 
   it('save() puts the instance into the hosts table', async () => {

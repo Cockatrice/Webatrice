@@ -1,12 +1,17 @@
+import { useId } from 'react';
+import { useAnimationPreference } from '@app/hooks';
+
 import { useGameId } from '../../ui/GameIdContext';
 
-import { useGameArrowOverlay } from './useGameArrowOverlay';
+import { arrowKey, useGameArrowOverlay } from './useGameArrowOverlay';
 import { buildArrowGeometry } from './arrowPath';
+import { useArrivingArrows, useArrowDrawIn } from './useArrowDrawIn';
 
 import './GameArrowOverlay.css';
 
 export interface GameArrowOverlayProps {
   containerRef: React.RefObject<HTMLElement | null>;
+  layoutVersion?: unknown;
   /** Live drag preview endpoint (viewport → board-relative coords). The
    *  `fullColor` flag mirrors Cockatrice's `ArrowDragItem::fullColor`
    *  (alpha 200 when snapped to a valid target, 150 otherwise). */
@@ -49,6 +54,7 @@ function ArrowShape({
   onClick,
   testId,
   className,
+  drawIn,
 }: {
   x1: number;
   y1: number;
@@ -58,15 +64,26 @@ function ArrowShape({
   onClick?: () => void;
   testId?: string;
   className?: string;
+  drawIn?: { id: string; animate: boolean };
 }) {
+  const length = Math.hypot(x2 - x1, y2 - y1);
+  const progress = useArrowDrawIn(drawIn?.animate ?? false, length);
   const geom = buildArrowGeometry(x1, y1, x2, y2);
   if (!geom) {
     return null;
   }
+  const clipId = drawIn && progress < 1 ? `arrow-draw-${drawIn.id}` : undefined;
   return (
     <g
       transform={`translate(${geom.originX} ${geom.originY}) rotate(${geom.angleDeg})`}
+      clipPath={clipId && `url(#${clipId})`}
+      data-drawing={clipId ? progress.toFixed(2) : undefined}
     >
+      {clipId && (
+        <clipPath id={clipId}>
+          <rect x={-length} y={-length} width={length + progress * length} height={2 * length} />
+        </clipPath>
+      )}
       {/* Border stroke mirrors Cockatrice's `ArrowItem::paint`, which
        *  never calls `setPen` — so QPainter falls back to its default
        *  black 1-pixel pen and strokes the path's outline in addition to
@@ -90,9 +107,12 @@ function ArrowShape({
   );
 }
 
-function GameArrowOverlay({ containerRef, dragPreview = null }: GameArrowOverlayProps) {
+function GameArrowOverlay({ containerRef, layoutVersion, dragPreview = null }: GameArrowOverlayProps) {
   const gameId = useGameId();
-  const { arrows, width, height, handleArrowClick } = useGameArrowOverlay({ gameId, containerRef });
+  const { arrows, gameArrowKeys, width, height, handleArrowClick } = useGameArrowOverlay({ gameId, containerRef, layoutVersion });
+  const arrowDrawAnimation = useAnimationPreference('arrowDrawAnimation');
+  const arriving = useArrivingArrows(gameArrowKeys, arrows.map(arrowKey));
+  const clipScope = useId().replace(/[^\w-]/g, '');
 
   // Committed arrows always render at Cockatrice's "locked target" alpha
   // (α=200) — they've already resolved to a real endpoint.
@@ -113,7 +133,7 @@ function GameArrowOverlay({ containerRef, dragPreview = null }: GameArrowOverlay
     >
       {arrows.map((a) => (
         <ArrowShape
-          key={a.arrowId}
+          key={arrowKey(a)}
           x1={a.x1}
           y1={a.y1}
           x2={a.x2}
@@ -122,6 +142,7 @@ function GameArrowOverlay({ containerRef, dragPreview = null }: GameArrowOverlay
           onClick={() => handleArrowClick(a.arrowId)}
           testId={`arrow-${a.arrowId}`}
           className="game-arrow-overlay__shape"
+          drawIn={{ id: `${clipScope}-${a.ownerPlayerId}-${a.arrowId}`, animate: arrowDrawAnimation && arriving.has(arrowKey(a)) }}
         />
       ))}
       {dragPreview && (

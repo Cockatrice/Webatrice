@@ -131,9 +131,6 @@ describe('test connection', () => {
     const secondSocket = getMockWebSocket();
 
     expect(secondSocket).not.toBe(firstSocket);
-    // The prior probe is still CONNECTING; aborting it (close() on a CONNECTING
-    // socket) would strand a half-open upstream against the per-IP cap, so
-    // terminateSocket defers a clean close to onopen instead of closing now.
     expect(firstSocket.close).not.toHaveBeenCalled();
     expect(typeof firstSocket.onopen).toBe('function');
     firstSocket.onopen?.();

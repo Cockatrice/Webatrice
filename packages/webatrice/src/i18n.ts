@@ -3,8 +3,8 @@ import LanguageDetector from 'i18next-browser-languagedetector';
 import ICU from 'i18next-icu';
 import { initReactI18next } from 'react-i18next';
 
-import { Language } from '@app/types';
-import { toBcp47 } from '@app/utils';
+import { DEFAULT_LANGUAGE, Language } from '@app/types';
+import { resolveSupportedLanguage, toBcp47 } from '@app/utils';
 import I18nBackend from './i18n-backend';
 
 // Bundle default translation with application
@@ -19,15 +19,18 @@ i18n
   .use(initReactI18next)
   // for all options read: https://www.i18next.com/overview/configuration-options
   .init({
-    fallbackLng: Language['en-US'],
+    fallbackLng: DEFAULT_LANGUAGE,
+    supportedLngs: Object.values(Language),
     resources: {
-      [Language['en-US']]: { translation },
+      [DEFAULT_LANGUAGE]: { translation },
     },
     partialBundledLanguages: true,
+    detection: {
+      order: ['querystring', 'localStorage', 'navigator', 'htmlTag'],
+      caches: [],
+      convertDetectedLanguage: (lng: string) => resolveSupportedLanguage(lng) ?? lng,
+    },
     i18nFormat: {
-      // Locale codes are Cockatrice/Transifex underscore style (e.g. `pt_BR`),
-      // but IntlMessageFormat needs BCP-47 hyphens (`pt-BR`) or it throws
-      // `RangeError: Invalid language tag`. Normalize only at this boundary.
       parseLngForICU: toBcp47,
       parseErrorHandler: (err: unknown, key: string, res: string, options?: unknown) => {
         if (import.meta.env.DEV) {
@@ -43,13 +46,6 @@ i18n
     }
   });
 
-// Re-render a message that failed ICU parse/format from the bundled, validated
-// English source, so a malformed *translation* (a Transifex data error, e.g. a
-// missing `select` comma or localized ICU keywords) never reaches users as a raw
-// `{…}` template. Returns `res` unchanged when there's no usable English fallback
-// — including when the failing string IS the English source, which keeps our own
-// malformed strings visible rather than masking them. Uses the IntlMessageFormat
-// i18next-icu attaches to the instance, so there's no recursion through `t()`.
 function formatWithEnglishFallback(key: string, res: string, options?: unknown): string {
   const en = key.split('.').reduce<unknown>(
     (node, part) => (node && typeof node === 'object' ? (node as Record<string, unknown>)[part] : undefined),
@@ -63,9 +59,9 @@ function formatWithEnglishFallback(key: string, res: string, options?: unknown):
     return res;
   }
   try {
-    return new IntlMessageFormat(en, Language['en-US']).format(options);
+    return new IntlMessageFormat(en, toBcp47(DEFAULT_LANGUAGE)).format(options);
   } catch {
-    return res; // English source also malformed — fall through to the raw string
+    return res;
   }
 }
 

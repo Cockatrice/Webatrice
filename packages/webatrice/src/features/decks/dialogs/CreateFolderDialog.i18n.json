@@ -1,0 +1,13 @@
+{
+  "CreateFolder": {
+    "title": "New folder",
+    "label": "Name of new folder:",
+    "create": "Create",
+    "cancel": "Cancel",
+    "problem": {
+      "empty": "Enter a folder name.",
+      "tooLong": "This name makes the folder path too long for the server.",
+      "exists": "A folder with this name already exists here."
+    }
+  }
+}

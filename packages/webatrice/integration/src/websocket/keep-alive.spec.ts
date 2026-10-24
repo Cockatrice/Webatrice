@@ -59,15 +59,12 @@ describe('keep-alive', () => {
     expect(store.getState().server.status.state).toBe(WebsocketTypes.StatusEnum.CONNECTED);
     expect(store.getState().server.connectionHealth.missedPongs).toBe(0);
 
-    // Silence only degrades health; the keepalive never closes the connection —
-    // see sockatrice-transport.instructions.md § keep-alive worker.
     vi.advanceTimersByTime(5000 * 6);
     expect(getMockWebSocket().close).not.toHaveBeenCalled();
     expect(store.getState().server.status.state).toBe(WebsocketTypes.StatusEnum.CONNECTED);
     expect(store.getState().server.connectionHealth.missedPongs).toBeGreaterThanOrEqual(2);
     expect(store.getState().server.connectionHealth.silentForMs).toBeGreaterThan(0);
 
-    // Pings keep flowing so a recovering server still hears from us.
     const lastPing = findLastSessionCommand(Command_Ping_ext);
     expect(lastPing.cmdId).toBeGreaterThan(1);
   });
@@ -80,7 +77,6 @@ describe('keep-alive', () => {
     vi.advanceTimersByTime(5000);
     expect(store.getState().server.connectionHealth.missedPongs).toBeGreaterThanOrEqual(2);
 
-    // The latest ping finally gets its response: proof of life.
     const ping = findLastSessionCommand(Command_Ping_ext);
     deliverMessage(buildResponseMessage(buildResponse({
       cmdId: ping.cmdId,

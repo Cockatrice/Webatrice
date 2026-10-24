@@ -1,25 +1,3 @@
-/**
- * Client-side registry for optimistic card mutations.
- *
- * Callers dispatch the intended state change immediately (so the UI
- * reflects it without waiting for the server round-trip), register the
- * rollback closure here, and hand the server-side wire call an
- * `onError` callback that invokes `rollbackOptimistic` if the server
- * rejects.
- *
- * The listener middleware (`game.listeners.ts`) consults this
- * registry when the corresponding server event arrives — if a matching
- * pending op is present, the reducer dispatch is skipped for
- * non-idempotent state changes (specifically `cardMovedBetweenZones`,
- * which double-counts if applied twice). Idempotent reducers
- * (`cardFieldsUpdated`, `cardMovedInSameZone`) don't need dedup — the
- * server echo simply re-applies the same state.
- *
- * Deliberately module-scope rather than a Redux slice: pending-op
- * state is ephemeral client bookkeeping that never needs to be
- * persisted, replayed, or observed for reactivity. A plain Map is
- * simpler and cheaper than a slice + selectors + subscription plumbing.
- */
 
 type RollbackFn = () => void;
 

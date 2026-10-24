@@ -1,0 +1,15 @@
+{
+  "ErrorFallback": {
+    "returnToLobby": "Return to lobby",
+    "chunk": {
+      "title": "A new version is available",
+      "message": "Reload to get the latest version of Webatrice and open this page.",
+      "reload": "Reload"
+    },
+    "route": {
+      "title": "Something went wrong",
+      "message": "This page hit an unexpected error. Your connection to the server is unaffected.",
+      "retry": "Try again"
+    }
+  }
+}

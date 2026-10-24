@@ -1,0 +1,8 @@
+{
+  "ZoneViewTitle": {
+    "zone": "{zone} — {player}",
+    "library": "{player}'s library",
+    "top": "Top {count} cards — {player}",
+    "bottom": "Bottom {count} cards — {player}"
+  }
+}

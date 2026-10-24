@@ -2,7 +2,7 @@ import { ReactNode } from 'react';
 import { renderHook } from '@testing-library/react';
 
 import { ShortcutContext, ShortcutContextValue } from './shortcutContext';
-import { useShortcut } from './useShortcut';
+import { useShortcut, useShortcutGroup } from './useShortcut';
 import { ShortcutScope } from './types';
 
 function makeWrapper(register: ShortcutContextValue['register']) {
@@ -82,5 +82,44 @@ describe('useShortcut', () => {
 
     unmount();
     expect(unregister).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('useShortcutGroup', () => {
+  const GROUP = ['game.incP', 'game.decP'] as const;
+
+  it('registers every action once and passes the action id and its index to the latest handler', () => {
+    const unregister = vi.fn();
+    const register = vi.fn<ShortcutContextValue['register']>(() => unregister);
+    const first = vi.fn();
+    const second = vi.fn();
+    const wrapper = makeWrapper(register);
+
+    const { rerender, unmount } = renderHook(
+      ({ handler }: { handler: (actionId: string, event: KeyboardEvent, index: number) => void }) =>
+        useShortcutGroup(GROUP, handler, { scope: ShortcutScope.GAME, preventDefault: false }),
+      { wrapper, initialProps: { handler: first } },
+    );
+    rerender({ handler: second });
+
+    expect(register.mock.calls.map(([reg]) => [reg.actionId, reg.scope, reg.preventDefault])).toEqual([
+      ['game.incP', ShortcutScope.GAME, false],
+      ['game.decP', ShortcutScope.GAME, false],
+    ]);
+    const event = new KeyboardEvent('keydown');
+    register.mock.calls[1][0].handler(event);
+    expect(first).not.toHaveBeenCalled();
+    expect(second).toHaveBeenCalledWith('game.decP', event, 1);
+
+    unmount();
+    expect(unregister).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not register when enabled=false', () => {
+    const register = vi.fn<ShortcutContextValue['register']>(() => () => {});
+    renderHook(() => useShortcutGroup(GROUP, vi.fn(), { scope: ShortcutScope.GAME, enabled: false }), {
+      wrapper: makeWrapper(register),
+    });
+    expect(register).not.toHaveBeenCalled();
   });
 });

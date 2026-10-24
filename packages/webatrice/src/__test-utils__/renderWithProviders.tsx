@@ -1,10 +1,11 @@
 import { ReactElement } from 'react';
 import { render, RenderOptions } from '@testing-library/react';
 import { combineReducers, type EnhancedStore } from '@reduxjs/toolkit';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, type InitialEntry } from 'react-router-dom';
 import { I18nextProvider } from 'react-i18next';
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
+import ICU from 'i18next-icu';
 import { DndContext } from '@dnd-kit/core';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 import type { WebsocketTypes } from '@cockatrice/sockatrice/types';
@@ -32,27 +33,47 @@ const testTheme = createTheme({
 
 import { rootReducerMap, type RootState } from '../store';
 import { ToastProvider } from '../components/Toast/ToastContext';
-import { GameInteractionProvider, type GameInteractionHandlers } from '../features/game/components/ui/GameInteractionContext';
 import { CardVisualStateProvider, type CanActFor } from '../features/game/components/ui/CardVisualStateContext';
 import { GameDialogActionsProvider, type GameDialogActions } from '../features/game/components/ui/GameDialogActionsContext';
-import { GameIdProvider } from '../features/game/components/ui/GameIdContext';
-import { CardPreviewProvider } from '../features/game/components/ui/CardPreviewContext';
+import { GameIdProvider, useGameId } from '../features/game/components/ui/GameIdContext';
+import { PendingTargetProvider } from '../features/game/components/ui/PendingTargetContext';
+import { usePendingTarget } from '../features/game/hooks/usePendingTarget';
+import { CardPreviewProvider, createCardPreviewStore, type CardPreviewStore } from '../features/game/components/ui/CardPreviewContext';
 import { GameDialogsProvider } from '../features/game/components/ui/GameDialogsContext';
-import { BoardCellProvider, type BoardCellInfo } from '../features/game/components/ui/BoardCellContext';
+import { LobbyDeckStateProvider } from '../features/game/components/lobby/LobbyDeckStateProvider';
 import { NOOP_GAME_DIALOGS_ACTIONS, type GameDialogs } from '../features/game/hooks/useGameDialogs';
-import type { ServerInfo_Card } from '@cockatrice/sockatrice/generated';
 import { createMockWebClient } from './mockWebClient';
+import zoneViewTitles from '../features/game/dialogs/ZoneViewDialog/useZoneViewDialog.i18n.json';
+import incomingRevealTitles from '../features/game/dialogs/IncomingRevealDialog/IncomingRevealDialog.i18n.json';
+import playerInfoLabels from '../features/game/components/right-sidebar/PlayerInfoPanel/PlayerInfoPanel.i18n.json';
+import moveTopUntilText from '../features/game/dialogs/MoveTopUntilDialog/MoveTopUntilDialog.i18n.json';
+import handZoneText from '../features/game/components/ui/HandZone/HandZone.i18n.json';
+import playerBoardLabels from '../features/game/components/ui/PlayerBoard/PlayerBoard.i18n.json';
+import gameDockText from '../features/game/components/GameDock/GameDock.i18n.json';
+import cardPreviewPaneText from '../features/game/components/CardPreviewPane/CardPreviewPane.i18n.json';
+import boardTrayText from '../features/game/components/BoardTray/BoardTray.i18n.json';
+import turnBarText from '../features/game/components/TurnBar/TurnBar.i18n.json';
+import seatCardLabels from '../features/game/components/ui/SeatCard/SeatCard.i18n.json';
+import zoneStackLabels from '../features/game/components/ui/ZoneStack/ZoneStack.i18n.json';
+import pendingTargetText from '../features/game/components/ui/PendingTargetAnnouncer/PendingTargetAnnouncer.i18n.json';
+import moveCardsText from '../features/game/dialogs/MoveCardsDialog/MoveCardsDialog.i18n.json';
+import shortcutsText from '../feature-widgets/shortcuts/SettingsTab/ShortcutsTab.i18n.json';
+import gameLogText from '../feature-widgets/replay-player/formatLogDescriptor.i18n.json';
+import gameMenus from '../features/game/components/context-menus/menus.i18n.json';
+import gamePrompts from '../features/game/hooks/dialogs/GamePrompt.i18n.json';
+import createTokenText from '../features/game/dialogs/CreateTokenDialog/CreateTokenDialog.i18n.json';
+import deckSelectText from '../features/game/dialogs/DeckSelectDialog/DeckSelectDialog.i18n.json';
+import rollDieText from '../features/game/dialogs/RollDieDialog/RollDieDialog.i18n.json';
+import zoneViewText from '../features/game/dialogs/shared/ZoneView.i18n.json';
+import zoneLabelText from '../features/game/dialogs/shared/zoneLabels.i18n.json';
+import editTokensText from '../feature-widgets/card-import/EditTokens.i18n.json';
+import deckSharingText from '../features/decks/DeckSharing.i18n.json';
+import gamePhaseText from '../utils/phaseLabels.i18n.json';
+import tallyText from '../features/game/components/TallyOverlay/TallyOverlay.i18n.json';
 
-const NOOP_GAME_INTERACTION: GameInteractionHandlers = {
-  onCardHover: () => undefined,
-  onCardFocus: () => undefined,
-  onCardBlur: () => undefined,
-  onCardClick: () => undefined,
-  onCardContextMenu: () => undefined,
-  onCardDoubleClick: () => undefined,
-  onZoneClick: () => undefined,
-  onZoneContextMenu: () => undefined,
-};
+function GamePendingTarget({ children }: { children: React.ReactNode }) {
+  return <PendingTargetProvider value={usePendingTarget(useGameId())}>{children}</PendingTargetProvider>;
+}
 
 const NOOP_DIALOG_ACTIONS: GameDialogActions = {
   onRequestRollDie: () => undefined,
@@ -61,6 +82,7 @@ const NOOP_DIALOG_ACTIONS: GameDialogActions = {
   onRequestGameInfo: () => undefined,
   onRequestViewSideboard: () => undefined,
   onRequestLeave: () => undefined,
+  onRotateView: () => undefined,
 };
 
 // Closed/no-op default for the whole dialogs slice: the closed-state fields plus
@@ -68,24 +90,18 @@ const NOOP_DIALOG_ACTIONS: GameDialogActions = {
 // the type at its source). Typed as GameDialogs so the compiler flags any state
 // field that drifts — specs override only what they assert.
 const NOOP_GAME_DIALOGS: GameDialogs = {
-  cardMenu: null,
-  zoneMenu: null,
-  playerMenu: null,
-  handMenu: null,
+  seatCardMenu: null,
   zoneViews: [],
   prompt: null,
+  moveTopUntil: null,
   rollDieOpen: false,
   lastDieSides: 0,
   lastDieCount: 0,
   createTokenOpen: false,
-  sideboardOpen: false,
-  viewSideboardOpen: false,
-  viewLibraryOpen: false,
-  viewGraveyardOpen: false,
+  createTokenInitial: null,
   gameInfoOpen: false,
   concedeConfirm: null,
   leaveConfirm: false,
-  revealState: null,
   ...NOOP_GAME_DIALOGS_ACTIONS,
 };
 
@@ -99,12 +115,6 @@ interface CardVisualStateOverride {
 const EMPTY_SELECTION: ReadonlySet<string> = new Set();
 const DENY_ALL: CanActFor = () => false;
 
-// Board components (PlayerBoard, StackColumn, Battlefield, PlayerInfoPanel,
-// ZoneStack) read their seat from BoardCellContext; default to the local seat 1
-// (matching the dominant localPlayerId: 1 fixture — so isLocal is true). Opponent
-// specs override with boardCell: { playerId: 2, isLocal: false }.
-const DEFAULT_BOARD_CELL: BoardCellInfo = { playerId: 1, mirrored: false, isLocal: true };
-
 let defaultWebClient: WebClient | undefined;
 function getDefaultWebClient(): WebClient {
   if (!defaultWebClient) {
@@ -113,10 +123,52 @@ function getDefaultWebClient(): WebClient {
   return defaultWebClient;
 }
 
-const testI18n = i18n.createInstance();
-testI18n.use(initReactI18next).init({
+export const testI18n = i18n.createInstance();
+testI18n.use(ICU).use(initReactI18next).init({
   lng: 'en-US',
-  resources: { 'en-US': { translation: {} } },
+  resources: {
+    'en-US': {
+      translation: {
+        ...zoneViewTitles,
+        ...incomingRevealTitles,
+        ...playerInfoLabels,
+        ...playerBoardLabels,
+        ...seatCardLabels,
+        ...zoneStackLabels,
+        ...pendingTargetText,
+        ...moveCardsText,
+        ShortcutsTab: {
+          action: Object.fromEntries(Object.entries(shortcutsText.ShortcutsTab.action).filter(([key]) => key.startsWith('game.'))),
+        },
+        ...gameLogText,
+        ...gameMenus,
+        TallyOverlay: { tally: tallyText.TallyOverlay.tally },
+        ...gamePrompts,
+        ...createTokenText,
+        ...deckSelectText,
+        ...rollDieText,
+        ...zoneViewText,
+        ...zoneLabelText,
+        EditTokens: {
+          label: {
+            name: editTokensText.EditTokens.label.name,
+            color: editTokensText.EditTokens.label.color,
+            pt: editTokensText.EditTokens.label.pt,
+            annotation: editTokensText.EditTokens.label.annotation,
+          },
+          color: editTokensText.EditTokens.color,
+        },
+        ReadOnlyDeck: { cardCount: deckSharingText.ReadOnlyDeck.cardCount },
+        ...gamePhaseText,
+        ...moveTopUntilText,
+        ...handZoneText,
+        ...gameDockText,
+        ...cardPreviewPaneText,
+        ...boardTrayText,
+        ...turnBarText,
+      },
+    },
+  },
   fallbackLng: 'en-US',
   interpolation: { escapeValue: false },
 });
@@ -135,14 +187,12 @@ const TEST_CLIENT_OPTIONS: WebsocketTypes.ClientOptions = {
 
 interface ExtendedRenderOptions extends Omit<RenderOptions, 'wrapper'> {
   preloadedState?: Partial<RootState>;
-  route?: string;
+  route?: InitialEntry;
   webClient?: WebClient;
   // Pre-built store override — used by the integration harness, whose
   // setup.ts owns a test store shared with a manually-constructed WebClient.
   // When omitted, the helper builds a fresh store per render.
   store?: EnhancedStore<RootState>;
-  // Partial overrides for the game-interaction context (defaults to no-ops).
-  gameInteraction?: Partial<GameInteractionHandlers>;
   // Partial overrides for the card-visual-state context (arrow/selection/canAct).
   // Defaults: no arrows, empty selection, canAct denied for every seat.
   cardVisualState?: CardVisualStateOverride;
@@ -152,14 +202,10 @@ interface ExtendedRenderOptions extends Omit<RenderOptions, 'wrapper'> {
   // matching the dominant store fixture); pass explicitly — including
   // `undefined` — to override (e.g. the no-active-game case).
   gameId?: number;
-  // The card shown in the preview pane, provided via CardPreviewContext.
-  previewCard?: ServerInfo_Card | null;
+  previewStore?: CardPreviewStore;
   // Partial overrides for the dialogs slice (defaults to a closed/no-op slice).
   // Set the relevant menu state + handlers a dialog spec asserts against.
   gameDialogs?: Partial<GameDialogs>;
-  // The seat a board component renders, provided via BoardCellContext. Defaults
-  // to the local seat (playerId 1); pass to render an opponent/mirrored cell.
-  boardCell?: Partial<BoardCellInfo>;
 }
 
 export function renderWithProviders(
@@ -171,23 +217,15 @@ export function renderWithProviders(
     route = '/',
     webClient = getDefaultWebClient(),
     store: externalStore,
-    gameInteraction,
     cardVisualState,
     gameDialogActions,
     gameDialogs,
-    boardCell,
-    previewCard = null,
+    previewStore = createCardPreviewStore(),
     ...renderOptions
   } = options;
-  const boardCellInfo: BoardCellInfo = boardCell
-    ? { ...DEFAULT_BOARD_CELL, ...boardCell }
-    : DEFAULT_BOARD_CELL;
   // Distinguish "omitted" (default game 1) from an explicit `gameId: undefined`
   // (no-active-game tests) — a destructure default can't tell them apart.
   const gameId = 'gameId' in options ? options.gameId : 1;
-  const interactionHandlers: GameInteractionHandlers = gameInteraction
-    ? { ...NOOP_GAME_INTERACTION, ...gameInteraction }
-    : NOOP_GAME_INTERACTION;
   const dialogActions: GameDialogActions = gameDialogActions
     ? { ...NOOP_DIALOG_ACTIONS, ...gameDialogActions }
     : NOOP_DIALOG_ACTIONS;
@@ -200,9 +238,6 @@ export function renderWithProviders(
     selectedCardKeys: cardVisualState?.selectedCardKeys ?? EMPTY_SELECTION,
     canActFor: cardVisualState?.canActFor ?? DENY_ALL,
   };
-  // Specs preload a partial games slice (DeepPartial) that omits the required
-  // `pings` sibling map; complete it here so a ping-touching reducer doesn't hit
-  // an undefined `state.pings`, mirroring the real initialState. See GamesState.pings.
   const completedState = preloadedState?.games
     ? { ...preloadedState, games: { pings: {}, ...preloadedState.games } }
     : preloadedState;
@@ -225,7 +260,7 @@ export function renderWithProviders(
                     }}
                   >
                     <GameIdProvider value={gameId}>
-                      <GameInteractionProvider value={interactionHandlers}>
+                      <GamePendingTarget>
                         <CardVisualStateProvider
                           arrowSourceKey={visualState.arrowSourceKey}
                           arrowTargetKey={visualState.arrowTargetKey}
@@ -233,16 +268,16 @@ export function renderWithProviders(
                           canActFor={visualState.canActFor}
                         >
                           <GameDialogActionsProvider value={dialogActions}>
-                            <CardPreviewProvider value={previewCard}>
+                            <CardPreviewProvider store={previewStore}>
                               <GameDialogsProvider value={dialogs}>
-                                <BoardCellProvider value={boardCellInfo}>
+                                <LobbyDeckStateProvider>
                                   {children}
-                                </BoardCellProvider>
+                                </LobbyDeckStateProvider>
                               </GameDialogsProvider>
                             </CardPreviewProvider>
                           </GameDialogActionsProvider>
                         </CardVisualStateProvider>
-                      </GameInteractionProvider>
+                      </GamePendingTarget>
                     </GameIdProvider>
                   </DndContext>
                 </MemoryRouter>

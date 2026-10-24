@@ -1,0 +1,31 @@
+{
+  "ImportDeckDialog": {
+    "title": "Import a deck",
+    "subtitle": "Paste a list or open a deck file. Cockatrice .cod and .txt, Moxfield, Archidekt, Arena and MTGO lists all work.",
+    "resolving": "Looking up cards…",
+    "importing": "Creating deck…",
+    "next": "Next: check cards",
+    "importCards": "Import {count, plural, one {# card} other {# cards}}",
+    "deckName": "Deck name",
+    "format": "Format",
+    "decklist": "Decklist",
+    "uploadFile": "Open a deck file",
+    "uploadFileHint": "Cockatrice .cod, or a .txt, .dec, .dek or .mwDeck list",
+    "placeholder": "Paste your deck list (Arena / MTGO / Moxfield export). Example:\n\nCommander\n1 Atraxa, Grand Unifier\n\nDeck\n1 Sol Ring\n1 Cultivate\n1 Swords to Plowshares\n...",
+    "review": {
+      "matched": "{count, plural, other {# matched}}",
+      "missing": "{count, plural, other {# unknown (imported with warning)}}",
+      "ignored": "{count, plural, one {# unrecognised line} other {# unrecognised lines}}",
+      "unknown": "unknown",
+      "kept": "Kept as in the file: {zones}",
+      "showIgnored": "Show unrecognised lines",
+      "main": "Main",
+      "sideboard": "Sideboard",
+      "commander": "Commander"
+    },
+    "zone": {
+      "tokens": "Tokens",
+      "maybeboard": "Maybeboard"
+    }
+  }
+}

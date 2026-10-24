@@ -1,10 +1,12 @@
-import { act, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { useEffect, useState } from 'react';
 
 import { renderWithProviders } from '../../__test-utils__';
-import Toast from './Toast';
-import { ToastProvider, useToast } from './ToastContext';
+import Toast, { type ToastActionButton } from './Toast';
+import { ToastProvider, usePushToast, useToast } from './ToastContext';
 import { ACTIONS, initialState, reducer } from './reducer';
+import { toastLaneFor } from './toastLane';
+import { endSession } from '../../services/session';
 
 function ManagedToast() {
   const [open, setOpen] = useState(true);
@@ -32,16 +34,31 @@ function AutoOpen({ messageKey, body }: { messageKey: string; body: string }) {
   const { openToast } = useToast({ key: messageKey, children: body });
   useEffect(() => {
     openToast();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fixture opens exactly once on mount
+  }, []);
+  return null;
+}
+
+function PushOnMount({ body, severity, action, sessionScoped }: {
+  body: string;
+  severity?: 'warning' | 'error';
+  action?: ToastActionButton;
+  sessionScoped?: boolean;
+}) {
+  const pushToast = usePushToast();
+  useEffect(() => {
+    pushToast(body, { severity, action, sessionScoped });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fixture pushes exactly once on mount
   }, []);
   return null;
 }
 
 function queryAlerts(): HTMLElement[] {
-  return screen.queryAllByRole('alert');
+  return screen.queryAllByTestId('toast');
 }
 
 describe('Toast component', () => {
-  it('renders an alert element when open and removes it when closed', async () => {
+  it('renders the pill when open and removes it when closed', async () => {
     const { rerender } = renderWithProviders(
       <Toast open onClose={() => {}}>
         hello
@@ -169,6 +186,184 @@ describe('ToastProvider + useToast', () => {
     rerender(<Container show={false} />);
 
     await waitFor(() => expect(queryAlerts().length).toBe(0));
+  });
+});
+
+describe('ToastProvider + usePushToast', () => {
+  it('shows a pushed toast with the default success severity', async () => {
+    renderWithProviders(
+      <ToastProvider>
+        <PushOnMount body="pushed" />
+      </ToastProvider>,
+    );
+
+    const toast = await screen.findByTestId('toast');
+    expect(toast).toHaveTextContent('pushed');
+    expect(toast.querySelector('svg')).toHaveClass('text-success');
+  });
+
+  it('carries the requested severity to the pill', async () => {
+    renderWithProviders(
+      <ToastProvider>
+        <PushOnMount body="careful" severity="warning" />
+      </ToastProvider>,
+    );
+
+    const toast = await screen.findByTestId('toast');
+    expect(toast.querySelector('svg')).toHaveClass('text-warning');
+  });
+
+  it('announces through persistent regions: errors assertively, the rest politely', async () => {
+    renderWithProviders(
+      <ToastProvider>
+        <PushOnMount body="saved" />
+        <PushOnMount body="failed" severity="error" />
+      </ToastProvider>,
+    );
+
+    const saved = await screen.findByText('saved');
+    const region = saved.closest('section') as HTMLElement;
+    expect(region).toHaveAccessibleName('Toast.region');
+    expect(region).toHaveAttribute('data-modal-exempt');
+    expect(saved.closest('[aria-live]')).toHaveAttribute('aria-live', 'polite');
+    expect(within(region).getByText('failed').closest('[aria-live]')).toHaveAttribute('aria-live', 'assertive');
+  });
+
+  it('removes a pushed toast when it times out', () => {
+    vi.useFakeTimers();
+    renderWithProviders(
+      <ToastProvider>
+        <PushOnMount body="brief" />
+      </ToastProvider>,
+    );
+    expect(screen.getByText('brief')).toBeInTheDocument();
+
+    act(() => {
+      vi.advanceTimersByTime(5_900);
+    });
+    expect(screen.getByText('brief')).toBeInTheDocument();
+
+    act(() => {
+      vi.advanceTimersByTime(100);
+    });
+    expect(screen.queryByText('brief')).not.toBeInTheDocument();
+    vi.useRealTimers();
+  });
+
+  it('shows one action that runs and closes the toast', () => {
+    const onSelect = vi.fn();
+    renderWithProviders(
+      <ToastProvider>
+        <PushOnMount body="new message" action={{ label: 'Reply', onSelect }} />
+      </ToastProvider>,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Reply' }));
+
+    expect(onSelect).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText('new message')).not.toBeInTheDocument();
+  });
+
+  it('keeps only the newest three pushed toasts on screen', () => {
+    renderWithProviders(
+      <ToastProvider>
+        {['one', 'two', 'three', 'four', 'five'].map((body) => <PushOnMount key={body} body={body} />)}
+      </ToastProvider>,
+    );
+
+    expect(queryAlerts().map((toast) => toast.textContent)).toEqual(['three', 'four', 'five']);
+  });
+});
+
+describe('Toast eviction, session and lane', () => {
+  it('keeps the focused toast when newer ones would evict it', () => {
+    const toasts = (bodies: string[]) => (
+      <ToastProvider>
+        {bodies.map((body) => <PushOnMount key={body} body={body} />)}
+        <button type="button">elsewhere</button>
+      </ToastProvider>
+    );
+    const { rerender } = renderWithProviders(toasts(['one', 'two', 'three']));
+    const dismissOne = within(queryAlerts()[0]).getByRole('button', { name: 'Common.action.dismiss' });
+    act(() => dismissOne.focus());
+
+    rerender(toasts(['one', 'two', 'three', 'four']));
+
+    expect(queryAlerts().map((toast) => toast.textContent)).toEqual(['one', 'three', 'four']);
+    expect(dismissOne).toHaveFocus();
+  });
+
+  it('removes session toasts when the session ends and keeps the rest', () => {
+    renderWithProviders(
+      <ToastProvider>
+        <PushOnMount body="private message" sessionScoped />
+        <PushOnMount body="password changed" />
+      </ToastProvider>,
+    );
+
+    act(() => endSession());
+
+    expect(queryAlerts().map((toast) => toast.textContent)).toEqual(['password changed']);
+  });
+
+  it('moves the toast lane off the deck editor top controls', () => {
+    expect(toastLaneFor('/room/1')).toBe('top');
+    expect(toastLaneFor('/deck/12')).toBe('bottom');
+    expect(toastLaneFor('/deck/draft/abc')).toBe('bottom');
+  });
+});
+
+describe('Toast auto-hide pause', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('stops the countdown while hovered and resumes with the time that was left', () => {
+    vi.useFakeTimers();
+    const onClose = vi.fn();
+    renderWithProviders(<Toast open autoHideDuration={3000} onClose={onClose}>hover me</Toast>);
+    const toast = screen.getByTestId('toast');
+
+    act(() => {
+      vi.advanceTimersByTime(2000);
+    });
+    fireEvent.mouseEnter(toast);
+    act(() => {
+      vi.advanceTimersByTime(10_000);
+    });
+    expect(onClose).not.toHaveBeenCalled();
+
+    fireEvent.mouseLeave(toast);
+    act(() => {
+      vi.advanceTimersByTime(900);
+    });
+    expect(onClose).not.toHaveBeenCalled();
+    act(() => {
+      vi.advanceTimersByTime(100);
+    });
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('stops the countdown while focus is inside', () => {
+    vi.useFakeTimers();
+    const onClose = vi.fn();
+    renderWithProviders(<Toast open autoHideDuration={1000} onClose={onClose}>focus me</Toast>);
+
+    act(() => {
+      screen.getByRole('button', { name: 'Common.action.dismiss' }).focus();
+    });
+    act(() => {
+      vi.advanceTimersByTime(5000);
+    });
+    expect(onClose).not.toHaveBeenCalled();
+
+    act(() => {
+      screen.getByRole('button', { name: 'Common.action.dismiss' }).blur();
+    });
+    act(() => {
+      vi.advanceTimersByTime(1000);
+    });
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 });
 

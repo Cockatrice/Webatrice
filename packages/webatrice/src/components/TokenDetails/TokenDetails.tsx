@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next';
+
 import { TokenDTO } from '@app/services';
 
 import Token from '../Token/Token';
@@ -9,6 +11,7 @@ interface TokenProps {
 }
 
 const TokenDetails = ({ token }: TokenProps) => {
+  const { t } = useTranslation();
   const props = token?.prop?.value;
 
   return (
@@ -22,34 +25,34 @@ const TokenDetails = ({ token }: TokenProps) => {
           <div>
             <div className='tokenDetails-attributes'>
               <div className='tokenDetails-attribute'>
-                <span className='tokenDetails-attribute__label'>Name:</span>
+                <span className='tokenDetails-attribute__label'>{t('CardDetails.label.name')}</span>
                 <span className='tokenDetails-attribute__value'>{token.name?.value}</span>
               </div>
 
               {props.pt?.value && (
                 <div className='tokenDetails-attribute'>
-                  <span className='tokenDetails-attribute__label'>P/T:</span>
+                  <span className='tokenDetails-attribute__label'>{t('CardDetails.label.pt')}</span>
                   <span className='tokenDetails-attribute__value'>{props.pt.value}</span>
                 </div>
               )}
 
               {props.colors?.value && (
                 <div className='tokenDetails-attribute'>
-                  <span className='tokenDetails-attribute__label'>Color(s):</span>
+                  <span className='tokenDetails-attribute__label'>{t('CardDetails.label.colors')}</span>
                   <span className='tokenDetails-attribute__value'>{props.colors.value}</span>
                 </div>
               )}
 
               {props.maintype?.value && (
                 <div className='tokenDetails-attribute'>
-                  <span className='tokenDetails-attribute__label'>Main Type:</span>
+                  <span className='tokenDetails-attribute__label'>{t('CardDetails.label.mainType')}</span>
                   <span className='tokenDetails-attribute__value'>{props.maintype.value}</span>
                 </div>
               )}
 
               {props.type?.value && (
                 <div className='tokenDetails-attribute'>
-                  <span className='tokenDetails-attribute__label'>Type:</span>
+                  <span className='tokenDetails-attribute__label'>{t('CardDetails.label.type')}</span>
                   <span className='tokenDetails-attribute__value'>{props.type.value}</span>
                 </div>
               )}

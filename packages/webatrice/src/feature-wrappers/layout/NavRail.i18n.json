@@ -1,0 +1,18 @@
+{
+  "NavRail": {
+    "label": "Main navigation",
+    "home": "Webatrice home",
+    "place": {
+      "play": "Play",
+      "decks": "Decks",
+      "replays": "Replays",
+      "people": "People",
+      "staff": "Staff",
+      "settings": "Settings"
+    },
+    "toggle": {
+      "hide": "Hide the navigation rail",
+      "show": "Show the navigation rail"
+    }
+  }
+}

@@ -21,6 +21,7 @@ import { vi } from 'vitest';
 
 import * as Data from '../generated';
 import { PROTOCOL_VERSION, WebClient, setPendingOptions } from '..';
+import { _resetPendingRoomJoins } from '../commands/session/pendingRoomJoins';
 import { createWorkerHandler } from '../services/keepAliveWorkerHandler';
 import { WebsocketTypes } from '../types';
 
@@ -248,6 +249,7 @@ export function _resetAll(): void {
   }
 
   client.protobuf.resetCommands();
+  _resetPendingRoomJoins();
   client.status = WebsocketTypes.StatusEnum.DISCONNECTED;
 
   if (currentMockInstance) {

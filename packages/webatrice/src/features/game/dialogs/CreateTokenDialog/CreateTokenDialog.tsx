@@ -15,6 +15,7 @@ import FormControl from '@mui/material/FormControl';
 import List from '@mui/material/List';
 import ListItemButton from '@mui/material/ListItemButton';
 import ListItemText from '@mui/material/ListItemText';
+import { useTranslation } from 'react-i18next';
 
 import { useGameDialogsContext } from '../../components/ui/GameDialogsContext';
 import {
@@ -35,7 +36,7 @@ const classes = {
 const StyledDialog = styled(Dialog)(({ theme }) => ({
   [`&.${classes.root}`]: {
     '& .dialog-title__wrapper': {
-      borderColor: theme.palette.grey[300],
+      borderColor: theme.palette.divider,
     },
   },
 }));
@@ -50,21 +51,21 @@ export interface CreateTokenSubmit {
   providerId?: string;
 }
 
-const COLOR_OPTIONS: ReadonlyArray<{ value: string; label: string }> = [
-  { value: 'w', label: 'White' },
-  { value: 'u', label: 'Blue' },
-  { value: 'b', label: 'Black' },
-  { value: 'r', label: 'Red' },
-  { value: 'g', label: 'Green' },
-  { value: 'm', label: 'Multicolor' },
-  { value: '', label: 'Colorless' },
-];
+const COLOR_OPTIONS = [
+  { value: 'w', key: 'w' },
+  { value: 'u', key: 'u' },
+  { value: 'b', key: 'b' },
+  { value: 'r', key: 'r' },
+  { value: 'g', key: 'g' },
+  { value: 'm', key: 'm' },
+  { value: '', key: 'c' },
+] as const;
 
-// Self-sources its open state and the submit / cancel handlers from
-// GameDialogsContext, so Game renders it propless.
 function CreateTokenDialog() {
+  const { t } = useTranslation();
   const {
     createTokenOpen: isOpen,
+    createTokenInitial: initial,
     handleCreateTokenSubmit: onSubmit,
     closeCreateToken: onCancel,
   } = useGameDialogsContext();
@@ -88,7 +89,7 @@ function CreateTokenDialog() {
     setDestroyOnZoneChange,
     setFaceDown,
     handleSubmit,
-  } = useCreateTokenDialog({ isOpen, onSubmit });
+  } = useCreateTokenDialog({ isOpen, onSubmit, initial });
 
   return (
     <StyledDialog
@@ -99,7 +100,7 @@ function CreateTokenDialog() {
     >
       <DialogTitle className="dialog-title">
         <div className="dialog-title__wrapper">
-          Create token
+          {t('CreateTokenDialog.title')}
         </div>
       </DialogTitle>
       <form onSubmit={handleSubmit}>
@@ -109,15 +110,15 @@ function CreateTokenDialog() {
               fullWidth
               variant="outlined"
               size="small"
-              label="Search tokens"
+              label={t('CreateTokenDialog.search')}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              slotProps={{ htmlInput: { 'aria-label': 'Search tokens' } }}
+              slotProps={{ htmlInput: { 'aria-label': t('CreateTokenDialog.search') } }}
             />
             <div className="create-token-dialog__chooser-list scrollable">
               {filteredTokens.length === 0 ? (
                 <div className="create-token-dialog__chooser-empty">
-                  No predefined tokens available.
+                  {t('CreateTokenDialog.noTokens')}
                 </div>
               ) : (
                 <List dense disablePadding>
@@ -153,26 +154,26 @@ function CreateTokenDialog() {
               fullWidth
               variant="outlined"
               size="small"
-              label="Token name"
+              label={t('EditTokens.label.name')}
               value={name}
               onChange={(e) => handleNameChange(e.target.value)}
               error={error != null}
               helperText={error ?? ''}
               disabled={faceDown}
-              slotProps={{ htmlInput: { 'aria-label': 'Token name', maxLength: MAX_NAME_LEN } }}
+              slotProps={{ htmlInput: { 'aria-label': t('EditTokens.label.name'), maxLength: MAX_NAME_LEN } }}
             />
             <FormControl fullWidth size="small" variant="outlined" disabled={faceDown}>
-              <InputLabel id="create-token-color-label">Color</InputLabel>
+              <InputLabel id="create-token-color-label">{t('EditTokens.label.color')}</InputLabel>
               <Select
                 labelId="create-token-color-label"
-                label="Color"
+                label={t('EditTokens.label.color')}
                 value={color}
                 onChange={(e) => setColor(e.target.value)}
-                slotProps={{ input: { 'aria-label': 'Token color' } }}
+                slotProps={{ input: { 'aria-label': t('EditTokens.label.color') } }}
               >
                 {COLOR_OPTIONS.map((opt) => (
-                  <MenuItem key={opt.label} value={opt.value}>
-                    {opt.label}
+                  <MenuItem key={opt.key} value={opt.value}>
+                    {t(`EditTokens.color.${opt.key}`)}
                   </MenuItem>
                 ))}
               </Select>
@@ -181,47 +182,47 @@ function CreateTokenDialog() {
               fullWidth
               variant="outlined"
               size="small"
-              label="Token power/toughness"
-              placeholder="e.g. 3/3"
+              label={t('EditTokens.label.pt')}
+              placeholder={t('CreateTokenDialog.placeholder.powerToughness')}
               value={pt}
               onChange={(e) => setPT(e.target.value.slice(0, MAX_PT_LEN))}
               disabled={faceDown}
-              slotProps={{ htmlInput: { 'aria-label': 'Token power/toughness', maxLength: MAX_PT_LEN } }}
+              slotProps={{ htmlInput: { 'aria-label': t('EditTokens.label.pt'), maxLength: MAX_PT_LEN } }}
             />
             <TextField
               fullWidth
               variant="outlined"
               size="small"
-              label="Token annotation"
+              label={t('EditTokens.label.annotation')}
               value={annotation}
               onChange={(e) => setAnnotation(e.target.value.slice(0, MAX_ANNOTATION_LEN))}
-              slotProps={{ htmlInput: { 'aria-label': 'Token annotation', maxLength: MAX_ANNOTATION_LEN } }}
+              slotProps={{ htmlInput: { 'aria-label': t('EditTokens.label.annotation'), maxLength: MAX_ANNOTATION_LEN } }}
             />
             <FormControlLabel
               control={
                 <Checkbox
                   checked={destroyOnZoneChange}
                   onChange={(e) => setDestroyOnZoneChange(e.target.checked)}
-                  slotProps={{ input: { 'aria-label': 'Destroy when it leaves the table' } }}
+                  slotProps={{ input: { 'aria-label': t('CreateTokenDialog.destroyOnZoneChange') } }}
                 />
               }
-              label="Destroy when it leaves the table"
+              label={t('CreateTokenDialog.destroyOnZoneChange')}
             />
             <FormControlLabel
               control={
                 <Checkbox
                   checked={faceDown}
                   onChange={(e) => setFaceDown(e.target.checked)}
-                  slotProps={{ input: { 'aria-label': 'Create face-down' } }}
+                  slotProps={{ input: { 'aria-label': t('CreateTokenDialog.faceDown') } }}
                 />
               }
-              label="Create face-down"
+              label={t('CreateTokenDialog.faceDown')}
             />
           </div>
         </DialogContent>
         <DialogActions>
-          <Button type="button" onClick={onCancel}>Cancel</Button>
-          <Button type="submit" variant="contained" color="primary">Create</Button>
+          <Button type="button" onClick={onCancel}>{t('Common.action.cancel')}</Button>
+          <Button type="submit" variant="contained" color="primary">{t('Common.action.create')}</Button>
         </DialogActions>
       </form>
     </StyledDialog>

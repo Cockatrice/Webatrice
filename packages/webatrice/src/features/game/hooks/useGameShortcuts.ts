@@ -1,16 +1,25 @@
 import { ZoneName } from '@cockatrice/sockatrice';
-import { ShortcutScope, useShortcut } from '@app/feature-widgets/shortcuts';
+import { ShortcutScope, useShortcut, useShortcutGroup } from '@app/feature-widgets/shortcuts';
+import { useMessageMacros } from '@app/hooks';
 import { useWebClient } from '@cockatrice/datatrice/react';
-import { games } from '@cockatrice/datatrice';
-import { useAppDispatch } from '@app/store';
 import { CardAttribute } from '@cockatrice/sockatrice/generated';
+import {
+  SEAT_SHORTCUT_ACTIONS,
+  type SeatShortcutActionId,
+  type SeatShortcutRegistry,
+} from '../components/ui/SeatShortcutsContext';
+import { nextPhase, PHASE_SHORTCUT_ACTIONS, previousPhase } from '../components/PhaseTrack/phaseActions';
+import { useNextPhaseAction } from '../components/PhaseTrack/useNextPhaseAction';
+import { usePhaseBar } from '../components/PhaseTrack/usePhaseBar';
 import { useCurrentGame } from './useCurrentGame';
 import { useGameAffordances } from './useGameAffordances';
-
-const PHASE_COUNT = 11;
+import { SAY_MACRO_ACTIONS } from '../components/battlefield/Battlefield/sayMenu';
+import { ROTATE_CLOCKWISE, ROTATE_COUNTERCLOCKWISE, type RotationStep } from './useGameBoardLayout';
 
 interface UseGameShortcutsArgs {
   gameId: number | undefined;
+  seatShortcuts: SeatShortcutRegistry;
+  onRotateView: (step: RotationStep) => void;
   onRequestConcede: () => void;
   onRequestDrawMultiple: () => void;
   onRequestUndoDraw: () => void;
@@ -28,6 +37,8 @@ interface UseGameShortcutsArgs {
 
 export function useGameShortcuts({
   gameId,
+  seatShortcuts,
+  onRotateView,
   onRequestConcede,
   onRequestDrawMultiple,
   onRequestUndoDraw,
@@ -43,7 +54,6 @@ export function useGameShortcuts({
   onCloseRecentZoneView,
 }: UseGameShortcutsArgs): void {
   const webClient = useWebClient();
-  const dispatch = useAppDispatch();
   const { game } = useCurrentGame(gameId);
   const {
     hasLiveGame,
@@ -54,6 +64,9 @@ export function useGameShortcuts({
     canConcede,
   } = useGameAffordances(gameId);
   const inGame = hasLiveGame && isStarted;
+  const { handlePhaseClick, handleReverseTurn } = usePhaseBar(gameId);
+  const nextPhaseAction = useNextPhaseAction(gameId);
+  const messageMacros = useMessageMacros();
 
   useShortcut(
     'game.untapAll',
@@ -122,21 +135,9 @@ export function useGameShortcuts({
   useShortcut(
     'game.nextPhase',
     () => {
-      if (!canAdvancePhase || gameId == null || game == null) {
-        return;
+      if (game != null) {
+        handlePhaseClick(nextPhase(game.activePhase));
       }
-      const current = game.activePhase;
-      const next = current >= 0 ? (current + 1) % PHASE_COUNT : 0;
-      // Optimistic: flip the phase locally so the phase tracker
-      // highlights the new phase immediately, then fire the wire
-      // with `onError` to revert if the server rejects.
-      dispatch(games.Actions.activePhaseSet({ gameId, phase: next }));
-      webClient.request.game.setActivePhase(gameId, { phase: next }, {
-        onError: (code) => {
-          console.warn(`setActivePhase(next) rejected (${code}); rolling back to phase ${current}`);
-          dispatch(games.Actions.activePhaseSet({ gameId, phase: current }));
-        },
-      });
     },
     { scope: ShortcutScope.GAME, enabled: inGame },
   );
@@ -144,21 +145,28 @@ export function useGameShortcuts({
   useShortcut(
     'game.prevPhase',
     () => {
-      if (!canAdvancePhase || gameId == null || game == null) {
-        return;
+      if (game != null) {
+        handlePhaseClick(previousPhase(game.activePhase));
       }
-      const current = game.activePhase;
-      const prev = current > 0 ? current - 1 : PHASE_COUNT - 1;
-      dispatch(games.Actions.activePhaseSet({ gameId, phase: prev }));
-      webClient.request.game.setActivePhase(gameId, { phase: prev }, {
-        onError: (code) => {
-          console.warn(`setActivePhase(prev) rejected (${code}); rolling back to phase ${current}`);
-          dispatch(games.Actions.activePhaseSet({ gameId, phase: current }));
-        },
-      });
     },
     { scope: ShortcutScope.GAME, enabled: inGame },
   );
+
+  useShortcut('game.nextPhaseAction', nextPhaseAction.run, { scope: ShortcutScope.GAME, enabled: inGame });
+
+  useShortcutGroup(
+    PHASE_SHORTCUT_ACTIONS,
+    (_actionId, _event, phase) => handlePhaseClick(phase),
+    { scope: ShortcutScope.GAME, enabled: inGame },
+  );
+
+  useShortcut('game.rotateViewCW', () => onRotateView(ROTATE_CLOCKWISE), { scope: ShortcutScope.GAME, enabled: hasLiveGame });
+  useShortcut('game.rotateViewCCW', () => onRotateView(ROTATE_COUNTERCLOCKWISE), {
+    scope: ShortcutScope.GAME,
+    enabled: hasLiveGame,
+  });
+
+  useShortcut('game.reverseTurn', handleReverseTurn, { scope: ShortcutScope.GAME, enabled: inGame });
 
   // Drawing utilities — dialog-based, so we only gate on participation
   // rather than active player.
@@ -267,13 +275,6 @@ export function useGameShortcuts({
     { scope: ShortcutScope.GAME, enabled: inGame && isParticipant },
   );
 
-  // View Library / Graveyard — opens the local player's full-pile
-  // viewer (LibrarySearchDialog with search/group/sort). Owner-only.
-  // Both routes trigger the same dialog the battlefield right-click
-  // "View library" / "View graveyard" menus open — the actual dialog
-  // state lives inside PlayerBox (entangled with enrichedDeckCards
-  // and the dump/close plumbing), so these hooks flip a boolean via
-  // useGameDialogs that PlayerBox subscribes to.
   useShortcut(
     'game.viewLibrary',
     () => {
@@ -359,5 +360,28 @@ export function useGameShortcuts({
       webClient.request.game.rollDie(gameId, { sides: 2, count: 1 });
     },
     { scope: ShortcutScope.GAME, enabled: inGame && isParticipant },
+  );
+
+  useShortcutGroup(
+    SAY_MACRO_ACTIONS,
+    (actionId, event) => {
+      const message = messageMacros[SAY_MACRO_ACTIONS.indexOf(actionId as (typeof SAY_MACRO_ACTIONS)[number])];
+      if (!isParticipant || gameId == null || !message) {
+        return;
+      }
+      event.preventDefault();
+      webClient.request.game.gameSay(gameId, { message });
+    },
+    { scope: ShortcutScope.GAME, preventDefault: false, enabled: hasLiveGame },
+  );
+
+  useShortcutGroup(
+    SEAT_SHORTCUT_ACTIONS,
+    (actionId, event) => {
+      if (seatShortcuts.run(actionId as SeatShortcutActionId)) {
+        event.preventDefault();
+      }
+    },
+    { scope: ShortcutScope.GAME, preventDefault: false, enabled: hasLiveGame },
   );
 }

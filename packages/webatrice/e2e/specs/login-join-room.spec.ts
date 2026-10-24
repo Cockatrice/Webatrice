@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from '../fixtures/test';
 
 import { E2E_HOST_LABEL, registerAndReachRooms } from '../fixtures/flows';
 

@@ -1,0 +1,34 @@
+{
+  "Staff": {
+    "nav": "Staff tools",
+    "tool": {
+      "reports": "Reports",
+      "moderation": "Moderation",
+      "logs": "Logs",
+      "administration": "Administration",
+      "cardArtRules": "Card art rules",
+      "developer": "Developer"
+    },
+    "needsServer": "Needs server 3.1",
+    "unresolvedBadge": "{count, plural, one {# unresolved report} other {# unresolved reports}}",
+    "lock": {
+      "region": "Administration lock",
+      "locked": "Functions locked",
+      "unlocked": "Functions unlocked",
+      "lockedIcon": "Locked",
+      "lockedHint": "Administration functions (server message, shut down, reload config, force-activate, grant replay access) and moderator actions on users stay greyed out until you unlock.",
+      "unlockedHint": "Administration functions and moderator actions on users are live. Lock again when you are done.",
+      "unlock": "Unlock functions",
+      "lock": "Lock functions"
+    },
+    "drawer": {
+      "close": "Close details"
+    },
+    "sanctions": {
+      "warn": "Warn...",
+      "ban": "Ban...",
+      "hint": "Both ask to confirm, with a reason",
+      "lockedHint": "Unlock functions to warn or ban."
+    }
+  }
+}

@@ -5,7 +5,7 @@ import { arrowReducers } from './game.reducer.arrow';
 import { cardReducers } from './game.reducer.card';
 import { chatReducers } from './game.reducer.chat';
 import { counterReducers } from './game.reducer.counter';
-import { lifecycleReducers } from './game.reducer.lifecycle';
+import { lifecycleReducers, retainReplayGames } from './game.reducer.lifecycle';
 import { playerReducers } from './game.reducer.player';
 import { primitiveReducers } from './game.reducer.primitives';
 import { turnReducers } from './game.reducer.turn';
@@ -28,7 +28,7 @@ export const gamesSlice = createSlice({
     ...chatReducers,
   },
   extraReducers: (builder) => {
-    builder.addCase(ServerActions.disconnected, () => initialState);
+    builder.addCase(ServerActions.disconnected, (state) => ({ ...retainReplayGames(state), incomingReveal: null }));
   },
 });
 

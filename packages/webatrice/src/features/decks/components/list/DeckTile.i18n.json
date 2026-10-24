@@ -1,0 +1,7 @@
+{
+  "DeckTile": {
+    "open": "Open {name}",
+    "tags": "Tags",
+    "cards": "{count, plural, one {# card} other {# cards}}"
+  }
+}

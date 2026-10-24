@@ -1,0 +1,26 @@
+{
+  "UserMenu": {
+    "account": "Account",
+    "settings": "Settings",
+    "shortcuts": "Shortcuts",
+    "myReports": "My Reports",
+    "logs": "Logs",
+    "administration": "Administration",
+    "moderation": "Moderation",
+    "reportQueue": "Report Queue",
+    "cardArtRules": "Card Art Rules",
+    "developer": "Developer",
+    "importCards": "Import cards",
+    "debugLog": "Debug log",
+    "onTheBoard": "On the board",
+    "staff": "Staff tools",
+    "roleOnServer": "{role} · {server}",
+    "role": {
+      "admin": "Administrator",
+      "moderator": "Moderator",
+      "judge": "Judge",
+      "registered": "Registered user",
+      "unregistered": "Unregistered user"
+    }
+  }
+}

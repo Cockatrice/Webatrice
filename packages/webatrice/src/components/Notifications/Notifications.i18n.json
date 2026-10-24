@@ -1,0 +1,29 @@
+{
+  "Notifications": {
+    "title": {
+      "mention": "{sender} mentioned you",
+      "mentionIn": "{sender} mentioned you in {room}",
+      "buddy": "{name} is online",
+      "game": "Your game \"{game}\" is ready"
+    },
+    "body": {
+      "seats": "{taken} of {max} seats taken"
+    },
+    "system": {
+      "message": "New message from {sender}"
+    },
+    "toastTitle": "{title}:",
+    "action": {
+      "message": "Reply",
+      "mention": "Open room",
+      "buddy": "Message",
+      "game": "Go to game",
+      "report": "View report"
+    },
+    "age": {
+      "now": "just now",
+      "minutes": "{count}m ago",
+      "hours": "{count}h ago"
+    }
+  }
+}

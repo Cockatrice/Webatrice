@@ -1,0 +1,11 @@
+{
+  "SettingsCardSources": {
+    "group": {
+      "downloads": "URL Download Priority"
+    },
+    "pictureUrls": {
+      "label": "Picture download URLs",
+      "description": "Card art is tried from these URLs top to bottom for each printing, after the card database's own picture URL and before the Scryfall fallback."
+    }
+  }
+}

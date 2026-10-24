@@ -1,0 +1,6 @@
+{
+  "TallyOverlay": {
+    "tally": "Tally",
+    "selectedCount": "{count, plural, one {# card selected} other {# cards selected}}"
+  }
+}

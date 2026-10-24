@@ -17,6 +17,8 @@ import { joinGame } from './joinGame';
 import { leaveRoom } from './leaveRoom';
 import { roomSay } from './roomSay';
 import { create } from '@bufbuild/protobuf';
+import { CommandFailure } from '../../types/CommandFailure';
+import { StatusEnum } from '../../types/StatusEnum';
 import { Mock } from 'vitest';
 
 const { invokeOnSuccess, invokeResponseCode, invokeOnError } = makeCallbackHelpers(
@@ -38,6 +40,22 @@ describe('createGame', () => {
     createGame(5, create(Command_CreateGameSchema, {}));
     invokeOnSuccess();
     expect(WebClient.instance.response.room.gameCreated).toHaveBeenCalledWith(5);
+  });
+
+  it('onError reports the failure with roomId, code and transport reason', () => {
+    createGame(5, create(Command_CreateGameSchema, {}));
+    invokeOnError(Response_ResponseCode.RespNotConnected, {}, CommandFailure.Timeout);
+    expect(WebClient.instance.response.room.createGameFailed).toHaveBeenCalledWith(
+      5, Response_ResponseCode.RespNotConnected, CommandFailure.Timeout,
+    );
+  });
+
+  it('onError reports a server rejection without a transport reason', () => {
+    createGame(5, create(Command_CreateGameSchema, {}));
+    invokeOnError(Response_ResponseCode.RespContextError);
+    expect(WebClient.instance.response.room.createGameFailed).toHaveBeenCalledWith(
+      5, Response_ResponseCode.RespContextError, undefined,
+    );
   });
 });
 
@@ -67,23 +85,16 @@ describe('joinGame', () => {
     expect(WebClient.instance.response.room.joinedGame).toHaveBeenCalledWith(7, 42);
   });
 
-  // Desktop GameSelector::checkResponse — matching message strings from
-  // cockatrice/src/interface/widgets/server/game_selector.cpp:234-260.
-  const errorCases: Array<[number, string]> = [
-    [Response_ResponseCode.RespNotInRoom, 'Please join the appropriate room first.'],
-    [Response_ResponseCode.RespNameNotFound, 'The game does not exist any more.'],
-    [Response_ResponseCode.RespGameFull, 'The game is already full.'],
-    [Response_ResponseCode.RespWrongPassword, 'Wrong password.'],
-    [Response_ResponseCode.RespSpectatorsNotAllowed, 'Spectators are not allowed in this game.'],
-    [Response_ResponseCode.RespOnlyBuddies, 'This game is only open to its creator\'s buddies.'],
-    [Response_ResponseCode.RespUserLevelTooLow, 'This game is only open to registered users.'],
-    [Response_ResponseCode.RespInIgnoreList, 'You are being ignored by the creator of this game.'],
+  const errorCodes = [
+    Response_ResponseCode.RespNotInRoom, Response_ResponseCode.RespNameNotFound,
+    Response_ResponseCode.RespGameFull, Response_ResponseCode.RespWrongPassword,
+    Response_ResponseCode.RespSpectatorsNotAllowed, Response_ResponseCode.RespOnlyBuddies,
+    Response_ResponseCode.RespUserLevelTooLow, Response_ResponseCode.RespInIgnoreList,
   ];
-
-  it.each(errorCases)('code %i dispatches setJoinGameError with desktop-matching message', (code, message) => {
+  it.each(errorCodes)('code %i reaches the UI without protocol-owned presentation text', (code) => {
     joinGame(7, create(Command_JoinGameSchema, { gameId: 42 }));
     invokeResponseCode(code);
-    expect(WebClient.instance.response.room.setJoinGameError).toHaveBeenCalledWith(code, message);
+    expect(WebClient.instance.response.room.setJoinGameError).toHaveBeenCalledWith(code, '');
     expect(WebClient.instance.response.room.joinedGame).not.toHaveBeenCalled();
   });
 
@@ -103,6 +114,17 @@ describe('joinGame', () => {
     expect(WebClient.instance.response.room.setJoinGameError).not.toHaveBeenCalled();
     expect(WebClient.instance.response.room.setJoinGamePending).toHaveBeenLastCalledWith(false);
   });
+
+  it.each([CommandFailure.Timeout, CommandFailure.Disconnected, CommandFailure.NotSent])(
+    'a %s failure carries its reason for UI translation', (failure) => {
+      WebClient.instance.status = StatusEnum.RECONNECTING;
+      joinGame(7, create(Command_JoinGameSchema, { gameId: 42 }));
+      invokeOnError(Response_ResponseCode.RespNotConnected, {}, failure);
+      expect(WebClient.instance.response.room.setJoinGameError).toHaveBeenCalledWith(
+        Response_ResponseCode.RespNotConnected, '', failure,
+      );
+    },
+  );
 });
 
 describe('leaveRoom', () => {
@@ -128,7 +150,8 @@ describe('roomSay', () => {
     expect(WebClient.instance.protobuf.sendRoomCommand).toHaveBeenCalledWith(
       2,
       Command_RoomSay_ext,
-      expect.objectContaining({ message: 'hello' })
+      expect.objectContaining({ message: 'hello' }),
+      expect.any(Object),
     );
   });
 
@@ -140,5 +163,34 @@ describe('roomSay', () => {
   it('does not call sendRoomCommand when message is empty string', () => {
     roomSay(2, '');
     expect(WebClient.instance.protobuf.sendRoomCommand).not.toHaveBeenCalled();
+  });
+
+  it('reports a flood rejection with the unsent message', () => {
+    roomSay(2, '  hello  ');
+    invokeResponseCode(Response_ResponseCode.RespChatFlood);
+    expect(WebClient.instance.response.room.roomSayFailed).toHaveBeenCalledWith(2, 'hello', Response_ResponseCode.RespChatFlood);
+  });
+
+  it('reports a message the server never answered with the transport reason', () => {
+    WebClient.instance.status = StatusEnum.RECONNECTING;
+    roomSay(2, 'hello');
+    invokeOnError(Response_ResponseCode.RespNotConnected, {}, CommandFailure.Disconnected);
+    WebClient.instance.status = StatusEnum.DISCONNECTED;
+    expect(WebClient.instance.response.room.roomSayFailed).toHaveBeenCalledWith(
+      2, 'hello', Response_ResponseCode.RespNotConnected, CommandFailure.Disconnected,
+    );
+  });
+
+  it('does not report a message failed because the session ended, whose state is already reset', () => {
+    WebClient.instance.status = StatusEnum.DISCONNECTED;
+    roomSay(2, 'hello');
+    invokeOnError(Response_ResponseCode.RespNotConnected, {}, CommandFailure.Disconnected);
+    expect(WebClient.instance.response.room.roomSayFailed).not.toHaveBeenCalled();
+  });
+
+  it('keeps other server rejections silent, as desktop does', () => {
+    roomSay(2, 'hello');
+    invokeOnError(Response_ResponseCode.RespContextError);
+    expect(WebClient.instance.response.room.roomSayFailed).not.toHaveBeenCalled();
   });
 });

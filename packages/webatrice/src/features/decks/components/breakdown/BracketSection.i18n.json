@@ -1,0 +1,53 @@
+{
+  "DeckBracket": {
+    "assessing": "Assessing bracket…",
+    "failed": "Couldn’t assess bracket: {message}",
+    "unknownError": "Bracket assessment failed",
+    "title": "Bracket {level} · {label}",
+    "partialTitle": "At least bracket {level} · {label}",
+    "methodology": "Minimum bracket per <0>edhpowerlevel</0>’s algorithm: Game Changers, MLD, extra turns, and early game-defining combos.",
+    "provenance": "Card data from Scryfall; combos from Commander Spellbook, which receives the main deck’s card names and quantities.",
+    "consent": {
+      "prompt": "Bracket analysis sends this deck’s card names to Scryfall (Game Changers list and card text), and the main deck’s card names and quantities to Commander Spellbook (combos). Choose Enable to estimate when you ask, or Automatic to estimate whenever the deck changes.",
+      "enable": "Enable",
+      "automatic": "Automatic",
+      "disable": "Disable",
+      "revoke": "Turn off bracket analysis"
+    },
+    "estimate": "Estimate bracket",
+    "partialNotice": "Partial estimate: this deck may sit in a higher bracket. It isn’t saved with the deck until every source answers.",
+    "sourceUnavailable": "{source} unavailable ({reason})",
+    "sourcePartial": "{source}: {missing} of {total} cards missing ({reason})",
+    "retry": "Retry",
+    "source": {
+      "gameChangers": "Scryfall Game Changers list",
+      "oracleText": "Scryfall card text",
+      "combos": "Commander Spellbook combos"
+    },
+    "failure": {
+      "timeout": "timed out",
+      "network": "network error",
+      "http": "HTTP {status}",
+      "malformed": "unexpected response"
+    },
+    "level": {
+      "1": "Exhibition",
+      "2": "Core",
+      "3": "Upgraded",
+      "4": "Optimized",
+      "5": "cEDH"
+    },
+    "signal": {
+      "gameChangers": "Game Changers",
+      "denial": "MLD",
+      "turns": "Extra turns",
+      "earlyCombos": "Early combos",
+      "lateCombos": "Late combos"
+    },
+    "chainable": "— chain-able:",
+    "bracket": "Bracket",
+    "estimateNote": "estimate",
+    "partialEstimate": "partial estimate",
+    "why": "Why this bracket?"
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "CreateTokenDialog": {
+    "title": "Create token",
+    "search": "Search tokens",
+    "noTokens": "No predefined tokens available.",
+    "placeholder": {
+      "powerToughness": "e.g. 3/3"
+    },
+    "destroyOnZoneChange": "Destroy token when it leaves the table",
+    "faceDown": "Create face-down (Only hides name)",
+    "validation": {
+      "nameRequired": "Name is required"
+    }
+  }
+}

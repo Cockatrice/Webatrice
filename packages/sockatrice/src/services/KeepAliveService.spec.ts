@@ -68,8 +68,6 @@ describe('KeepAliveService', () => {
     });
 
     it('should NEVER close the connection, no matter how many pongs are missed', () => {
-      // The keepalive never tears the connection down — see
-      // sockatrice-transport.instructions.md § keep-alive worker.
       const timersBefore = vi.getTimerCount();
       vi.advanceTimersByTime(interval * 20);
 
@@ -201,9 +199,6 @@ describe('KeepAliveService', () => {
     });
 
     it('should ignore burst-drained ticks (pending ping younger than an interval)', () => {
-      // Field-captured failure mode: ticks queue behind a stalled main thread
-      // and drain back-to-back; the tick right after a ping is armed must not
-      // count it as missed.
       workerService.startPingLoop(5000, pingFn);
 
       mockWorker._listener!({ data: { type: 'tick' } } as MessageEvent);
@@ -212,8 +207,6 @@ describe('KeepAliveService', () => {
       mockWorker._listener!({ data: { type: 'tick' } } as MessageEvent);
 
       expect(workerOnHealthChange).not.toHaveBeenCalled();
-      // Only the first tick arms a ping; the drained ticks must not each fire
-      // one (that back-to-back burst could trip the server's flood counter).
       expect(pingFn).toHaveBeenCalledTimes(1);
     });
 

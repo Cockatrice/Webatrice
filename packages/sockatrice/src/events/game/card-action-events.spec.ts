@@ -118,15 +118,24 @@ describe('drawCards event', () => {
 });
 
 describe('revealCards event', () => {
+  it.each([true, false])('passes skipRevealWindow=%s to the reveal response', (skipRevealWindow) => {
+    const data = create(Event_RevealCardsSchema, { zoneName: 'hand', cards: [] });
+    const replayOptions = { skipRevealWindow };
+
+    revealCards(data, { ...meta, replayOptions });
+
+    expect(WebClient.instance.response.game.cardsRevealed).toHaveBeenCalledWith(5, 2, data, replayOptions);
+  });
+
   it('delegates to WebClient.instance.response.game.cardsRevealed with gameId, playerId and data', () => {
     const data = create(Event_RevealCardsSchema, { zoneName: 'hand', cards: [] });
     revealCards(data, meta);
-    expect(WebClient.instance.response.game.cardsRevealed).toHaveBeenCalledWith(5, 2, data);
+    expect(WebClient.instance.response.game.cardsRevealed).toHaveBeenCalledWith(5, 2, data, undefined);
   });
 
   it('forwards a malformed reveal payload (no zoneName) intact', () => {
     const data = create(Event_RevealCardsSchema, { cards: [] });
     revealCards(data, meta);
-    expect(WebClient.instance.response.game.cardsRevealed).toHaveBeenCalledWith(5, 2, data);
+    expect(WebClient.instance.response.game.cardsRevealed).toHaveBeenCalledWith(5, 2, data, undefined);
   });
 });

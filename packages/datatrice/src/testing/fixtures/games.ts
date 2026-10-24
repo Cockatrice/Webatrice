@@ -166,9 +166,6 @@ export function makeState(overrides: Partial<GamesState> = {}): GamesState {
   const games = overrides.games ?? { 1: makeGameEntry() };
   return {
     games,
-    // Keep the sibling ping map consistent with `games` so reducers that assume
-    // `pings[gameId]` exists (the gameJoined invariant) hold in fixture-built
-    // state too. Each game seeds its players' join-time ping snapshot.
     pings: Object.fromEntries(
       Object.entries(games).map(([id, game]) => [
         Number(id),

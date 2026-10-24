@@ -9,5 +9,8 @@ export function createGame(roomId: number, gameConfig: CreateGameParams): void {
     onSuccess: () => {
       WebClient.instance.response.room.gameCreated(roomId);
     },
+    onError: (responseCode, _raw, failure) => {
+      WebClient.instance.response.room.createGameFailed?.(roomId, responseCode, failure);
+    },
   });
 }

@@ -1,0 +1,118 @@
+{
+  "Replays": {
+    "title": "Replays",
+    "subtitle": "{matches} matches stored on the server · {files} files in this browser",
+    "subtitleLocal": "{files} files in this browser",
+    "action": {
+      "openFile": "Open .cor file",
+      "import": "Import to library",
+      "delete": "Delete",
+      "submitCode": "Open share code"
+    },
+    "source": {
+      "label": "Source",
+      "all": "All",
+      "server": "On the server",
+      "local": "On this device"
+    },
+    "group": {
+      "today": "Today",
+      "yesterday": "Yesterday",
+      "week": "Earlier this week",
+      "older": "Older"
+    },
+    "list": {
+      "label": "Matches",
+      "search": "Search replays",
+      "searchPlaceholder": "Search players or game names",
+      "loading": "Loading replays…",
+      "empty": "No replays yet. Finished games you played while registered appear here; you can also import .cor files.",
+      "noMatches": "No replays match your search.",
+      "oneGame": "1 game",
+      "games": "{count} games",
+      "kept": "Kept",
+      "notKept": "Not kept",
+      "savedIn": "Saved in {folder}",
+      "savedHere": "Saved in this browser",
+      "onlyHere": "Only in this browser",
+      "fileSize": "{size} KB"
+    },
+    "detail": {
+      "label": "Replay details",
+      "empty": "Select a match to see its games and preview a replay.",
+      "gameNumber": "Game #{id}",
+      "total": "{duration} total",
+      "imported": "Imported {date}",
+      "versus": "vs",
+      "games": "Games in this match",
+      "keep": "Keep",
+      "kept": "Kept",
+      "shareCode": "Share code",
+      "download": "Download",
+      "saveToLibrary": "Save to library",
+      "inLibrary": "In library",
+      "saveMissing": "Save {count} missing to library",
+      "deleteFromServer": "Delete from server",
+      "saveAsFile": "Save as file",
+      "deleteFile": "Delete from this browser"
+    },
+    "preview": {
+      "title": "Preview {name}",
+      "serverHint": "Loading the preview downloads the replay and replays it in your browser, so you can scrub to a moment before opening it.",
+      "localHint": "Loading the preview reads the replay from your library and replays it in your browser, so you can scrub to a moment before opening it.",
+      "downloadAndPreview": "Download and preview",
+      "readAndPreview": "Read and preview",
+      "loading": "Loading…",
+      "retry": "Try again",
+      "failed": "Could not load the preview: {error}",
+      "loadedServer": "Downloaded replay #{id} from the server and replayed it here to draw this preview.",
+      "loadedLocal": "Read {name} from your library and replayed it here to draw this preview."
+    },
+    "notice": {
+      "error": "Error",
+      "failed": "Failed",
+      "imported": "Import finished"
+    },
+    "local": {
+      "deleteTitle": "Delete local file",
+      "deleteMessage": "Are you sure you want to delete this replay from this browser?",
+      "deleteFailed": "Could not delete the replay.",
+      "loadFailed": "Could not read the local replay library.",
+      "saveFailed": "Could not save the replay to the local library.",
+      "missingData": "The replay data for this entry is missing.",
+      "readFailed": "Could not read the replay from the local library.",
+      "invalidFile": "\"{name}\" is not a Cockatrice replay (.cor) file.",
+      "tooLarge": "These files are too large to be replays and were not imported: {names}"
+    },
+    "server": {
+      "disconnected": "Connect to a server to see the replays stored for your account.",
+      "unregistered": "Only registered users can store replays on the server.",
+      "replayTitle": "Replay #{id}",
+      "matchReplayTitle": "{name} (#{id})",
+      "deleteTitle": "Delete remote replay",
+      "deleteMessage": "Are you sure you want to delete this match's replays from the server?",
+      "deleteFailed": "Could not delete the replay.",
+      "keepFailed": "Could not change the expiration lock.",
+      "downloadFailed": "Could not download the replay.",
+      "listFailed": "Could not load the replays stored on the server.",
+      "unreadable": "The server sent a replay that could not be read."
+    },
+    "share": {
+      "codeTitle": "Replay Share Code",
+      "codeMessage": "Others can use this code to add the replay to their list of remote replays:",
+      "copy": "Copy to clipboard",
+      "copied": "Copied",
+      "ok": "OK",
+      "codeLabel": "Replay share code",
+      "codeRequired": "Enter a share code.",
+      "getFailedTitle": "Failed to get code",
+      "getFailed": "Could not get replay code",
+      "submitFailedTitle": "Failed to submit code",
+      "notPermitted": "Either this server does not support replay sharing, or does not permit replay sharing for you.",
+      "foundTitle": "Replay code found",
+      "found": "Replay was added, or you already had access to it.",
+      "notFound": "Replay code not found",
+      "unexpected": "Unexpected error"
+    }
+  }
+}

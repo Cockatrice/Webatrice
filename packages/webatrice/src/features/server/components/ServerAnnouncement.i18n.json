@@ -1,0 +1,8 @@
+{
+  "ServerAnnouncement": {
+    "title": "From the server",
+    "empty": "No announcement from this server.",
+    "showMore": "Show more",
+    "showLess": "Show less"
+  }
+}

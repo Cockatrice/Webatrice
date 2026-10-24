@@ -13,6 +13,8 @@ vi.mock('../DexieService', () => ({
 
 import { SetDTO } from './SetDTO';
 
+const mapToClassCalls = [...setsTable.mapToClass.mock.calls];
+
 describe('SetDTO', () => {
   beforeEach(() => {
     setsTable.put.mockClear();
@@ -21,7 +23,7 @@ describe('SetDTO', () => {
   });
 
   it('registers itself with the sets table on import', () => {
-    expect(setsTable.mapToClass).toHaveBeenCalledWith(SetDTO);
+    expect(mapToClassCalls).toEqual([[SetDTO]]);
   });
 
   it('save() puts the instance into the sets table', async () => {

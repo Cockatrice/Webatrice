@@ -1,405 +1,172 @@
-import { ZoneName } from '@cockatrice/sockatrice';
-import { screen, fireEvent } from '@testing-library/react';
+import { act, fireEvent, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { create } from '@bufbuild/protobuf';
-import { colorSchema } from '@cockatrice/sockatrice/generated';
-import { createMockWebClient, makeStoreState, renderWithProviders, makeUser } from '../../../../../__test-utils__';
-import {
-  makeCounter,
-  makeGameEntry,
-  makePlayerEntry,
-  makePlayerProperties,
-} from '@cockatrice/datatrice/testing';
-import PlayerInfoPanel from './PlayerInfoPanel';
+import { games } from '@cockatrice/datatrice';
+import { Event_SetCounterSchema } from '@cockatrice/sockatrice/generated';
 
-function statefulPlayer(
-  overrides: Partial<Parameters<typeof makePlayerEntry>[0]> = {},
-) {
-  const player = makePlayerEntry({
-    properties: makePlayerProperties({
-      playerId: 1,
-      userInfo: makeUser({ name: 'Pumuky' }),
-      pingSeconds: 42,
-    }),
-    ...overrides,
-  });
-  return makeStoreState({
-    games: {
-      games: {
-        1: makeGameEntry({
-          localPlayerId: 1,
-          players: { 1: player },
-        }),
-      },
-    },
-  });
-}
+import { getSettings, settingsStore } from '../../../../../hooks/useSettings';
+import { LIFE_COUNTER_ID, MANA_COUNTER_IDS, renderSeatCell, type SeatGameSpec } from '../../../__test-utils__/seatFixtures';
+
+vi.mock('../../../../../services/cards/catalog/lookup', async () =>
+  (await import('../../../__test-utils__/unknownCardCatalog')).unknownCardCatalog());
+
+const SPEC: SeatGameSpec = {
+  localPlayerId: 1,
+  seats: [
+    { playerId: 1, name: 'Alice', life: 18 },
+    { playerId: 2, name: 'Bob' },
+  ],
+};
+
+const lifePill = (name: string) => screen.getByLabelText(`${name}'s life`);
 
 describe('PlayerInfoPanel', () => {
-  it('renders the player name', () => {
-    renderWithProviders(<PlayerInfoPanel />, {
-      preloadedState: statefulPlayer(),
-    });
-
-    expect(screen.getByText('Pumuky')).toBeInTheDocument();
+  it('shows the player, the life total and the seven mana pool counters', () => {
+    renderSeatCell(SPEC);
+    expect(lifePill('Alice')).toHaveTextContent('Alice18');
+    expect(['White', 'Blue', 'Black', 'Red', 'Green', 'Colorless', 'Other'].map((label) => screen.getByTitle(label).textContent))
+      .toEqual(['0', '0', '0', '0', '0', '0', '0']);
+    expect(lifePill('Alice')).toHaveAttribute('data-arrow-target-player-id', '1');
   });
 
-  it('does not render ping (ping lives in the right-side PlayerList)', () => {
-    renderWithProviders(<PlayerInfoPanel />, {
-      preloadedState: statefulPlayer(),
-    });
-
-    expect(screen.queryByText('42s')).not.toBeInTheDocument();
+  it('lets the owner click the life total up and right-click it down', () => {
+    const { game } = renderSeatCell(SPEC);
+    fireEvent.click(lifePill('Alice'));
+    fireEvent.contextMenu(lifePill('Alice'));
+    expect(vi.mocked(game.incCounter).mock.calls.map(([, params]) => params)).toEqual([
+      { counterId: LIFE_COUNTER_ID, delta: 1 },
+      { counterId: LIFE_COUNTER_ID, delta: -1 },
+    ]);
   });
 
-  it('falls back to "(unknown)" when userInfo is absent', () => {
-    const player = makePlayerEntry({
-      properties: makePlayerProperties({ playerId: 1 }),
-    });
-    renderWithProviders(<PlayerInfoPanel />, {
-      preloadedState: makeStoreState({
-        games: { games: { 1: makeGameEntry({ players: { 1: player } }) } },
-      }),
-    });
-
-    expect(screen.getByText('(unknown)')).toBeInTheDocument();
+  it('lets the owner add and remove mana with a click and a right-click', () => {
+    const { game } = renderSeatCell(SPEC);
+    fireEvent.click(screen.getByTitle('Green'));
+    fireEvent.contextMenu(screen.getByTitle('Other'));
+    expect(vi.mocked(game.incCounter).mock.calls.map(([, params]) => params)).toEqual([
+      { counterId: MANA_COUNTER_IDS.g, delta: 1 },
+      { counterId: MANA_COUNTER_IDS.storm, delta: -1 },
+    ]);
   });
 
-  it('renders the Life counter inline in the header and other counters as circles in the body', () => {
-    const life = makeCounter({
-      id: 1,
-      name: 'Life',
-      count: 20,
-      counterColor: create(colorSchema, { r: 255, g: 150, b: 0, a: 255 }),
-    });
-    const white = makeCounter({
-      id: 2,
-      name: 'W',
-      count: 3,
-      counterColor: create(colorSchema, { r: 250, g: 245, b: 220, a: 255 }),
-    });
-
-    const { container } = renderWithProviders(
-      <PlayerInfoPanel />,
-      {
-        preloadedState: statefulPlayer({ counters: { 2: white, 1: life } }),
-      },
-    );
-
-    const lifePill = screen.getByTestId('counter-1');
-    const whitePill = screen.getByTestId('counter-2');
-
-    expect(lifePill).toHaveTextContent('20');
-    expect(whitePill).toHaveTextContent('3');
-    expect(lifePill).toHaveClass('player-info-panel__counter--life');
-    expect(whitePill).not.toHaveClass('player-info-panel__counter--life');
-
-    // Life sits inside the header (life-slot); others sit in the body list.
-    expect(container.querySelector('.player-info-panel__header')?.contains(lifePill)).toBe(true);
-    expect(container.querySelector('.player-info-panel__counters')?.contains(whitePill)).toBe(true);
-    expect(container.querySelector('.player-info-panel__counters')?.contains(lifePill)).toBe(false);
+  it('is read-only on another player\'s seat', () => {
+    const { game } = renderSeatCell(SPEC, 2);
+    fireEvent.click(lifePill('Bob'));
+    fireEvent.click(screen.getByTitle('Green'));
+    expect(game.incCounter).not.toHaveBeenCalled();
+    expect(screen.queryByRole('spinbutton')).not.toBeInTheDocument();
   });
 
-  it('renders no counter elements when the player has no counters', () => {
-    renderWithProviders(<PlayerInfoPanel />, {
-      preloadedState: statefulPlayer({ counters: {} }),
+  describe('from the keyboard', () => {
+    it('makes the owner\'s life total a spin button that reads out the total', () => {
+      renderSeatCell(SPEC);
+      const life = screen.getByRole('spinbutton', { name: 'Alice\'s life' });
+      expect(life).toHaveAttribute('aria-valuenow', '18');
+      expect(life).toHaveAttribute('tabindex', '0');
     });
 
-    expect(screen.queryByTestId(/^counter-/)).not.toBeInTheDocument();
-  });
-
-  it('renders the Deck, Hand, Graveyard, and Exile zones inside the body', () => {
-    renderWithProviders(<PlayerInfoPanel />, {
-      preloadedState: statefulPlayer(),
+    it('changes life by one with the up and down arrows', async () => {
+      const user = userEvent.setup();
+      const { game } = renderSeatCell(SPEC);
+      screen.getByRole('spinbutton', { name: 'Alice\'s life' }).focus();
+      await user.keyboard('{ArrowUp}{ArrowDown}{ArrowDown}');
+      expect(vi.mocked(game.incCounter).mock.calls.map(([, params]) => params)).toEqual([
+        { counterId: LIFE_COUNTER_ID, delta: 1 },
+        { counterId: LIFE_COUNTER_ID, delta: -1 },
+        { counterId: LIFE_COUNTER_ID, delta: -1 },
+      ]);
     });
 
-    expect(screen.getByTestId('zone-stack-deck')).toBeInTheDocument();
-    expect(screen.getByTestId('zone-stack-hand')).toBeInTheDocument();
-    expect(screen.getByTestId('zone-stack-grave')).toBeInTheDocument();
-    expect(screen.getByTestId('zone-stack-rfg')).toBeInTheDocument();
+    it('opens the set-life prompt with Enter, as desktop\'s "Set counter..."', async () => {
+      const user = userEvent.setup();
+      const openPrompt = vi.fn();
+      renderSeatCell(SPEC, 1, { gameDialogs: { openPrompt } });
+      screen.getByRole('spinbutton', { name: 'Alice\'s life' }).focus();
+      await user.keyboard('{Enter}');
+      expect(openPrompt).toHaveBeenCalledWith(expect.objectContaining({ title: 'Set life total', initialValue: '18' }));
+    });
+
+    it('reads another player\'s life total as a named group with the number in it', () => {
+      renderSeatCell(SPEC, 2);
+      const life = screen.getByRole('group', { name: 'Bob\'s life' });
+      expect(life).not.toHaveAttribute('tabindex');
+      expect(life).toHaveTextContent('Bob');
+    });
+
+    it('makes the mana pool one tab stop, moving between counters with the side arrows', async () => {
+      const user = userEvent.setup();
+      renderSeatCell(SPEC);
+      const pool = screen.getByRole('group', { name: 'Mana pool' });
+      const pips = within(pool).getAllByRole('spinbutton');
+      expect(pips.map((pip) => pip.getAttribute('aria-label')))
+        .toEqual(['White', 'Blue', 'Black', 'Red', 'Green', 'Colorless', 'Other']);
+      expect(pips.map((pip) => pip.tabIndex)).toEqual([0, -1, -1, -1, -1, -1, -1]);
+
+      pips[0].focus();
+      await user.keyboard('{ArrowRight}{ArrowRight}');
+      expect(pips[2]).toHaveFocus();
+      await user.keyboard('{ArrowLeft}{ArrowLeft}{ArrowLeft}');
+      expect(pips[6]).toHaveFocus();
+      expect(pips.map((pip) => pip.tabIndex)).toEqual([-1, -1, -1, -1, -1, -1, 0]);
+    });
+
+    it('adds and removes mana with the up and down arrows', async () => {
+      const user = userEvent.setup();
+      const { game } = renderSeatCell(SPEC);
+      const green = screen.getByRole('spinbutton', { name: 'Green' });
+      expect(green).toHaveAttribute('aria-valuenow', '0');
+      green.focus();
+      await user.keyboard('{ArrowUp}{ArrowDown}');
+      expect(vi.mocked(game.incCounter).mock.calls.map(([, params]) => params)).toEqual([
+        { counterId: MANA_COUNTER_IDS.g, delta: 1 },
+        { counterId: MANA_COUNTER_IDS.g, delta: -1 },
+      ]);
+    });
+
+    it('reads an opponent\'s mana counters as their colour and count', () => {
+      renderSeatCell(SPEC, 2);
+      expect(within(screen.getByRole('group', { name: 'Mana pool' })).getByTitle('Green')).toHaveTextContent('Green0');
+    });
   });
 
-  it('does not wire left-click onZoneClick for the Hand row', () => {
-    const onZoneClick = vi.fn();
-    renderWithProviders(
-      <PlayerInfoPanel />,
-      { preloadedState: statefulPlayer(), gameInteraction: { onZoneClick } },
-    );
-
-    fireEvent.click(screen.getByTestId('zone-stack-hand'));
-
-    expect(onZoneClick).not.toHaveBeenCalled();
-  });
-
-  it('forwards zone clicks with (playerId, zoneName)', () => {
-    const onZoneClick = vi.fn();
-    renderWithProviders(
-      <PlayerInfoPanel />,
-      { preloadedState: statefulPlayer(), gameInteraction: { onZoneClick } },
-    );
-
-    fireEvent.click(screen.getByTestId('zone-stack-deck'));
-
-    expect(onZoneClick).toHaveBeenCalledWith(1, 'deck');
-  });
-
-  it('shows the Conceded flag when player has conceded', () => {
-    const player = makePlayerEntry({
-      properties: makePlayerProperties({
+  describe('life counter flash', () => {
+    type Store = ReturnType<typeof renderSeatCell>['store'];
+    const setLife = (store: Store, value: number) => act(() => {
+      store.dispatch(games.Actions.counterSet({
+        gameId: 1,
         playerId: 1,
-        userInfo: makeUser({ name: 'Quitter' }),
-        conceded: true,
-      }),
-    });
-    renderWithProviders(<PlayerInfoPanel />, {
-      preloadedState: makeStoreState({
-        games: { games: { 1: makeGameEntry({ players: { 1: player } }) } },
-      }),
+        data: create(Event_SetCounterSchema, { counterId: LIFE_COUNTER_ID, value }),
+      }));
     });
 
-    expect(screen.getByText(/conceded/i)).toBeInTheDocument();
-  });
-
-  it('shows the Ready flag when readyStart is true and player has not conceded', () => {
-    const player = makePlayerEntry({
-      properties: makePlayerProperties({
-        playerId: 1,
-        userInfo: makeUser({ name: 'Waiting' }),
-        readyStart: true,
-      }),
-    });
-    renderWithProviders(<PlayerInfoPanel />, {
-      preloadedState: makeStoreState({
-        games: { games: { 1: makeGameEntry({ players: { 1: player } }) } },
-      }),
+    afterEach(() => {
+      settingsStore.reset();
     });
 
-    expect(screen.getByText(/ready/i)).toBeInTheDocument();
-  });
+    it('flashes green on a gain and red on a loss, over the life total and the battlefield', () => {
+      const { store } = renderSeatCell(SPEC);
+      expect(screen.queryByTestId(/^value-flash-/)).not.toBeInTheDocument();
 
-  it('renders an empty panel when the player is missing', () => {
-    const { container } = renderWithProviders(
-      <PlayerInfoPanel />,
-      { preloadedState: statefulPlayer(), boardCell: { playerId: 999 } },
-    );
+      setLife(store, 20);
+      expect(lifePill('Alice')).toContainElement(screen.getByTestId('value-flash-gain'));
+      expect(screen.queryByTestId('value-flash-damage')).not.toBeInTheDocument();
 
-    expect(container.querySelector('.player-info-panel--empty')).not.toBeNull();
-    expect(screen.queryByText('Pumuky')).not.toBeInTheDocument();
-  });
-
-  it('renders a host badge when the player is the game host', () => {
-    const player = makePlayerEntry({
-      properties: makePlayerProperties({
-        playerId: 1,
-        userInfo: makeUser({ name: 'Host' }),
-      }),
-    });
-    const { container } = renderWithProviders(
-      <PlayerInfoPanel />,
-      {
-        preloadedState: makeStoreState({
-          games: {
-            games: {
-              1: makeGameEntry({ hostId: 1, players: { 1: player } }),
-            },
-          },
-        }),
-      },
-    );
-
-    expect(container.querySelector('.player-info-panel__host-badge')).not.toBeNull();
-  });
-
-  it('omits the host badge when the player is not the host', () => {
-    const player = makePlayerEntry({
-      properties: makePlayerProperties({
-        playerId: 2,
-        userInfo: makeUser({ name: 'Guest' }),
-      }),
-    });
-    const { container } = renderWithProviders(
-      <PlayerInfoPanel />,
-      {
-        boardCell: { playerId: 2 },
-        preloadedState: makeStoreState({
-          games: {
-            games: {
-              1: makeGameEntry({ hostId: 1, players: { 2: player } }),
-            },
-          },
-        }),
-      },
-    );
-
-    expect(container.querySelector('.player-info-panel__host-badge')).toBeNull();
-  });
-
-  // Sideboard lock lives in the right-side PlayerList — it must NOT render
-  // inside the PlayerInfoPanel.
-  it('never renders the sideboard-lock indicator in the panel', () => {
-    const player = makePlayerEntry({
-      properties: makePlayerProperties({
-        playerId: 1,
-        userInfo: makeUser({ name: 'P1' }),
-        sideboardLocked: true,
-      }),
-    });
-    renderWithProviders(<PlayerInfoPanel />, {
-      preloadedState: makeStoreState({
-        games: { games: { 1: makeGameEntry({ players: { 1: player } }) } },
-      }),
+      setLife(store, 15);
+      expect(lifePill('Alice')).toContainElement(screen.getByTestId('value-flash-loss'));
+      const battlefield = document.querySelector('[data-battlefield-owner="1"]')!;
+      expect(screen.getByTestId('value-flash-damage').parentElement).toContainElement(battlefield as HTMLElement);
     });
 
-    expect(screen.queryByLabelText('sideboard locked')).not.toBeInTheDocument();
-  });
-
-  describe('counter color fallback', () => {
-    it('falls back to the MTG name map when the server omits the color', () => {
-      const white = makeCounter({
-        id: 1,
-        name: 'W',
-        count: 1,
-        counterColor: create(colorSchema, { r: 0, g: 0, b: 0, a: 0 }),
-      });
-      renderWithProviders(<PlayerInfoPanel />, {
-        preloadedState: statefulPlayer({ counters: { 1: white } }),
-      });
-
-      expect(screen.getByTestId('counter-1')).toHaveStyle({
-        background: 'rgba(245, 245, 220, 1)',
-      });
+    it('stays still with the life counter and battlefield flashes off', async () => {
+      const settings = await getSettings();
+      settingsStore.setValue(Object.assign(settings, {
+        animationsChosen: true,
+        lifeCounterAnimations: false,
+        battlefieldFlash: false,
+      }));
+      const { store } = renderSeatCell(SPEC);
+      setLife(store, 12);
+      expect(screen.queryByTestId(/^value-flash-/)).not.toBeInTheDocument();
     });
-
-    it('respects the server color when it is present and non-zero', () => {
-      const custom = makeCounter({
-        id: 2,
-        name: 'W',
-        count: 1,
-        counterColor: create(colorSchema, { r: 10, g: 20, b: 30, a: 255 }),
-      });
-      renderWithProviders(<PlayerInfoPanel />, {
-        preloadedState: statefulPlayer({ counters: { 2: custom } }),
-      });
-
-      expect(screen.getByTestId('counter-2')).toHaveStyle({
-        background: 'rgba(10, 20, 30, 1)',
-      });
-    });
-
-    it('derives a stable non-black hash color for unknown names', () => {
-      const poison1 = makeCounter({
-        id: 3,
-        name: 'Poison',
-        count: 1,
-        counterColor: create(colorSchema, { r: 0, g: 0, b: 0, a: 0 }),
-      });
-      const { unmount } = renderWithProviders(
-        <PlayerInfoPanel />,
-        { preloadedState: statefulPlayer({ counters: { 3: poison1 } }) },
-      );
-      const first = screen.getByTestId('counter-3').getAttribute('style') ?? '';
-      unmount();
-
-      renderWithProviders(<PlayerInfoPanel />, {
-        preloadedState: statefulPlayer({ counters: { 3: poison1 } }),
-      });
-      const second = screen.getByTestId('counter-3').getAttribute('style') ?? '';
-
-      expect(first).toBe(second);
-      // jsdom normalizes rgba(r,g,b,1) → rgb(r,g,b) on style attributes; accept either.
-      expect(first).toMatch(/rgba?\(\d+, \d+, \d+(?:, 1)?\)/);
-      expect(first).not.toMatch(/rgba?\(0, 0, 0/);
-    });
-  });
-
-  describe('editable counters', () => {
-    const life = makeCounter({
-      id: 1,
-      name: 'Life',
-      count: 20,
-      counterColor: create(colorSchema, { r: 255, g: 255, b: 255, a: 255 }),
-    });
-
-    it('does not attach click handlers when canEdit is false (default)', () => {
-      const webClient = createMockWebClient();
-      renderWithProviders(<PlayerInfoPanel />, {
-        preloadedState: statefulPlayer({ counters: { 1: life } }),
-        webClient,
-      });
-
-      const pill = screen.getByTestId('counter-1');
-      expect(pill).not.toHaveAttribute('role', 'button');
-
-      fireEvent.click(pill);
-      fireEvent.contextMenu(pill);
-      expect(webClient.request.game.incCounter).not.toHaveBeenCalled();
-    });
-
-    it('dispatches incCounter(+1) on left-click when canEdit is true', () => {
-      const webClient = createMockWebClient();
-      renderWithProviders(<PlayerInfoPanel />, {
-        preloadedState: statefulPlayer({ counters: { 1: life } }),
-        webClient,
-        cardVisualState: { canActFor: () => true },
-      });
-
-      fireEvent.click(screen.getByTestId('counter-1'));
-
-      expect(webClient.request.game.incCounter).toHaveBeenCalledWith(1, { counterId: 1, delta: 1 });
-    });
-
-    it('dispatches incCounter(-1) on right-click, suppresses browser menu, and does not bubble to the panel', () => {
-      const webClient = createMockWebClient();
-      const onContextMenu = vi.fn();
-      renderWithProviders(
-        <PlayerInfoPanel onContextMenu={onContextMenu} />,
-        {
-          preloadedState: statefulPlayer({ counters: { 1: life } }),
-          webClient,
-          cardVisualState: { canActFor: () => true },
-        },
-      );
-
-      const dispatched = fireEvent.contextMenu(screen.getByTestId('counter-1'));
-
-      expect(dispatched).toBe(false);
-      expect(webClient.request.game.incCounter).toHaveBeenCalledWith(1, { counterId: 1, delta: -1 });
-      expect(onContextMenu).not.toHaveBeenCalled();
-    });
-
-    it('still fires the panel-level onContextMenu when right-clicking outside a counter', () => {
-      const onContextMenu = vi.fn();
-      const { container } = renderWithProviders(
-        <PlayerInfoPanel onContextMenu={onContextMenu} />,
-        {
-          preloadedState: statefulPlayer({ counters: { 1: life } }),
-          cardVisualState: { canActFor: () => true },
-        },
-      );
-
-      fireEvent.contextMenu(container.querySelector('.player-info-panel__name')!);
-
-      expect(onContextMenu).toHaveBeenCalled();
-    });
-
-    it('does not bubble a zone-stack right-click up to the panel-level onContextMenu', () => {
-      const onContextMenu = vi.fn();
-      const onZoneContextMenu = vi.fn();
-      renderWithProviders(
-        <PlayerInfoPanel
-          onContextMenu={onContextMenu}
-        />,
-        {
-          preloadedState: statefulPlayer({ counters: { 1: life } }),
-          gameInteraction: { onZoneContextMenu },
-          cardVisualState: { canActFor: () => true },
-        },
-      );
-
-      fireEvent.contextMenu(screen.getByTestId(`zone-stack-${ZoneName.DECK}`));
-
-      expect(onZoneContextMenu).toHaveBeenCalled();
-      expect(onContextMenu).not.toHaveBeenCalled();
-    });
-
   });
 });

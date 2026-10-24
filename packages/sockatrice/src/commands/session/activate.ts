@@ -6,6 +6,7 @@ import {
   type ActivateParams,
 } from '../../generated';
 
+import { CommandFailure } from '../../services/command-options';
 import { StatusEnum } from '../../types/StatusEnum';
 import { WebClient } from '../../WebClient';
 import type { ConnectTarget } from '../../types/WebClientConfig';
@@ -30,10 +31,12 @@ export function activate(options: ConnectTarget & ActivateParams, password?: str
         }, password);
       },
     },
-    onError: () => {
-      updateStatus(StatusEnum.DISCONNECTED, 'Account Activation Failed');
-      disconnect();
-      WebClient.instance.response.session.accountActivationFailed();
+    onError: (_responseCode, _raw, failure) => {
+      if (failure !== CommandFailure.Disconnected) {
+        updateStatus(StatusEnum.DISCONNECTED, 'Account Activation Failed');
+        disconnect();
+      }
+      WebClient.instance.response.session.accountActivationFailed(failure);
     },
   });
 }

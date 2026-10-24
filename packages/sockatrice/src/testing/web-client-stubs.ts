@@ -9,7 +9,14 @@
 
 import { vi } from 'vitest';
 import type { IWebClientResponse } from '../types/WebClientResponse';
-import type { ISessionResponse, IRoomResponse, IGameResponse, IAdminResponse, IModeratorResponse } from '../types/WebClientResponse';
+import type {
+  ISessionResponse,
+  IRoomResponse,
+  IGameResponse,
+  IAdminResponse,
+  IModeratorResponse,
+  IDeveloperResponse,
+} from '../types/WebClientResponse';
 
 type AnyFn = (...args: unknown[]) => unknown;
 
@@ -37,6 +44,7 @@ export interface MockWebClientResponse extends IWebClientResponse {
   game: ReturnType<typeof makeSpyBag<IGameResponse>>;
   admin: ReturnType<typeof makeSpyBag<IAdminResponse>>;
   moderator: ReturnType<typeof makeSpyBag<IModeratorResponse>>;
+  developer: ReturnType<typeof makeSpyBag<IDeveloperResponse>>;
 }
 
 export function createMockWebClientResponse(): MockWebClientResponse {
@@ -46,5 +54,6 @@ export function createMockWebClientResponse(): MockWebClientResponse {
     game: makeSpyBag<IGameResponse>(),
     admin: makeSpyBag<IAdminResponse>(),
     moderator: makeSpyBag<IModeratorResponse>(),
+    developer: makeSpyBag<IDeveloperResponse>(),
   };
 }

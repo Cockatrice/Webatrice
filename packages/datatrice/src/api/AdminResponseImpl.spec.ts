@@ -1,5 +1,6 @@
 import { createStore } from '../store/createStore';
 import { Actions as ServerActions } from '../store/server/server.actions';
+import { WebsocketTypes } from '@cockatrice/sockatrice/types';
 import { AdminResponseImpl } from './AdminResponseImpl';
 
 function setup() {
@@ -14,6 +15,24 @@ describe('AdminResponseImpl', () => {
     impl.adjustMod('alice', true, false);
     expect(dispatch).toHaveBeenCalledWith(
       ServerActions.adjustMod({ userName: 'alice', shouldBeMod: true, shouldBeJudge: false }),
+    );
+  });
+
+  it('commandFailed dispatches adminCommandFailed with the command, code and target', () => {
+    const { impl, dispatch } = setup();
+    impl.commandFailed('adjustMod', 18, 'alice');
+    expect(dispatch).toHaveBeenCalledWith(
+      ServerActions.adminCommandFailed({ command: 'adjustMod', responseCode: 18, target: 'alice', failure: undefined }),
+    );
+  });
+
+  it('commandFailed carries the transport reason when the server never answered', () => {
+    const { impl, dispatch } = setup();
+    impl.commandFailed('adjustMod', -1, 'alice', WebsocketTypes.CommandFailure.Timeout);
+    expect(dispatch).toHaveBeenCalledWith(
+      ServerActions.adminCommandFailed({
+        command: 'adjustMod', responseCode: -1, target: 'alice', failure: WebsocketTypes.CommandFailure.Timeout,
+      }),
     );
   });
 

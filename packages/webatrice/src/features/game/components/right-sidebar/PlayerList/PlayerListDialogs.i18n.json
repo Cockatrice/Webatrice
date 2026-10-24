@@ -1,0 +1,10 @@
+{
+  "PlayerListDialogs": {
+    "unknownUser": "(unknown user)",
+    "close": "Close",
+    "realName": "Real name",
+    "country": "Country",
+    "accountAge": "Account age",
+    "userLevel": "User level"
+  }
+}

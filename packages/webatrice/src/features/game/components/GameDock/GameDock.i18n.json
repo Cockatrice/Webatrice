@@ -1,0 +1,24 @@
+{
+  "GameDock": {
+    "label": "Game dock",
+    "tabs": "Dock panels",
+    "tab": {
+      "log": "Chat & log",
+      "players": "Players",
+      "spectators": "Spectators"
+    },
+    "players": "Players",
+    "spectating": "Spectating",
+    "collapse": "Collapse the dock",
+    "expand": "Expand the dock",
+    "leaveTitle": "Leave the game",
+    "leave": "Leave",
+    "concedeTitle": "Concede this game",
+    "concede": "Concede",
+    "rejoinTitle": "Rejoin the game",
+    "rejoin": "Rejoin",
+    "sideboardTitle": "Open sideboard",
+    "sideboard": "Sideboard",
+    "gameInfo": "Game info"
+  }
+}

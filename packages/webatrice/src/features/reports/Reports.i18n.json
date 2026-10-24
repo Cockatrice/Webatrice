@@ -1,0 +1,127 @@
+{
+  "Reports": {
+    "loading": "Loading...",
+    "loadFailed": "Failed to load reports.",
+    "count": "{count, plural, one {# report} other {# reports}}",
+    "refresh": "Refresh",
+    "column": {
+      "id": "ID",
+      "age": "Age",
+      "reportedUser": "Reported user",
+      "category": "Category",
+      "status": "Status",
+      "assignedTo": "Assigned",
+      "nobody": "Nobody"
+    },
+    "age": {
+      "minutes": "{count} min",
+      "hours": "{count} h",
+      "days": "{count} d"
+    },
+    "view": {
+      "unresolved": "Unresolved",
+      "open": "Open",
+      "assigned": "Assigned",
+      "resolved": "Resolved",
+      "dismissed": "Dismissed",
+      "all": "All"
+    },
+    "drawer": {
+      "label": "Report {id}",
+      "subtitle": "{reporter} reported {reported} · {time}",
+      "game": "Game #{gameId}",
+      "mineSubtitle": "You reported {reported} · {time}"
+    },
+    "thread": {
+      "noDescription": "No description.",
+      "chatGroup": "Chat log",
+      "chatCaveat": "Captured from {name}'s client. It may be incomplete or edited; check it against the server log or replay.",
+      "noChatLog": "No chat log attached.",
+      "comments": "Replies",
+      "threadWith": "Thread with {name}",
+      "noComments": "No comments yet.",
+      "detailsFailed": "Failed to load report details.",
+      "addComment": "Add a comment",
+      "commentPlaceholder": "Add to your report (moderators will see it)",
+      "replyPlaceholder": "Comment to {name} (they will see it)",
+      "closedPlaceholder": "This report is closed.",
+      "send": "Send",
+      "commentFailed": "Failed to send comment.",
+      "moderatorPrefix": "Moderator",
+      "youPrefix": "You",
+      "reporterPrefix": "Reporter",
+      "resolution": "Resolution note:"
+    },
+    "mine": {
+      "title": "My reports",
+      "subtitle": "Reports you filed, and what moderators said about them."
+    },
+    "queue": {
+      "title": "Reports",
+      "searchPlaceholder": "Search reports",
+      "filter": "Report status",
+      "shownOfTotal": "{shown} of {total, plural, one {# report} other {# reports}}",
+      "assign": "Assign to me",
+      "resolve": "Resolve",
+      "resolveWithNote": "Resolve with note...",
+      "dismiss": "Dismiss...",
+      "viewReplay": "Replay",
+      "joinGame": "Join",
+      "assigning": "Assigning...",
+      "assignedDone": "Assigned.",
+      "assignFailed": "Assignment failed.",
+      "resolving": "Resolving...",
+      "dismissing": "Dismissing...",
+      "done": "Done.",
+      "actionFailed": "Action failed.",
+      "loadingReplay": "Loading replay...",
+      "noReplay": "No replay available for this game.",
+      "replayOpened": "Replay opened.",
+      "replayParseFailed": "Failed to parse replay.",
+      "replayTitle": "Report game #{gameId}",
+      "noRoom": "No room recorded for this report, use the replay instead.",
+      "joining": "Attempting to join game...",
+      "resolveTitle": "Resolve report",
+      "dismissTitle": "Dismiss report",
+      "resolveNoteLabel": "Resolution note (optional):",
+      "dismissNoteLabel": "Optional note:",
+      "ok": "OK",
+      "joinFailedTitle": "Join game"
+    },
+    "status": {
+      "open": "Open",
+      "assigned": "Assigned",
+      "resolved": "Resolved",
+      "dismissed": "Dismissed"
+    },
+    "userContext": {
+      "title": "Reported user",
+      "reports": "reports",
+      "warns": "warnings",
+      "bans": "bans",
+      "adminNotes": "Admin notes",
+      "recentReports": "Recent reports against this user",
+      "ageValue": "{days} days old · since {date}",
+      "none": "No notes.",
+      "noRecent": "No previous reports against this user.",
+      "loadFailed": "Error loading user info.",
+      "recentLine": "[{date}] #{id} by {reporter} [{status}]: {category}",
+      "openProfile": "Open profile",
+      "newAccount": "New account"
+    },
+    "stats": {
+      "title": "Report statistics",
+      "loading": "Loading statistics...",
+      "failed": "Error loading statistics.",
+      "line": "Last 24 h {day} · 7 days {week} · average time to resolve {hours} h",
+      "total": "Total: {total} reports ({open} open, {assigned} assigned, {resolved} resolved or dismissed)",
+      "month": "Last 30 days: {month}",
+      "weekCompare": "This week {thisWeek}, last week {lastWeek} ({change})",
+      "weekChangeNew": "new",
+      "topCategories": "Top categories",
+      "mostReported": "Most reported users",
+      "topReporters": "Top reporters",
+      "none": "None yet."
+    }
+  }
+}

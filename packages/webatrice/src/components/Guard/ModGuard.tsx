@@ -1,13 +1,18 @@
+import type { ReactNode } from 'react';
 import { Navigate } from 'react-router-dom';
 
-import { server } from '@cockatrice/datatrice';
-import { useAppSelector } from '@app/store';
+import { useUserCapabilities } from '@app/hooks';
 import { RouteEnum } from '@app/types';
-const ModGuard = () => {
-  const isModerator = useAppSelector(server.Selectors.getIsUserModerator);
+
+interface ModGuardProps {
+  children?: ReactNode;
+}
+
+const ModGuard = ({ children }: ModGuardProps) => {
+  const { isModerator } = useUserCapabilities();
   return !isModerator
     ? <Navigate to={RouteEnum.SERVER} />
-    : <></>;
+    : <>{children}</>;
 };
 
 export default ModGuard;

@@ -1,0 +1,55 @@
+{
+  "CardSearch": {
+    "label": "Search cards",
+    "searching": "Searching…",
+    "searchFailed": "Search failed",
+    "noResults": "No results.",
+    "filter": {
+      "clear": "Clear filters",
+      "to": "to",
+      "rarity": "Rarity",
+      "subtype": "Subtype",
+      "subtypePlaceholder": "e.g. Elemental, or \"Human Warrior\" for both",
+      "oracle": "Oracle text contains",
+      "oraclePlaceholder": "e.g. \"draw a card\""
+    },
+    "color": {
+      "W": "White",
+      "U": "Blue",
+      "B": "Black",
+      "R": "Red",
+      "G": "Green",
+      "C": "Colorless"
+    },
+    "cardType": {
+      "Creature": "Creature",
+      "Planeswalker": "Planeswalker",
+      "Battle": "Battle",
+      "Instant": "Instant",
+      "Sorcery": "Sorcery",
+      "Enchantment": "Enchantment",
+      "Artifact": "Artifact",
+      "Land": "Land",
+      "Other": "Other"
+    },
+    "rarity": {
+      "common": {
+        "name": "Common",
+        "short": "C"
+      },
+      "uncommon": {
+        "name": "Uncommon",
+        "short": "U"
+      },
+      "rare": {
+        "name": "Rare",
+        "short": "R"
+      },
+      "mythic": {
+        "name": "Mythic",
+        "short": "M"
+      }
+    },
+    "badQuery": "Search failed: {details}"
+  }
+}

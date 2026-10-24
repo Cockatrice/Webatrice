@@ -14,15 +14,19 @@ import { ArrowColor, rgbaToCss } from '@app/types';
 import { makeCardKey, makePlayerKey, useCardRegistry } from '../../../utils/CardRegistry/CardRegistryContext';
 
 // Fallback DOM lookup for consumers that don't wire the CardRegistry
-// (e.g. the ported fancy PlayerBox). We tag battlefield cards with
+// (e.g. the seat, PlayerBoard). We tag battlefield cards with
 // `data-card-id`, `data-card-owner`, `data-card-zone` and player-target
 // hitboxes with `data-arrow-target-*` — a plain querySelector finds them.
 // CSS.escape guards against zone strings with punctuation.
 function findCardEl(playerId: number, zone: string, cardId: number): HTMLElement | null {
   const exact = document.querySelector<HTMLElement>(
-    `[data-card-id="${CSS.escape(String(cardId))}"][data-card-owner="${CSS.escape(String(playerId))}"][data-card-zone="${CSS.escape(zone)}"]`,
+    `[data-card-id="${CSS.escape(String(cardId))}"]`
+    + `[data-card-owner="${CSS.escape(String(playerId))}"]`
+    + `[data-card-zone="${CSS.escape(zone)}"]`,
   );
-  if (exact) return exact;
+  if (exact) {
+    return exact;
+  }
   // Fallback: arrows drawn from a card in a pile-type zone (grave /
   // exile / library) can't hit-test the individual card element — the
   // cards there either aren't rendered at all or live inside a
@@ -95,8 +99,13 @@ function pointOnCircleEdge(
   return { x: cx + (dx * r) / d, y: cy + (dy * r) / d };
 }
 
+export function arrowKey(arrow: Pick<ResolvedArrow, 'ownerPlayerId' | 'arrowId'>): string {
+  return `${arrow.ownerPlayerId}:${arrow.arrowId}`;
+}
+
 export interface GameArrowOverlay {
   arrows: ResolvedArrow[];
+  gameArrowKeys: ReadonlySet<string> | null;
   width: number;
   height: number;
   handleArrowClick: (arrowId: number) => void;
@@ -105,11 +114,13 @@ export interface GameArrowOverlay {
 export interface UseGameArrowOverlayArgs {
   gameId: number | undefined;
   containerRef: React.RefObject<HTMLElement | null>;
+  layoutVersion?: unknown;
 }
 
 export function useGameArrowOverlay({
   gameId,
   containerRef,
+  layoutVersion,
 }: UseGameArrowOverlayArgs): GameArrowOverlay {
   const webClient = useWebClient();
   const registry = useCardRegistry();
@@ -134,10 +145,11 @@ export function useGameArrowOverlay({
 
   // First-paint: the board ref is null during the initial render, so `containerRect`
   // is undefined and the arrows memo bails out. Bump once after mount so the
-  // next render sees a populated ref.
+  // next render sees a populated ref, and again after each layout change commits,
+  // since a render-time measure would still read the old positions.
   useLayoutEffect(() => {
     bump();
-  }, [bump]);
+  }, [bump, layoutVersion]);
 
   useLayoutEffect(() => {
     const el = containerRef.current;
@@ -225,8 +237,8 @@ export function useGameArrowOverlay({
         });
       }
     }
-    // `tick` in deps intentionally re-runs the memo on DOM-layout changes.
     return out;
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `tick` re-measures the DOM after layout changes
   }, [players, registry, containerRect, tick]);
 
   const handleArrowClick = (arrowId: number) => {
@@ -239,5 +251,19 @@ export function useGameArrowOverlay({
   const width = containerRect?.width ?? 0;
   const height = containerRect?.height ?? 0;
 
-  return { arrows, width, height, handleArrowClick };
+  const measured = !!players && !!registry && !!containerRect;
+  const gameArrowKeys = useMemo(() => {
+    if (!measured) {
+      return null;
+    }
+    const keys = new Set<string>();
+    for (const player of Object.values(players) as PlayerEntry[]) {
+      for (const a of Object.values(player.arrows) as ServerInfo_Arrow[]) {
+        keys.add(arrowKey({ ownerPlayerId: player.properties.playerId, arrowId: a.id }));
+      }
+    }
+    return keys;
+  }, [measured, players]);
+
+  return { arrows, gameArrowKeys, width, height, handleArrowClick };
 }

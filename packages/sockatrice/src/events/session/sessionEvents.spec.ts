@@ -14,12 +14,14 @@ vi.mock('../../commands/session', () => ({
   forgotPasswordChallenge: vi.fn(),
   forgotPasswordReset: vi.fn(),
   requestPasswordSalt: vi.fn(),
+  replayList: vi.fn(),
 }));
 
 vi.mock('../../utils', () => ({
   sanitizeHtml: vi.fn((msg: string) => msg),
   generateSalt: vi.fn().mockReturnValue('randSalt'),
   passwordSaltSupported: vi.fn().mockReturnValue(0),
+  passwordHashAvailable: vi.fn().mockReturnValue(true),
   hashPassword: vi.fn().mockResolvedValue('hashedFromSalt'),
 }));
 
@@ -34,6 +36,7 @@ import {
   Event_GameJoinedSchema,
   Event_ListRoomsSchema,
   Event_NotifyUserSchema,
+  Event_NotifyUser_NotificationType,
   Event_RemoveFromListSchema,
   Event_ReplayAddedSchema,
   Event_ServerCompleteListSchema,
@@ -52,9 +55,10 @@ import { create } from '@bufbuild/protobuf';
 import { WebClient } from '../../WebClient';
 import * as SessionCmds from '../../commands/session';
 import { consumePendingOptions } from '../../utils/connectionState';
-import { passwordSaltSupported } from '../../utils';
+import { passwordHashAvailable, passwordSaltSupported } from '../../utils';
 import { WebSocketConnectReason } from '../../types/ConnectOptions';
 import { StatusEnum } from '../../types/StatusEnum';
+import { CommandFailure } from '../../types/CommandFailure';
 import { Mock } from 'vitest';
 import { gameJoined } from './gameJoined';
 
@@ -88,6 +92,15 @@ describe('notifyUser', () => {
     notifyUser(data);
     expect(WebClient.instance.response.session.notifyUser).toHaveBeenCalledWith(data);
   });
+
+  it.each([
+    Event_NotifyUser_NotificationType.REPORT_RESOLVED,
+    Event_NotifyUser_NotificationType.REPORT_COMMENT,
+  ])('forwards report notification type %s with its title and content', (type) => {
+    const data = create(Event_NotifyUserSchema, { type, customTitle: 'Report #3', customContent: 'Resolved' });
+    notifyUser(data);
+    expect(WebClient.instance.response.session.notifyUser).toHaveBeenCalledWith(data);
+  });
 });
 
 describe('replayAdded', () => {
@@ -98,6 +111,12 @@ describe('replayAdded', () => {
     });
     replayAdded(data);
     expect(WebClient.instance.response.session.replayAdded).toHaveBeenCalledWith(data.matchInfo);
+  });
+
+  it('refreshes the replay list when the event carries no match info', () => {
+    replayAdded(create(Event_ReplayAddedSchema, {}));
+    expect(SessionCmds.replayList).toHaveBeenCalled();
+    expect(WebClient.instance.response.session.replayAdded).not.toHaveBeenCalled();
   });
 });
 
@@ -233,7 +252,7 @@ describe('listRooms', () => {
       ]
     }));
     expect(SessionCmds.joinRoom).toHaveBeenCalledTimes(1);
-    expect(SessionCmds.joinRoom).toHaveBeenCalledWith(2);
+    expect(SessionCmds.joinRoom).toHaveBeenCalledWith(2, false);
   });
 });
 
@@ -343,7 +362,8 @@ describe('serverIdentification', () => {
 
   beforeEach(() => {
     (consumePendingOptions as Mock).mockReturnValue(null);
-    (passwordSaltSupported as Mock).mockReturnValue(0);
+    (passwordSaltSupported as Mock).mockReturnValue(false);
+    (passwordHashAvailable as Mock).mockReturnValue(true);
   });
 
   it('disconnects on protocol version mismatch', () => {
@@ -366,7 +386,7 @@ describe('serverIdentification', () => {
     serverIdentification(makeInfo());
     expect(SessionCmds.updateStatus).toHaveBeenCalledWith(StatusEnum.LOGGING_IN, 'Logging In...');
     expect(SessionCmds.login).toHaveBeenCalledWith(expect.objectContaining({ userName: 'alice' }), 'pw');
-    expect(WebClient.instance.response.session.updateInfo).toHaveBeenCalledWith('TestServer', '1.0');
+    expect(WebClient.instance.response.session.updateInfo).toHaveBeenCalledWith('TestServer', '1.0', false);
   });
 
   it('LOGIN → calls requestPasswordSalt when server supports it', () => {
@@ -469,10 +489,52 @@ describe('serverIdentification', () => {
     );
   });
 
+  it('records the password-hash capability on the client and reports it with the server info', () => {
+    (passwordSaltSupported as Mock).mockReturnValue(true);
+    (consumePendingOptions as Mock).mockReturnValue(makeLoginOptions());
+    serverIdentification(makeInfo());
+    expect(WebClient.instance.serverSupportsPasswordHash).toBe(true);
+    expect(WebClient.instance.response.session.updateInfo).toHaveBeenCalledWith('TestServer', '1.0', true);
+  });
+
+  describe('when the client cannot hash (no Web Crypto outside a secure context)', () => {
+    beforeEach(() => {
+      (passwordSaltSupported as Mock).mockReturnValue(true);
+      (passwordHashAvailable as Mock).mockReturnValue(false);
+    });
+
+    it('LOGIN → logs in with the plain password instead of requesting a salt', () => {
+      (consumePendingOptions as Mock).mockReturnValue(makeLoginOptions());
+      serverIdentification(makeInfo({ serverOptions: 1 }));
+      expect(SessionCmds.requestPasswordSalt).not.toHaveBeenCalled();
+      expect(SessionCmds.login).toHaveBeenCalledWith(expect.objectContaining({ userName: 'alice' }), 'pw');
+    });
+
+    it('REGISTER → registers with the plain password', async () => {
+      (consumePendingOptions as Mock).mockReturnValue({
+        host: 'h', port: '1', userName: 'alice', password: 'pw',
+        email: 'a@b.com', country: 'US', realName: 'Al',
+        reason: WebSocketConnectReason.REGISTER as const,
+      });
+      await serverIdentification(makeInfo({ serverOptions: 1 }));
+      expect(SessionCmds.register).toHaveBeenCalledWith(
+        expect.not.objectContaining({ hashedPassword: expect.anything() }),
+        'pw',
+      );
+    });
+
+    it('still reports the server capability itself', () => {
+      (consumePendingOptions as Mock).mockReturnValue(makeLoginOptions());
+      serverIdentification(makeInfo({ serverOptions: 1 }));
+      expect(WebClient.instance.serverSupportsPasswordHash).toBe(true);
+      expect(WebClient.instance.response.session.updateInfo).toHaveBeenCalledWith('TestServer', '1.0', true);
+    });
+  });
+
   it('always calls updateInfo after successful routing', () => {
     (consumePendingOptions as Mock).mockReturnValue(makeLoginOptions());
     serverIdentification(makeInfo());
-    expect(WebClient.instance.response.session.updateInfo).toHaveBeenCalledWith('TestServer', '1.0');
+    expect(WebClient.instance.response.session.updateInfo).toHaveBeenCalledWith('TestServer', '1.0', false);
   });
 
   describe('LOGIN with password salt', () => {
@@ -512,6 +574,14 @@ describe('serverIdentification', () => {
       onFailure();
       expect(WebClient.instance.response.session.loginFailed).toHaveBeenCalled();
       expect(SessionCmds.disconnect).toHaveBeenCalled();
+    });
+
+    it('a salt request lost to a dropped socket settles the form without cancelling the reconnect', () => {
+      setup();
+      const [, , onFailure] = (SessionCmds.requestPasswordSalt as Mock).mock.calls[0];
+      onFailure(CommandFailure.Disconnected);
+      expect(WebClient.instance.response.session.loginFailed).toHaveBeenCalled();
+      expect(SessionCmds.disconnect).not.toHaveBeenCalled();
     });
   });
 
@@ -554,12 +624,31 @@ describe('serverIdentification', () => {
       );
     });
 
+    it.each([CommandFailure.Timeout, CommandFailure.NotSent, CommandFailure.Disconnected])(
+      'forwards the activation salt failure reason %s', (failure) => {
+        setup();
+        const [, , onFailure] = (SessionCmds.requestPasswordSalt as Mock).mock.calls[0];
+        onFailure(failure);
+        expect(WebClient.instance.response.session.accountActivationFailed).toHaveBeenCalledWith(failure);
+        expect(SessionCmds.activate).not.toHaveBeenCalled();
+        expect(SessionCmds.disconnect).toHaveBeenCalledTimes(failure === CommandFailure.Disconnected ? 0 : 1);
+      },
+    );
+
     it('failure callback dispatches accountActivationFailed and disconnects', () => {
       setup();
       const [, , onFailure] = (SessionCmds.requestPasswordSalt as Mock).mock.calls[0];
       onFailure();
       expect(WebClient.instance.response.session.accountActivationFailed).toHaveBeenCalled();
       expect(SessionCmds.disconnect).toHaveBeenCalled();
+    });
+
+    it('a salt request lost to a dropped socket settles the form without cancelling the reconnect', () => {
+      setup();
+      const [, , onFailure] = (SessionCmds.requestPasswordSalt as Mock).mock.calls[0];
+      onFailure(CommandFailure.Disconnected);
+      expect(WebClient.instance.response.session.accountActivationFailed).toHaveBeenCalled();
+      expect(SessionCmds.disconnect).not.toHaveBeenCalled();
     });
   });
 
@@ -605,6 +694,14 @@ describe('serverIdentification', () => {
       onFailure();
       expect(WebClient.instance.response.session.resetPasswordFailed).toHaveBeenCalled();
       expect(SessionCmds.disconnect).toHaveBeenCalled();
+    });
+
+    it('a salt request lost to a dropped socket settles the form without cancelling the reconnect', () => {
+      setup();
+      const [, , onFailure] = (SessionCmds.requestPasswordSalt as Mock).mock.calls[0];
+      onFailure(CommandFailure.Disconnected);
+      expect(WebClient.instance.response.session.resetPasswordFailed).toHaveBeenCalled();
+      expect(SessionCmds.disconnect).not.toHaveBeenCalled();
     });
   });
 

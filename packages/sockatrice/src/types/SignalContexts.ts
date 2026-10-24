@@ -8,10 +8,7 @@ export interface PendingActivationContext {
   userName: string;
 }
 
-/**
- * Payload for the LOGIN_SUCCESSFUL signal. Only carries what the UI needs to
- * persist into the selected host record (hashedPassword for "remember me").
- */
 export interface LoginSuccessContext {
   hashedPassword?: string;
+  missingFeatures?: string[];
 }

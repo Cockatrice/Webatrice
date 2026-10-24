@@ -1,7 +1,12 @@
 import { create } from '@bufbuild/protobuf';
 import { describe, expect, it } from 'vitest';
 
-import { Command_Login_ext, Event_ServerIdentificationSchema, Event_ServerIdentification_ServerOptions, Event_ServerIdentification_ext } from '@cockatrice/sockatrice/generated';
+import {
+  Command_Login_ext,
+  Event_ServerIdentificationSchema,
+  Event_ServerIdentification_ServerOptions,
+  Event_ServerIdentification_ext,
+} from '@cockatrice/sockatrice/generated';
 import { store } from '../helpers/setup';
 import { WebsocketTypes } from '@cockatrice/sockatrice/types';
 

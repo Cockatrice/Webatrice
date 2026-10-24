@@ -1,0 +1,10 @@
+{
+  "MoveTopUntilDialog": {
+    "title": "Put top cards on stack until…",
+    "librarySize": "Library size: {count}",
+    "filter": "Card name (or search expressions)",
+    "hits": "Number of hits",
+    "autoPlay": "Auto play hits",
+    "start": "Start"
+  }
+}

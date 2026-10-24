@@ -1,0 +1,16 @@
+{
+  "DeckActionsMenu": {
+    "more": "More actions for {name}",
+    "label": "Actions for {name}",
+    "open": "Open in editor",
+    "share": "Share link…",
+    "makePublic": "Make public",
+    "makePrivate": "Make private",
+    "editTags": "Edit tags…",
+    "setBanner": "Set banner card…",
+    "rename": "Rename…",
+    "move": "Move to folder…",
+    "download": "Download .cod",
+    "delete": "Delete deck…"
+  }
+}

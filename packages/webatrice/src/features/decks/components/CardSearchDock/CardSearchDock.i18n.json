@@ -1,0 +1,61 @@
+{
+  "CardSearchDock": {
+    "label": "Card database",
+    "title": "Find cards",
+    "matches": "{count, plural, one {# match} other {# matches}}",
+    "placeholder": "Card name or Scryfall syntax",
+    "clear": "Clear search",
+    "results": "Search results",
+    "empty": "Type a card name or pick a filter. Scryfall syntax works too.",
+    "loadMore": "Show more ({shown} of {total})",
+    "highlighted": "{name} highlighted",
+    "addMain": "Add {name} to the deck",
+    "addSide": "Add {name} to the sideboard",
+    "sideShort": "SB",
+    "addedMain": "Added {name} to the deck",
+    "addedSide": "Added {name} to the sideboard",
+    "inDeck": "{count} in deck",
+    "noPrice": "No price",
+    "view": {
+      "label": "Results view",
+      "list": "List",
+      "art": "Art"
+    },
+    "keys": {
+      "adds": "adds",
+      "side": "to sideboard"
+    },
+    "filter": {
+      "colours": "Colours",
+      "colourMode": "Colour match",
+      "mode": {
+        "withinIdentity": "Within commander",
+        "includes": "Includes",
+        "exactly": "Exactly",
+        "atMost": "At most"
+      },
+      "types": "Card types",
+      "manaValueShort": "MV",
+      "manaValueMin": "Lowest mana value",
+      "manaValueMax": "Highest mana value",
+      "any": "any",
+      "legalIn": "Legal in {format}",
+      "more": "More filters"
+    },
+    "printings": {
+      "label": "Printings of {name}",
+      "title": "Printing",
+      "count": "{count, plural, one {# printing} other {# printings}}",
+      "loading": "Loading printings…",
+      "empty": "No printings found.",
+      "choose": "{set} #{number}: add this printing",
+      "chosen": "Chosen"
+    },
+    "gameChanger": {
+      "present": "Game Changer: it counts toward the deck’s bracket.",
+      "under": "Game Changer. Adding it makes {count}; Bracket 3 allows {limit}.",
+      "atLimit": "Game Changer. Adding it makes {count}, the most Bracket 3 allows.",
+      "over": "Game Changer. Adding it makes {count}, more than Bracket 3 allows."
+    }
+  }
+}

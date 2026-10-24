@@ -1,0 +1,28 @@
+{
+  "GameInvite": {
+    "copyLink": "Copy game link",
+    "inviteToGame": "Invite to Game...",
+    "invite": "Invite",
+    "linkCopied": "Game link copied",
+    "linkCopyFailed": "Could not copy the game link",
+    "desktopPortRequired": "Set this server's desktop port in server settings to copy links or send invites.",
+    "inviteSent": "Invitation sent to {name}",
+    "inviteFailed": {
+      "ignoring": "{name} is ignoring you, so the invitation was not delivered",
+      "offline": "{name} is no longer online, so the invitation was not delivered",
+      "rejected": "The server did not deliver the invitation to {name}",
+      "notSent": "The invitation to {name} was not sent: {reason}"
+    },
+    "message": "Join my game (#{gameId}):",
+    "messageWithDescription": "Join my game \"{description}\" (#{gameId}):",
+    "dialog": {
+      "title": "Invite to Game",
+      "search": "Search users...",
+      "buddies": "Buddies",
+      "online": "Online",
+      "empty": "No one to invite",
+      "invite": "Invite",
+      "cancel": "Cancel"
+    }
+  }
+}

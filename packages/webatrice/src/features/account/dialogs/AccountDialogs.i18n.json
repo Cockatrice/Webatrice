@@ -1,0 +1,21 @@
+{
+  "AccountDialogs": {
+    "label": {
+      "cancel": "Cancel",
+      "ok": "OK"
+    },
+    "error": {
+      "editNotAllowed": "This server does not permit you to update your user information.",
+      "passwordCheckWrong": "The entered password does not match your account.",
+      "updateFailed": "An error occurred while trying to update your user information.",
+      "passwordNotAllowed": "This server does not permit you to change your password.",
+      "passwordTooShort": "The new password is too short.",
+      "oldPasswordWrong": "The old password is incorrect.",
+      "avatarNotAllowed": "This server does not permit you to update your avatar.",
+      "avatarFailed": "An error occurred while trying to update your avatar."
+    },
+    "validation": {
+      "maxChars": "Maximum of {count} characters"
+    }
+  }
+}

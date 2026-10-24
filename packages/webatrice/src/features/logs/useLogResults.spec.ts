@@ -16,3 +16,17 @@ describe('useLogResults', () => {
     expect(result.current.value).toBe(2);
   });
 });
+
+describe('useLogResults selection', () => {
+  it('selects a row and forgets it when the tab changes', () => {
+    const { result } = renderHook(() => useLogResults());
+    act(() => {
+      result.current.select('row-1');
+    });
+    expect(result.current.selectedKey).toBe('row-1');
+    act(() => {
+      result.current.handleChange(null, 1);
+    });
+    expect(result.current.selectedKey).toBeNull();
+  });
+});

@@ -323,3 +323,9 @@ describe('Selectors', () => {
     });
   });
 });
+
+it('selects the raw join-room error or null', () => {
+  const error = { roomId: 7, responseCode: 6 };
+  expect(Selectors.getJoinRoomError(rootState(makeRoomsState({ joinRoomError: error })))).toBe(error);
+  expect(Selectors.getJoinRoomError(rootState(makeRoomsState()))).toBeNull();
+});

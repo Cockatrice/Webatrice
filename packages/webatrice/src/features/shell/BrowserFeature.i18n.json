@@ -1,0 +1,18 @@
+{
+  "BrowserFeature": {
+    "syntax": "Modern JavaScript, used by the whole client",
+    "esModules": "JavaScript modules, used to load the client",
+    "bigInt": "BigInt numbers, used by the server protocol",
+    "webSocket": "WebSockets, used to connect to the server",
+    "cryptoRandom": "Secure random numbers, used to log in",
+    "textEncoder": "Text encoding, used by the server protocol",
+    "structuredClone": "Structured cloning, used to track server requests",
+    "fetch": "Fetch, used to load translations, servers and card data",
+    "indexedDB": "IndexedDB storage, used for cards, decks and settings",
+    "resizeObserver": "Resize observers, used to lay out the game board",
+    "webCrypto": "Password hashing, which needs a page served over https://; passwords are sent to the server unhashed instead",
+    "worker": "Web Workers, used to keep the connection alive in a background tab",
+    "broadcastChannel": "Broadcast channels, used by the pop-out card preview",
+    "clipboard": "The clipboard, used by copy buttons (needs a page served over https://)"
+  }
+}

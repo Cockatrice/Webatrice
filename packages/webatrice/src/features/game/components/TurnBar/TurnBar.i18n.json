@@ -1,0 +1,12 @@
+{
+  "TurnBar": {
+    "whoseTurn": "{name}'s turn",
+    "noTurn": "No active turn",
+    "elapsedTitle": "Time since the game started",
+    "stack": "Stack",
+    "stackEmpty": "empty",
+    "stackItem": "{card} on the stack ({name})",
+    "pass": "Pass turn",
+    "passDisabled": "You cannot pass the turn right now"
+  }
+}

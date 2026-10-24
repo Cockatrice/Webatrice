@@ -12,10 +12,11 @@ import {
 } from '@cockatrice/datatrice/testing';
 import { CardAttribute } from '@cockatrice/sockatrice/generated';
 
+import { allActionIds, defaults, ShortcutScope } from '@app/feature-widgets/shortcuts';
 import { makeReduxWebClientHookWrapper } from '../../../__test-utils__/makeHookWrapper';
 
 interface ShortcutRegistration {
-  handler: () => void;
+  handler: (event?: KeyboardEvent) => void;
   enabled: boolean;
   scope: unknown;
 }
@@ -39,9 +40,27 @@ vi.mock('@app/feature-widgets/shortcuts', async (importOriginal) => {
         scope: options.scope,
       });
     },
+    useShortcutGroup: (
+      actionIds: readonly string[],
+      handler: (actionId: string, event: KeyboardEvent, index: number) => void,
+      options: { scope: unknown; enabled?: boolean },
+    ) => {
+      for (const [index, actionId] of actionIds.entries()) {
+        registrations.set(actionId, {
+          handler: (event?: KeyboardEvent) => handler(actionId, event ?? new KeyboardEvent('keydown'), index),
+          enabled: options.enabled ?? true,
+          scope: options.scope,
+        });
+      }
+    },
   };
 });
 
+import {
+  SEAT_SHORTCUT_ACTIONS,
+  createSeatShortcutRegistry,
+  type SeatShortcutRegistry,
+} from '../components/ui/SeatShortcutsContext';
 import { useGameShortcuts } from './useGameShortcuts';
 
 interface SetupOpts {
@@ -52,6 +71,7 @@ interface SetupOpts {
   conceded?: boolean;
   activePhase?: number;
   tableCards?: ReturnType<typeof makeCard>[];
+  seatShortcuts?: SeatShortcutRegistry;
 }
 
 function setup(opts: SetupOpts = {}) {
@@ -64,6 +84,7 @@ function setup(opts: SetupOpts = {}) {
     conceded = false,
     activePhase = 2,
     tableCards = [],
+    seatShortcuts = createSeatShortcutRegistry(),
   } = opts;
 
   const localPlayerId = 7;
@@ -112,8 +133,11 @@ function setup(opts: SetupOpts = {}) {
   const onRequestMoveTopToGrave = vi.fn();
   const onRequestMoveTopNToGrave = vi.fn();
   const onCloseRecentZoneView = vi.fn(() => false);
+  const onRotateView = vi.fn();
   renderHook(() => useGameShortcuts({
     gameId: 1,
+    seatShortcuts,
+    onRotateView,
     onRequestConcede,
     onRequestDrawMultiple,
     onRequestUndoDraw,
@@ -133,6 +157,7 @@ function setup(opts: SetupOpts = {}) {
 
   return {
     webClient,
+    onRotateView,
     onRequestConcede,
     onRequestDrawMultiple,
     onRequestUndoDraw,
@@ -168,6 +193,21 @@ describe('useGameShortcuts', () => {
     expect(registrations.has('game.shuffleLibrary')).toBe(true);
     expect(registrations.has('game.nextPhase')).toBe(true);
     expect(registrations.has('game.prevPhase')).toBe(true);
+    expect(registrations.has('game.nextPhaseAction')).toBe(true);
+    expect(registrations.has('game.reverseTurn')).toBe(true);
+  });
+
+  it('registers a handler for every game shortcut in the catalogue', () => {
+    setup();
+    const elsewhere = new Set([
+      'game.moveCardDialog',
+      'chat.focus',
+      'game.hideRevealedCard',
+    ]);
+    const unhandled = allActionIds.filter(
+      (id) => defaults[id].scope === ShortcutScope.GAME && !elsewhere.has(id) && !registrations.has(id),
+    );
+    expect(unhandled).toEqual([]);
   });
 
   it('sends a single bulk setCardAttr with cardId -1 for untap-all', () => {
@@ -223,6 +263,58 @@ describe('useGameShortcuts', () => {
     );
   });
 
+  it('sets a phase directly from its phase shortcut, for the active player only', () => {
+    const { webClient } = setup({ activePhase: 2 });
+    fire('game.setPhase0');
+    fire('game.setPhase9');
+    expect(vi.mocked(webClient.request.game.setActivePhase).mock.calls.map(([, params]) => params)).toEqual([
+      { phase: 0 },
+      { phase: 9 },
+    ]);
+
+    const offTurn = setup({ activePlayerId: 8 });
+    fire('game.setPhase4');
+    expect(offTurn.webClient.request.game.setActivePhase).not.toHaveBeenCalled();
+  });
+
+  it('steps back one phase, wrapping Untap to End', () => {
+    const { webClient } = setup({ activePhase: 0 });
+
+    fire('game.prevPhase');
+
+    expect(webClient.request.game.setActivePhase).toHaveBeenCalledWith(1, { phase: 10 }, expect.anything());
+  });
+
+  it('runs next phase with action: Upkeep sets Draw, then draws one', () => {
+    const { webClient } = setup({ activePhase: 1 });
+
+    fire('game.nextPhaseAction');
+
+    expect(webClient.request.game.setActivePhase).toHaveBeenCalledWith(1, { phase: 2 }, expect.anything());
+    expect(webClient.request.game.drawCards).toHaveBeenCalledWith(1, { number: 1 });
+  });
+
+  it('reverses the turn order for a participant, and not once they have conceded', () => {
+    const active = setup();
+    fire('game.reverseTurn');
+    expect(active.webClient.request.game.reverseTurn).toHaveBeenCalledWith(1);
+
+    const conceded = setup({ conceded: true });
+    fire('game.reverseTurn');
+    expect(conceded.webClient.request.game.reverseTurn).not.toHaveBeenCalled();
+  });
+
+  it('rotates the view clockwise (-1) and counterclockwise (+1), spectators included, sending nothing', () => {
+    const { webClient, onRotateView } = setup({ spectator: true, activePlayerId: 99 });
+
+    expect(registrations.get('game.rotateViewCW')?.enabled).toBe(true);
+    fire('game.rotateViewCW');
+    fire('game.rotateViewCCW');
+
+    expect(onRotateView.mock.calls).toEqual([[-1], [1]]);
+    expect(Object.values(webClient.request.game).some((fn) => vi.mocked(fn).mock.calls.length > 0)).toBe(false);
+  });
+
   it('does not draw or pass turn when the local player has conceded', () => {
     const { webClient } = setup({ conceded: true });
 
@@ -242,7 +334,10 @@ describe('useGameShortcuts', () => {
     fire('game.concede');
     fire('game.shuffleLibrary');
     fire('game.nextPhase');
+    fire('game.nextPhaseAction');
+    fire('game.reverseTurn');
 
+    expect(webClient.request.game.reverseTurn).not.toHaveBeenCalled();
     expect(webClient.request.game.setCardAttr).not.toHaveBeenCalled();
     expect(webClient.request.game.drawCards).not.toHaveBeenCalled();
     expect(webClient.request.game.nextTurn).not.toHaveBeenCalled();
@@ -250,5 +345,40 @@ describe('useGameShortcuts', () => {
     expect(webClient.request.game.setActivePhase).not.toHaveBeenCalled();
     expect(onRequestConcede).not.toHaveBeenCalled();
   });
-});
 
+  describe('seat-scoped shortcuts', () => {
+    it('registers every seat action once, for the live game', () => {
+      setup();
+      for (const actionId of SEAT_SHORTCUT_ACTIONS) {
+        expect(registrations.get(actionId)).toMatchObject({ enabled: true });
+      }
+      expect(SEAT_SHORTCUT_ACTIONS).toEqual(expect.arrayContaining([
+        'game.mulligan',
+        'game.setLife',
+        'game.removeLocalArrows',
+      ]));
+    });
+
+    it('runs the published seat operation and consumes the key', () => {
+      const seatShortcuts = createSeatShortcutRegistry();
+      const removeLocalArrows = vi.fn();
+      seatShortcuts.publish(() => ({ 'game.removeLocalArrows': removeLocalArrows }));
+      setup({ seatShortcuts });
+
+      const event = new KeyboardEvent('keydown', { cancelable: true });
+      registrations.get('game.removeLocalArrows')!.handler(event);
+
+      expect(removeLocalArrows).toHaveBeenCalledTimes(1);
+      expect(event.defaultPrevented).toBe(true);
+    });
+
+    it('leaves the key to the browser when no seat handles it (spectators)', () => {
+      setup({ spectator: true });
+
+      const event = new KeyboardEvent('keydown', { cancelable: true });
+      registrations.get('game.removeLocalArrows')!.handler(event);
+
+      expect(event.defaultPrevented).toBe(false);
+    });
+  });
+});

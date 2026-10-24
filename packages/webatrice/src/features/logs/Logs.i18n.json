@@ -1,20 +1,28 @@
 {
   "Logs": {
     "tab": {
-      "rooms": "Rooms",
-      "games": "Games",
-      "chats": "Chats"
+      "rooms": "Room logs",
+      "games": "Game logs",
+      "chats": "Chat logs"
     },
     "column": {
       "time": "Time",
-      "senderName": "Sender Name",
+      "senderName": "Sender",
       "senderIp": "Sender IP",
       "message": "Message",
       "targetId": "Target ID",
-      "targetName": "Target Name"
+      "targetName": "Target"
     },
-    "message": {
-      "emptyFilter": "Enter at least one search field before submitting."
-    }
+    "notice": {
+      "title": "Message History",
+      "empty": "There are no messages for the selected filters.",
+      "failed": "Failed to collect message history information."
+    },
+    "title": "Log Results",
+    "tabWithCount": "{tab} ({count})",
+    "pageTitle": "Logs",
+    "subtitle": "Search room, game and private chat history.",
+    "empty": "No messages to show. Search to see results.",
+    "details": "Message details"
   }
 }

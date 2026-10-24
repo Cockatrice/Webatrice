@@ -1,0 +1,5 @@
+---
+'@cockatrice/webatrice': minor
+---
+
+A game can now be joined without a mouse: a room's games list is a keyboard grid where the arrow keys, Home and End move the selection (scrolling it into view), Enter joins like a double-click, and the column headers are sort buttons. The top bar's room, game, replay and page tabs are links in a navigation landmark, reachable with Tab, each with a Close button named after its tab. Saved servers on the login screen are a single-tab-stop listbox: the arrow keys, Home, End and typing a name move through them, Enter or Space picks one, a separate Edit button acts on the selected server, and the connection test result is announced. Tab always enters the games grid, even after its selected row is scrolled away. Card names in chat preview on keyboard focus as well as hover and are described by their type line and P/T. Screen readers get names for shortcut Edit and Reset buttons, report grids, game-creation sections, country flags and the "cards that use this token" toggle, and plain virtualized lists expose their items. The unused GameSelector, OpenGames and SayMessage components are removed.

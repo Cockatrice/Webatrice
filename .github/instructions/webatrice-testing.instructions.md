@@ -11,13 +11,14 @@ Vitest + Testing Library + jsdom. [src/setupTests.ts](../../packages/webatrice/s
 ## Vitest configuration
 
 - Unit specs run under [vite.config.ts](../../packages/webatrice/vite.config.ts) with `test.isolate: true`: every spec file gets a fresh module graph, but tests **within the same file share it**. `vi.clearAllMocks()` runs in the global `afterEach` and is safe.
+- The unit pool is `vmForks` with a 1 GB V8 heap per worker. Source modules are fresh per file, but `node_modules` (React, Testing Library, MUI) load once per worker and are shared by every file it runs. Never leave async work running past a spec's end (await it, or mock what it waits on), and never assert on a call recorded at import time after the first test: copy `mock.calls` at module load instead. Workers are recycled between files at 600 MB to bound accumulation during coverage runs; a single file that exceeds the 1 GB cap needs investigation, not a higher limit.
 - Integration specs run under [vitest.integration.config.ts](../../packages/webatrice/vitest.integration.config.ts) via `npm run test:integration` — slower; exercise the wired-up `WebClient` against fakes in [src/__test-utils__/](../../packages/webatrice/src/__test-utils__/).
 - `npm run golden` (lint + unit + integration) is the CI gate — run it before declaring work done.
 
 ## Mocking footguns
 
 - **Never add `vi.resetAllMocks()` to `setupTests.ts`.** It resets `vi.fn()` instances created inside `vi.mock(...)` factories at file load, breaking any spec that mocks something once (e.g. `store.dispatch`) and expects it to persist across tests in the file.
-- **`vi.restoreAllMocks()` only restores `vi.spyOn` targets.** Bare `Object.defineProperty` writes (e.g. on `window.location`) and global reassignments (e.g. `globalThis.WebSocket = ...`) leak between tests in the same file. Use `withMockLocation` from [src/__test-utils__/globalGuards.ts](../../packages/webatrice/src/__test-utils__/globalGuards.ts) for scoped overrides that clean up after themselves.
+- **`vi.restoreAllMocks()` only restores `vi.spyOn` targets.** Bare `Object.defineProperty` writes (e.g. on `window.location`) and global reassignments (e.g. `globalThis.WebSocket = ...`) leak between tests in the same file. Use `withMockLocation` (and `withMockColorSchemeMedia` for `matchMedia('(prefers-color-scheme: dark)')`) from [src/__test-utils__/globalGuards.ts](../../packages/webatrice/src/__test-utils__/globalGuards.ts) for scoped overrides that clean up after themselves.
 
 ## Shared scaffolding
 

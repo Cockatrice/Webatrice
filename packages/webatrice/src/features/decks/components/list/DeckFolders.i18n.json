@@ -1,0 +1,9 @@
+{
+  "DeckFolders": {
+    "root": "Server deck storage",
+    "newFolder": "New folder",
+    "downloadFolder": "Download all decks as .cod files",
+    "deleteFolder": "Delete folder",
+    "empty": "This folder is empty."
+  }
+}

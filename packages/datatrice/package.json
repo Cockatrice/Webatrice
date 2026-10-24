@@ -43,8 +43,8 @@
     "build": "tsup",
     "dev": "tsup --watch --no-dts",
     "typecheck": "tsc -p tsconfig.build.json --noEmit",
-    "lint": "eslint src",
-    "lint:fix": "eslint src --fix",
+    "lint": "eslint src integration",
+    "lint:fix": "eslint src integration --fix",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:integration": "vitest run --config vitest.integration.config.ts",
@@ -78,7 +78,7 @@
     "@types/node": "^22.19.17",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.3",
-    "@vitest/coverage-v8": "^4.1.4",
+    "@vitest/coverage-v8": "^5.0.3",
     "eslint": "^9.39.4",
     "eslint-import-resolver-typescript": "^4.4.4",
     "eslint-plugin-boundaries": "^6.0.2",
@@ -91,7 +91,7 @@
     "tsup": "^8.5.1",
     "typescript": "~6.0",
     "typescript-eslint": "^8.58.2",
-    "vitest": "^4.1.4"
+    "vitest": "^5.0.3"
   },
   "keywords": [
     "cockatrice",

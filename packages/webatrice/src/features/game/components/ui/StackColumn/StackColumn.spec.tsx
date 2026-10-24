@@ -1,71 +1,97 @@
+import { act, fireEvent, waitFor } from '@testing-library/react';
 import { ZoneName } from '@cockatrice/sockatrice';
-import { screen, fireEvent } from '@testing-library/react';
-vi.mock('../../../../../hooks/useSettings');
-vi.mock('../../../hooks/useScryfallCard', () => ({
-  useScryfallCard: () => ({ smallUrl: null, normalUrl: null, isLoading: false }),
-}));
+import { makeCard } from '@cockatrice/datatrice/testing';
 
-import { makeStoreState, renderWithProviders, makeUser } from '../../../../../__test-utils__';
-import {
-  makeCard,
-  makeGameEntry,
-  makePlayerEntry,
-  makePlayerProperties,
-  makeZoneEntry,
-} from '@cockatrice/datatrice/testing';
-import StackColumn from './StackColumn';
+import { lookupCard } from '../../../../../services/cards/catalog/lookup';
+import { cardEl, renderSeatCell, type SeatGameSpec } from '../../../__test-utils__/seatFixtures';
 
-function stateWithStack(cards: ReturnType<typeof makeCard>[] = []) {
-  const stack = makeZoneEntry({
-    name: ZoneName.STACK,
-    cards,
-    cardCount: cards.length,
-  });
-  const player = makePlayerEntry({
-    properties: makePlayerProperties({
-      playerId: 1,
-      userInfo: makeUser({ name: 'Alice' }),
-    }),
-    zones: { [ZoneName.STACK]: stack },
-  });
-  return makeStoreState({
-    games: { games: { 1: makeGameEntry({ localPlayerId: 1, players: { 1: player } }) } },
-  });
-}
+vi.mock('../../../../../services/cards/catalog/lookup', async () =>
+  (await import('../../../__test-utils__/unknownCardCatalog')).unknownCardCatalog());
+
+const SHOCK = makeCard({ id: 50, name: 'Shock' });
+const BEAR = makeCard({ id: 51, name: 'Bear' });
+
+const SPEC: SeatGameSpec = {
+  localPlayerId: 1,
+  seats: [
+    { playerId: 1, stack: [SHOCK, BEAR] },
+    { playerId: 2, stack: [makeCard({ id: 60, name: 'Counterspell' })] },
+  ],
+};
+
+const found = (name: string, typeLine: string) =>
+  ({ found: true, source: 'scryfall', name, typeLine, printings: [] }) as Awaited<ReturnType<typeof lookupCard>>;
+
+afterEach(() => {
+  vi.mocked(lookupCard).mockImplementation(async (name: string) =>
+    ({ found: false, source: 'unknown', name, printings: [] }) as Awaited<ReturnType<typeof lookupCard>>);
+});
 
 describe('StackColumn', () => {
-  it('renders an empty cards container when the stack is empty', () => {
-    renderWithProviders(<StackColumn />, {
-      preloadedState: stateWithStack([]),
-    });
-
-    expect(screen.getByTestId('stack-column-1')).toBeInTheDocument();
-    expect(screen.queryAllByTestId('card-slot')).toHaveLength(0);
+  it('lists the stack\'s cards, addressable as arrow sources and targets', () => {
+    renderSeatCell(SPEC);
+    expect(cardEl(SHOCK.id, 'stack')).toHaveAttribute('data-card-zone', ZoneName.STACK);
+    expect(cardEl(BEAR.id, 'stack')).toHaveAttribute('data-card-owner', '1');
   });
 
-  it('renders a CardSlot per card on the stack', () => {
-    renderWithProviders(<StackColumn />, {
-      preloadedState: stateWithStack([
-        makeCard({ id: 1, name: 'Lightning Bolt' }),
-        makeCard({ id: 2, name: 'Counterspell' }),
-      ]),
-    });
-
-    expect(screen.getAllByTestId('card-slot')).toHaveLength(2);
+  it('opens the seat\'s stack card menu on right-click, on any seat', () => {
+    const openSeatCardMenu = vi.fn();
+    renderSeatCell(SPEC, 2, { gameDialogs: { openSeatCardMenu } });
+    fireEvent.contextMenu(cardEl(60, 'stack'), { clientX: 5, clientY: 6 });
+    expect(openSeatCardMenu).toHaveBeenCalledWith({ kind: 'stack', playerId: 2, cardId: '60', x: 5, y: 6 });
   });
 
-  it('fires onCardContextMenu when right-clicking a stack card', () => {
-    const onCardContextMenu = vi.fn();
-    renderWithProviders(<StackColumn />, {
-      preloadedState: stateWithStack([makeCard({ id: 7, name: 'Lightning Bolt' })]),
-      gameInteraction: { onCardContextMenu },
+  it('resolves an own instant to the graveyard and anything else to the battlefield on double-click', async () => {
+    const { game } = renderSeatCell(SPEC);
+    vi.mocked(lookupCard).mockResolvedValueOnce(found('Shock', 'Instant'));
+    fireEvent.doubleClick(cardEl(SHOCK.id, 'stack'));
+    await waitFor(() => expect(game.moveCard).toHaveBeenCalledTimes(1));
+    expect(vi.mocked(game.moveCard).mock.calls[0][1]).toMatchObject({
+      startZone: ZoneName.STACK,
+      cardsToMove: { card: [{ cardId: SHOCK.id }] },
+      targetZone: ZoneName.GRAVE,
     });
 
-    fireEvent.contextMenu(screen.getByTestId('card-slot'));
+    vi.mocked(lookupCard).mockResolvedValueOnce(found('Bear', 'Creature — Bear'));
+    fireEvent.doubleClick(cardEl(BEAR.id, 'stack'));
+    await waitFor(() => expect(game.moveCard).toHaveBeenCalledTimes(2));
+    expect(vi.mocked(game.moveCard).mock.calls[1][1]).toMatchObject({ startZone: ZoneName.STACK, targetZone: ZoneName.TABLE });
+  });
 
-    expect(onCardContextMenu).toHaveBeenCalled();
-    const [ownerPlayerId, zoneName] = onCardContextMenu.mock.calls[0];
-    expect(ownerPlayerId).toBe(1);
-    expect(zoneName).toBe(ZoneName.STACK);
+  it('resolves a creature to the battlefield with its seat metadata P/T and cipt', async () => {
+    vi.mocked(lookupCard).mockImplementation(async (name: string) =>
+      ({ ...found(name, 'Creature — Bear'), power: '2', toughness: '2', cipt: true }) as Awaited<ReturnType<typeof lookupCard>>);
+    const { game } = renderSeatCell(SPEC);
+    await waitFor(() => expect(lookupCard).toHaveBeenCalledWith('Bear'));
+    await act(async () => {});
+    vi.mocked(lookupCard).mockClear();
+
+    fireEvent.doubleClick(cardEl(BEAR.id, 'stack'));
+    await waitFor(() => expect(game.moveCard).toHaveBeenCalledTimes(1));
+    expect(lookupCard).not.toHaveBeenCalled();
+    expect(vi.mocked(game.moveCard).mock.calls[0][1]).toMatchObject({
+      startZone: ZoneName.STACK,
+      targetZone: ZoneName.TABLE,
+      cardsToMove: { card: [{ cardId: BEAR.id, pt: '2/2', tapped: true }] },
+    });
+  });
+
+  it('plays nothing from another player\'s stack', () => {
+    const { game } = renderSeatCell(SPEC, 2);
+    fireEvent.doubleClick(cardEl(60, 'stack'));
+    expect(game.moveCard).not.toHaveBeenCalled();
+  });
+
+  it('lets a judge play from another player\'s stack, as desktop\'s getLocalOrJudge does', async () => {
+    const { game } = renderSeatCell({ ...SPEC, judge: true }, 2);
+    vi.mocked(lookupCard).mockResolvedValueOnce(found('Counterspell', 'Instant'));
+    fireEvent.doubleClick(cardEl(60, 'stack'));
+    await waitFor(() => expect(game.moveCard).toHaveBeenCalledTimes(1));
+    expect(vi.mocked(game.moveCard).mock.calls[0][1]).toMatchObject({
+      startPlayerId: 2,
+      startZone: ZoneName.STACK,
+      cardsToMove: { card: [{ cardId: 60 }] },
+      targetZone: ZoneName.GRAVE,
+    });
   });
 });

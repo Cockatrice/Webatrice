@@ -4,10 +4,12 @@ import { dequal } from 'dequal';
 import { Enriched } from '../../types';
 import { ServerInfo_Card } from '@cockatrice/sockatrice/generated';
 import { GamesState, IncomingReveal } from './game.interfaces';
+import { type Playmat, playmatFromParams } from './playmat';
 
 type State = { games: GamesState };
 
 const EMPTY_ARRAY: ServerInfo_Card[] = [];
+const EMPTY_MESSAGES: Enriched.GameMessage[] = [];
 const EMPTY_OBJECT = {} as Record<string, never>;
 const EMPTY_PINGS: { [playerId: number]: number } = {};
 const EMPTY_ATTACHMENTS: ReadonlyMap<number, AttachedChild[]> = new Map();
@@ -110,6 +112,13 @@ function buildAttachments(
 // output reference is what we're stabilizing here.
 const selectAllAttachments = lruMemoize(buildAttachments, { resultEqualityCheck: dequal });
 
+const selectPlaymat = lruMemoize(playmatFromParams, { maxSize: 32, resultEqualityCheck: dequal });
+
+function playmatOf(player: Enriched.PlayerEntry | undefined): Playmat | null {
+  const params = player?.properties.playmatParams;
+  return params ? selectPlaymat(params) : null;
+}
+
 export const Selectors = {
   getGames: ({ games }: State): { [gameId: number]: Enriched.GameEntry } => games.games,
 
@@ -124,15 +133,14 @@ export const Selectors = {
   getPlayers: ({ games }: State, gameId: number): { [playerId: number]: Enriched.PlayerEntry } | undefined =>
     games.games[gameId]?.players,
 
-  /** Live ping clock per player. Authoritative over the stale
-   *  `properties.pingSeconds` snapshot inside `players` — see
-   *  `GamesState.pings`. The `?.` guards preloaded/partial states that omit
-   *  the sibling map. */
   getPings: ({ games }: State, gameId: number): { [playerId: number]: number } =>
     games.pings?.[gameId] ?? EMPTY_PINGS,
 
   getPlayerPing: ({ games }: State, gameId: number, playerId: number): number =>
     games.pings?.[gameId]?.[playerId] ?? 0,
+
+  getPlayerPlaymat: ({ games }: State, gameId: number, playerId: number): Playmat | null =>
+    playmatOf(games.games[gameId]?.players[playerId]),
 
   getSeatedPlayers: ({ games }: State, gameId: number): Enriched.PlayerEntry[] => {
     const game = games.games[gameId];
@@ -227,15 +235,15 @@ export const Selectors = {
     games.games[gameId]?.reversed ?? false,
 
   getMessages: ({ games }: State, gameId: number) =>
-    games.games[gameId]?.messages ?? EMPTY_ARRAY,
+    games.games[gameId]?.messages ?? EMPTY_MESSAGES,
 
   getActiveGameIds: createSelector(
     [({ games }: State) => games.games],
-    (games) => Object.keys(games).map(Number)
+    (games) => Object.keys(games).map(Number).filter((id) => !games[id].replay)
   ),
 
   getActiveGames: createSelector(
     [({ games }: State) => games.games],
-    (games): Enriched.GameEntry[] => Object.values(games)
+    (games): Enriched.GameEntry[] => Object.values(games).filter((game) => !game.replay)
   ),
 };

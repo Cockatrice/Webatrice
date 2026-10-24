@@ -20,30 +20,31 @@ function setup(preloadedState: Partial<RootState>, userName: string) {
 }
 
 describe('useUserDisplay', () => {
-  it('starts with no menu position and buddy/ignore flags false', () => {
+  it('starts with the menu closed and buddy/ignore flags false', () => {
     const { result } = setup(connectedState, 'someUser');
 
-    expect(result.current.position).toBeNull();
+    expect(result.current.menu.anchor).toBeNull();
     expect(result.current.isABuddy).toBe(false);
     expect(result.current.isIgnored).toBe(false);
   });
 
-  it('handleClick records the click position and handleClose resets it', () => {
+  it('opens the menu at a right-click and closes it again', () => {
     const { result } = setup(connectedState, 'someUser');
 
     act(() => {
-      result.current.handleClick({
+      result.current.menu.getTriggerProps().onContextMenu({
         clientX: 100,
         clientY: 200,
+        currentTarget: document.createElement('a'),
         preventDefault: vi.fn(),
       } as never);
     });
-    expect(result.current.position).toEqual({ x: 102, y: 204 });
+    expect(result.current.menu.anchor).toEqual({ x: 100, y: 200 });
 
     act(() => {
-      result.current.handleClose();
+      result.current.menu.close();
     });
-    expect(result.current.position).toBeNull();
+    expect(result.current.menu.anchor).toBeNull();
   });
 
   it('reflects buddy and ignore membership from server state', () => {
@@ -66,19 +67,20 @@ describe('useUserDisplay', () => {
     const { result, webClient } = setup(connectedState, 'target');
 
     act(() => {
-      result.current.handleClick({
+      result.current.menu.getTriggerProps().onContextMenu({
         clientX: 5,
         clientY: 5,
+        currentTarget: document.createElement('a'),
         preventDefault: vi.fn(),
       } as never);
     });
-    expect(result.current.position).not.toBeNull();
+    expect(result.current.menu.anchor).not.toBeNull();
 
     act(() => {
       result.current.onAddBuddy();
     });
     expect(webClient.request.session.addToBuddyList).toHaveBeenCalledWith('target');
-    expect(result.current.position).toBeNull();
+    expect(result.current.menu.anchor).toBeNull();
 
     act(() => {
       result.current.onAddIgnore();

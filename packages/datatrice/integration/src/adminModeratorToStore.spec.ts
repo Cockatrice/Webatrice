@@ -48,6 +48,27 @@ describe('integration: admin handlers', () => {
     expect(user.userLevel & ServerInfo_User_UserLevelFlag.IsJudge).toBeTruthy();
   });
 
+  it('a judge-only adjustMod keeps an existing moderator flag', () => {
+    const store = createStore();
+    const response = attachResponseHandlers(store);
+    response.session.updateUsers([makeUser('carol', ServerInfo_User_UserLevelFlag.IsModerator)]);
+
+    response.admin.adjustMod('carol', undefined, true);
+    const user = server.Selectors.getUsers(store.getState())['carol'];
+    expect(user.userLevel & ServerInfo_User_UserLevelFlag.IsModerator).toBeTruthy();
+    expect(user.userLevel & ServerInfo_User_UserLevelFlag.IsJudge).toBeTruthy();
+  });
+
+  it('commandFailed surfaces as an adminCommandFailed signal', () => {
+    const store = createStore();
+    const response = attachResponseHandlers(store);
+    const dispatch = vi.spyOn(store, 'dispatch');
+    response.admin.commandFailed?.('adjustMod', 13, 'alice');
+    expect(dispatch).toHaveBeenCalledWith(
+      server.Actions.adminCommandFailed({ command: 'adjustMod', responseCode: 13, target: 'alice' }),
+    );
+  });
+
   it('adjustMod on an unknown user is a no-op', () => {
     const store = createStore();
     const response = attachResponseHandlers(store);
@@ -109,6 +130,17 @@ describe('integration: moderator handlers', () => {
     const list = [create(Response_WarnListSchema, { userName: 'troll', warning: ['Spam'] })];
     response.moderator.warnListOptions(list);
     expect(store.getState().server.warnListOptions).toEqual(list);
+    expect(server.Selectors.getWarnListForUser(store.getState(), 'troll')).toBe(list[0]);
+  });
+
+  it('commandFailed surfaces as a moderatorCommandFailed signal', () => {
+    const store = createStore();
+    const response = attachResponseHandlers(store);
+    const dispatch = vi.spyOn(store, 'dispatch');
+    response.moderator.commandFailed?.('warnHistory', 13, 'troll');
+    expect(dispatch).toHaveBeenCalledWith(
+      server.Actions.moderatorCommandFailed({ command: 'warnHistory', responseCode: 13, target: 'troll' }),
+    );
   });
 
   it('viewLogs normalizes chat logs into grouped buckets', () => {

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 export interface RollDieDialogState {
   sides: string;
@@ -22,6 +23,7 @@ export function useRollDieDialog({
   lastCount,
   onSubmit,
 }: UseRollDieDialogArgs): RollDieDialogState {
+  const { t } = useTranslation();
   const [sides, setSides] = useState(String(lastSides));
   const [count, setCount] = useState(String(lastCount));
   const [error, setError] = useState<{ field: 'sides' | 'count'; message: string } | null>(null);
@@ -52,12 +54,12 @@ export function useRollDieDialog({
     e?.preventDefault();
     const s = Number(sides);
     if (!Number.isInteger(s) || s < 1) {
-      setError({ field: 'sides', message: 'Enter an integer ≥ 1' });
+      setError({ field: 'sides', message: t('RollDieDialog.validation.positiveInteger') });
       return;
     }
     const c = Number(count);
     if (!Number.isInteger(c) || c < 1) {
-      setError({ field: 'count', message: 'Enter an integer ≥ 1' });
+      setError({ field: 'count', message: t('RollDieDialog.validation.positiveInteger') });
       return;
     }
     onSubmit({ sides: s, count: c });

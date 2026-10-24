@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { act, screen } from '@testing-library/react';
 import { Route, Routes } from 'react-router-dom';
 
@@ -117,5 +118,29 @@ describe('ModGuard', () => {
 
     expect(screen.getByText('mod-page')).toBeInTheDocument();
     expect(screen.queryByText('server-page')).not.toBeInTheDocument();
+  });
+
+  it('never mounts its children for a non-moderator, so their effects send nothing', () => {
+    const mounted = vi.fn();
+    const ModPage = () => {
+      useEffect(mounted, []);
+      return <div>mod-page</div>;
+    };
+    renderWithProviders(
+      <Routes>
+        <Route path="/server" element={<div>server-page</div>} />
+        <Route path="/logs" element={<ModGuard><ModPage /></ModGuard>} />
+      </Routes>,
+      { preloadedState: connectedState, route: '/logs' },
+    );
+
+    expect(screen.getByText('server-page')).toBeInTheDocument();
+    expect(mounted).not.toHaveBeenCalled();
+  });
+
+  it('mounts its children for a moderator', () => {
+    renderWithProviders(<ModGuard><div>mod-page</div></ModGuard>, { preloadedState: modState(), route: '/logs' });
+
+    expect(screen.getByText('mod-page')).toBeInTheDocument();
   });
 });

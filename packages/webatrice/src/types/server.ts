@@ -3,6 +3,7 @@ export class Host {
   name: string;
   host: string;
   port: string;
+  desktopPort?: string;
   editable: boolean;
   lastSelected?: boolean;
   userName?: string;

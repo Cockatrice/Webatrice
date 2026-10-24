@@ -1,6 +1,9 @@
 import { useMemo } from 'react';
+import { lruMemoize } from '@reduxjs/toolkit';
+import { shallowEqual } from 'react-redux';
 
 import { GameEntry, games } from '@cockatrice/datatrice';
+import { PREFERENCE_DEFAULTS } from '@app/types';
 
 import { computeCanAct } from './useGameAccess';
 
@@ -28,9 +31,9 @@ export interface GameBoardLayout {
   bottomHand: { playerId: number; canAct: boolean } | undefined;
 }
 
-// Cockatrice switches to a 2-column board at this player count
-// (its getMinPlayersForMultiColumnLayout default; see Cockatrice issue #3533).
-const MIN_PLAYERS_FOR_TWO_COLUMNS = 4;
+export type RotationStep = 1 | -1;
+export const ROTATE_CLOCKWISE: RotationStep = -1;
+export const ROTATE_COUNTERCLOCKWISE: RotationStep = 1;
 
 const EMPTY_LAYOUT: GameBoardLayout = {
   cells: [],
@@ -40,38 +43,35 @@ const EMPTY_LAYOUT: GameBoardLayout = {
   bottomHand: undefined,
 };
 
-/**
- * Board view-model for a game: where each seated player renders, whether the local
- * user can act on it, and how hands are shown. A port of Cockatrice's
- * GameScene::rearrange() (collectActivePlayers -> rotatePlayers ->
- * computeSceneSizeAndPlayerLayout): seated players sit in a cyclic ring in join
- * order; the local player anchors the bottom-left cell and the ring is rotated so
- * everyone else keeps their seating order relative to the local player. Cells fill
- * up the left column (bottom -> top) then down the right column (top -> bottom).
- */
-export function useGameBoardLayout(game: GameEntry | undefined): GameBoardLayout {
+export function useGameBoardLayout(
+  game: GameEntry | undefined,
+  rotation = 0,
+  minPlayersForMultiColumn: number = PREFERENCE_DEFAULTS.minPlayersForMultiColumnLayout,
+): GameBoardLayout {
+  const selectPlayerIds = useMemo(() => lruMemoize(
+    (entry: GameEntry | undefined) => entry ? games.seatedPlayersOf(entry).map((p) => p.properties.playerId) : [],
+    { resultEqualityCheck: shallowEqual },
+  ), []);
+  const players = selectPlayerIds(game);
+  const isSpectator = game?.spectator;
+  const localPlayerId = game?.localPlayerId;
+  const judge = game?.judge;
+  const omniscient = game?.info?.spectatorsOmniscient === true;
   return useMemo<GameBoardLayout>(() => {
-    if (!game) {
+    if (localPlayerId === undefined || isSpectator === undefined || judge === undefined) {
       return EMPTY_LAYOUT;
     }
-
-    // Active players (non-spectator, non-conceded) in server seat/join order,
-    // sourced from the store's seatOrder via seatedPlayersOf — only the id is
-    // needed to seat cells (names are a presentation concern owned by consumers).
-    const players = games.seatedPlayersOf(game).map((p) => p.properties.playerId);
 
     const n = players.length;
     if (n === 0) {
       return EMPTY_LAYOUT;
     }
 
-    const isSpectator = game.spectator;
-    const localPlayerId = game.localPlayerId;
+    const access = { spectator: isSpectator, localPlayerId, judge };
 
     // A seated player always sees their own hand; other hands are revealed only when
     // the server marks the game omniscient (spectators_see_everything). More than one
     // visible hand renders inline per board, otherwise a single bottom bar.
-    const omniscient = game.info?.spectatorsOmniscient === true;
     const visibleHand = new Set<number>();
     for (const playerId of players) {
       if ((!isSpectator && playerId === localPlayerId) || omniscient) {
@@ -81,21 +81,17 @@ export function useGameBoardLayout(game: GameEntry | undefined): GameBoardLayout
     const handMode: 'bar' | 'inline' = visibleHand.size > 1 ? 'inline' : 'bar';
     const bottomHand =
       handMode === 'bar' && visibleHand.has(localPlayerId)
-        ? { playerId: localPlayerId, canAct: computeCanAct(game, localPlayerId) }
+        ? { playerId: localPlayerId, canAct: computeCanAct(access, localPlayerId) }
         : undefined;
 
-    const columns = n >= MIN_PLAYERS_FOR_TWO_COLUMNS ? 2 : 1;
+    const columns = n >= minPlayersForMultiColumn ? 2 : 1;
     const rows = Math.ceil(n / columns);
 
-    // Rotate the ring so the anchored (local) player leads. Spectators have no
-    // anchor, so the seats fill in plain join order.
     const localIndex = isSpectator
       ? -1
       : players.findIndex((p) => p === localPlayerId);
-    const ring =
-      localIndex >= 0
-        ? [...players.slice(localIndex), ...players.slice(0, localIndex)]
-        : players;
+    const start = (((Math.max(localIndex, 0) + rotation) % n) + n) % n;
+    const ring = [...players.slice(start), ...players.slice(0, start)];
 
     // Around-the-table cell path: up the left column (bottom -> top), then
     // (2-column only) down the right column (top -> bottom). path[0] is bottom-left.
@@ -117,7 +113,7 @@ export function useGameBoardLayout(game: GameEntry | undefined): GameBoardLayout
         playerId,
         isLocal: !isSpectator && playerId === localPlayerId,
         mirrored: row < rows - 1,
-        canAct: computeCanAct(game, playerId),
+        canAct: computeCanAct(access, playerId),
         showHand: handMode === 'inline' && visibleHand.has(playerId),
         row,
         col,
@@ -125,5 +121,5 @@ export function useGameBoardLayout(game: GameEntry | undefined): GameBoardLayout
     });
 
     return { cells, columns, rows, handMode, bottomHand };
-  }, [game]);
+  }, [players, isSpectator, localPlayerId, judge, omniscient, rotation, minPlayersForMultiColumn]);
 }

@@ -1,0 +1,19 @@
+{
+  "BoardTray": {
+    "label": "Hand tray",
+    "yourHand": "Your hand",
+    "handHeading": "Your hand · {count}",
+    "sort": "Sort",
+    "reveal": "Reveal",
+    "sideboard": "Sideboard",
+    "actions": "Quick actions",
+    "action": {
+      "untapAll": "Untap all",
+      "draw": "Draw",
+      "shuffle": "Shuffle",
+      "drawN": "Draw N",
+      "rollDie": "Roll die",
+      "createToken": "Create token"
+    }
+  }
+}

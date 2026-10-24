@@ -100,6 +100,14 @@ describe('usePhaseBar', () => {
     expect(webClient.request.game.drawCards).toHaveBeenCalledWith(1, { number: 1 });
   });
 
+  it('handlePassAndUntap forwards and returns the caller request ID', () => {
+    const { result, webClient } = setup();
+    act(() => {
+      expect(result.current.handlePassAndUntap('wrap-request')).toBe('wrap-request');
+    });
+    expect(webClient.request.game.nextTurn).toHaveBeenCalledWith(1, 'wrap-request');
+  });
+
   it('handleUntapAll emits a single bulk setCardAttr with cardId -1', () => {
     const { result, webClient } = setup();
 
@@ -119,6 +127,56 @@ describe('usePhaseBar', () => {
     );
   });
 
+  it('handlePassAndUntap passes the turn, then untaps, even off turn', () => {
+    const { result, webClient } = setup({ gamesState: stateWith({ activePlayerId: 2 }) });
+
+    expect(result.current.canAdvancePhase).toBe(false);
+    act(() => {
+      result.current.handlePassAndUntap();
+      result.current.handleReverseTurn();
+    });
+
+    expect(webClient.request.game.nextTurn).toHaveBeenCalledWith(1);
+    expect(webClient.request.game.setCardAttr).toHaveBeenCalledWith(1, expect.objectContaining({ cardId: -1 }));
+    expect(vi.mocked(webClient.request.game.nextTurn).mock.invocationCallOrder[0])
+      .toBeLessThan(vi.mocked(webClient.request.game.setCardAttr).mock.invocationCallOrder[0]);
+  });
+
+  it('handleReverseTurn sends Command_ReverseTurn, off turn too', () => {
+    const { result, webClient } = setup({ gamesState: stateWith({ activePlayerId: 2 }) });
+
+    act(() => {
+      result.current.handleReverseTurn();
+    });
+
+    expect(webClient.request.game.reverseTurn).toHaveBeenCalledWith(1);
+  });
+
+  it.each([true, false])('reverse turn exempts a conceded judge: %s', (judge) => {
+    const state = stateWith();
+    state.games[1].judge = judge;
+    state.games[1].players[1].properties.conceded = true;
+    const { result, webClient } = setup({ gamesState: state });
+
+    act(() => {
+      result.current.handleReverseTurn();
+      result.current.handlePass();
+    });
+
+    expect(webClient.request.game.reverseTurn).toHaveBeenCalledTimes(judge ? 1 : 0);
+    expect(webClient.request.game.nextTurn).not.toHaveBeenCalled();
+  });
+
+  it('handleReverseTurn sends nothing before the game starts', () => {
+    const { result, webClient } = setup({ gamesState: stateWith({ started: false }) });
+
+    act(() => {
+      result.current.handleReverseTurn();
+    });
+
+    expect(webClient.request.game.reverseTurn).not.toHaveBeenCalled();
+  });
+
   it('no-ops every action when gameId is undefined', () => {
     const { result, webClient } = setup({ gameId: undefined });
 
@@ -127,10 +185,13 @@ describe('usePhaseBar', () => {
       result.current.handlePass();
       result.current.handleDrawOne();
       result.current.handleUntapAll();
+      result.current.handlePassAndUntap();
+      result.current.handleReverseTurn();
     });
 
     expect(webClient.request.game.setActivePhase).not.toHaveBeenCalled();
     expect(webClient.request.game.nextTurn).not.toHaveBeenCalled();
+    expect(webClient.request.game.reverseTurn).not.toHaveBeenCalled();
     expect(webClient.request.game.drawCards).not.toHaveBeenCalled();
     expect(webClient.request.game.setCardAttr).not.toHaveBeenCalled();
     expect(result.current.canAdvancePhase).toBe(false);

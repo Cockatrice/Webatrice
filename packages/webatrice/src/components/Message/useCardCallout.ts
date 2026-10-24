@@ -7,7 +7,7 @@ export interface CardCallout {
   token: TokenDTO | null;
   anchorEl: Element | null;
   open: boolean;
-  handlePopoverOpen: (event: React.MouseEvent) => void;
+  handlePopoverOpen: (event: React.SyntheticEvent) => void;
   handlePopoverClose: () => void;
 }
 
@@ -28,7 +28,7 @@ export function useCardCallout(name: string): CardCallout {
     }
   }, [name]);
 
-  const handlePopoverOpen = (event: React.MouseEvent) => {
+  const handlePopoverOpen = (event: React.SyntheticEvent) => {
     setAnchorEl(event.currentTarget);
   };
 

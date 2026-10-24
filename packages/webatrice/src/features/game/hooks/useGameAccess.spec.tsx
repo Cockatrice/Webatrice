@@ -1,5 +1,5 @@
 import { ReactNode } from 'react';
-import { renderHook } from '@testing-library/react';
+import { act, renderHook } from '@testing-library/react';
 import { configureStore } from '@reduxjs/toolkit';
 import { Provider } from 'react-redux';
 
@@ -9,6 +9,8 @@ import { Provider } from 'react-redux';
 import { games, type GamesState } from '@cockatrice/datatrice';
 import { makeGameEntry } from '@cockatrice/datatrice/testing';
 import { useGameAccess } from './useGameAccess';
+import { renderWithProviders } from '../../../__test-utils__';
+import { buildSeatGameState } from '../__test-utils__/seatFixtures';
 
 // `preloadedState` on configureStore is typed as `PreloadedState<S>` which
 // narrows collection fields past GamesState; a single precise cast keeps
@@ -24,6 +26,22 @@ function makeWrapper(gamesState: Pick<GamesState, 'games'>) {
 }
 
 describe('useGameAccess', () => {
+  it('does not render on unrelated game changes but revokes access when the game closes', () => {
+    const seen: ReturnType<typeof useGameAccess>[] = [];
+    function Probe() {
+      seen.push(useGameAccess(1, 1));
+      return null;
+    }
+    const { store } = renderWithProviders(<Probe />, {
+      preloadedState: buildSeatGameState({ localPlayerId: 1, seats: [{ playerId: 1 }] }),
+    });
+    const before = seen.length;
+    act(() => store.dispatch(games.Actions.gameInfoUpdated({ gameId: 1, secondsElapsed: 15 })));
+    expect(seen).toHaveLength(before);
+    act(() => store.dispatch(games.Actions.gameClosed({ gameId: 1 })));
+    expect(seen.at(-1)).toMatchObject({ canAct: false, canView: false, localPlayerId: undefined });
+  });
+
   it('returns fully locked out when the game is missing', () => {
     const wrapper = makeWrapper({ games: {} });
     const { result } = renderHook(() => useGameAccess(1), { wrapper });

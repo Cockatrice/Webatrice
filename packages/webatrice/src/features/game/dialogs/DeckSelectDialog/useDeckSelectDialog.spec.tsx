@@ -105,7 +105,7 @@ describe('useDeckSelectDialog', () => {
     act(() => result.current.handleSubmitDeck());
 
     expect(webClient.request.game.deckSelect).not.toHaveBeenCalled();
-    expect(result.current.validationError).toMatch(/not a valid cockatrice deck/i);
+    expect(result.current.validationError).toBe('DeckSelectDialog.error.invalidCod');
   });
 
   it('toggles readyStart against the current ready flag when canToggleReady is satisfied', () => {

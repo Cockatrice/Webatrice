@@ -20,4 +20,6 @@ export {
   makeLoginSuccessContext,
   makePendingActivationContext,
   makeServerState,
+  makeReport,
+  makeReportsState,
 } from './fixtures/server';

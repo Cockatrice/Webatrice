@@ -5,16 +5,22 @@ import { createStore } from '../store/createStore';
 import {
   Event_GameJoinedSchema,
   Event_NotifyUserSchema,
+  Event_NotifyUser_NotificationType,
   Event_PlayerPropertiesChangedSchema,
   Event_ServerShutdownSchema,
   Event_UserMessageSchema,
   Response_DeckDownloadSchema,
   Response_DeckListSchema,
+  Response_DeckShareCreateSchema,
+  Response_DeckShareListSchema,
   Response_GetGamesOfUserSchema,
   Response_ReplayDownloadSchema,
+  Response_ResponseCode,
+  ServerInfo_DeckShareSummarySchema,
   ServerInfo_DeckStorage_TreeItemSchema,
   ServerInfo_PlayerPropertiesSchema,
   ServerInfo_ReplayMatchSchema,
+  ServerInfo_ReportSchema,
   ServerInfo_UserSchema,
 } from '@cockatrice/sockatrice/generated';
 import { Actions as ServerActions } from '../store/server/server.actions';
@@ -26,6 +32,30 @@ function setup() {
   const dispatch = vi.spyOn(store, 'dispatch');
   return { store, impl: new SessionResponseImpl(store), dispatch };
 }
+
+describe('SessionResponseImpl.loginFailed', () => {
+  it('keeps the rejection code through the disconnect that follows a rejected login', () => {
+    const { store, impl } = setup();
+    impl.connectionAttempted();
+    impl.updateStatus(WebsocketTypes.StatusEnum.DISCONNECTED, 'Login failed: server is full');
+    impl.loginFailed(Response_ResponseCode.RespServerFull);
+    impl.updateStatus(WebsocketTypes.StatusEnum.DISCONNECTED, 'Login failed: server is full');
+    expect(store.getState().server.loginFailureCode).toBe(Response_ResponseCode.RespServerFull);
+  });
+
+  it('clears the rejection code on the next connection attempt', () => {
+    const { store, impl } = setup();
+    impl.loginFailed(Response_ResponseCode.RespPasswordChangeRequired);
+    impl.connectionAttempted();
+    expect(store.getState().server.loginFailureCode).toBeNull();
+  });
+
+  it('records no code when the login never reached Command_Login', () => {
+    const { store, impl } = setup();
+    impl.loginFailed();
+    expect(store.getState().server.loginFailureCode).toBeNull();
+  });
+});
 
 describe('SessionResponseImpl.updateStatus', () => {
   // updateStatus is the one method whose effect propagates through the server
@@ -92,6 +122,12 @@ describe('SessionResponseImpl forwards', () => {
     expect(dispatch).toHaveBeenCalledWith(ServerActions.loginFailed());
   });
 
+  it('loginFailed forwards the rejecting response code', () => {
+    const { impl, dispatch } = setup();
+    impl.loginFailed(Response_ResponseCode.RespServerFull);
+    expect(dispatch).toHaveBeenCalledWith(ServerActions.loginFailed({ responseCode: Response_ResponseCode.RespServerFull }));
+  });
+
   it('connectionFailed', () => {
     const { impl, dispatch } = setup();
     impl.connectionFailed();
@@ -156,10 +192,20 @@ describe('SessionResponseImpl forwards', () => {
     expect(dispatch).toHaveBeenCalledWith(ServerActions.removeFromIgnoreList({ userName: 'bob' }));
   });
 
-  it('updateInfo packs name + version into an info object', () => {
+  it('updateInfo packs name + version + password-hash capability into an info object', () => {
+    const { impl, dispatch } = setup();
+    impl.updateInfo('Servatrice', '2.7.0', true);
+    expect(dispatch).toHaveBeenCalledWith(ServerActions.updateInfo({
+      info: { name: 'Servatrice', version: '2.7.0', supportsPasswordHash: true },
+    }));
+  });
+
+  it('updateInfo without the capability reports it as unknown', () => {
     const { impl, dispatch } = setup();
     impl.updateInfo('Servatrice', '2.7.0');
-    expect(dispatch).toHaveBeenCalledWith(ServerActions.updateInfo({ info: { name: 'Servatrice', version: '2.7.0' } }));
+    expect(dispatch).toHaveBeenCalledWith(ServerActions.updateInfo({
+      info: { name: 'Servatrice', version: '2.7.0', supportsPasswordHash: undefined },
+    }));
   });
 
   it('updateUser', () => {
@@ -173,6 +219,13 @@ describe('SessionResponseImpl forwards', () => {
     const { impl, dispatch } = setup();
     impl.updateConnectionHealth(2, 10000);
     expect(dispatch).toHaveBeenCalledWith(ServerActions.connectionHealthChanged({ missedPongs: 2, silentForMs: 10000 }));
+  });
+
+  it('updateLatencyStats', () => {
+    const { impl, dispatch } = setup();
+    const stats = { lastMs: 30, medianMs: 30, p95Ms: 30, maxMs: 30, sampleCount: 1 };
+    impl.updateLatencyStats(stats, [30]);
+    expect(dispatch).toHaveBeenCalledWith(ServerActions.latencyStatsUpdated({ stats, samplesMs: [30] }));
   });
 
   it('updateUsers', () => {
@@ -218,6 +271,12 @@ describe('SessionResponseImpl forwards', () => {
     const { impl, dispatch } = setup();
     impl.accountActivationFailed();
     expect(dispatch).toHaveBeenCalledWith(ServerActions.accountActivationFailed());
+  });
+
+  it('accountActivationFailed carries a transport failure reason', () => {
+    const { impl, dispatch } = setup();
+    impl.accountActivationFailed(WebsocketTypes.CommandFailure.Timeout);
+    expect(dispatch).toHaveBeenCalledWith(ServerActions.accountActivationFailed({ failure: WebsocketTypes.CommandFailure.Timeout }));
   });
 
   it('registrationRequiresEmail', () => {
@@ -322,6 +381,28 @@ describe('SessionResponseImpl forwards', () => {
     expect(dispatch).toHaveBeenCalledWith(ServerActions.getUserInfo({ userInfo }));
   });
 
+  it('getUserInfoFailed dispatches the user name and code', () => {
+    const { impl, dispatch } = setup();
+    impl.getUserInfoFailed('alice', 34);
+    expect(dispatch).toHaveBeenCalledWith(ServerActions.getUserInfoFailed({ userName: 'alice', responseCode: 34 }));
+  });
+
+  it('privateMessageFailed dispatches privateMessageFailed with the response code', () => {
+    const { impl, dispatch } = setup();
+    impl.privateMessageFailed('alice', 'hi', 18);
+    expect(dispatch).toHaveBeenCalledWith(ServerActions.privateMessageFailed({ userName: 'alice', message: 'hi', responseCode: 18 }));
+  });
+
+  it('getGamesOfUserPending / getGamesOfUserFailed dispatch the request lifecycle actions', () => {
+    const { impl, dispatch } = setup();
+    impl.getGamesOfUserPending('alice');
+    impl.getGamesOfUserFailed('alice', 6, WebsocketTypes.CommandFailure.Disconnected);
+    expect(dispatch).toHaveBeenCalledWith(ServerActions.gamesOfUserRequested({ userName: 'alice' }));
+    expect(dispatch).toHaveBeenCalledWith(ServerActions.gamesOfUserFailed({
+      userName: 'alice', responseCode: 6, failure: WebsocketTypes.CommandFailure.Disconnected,
+    }));
+  });
+
   it('getGamesOfUser maps method name to gamesOfUser action', () => {
     const { impl, dispatch } = setup();
     const response = create(Response_GetGamesOfUserSchema, {});
@@ -341,6 +422,16 @@ describe('SessionResponseImpl forwards', () => {
     const notification = create(Event_NotifyUserSchema, {});
     impl.notifyUser(notification);
     expect(dispatch).toHaveBeenCalledWith(ServerActions.notifyUser({ notification }));
+  });
+
+  it.each([
+    Event_NotifyUser_NotificationType.REPORT_RESOLVED,
+    Event_NotifyUser_NotificationType.REPORT_COMMENT,
+  ])('notifyUser lands 3.1 report notification type %s in server.notifications', (type) => {
+    const { store, impl } = setup();
+    const notification = create(Event_NotifyUserSchema, { type, customTitle: 'Report #3', customContent: 'Resolved' });
+    impl.notifyUser(notification);
+    expect(store.getState().server.notifications).toEqual([notification]);
   });
 
   it('playerPropertiesChanged dispatches a GameActions action when playerProperties is set', () => {
@@ -367,11 +458,16 @@ describe('SessionResponseImpl forwards', () => {
     expect(dispatch).toHaveBeenCalledWith(ServerActions.serverShutdown({ data }));
   });
 
-  it('userMessage', () => {
+  it('stamps private messages at receipt before dispatching to the reducer', () => {
     const { impl, dispatch } = setup();
     const messageData = create(Event_UserMessageSchema, {});
-    impl.userMessage(messageData);
-    expect(dispatch).toHaveBeenCalledWith(ServerActions.userMessage({ messageData }));
+    const now = vi.spyOn(Date, 'now').mockReturnValue(123456789);
+    try {
+      impl.userMessage(messageData);
+      expect(dispatch).toHaveBeenCalledWith(ServerActions.userMessage({ messageData, timeReceived: 123456789 }));
+    } finally {
+      now.mockRestore();
+    }
   });
 
   it('addToList', () => {
@@ -406,10 +502,33 @@ describe('SessionResponseImpl forwards', () => {
     expect(dispatch).toHaveBeenCalledWith(ServerActions.deckUpload({ path: '/folder', treeItem }));
   });
 
+  it('updateServerDeck maps method name to deckUpdated action', () => {
+    const { impl, dispatch } = setup();
+    const treeItem = create(ServerInfo_DeckStorage_TreeItemSchema, { id: 4, name: 'deck1' });
+    impl.updateServerDeck(4, treeItem);
+    expect(dispatch).toHaveBeenCalledWith(ServerActions.deckUpdated({ deckId: 4, treeItem }));
+  });
+
+  it('updateServerDeckFailed maps method name to deckUpdateFailed action', () => {
+    const { impl, dispatch } = setup();
+    impl.updateServerDeckFailed(4, 19);
+    expect(dispatch).toHaveBeenCalledWith(ServerActions.deckUpdateFailed({ deckId: 4, responseCode: 19, failure: undefined }));
+  });
+
   it('createServerDeckDir maps method name to deckNewDir action', () => {
     const { impl, dispatch } = setup();
     impl.createServerDeckDir('/parent', 'newdir');
     expect(dispatch).toHaveBeenCalledWith(ServerActions.deckNewDir({ path: '/parent', dirName: 'newdir' }));
+    impl.createServerDeckDir('/parent', 'newdir', 'req-1');
+    expect(dispatch).toHaveBeenCalledWith(ServerActions.deckNewDir({ path: '/parent', dirName: 'newdir', requestId: 'req-1' }));
+  });
+
+  it('deckNewDirFailed dispatches the failure with its request identity', () => {
+    const { impl, dispatch } = setup();
+    impl.deckNewDirFailed('/parent', 'newdir', 18, undefined, 'req-2');
+    expect(dispatch).toHaveBeenCalledWith(ServerActions.deckNewDirFailed({
+      path: '/parent', dirName: 'newdir', responseCode: 18, failure: undefined, requestId: 'req-2',
+    }));
   });
 
   it('deleteServerDeckDir maps method name to deckDelDir action', () => {
@@ -459,4 +578,141 @@ describe('SessionResponseImpl forwards', () => {
     impl.replayDownloaded(1, response);
     expect(dispatch).toHaveBeenCalledWith(ServerActions.replayDownloaded({ replayId: 1, replayData }));
   });
+
+  it('commandFailed dispatches sessionCommandFailed with the command, code and target', () => {
+    const { impl, dispatch } = setup();
+    impl.commandFailed('deckShareList', Response_ResponseCode.RespNameNotFound, 'tok');
+    expect(dispatch).toHaveBeenCalledWith(
+      ServerActions.sessionCommandFailed({ command: 'deckShareList', responseCode: Response_ResponseCode.RespNameNotFound, target: 'tok' }),
+    );
+  });
+
+  it('deckListFailed dispatches deckListFailed with the code and transport reason', () => {
+    const { impl, dispatch } = setup();
+    impl.deckListFailed(-1, WebsocketTypes.CommandFailure.Timeout);
+    expect(dispatch).toHaveBeenCalledWith(
+      ServerActions.deckListFailed({ responseCode: -1, failure: WebsocketTypes.CommandFailure.Timeout }),
+    );
+  });
+
+  it('replayListFailed dispatches replayListFailed with the code and transport reason', () => {
+    const { impl, dispatch } = setup();
+    impl.replayListFailed(-1, WebsocketTypes.CommandFailure.Disconnected);
+    expect(dispatch).toHaveBeenCalledWith(
+      ServerActions.replayListFailed({ responseCode: -1, failure: WebsocketTypes.CommandFailure.Disconnected }),
+    );
+  });
+
+  it('deckDownloadFailed dispatches deckDownloadFailed keyed by deckId', () => {
+    const { impl, dispatch } = setup();
+    impl.deckDownloadFailed(42, 15);
+    expect(dispatch).toHaveBeenCalledWith(
+      ServerActions.deckDownloadFailed({ deckId: 42, responseCode: 15, failure: undefined }),
+    );
+  });
+
+  it('deckUploadFailed dispatches deckUploadFailed with the path', () => {
+    const { impl, dispatch } = setup();
+    impl.deckUploadFailed('', -1, WebsocketTypes.CommandFailure.Disconnected);
+    expect(dispatch).toHaveBeenCalledWith(
+      ServerActions.deckUploadFailed({ path: '', responseCode: -1, failure: WebsocketTypes.CommandFailure.Disconnected }),
+    );
+  });
+});
+
+describe('SessionResponseImpl reports', () => {
+  it('reportMyList dispatches reportMyList', () => {
+    const { impl, dispatch } = setup();
+    const reports = [create(ServerInfo_ReportSchema, { reportId: 3 })];
+    impl.reportMyList(reports);
+    expect(dispatch).toHaveBeenCalledWith(ServerActions.reportMyList({ reports }));
+  });
+
+  it('reportDetails lands the full report in server.reports.details', () => {
+    const { store, impl } = setup();
+    const report = create(ServerInfo_ReportSchema, { reportId: 3, chatLog: 'log' });
+    impl.reportDetails(report);
+    expect(store.getState().server.reports.details[3]).toBe(report);
+  });
+
+  it.each([
+    Event_NotifyUser_NotificationType.REPORT_RESOLVED,
+    Event_NotifyUser_NotificationType.REPORT_COMMENT,
+  ])('notifyUser also raises reportNotified for report notification type %s', (type) => {
+    const { store, impl } = setup();
+    const notification = create(Event_NotifyUserSchema, { type, customTitle: 'Report Resolved', customContent: 'Done' });
+    impl.notifyUser(notification);
+    expect(store.getState().server.reports.lastNotice).toEqual({ notification });
+  });
+
+  it('notifyUser does not raise reportNotified for other notification types', () => {
+    const { store, impl } = setup();
+    impl.notifyUser(create(Event_NotifyUserSchema, { type: Event_NotifyUser_NotificationType.PROMOTED }));
+    expect(store.getState().server.reports.lastNotice).toBeNull();
+  });
+});
+
+describe('SessionResponseImpl deck sharing (#7241)', () => {
+  it('deckShareCreated dispatches the created share', () => {
+    const { impl, dispatch } = setup();
+    const share = create(Response_DeckShareCreateSchema, { token: 'tok', expiresAt: 100n, itemCount: 1 });
+    impl.deckShareCreated(share);
+    expect(dispatch).toHaveBeenCalledWith(ServerActions.deckShareCreated({ share }));
+  });
+
+  it('deckShareListed dispatches the bundle keyed by token', () => {
+    const { impl, dispatch } = setup();
+    const share = create(Response_DeckShareListSchema, { name: 'Cube' });
+    impl.deckShareListed('tok', share);
+    expect(dispatch).toHaveBeenCalledWith(ServerActions.deckShareListed({ token: 'tok', share }));
+  });
+
+  it('deckShareDownloaded dispatches the deck text', () => {
+    const { impl, dispatch } = setup();
+    impl.deckShareDownloaded('tok', 3, '<deck/>');
+    expect(dispatch).toHaveBeenCalledWith(ServerActions.deckShareDownloaded({ token: 'tok', itemId: 3, deck: '<deck/>' }));
+  });
+
+  it('deckSharesMine and deckShareRemoved dispatch the share list changes', () => {
+    const { impl, dispatch } = setup();
+    const shares = [create(ServerInfo_DeckShareSummarySchema, { id: 4 })];
+    impl.deckSharesMine(shares);
+    impl.deckShareRemoved(4);
+    expect(dispatch).toHaveBeenCalledWith(ServerActions.deckSharesMine({ shares }));
+    expect(dispatch).toHaveBeenCalledWith(ServerActions.deckShareRemoved({ shareId: 4 }));
+  });
+
+  it('otherUserDecks dispatches publicDecks keyed by user', () => {
+    const { impl, dispatch } = setup();
+    const deckList = create(Response_DeckListSchema, {});
+    impl.otherUserDecks('bob', deckList);
+    expect(dispatch).toHaveBeenCalledWith(ServerActions.publicDecks({ userName: 'bob', deckList }));
+  });
+
+  it('deckVisibilityChanged dispatches the target and the new bit', () => {
+    const { impl, dispatch } = setup();
+    impl.deckVisibilityChanged({ folderPath: 'cubes', isPublic: true });
+    expect(dispatch).toHaveBeenCalledWith(
+      ServerActions.deckVisibilityChanged({ deckId: undefined, folderPath: 'cubes', isPublic: true }),
+    );
+  });
+
+  it('deckVisibilityChanged defaults an omitted visibility bit to private', () => {
+    const { impl, dispatch } = setup();
+    try {
+      impl.deckVisibilityChanged({ deckId: 8 });
+      expect(dispatch.mock.calls).toEqual([[
+        ServerActions.deckVisibilityChanged({ deckId: 8, folderPath: undefined, isPublic: false }),
+      ]]);
+    } finally {
+      dispatch.mockRestore();
+    }
+  });
+
+  it('publicDeckDownloaded dispatches the deck text', () => {
+    const { impl, dispatch } = setup();
+    impl.publicDeckDownloaded(7, '<deck/>');
+    expect(dispatch).toHaveBeenCalledWith(ServerActions.publicDeckDownloaded({ deckId: 7, deck: '<deck/>' }));
+  });
+
 });

@@ -3,7 +3,6 @@ import { App } from '../types';
 import { ServerInfo_UserSchema } from '@cockatrice/sockatrice/generated';
 import SortUtil from './SortUtil';
 
-
 describe('sortByField', () => {
   it('sorts string field ASC alphabetically', () => {
     const arr = [{ name: 'Zane' }, { name: 'Alice' }, { name: 'Bob' }];
@@ -54,7 +53,6 @@ describe('sortByField', () => {
     expect(arr[2].name).toBe('');
   });
 });
-
 
 describe('sortByFields', () => {
   it('sorts by the first key when all items have distinct first-key values', () => {
@@ -113,7 +111,6 @@ describe('sortByFields', () => {
   });
 });
 
-
 describe('sortUsersByField', () => {
   it('sorts by userLevel DESC first, then name ASC', () => {
     const users = [
@@ -145,10 +142,8 @@ describe('sortUsersByField', () => {
   });
 });
 
-
 describe('locale-aware sorting', () => {
   it('collates using the provided BCP-47 locale', () => {
-    // Swedish sorts 'ä' after 'z'; default/English collation sorts it near 'a'.
     const swedish = [{ name: 'ä' }, { name: 'z' }, { name: 'a' }];
     SortUtil.sortByField(swedish, { field: 'name', order: App.SortDirection.ASC }, 'sv');
     expect(swedish.map(x => x.name)).toEqual(['a', 'z', 'ä']);
@@ -176,7 +171,6 @@ describe('locale-aware sorting', () => {
   });
 });
 
-
 describe('toggleSortBy', () => {
   it('same field + ASC → returns DESC', () => {
     const result = SortUtil.toggleSortBy('name', { field: 'name', order: App.SortDirection.ASC });
@@ -193,7 +187,6 @@ describe('toggleSortBy', () => {
     expect(result).toEqual({ field: 'score', order: App.SortDirection.ASC });
   });
 });
-
 
 describe('resolveFieldChain via sortByField (numeric index)', () => {
   it('resolves numeric index in dot-notation chain', () => {

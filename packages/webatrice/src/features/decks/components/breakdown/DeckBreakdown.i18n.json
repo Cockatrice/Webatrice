@@ -1,0 +1,21 @@
+{
+  "DeckBreakdown": {
+    "stat": {
+      "total": "Total",
+      "nonland": "Nonland",
+      "lands": "Lands",
+      "avgCmc": "Avg MV"
+    },
+    "bracketEstimate": "Bracket estimate",
+    "manaCurve": "Mana curve",
+    "colorDistribution": "Colours",
+    "cardTypes": "Card types",
+    "colorBar": "Colour distribution: {summary}",
+    "curve": {
+      "label": "Mana curve: {summary}",
+      "barTitle": "{count, plural, one {# card} other {# cards}} at mana value {cmc}",
+      "sevenPlus": "7+"
+    },
+    "noCards": "No cards yet."
+  }
+}

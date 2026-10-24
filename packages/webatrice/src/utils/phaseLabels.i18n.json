@@ -1,0 +1,60 @@
+{
+  "GamePhase": {
+    "unknown": "phase {phase}",
+    "untap": {
+      "short": "Untap",
+      "log": "untap step",
+      "title": "Untap step (double-click: untap all)"
+    },
+    "upkeep": {
+      "short": "Upkeep",
+      "log": "upkeep step",
+      "title": "Upkeep step"
+    },
+    "draw": {
+      "short": "Draw",
+      "log": "draw step",
+      "title": "Draw step (double-click: draw a card)"
+    },
+    "firstMain": {
+      "short": "Main 1",
+      "log": "first main phase",
+      "title": "First main phase"
+    },
+    "beginCombat": {
+      "short": "Start Combat",
+      "log": "beginning of combat",
+      "title": "Beginning of combat"
+    },
+    "declareAttackers": {
+      "short": "Attack",
+      "log": "declare attackers step",
+      "title": "Declare attackers"
+    },
+    "declareBlockers": {
+      "short": "Block",
+      "log": "declare blockers step",
+      "title": "Declare blockers"
+    },
+    "combatDamage": {
+      "short": "Damage",
+      "log": "combat damage step",
+      "title": "Combat damage"
+    },
+    "endCombat": {
+      "short": "End Combat",
+      "log": "end of combat",
+      "title": "End of combat"
+    },
+    "secondMain": {
+      "short": "Main 2",
+      "log": "second main phase",
+      "title": "Second main phase"
+    },
+    "endCleanup": {
+      "short": "End",
+      "log": "end step",
+      "title": "End step / cleanup"
+    }
+  }
+}

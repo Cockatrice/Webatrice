@@ -1,3 +1,16 @@
-.link {
-	color: blue;
+.link:hover {
+	text-decoration: underline;
+}
+
+.link:focus-visible {
+	outline: 2px solid rgb(var(--accent-primary));
+	outline-offset: 2px;
+	border-radius: 2px;
+}
+
+.message__mention,
+.message__highlight {
+	padding: 0 2px;
+	border-radius: 2px;
+	font-weight: 600;
 }

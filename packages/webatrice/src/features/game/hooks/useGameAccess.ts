@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { shallowEqual } from 'react-redux';
 import { games, type GameEntry } from '@cockatrice/datatrice';
 import { useAppSelector } from '@app/store';
 
@@ -17,16 +18,17 @@ export interface GameAccess {
  * whether the local user can act at all (a seated, non-spectating player). Judges
  * may act on anyone. Pure so it can be reused outside a hook (e.g. per board cell).
  */
-export function computeCanAct(game: GameEntry, targetPlayerId?: number): boolean {
+export function computeCanAct(game: Pick<GameEntry, 'localPlayerId' | 'spectator' | 'judge'>, targetPlayerId?: number): boolean {
   const isLocalPlayer = targetPlayerId != null && targetPlayerId === game.localPlayerId;
   const noTargetButLocalControls = targetPlayerId == null && !game.spectator;
   return game.judge || (!game.spectator && (isLocalPlayer || noTargetButLocalControls));
 }
 
 export function useGameAccess(gameId: number | undefined, targetPlayerId?: number): GameAccess {
-  const game = useAppSelector((state) =>
-    gameId != null ? games.Selectors.getGame(state, gameId) : undefined,
-  );
+  const game = useAppSelector((state) => {
+    const entry = gameId != null ? games.Selectors.getGame(state, gameId) : undefined;
+    return entry ? { localPlayerId: entry.localPlayerId, spectator: entry.spectator, judge: entry.judge } : undefined;
+  }, shallowEqual);
 
   return useMemo<GameAccess>(() => {
     if (!game) {

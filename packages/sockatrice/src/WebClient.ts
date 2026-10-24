@@ -1,14 +1,18 @@
-import { fromBinary, getExtension, hasExtension } from '@bufbuild/protobuf';
+import { fromBinary, getExtension, hasExtension, isFieldSet } from '@bufbuild/protobuf';
 
 import {
   Event_ServerIdentification_ext,
+  GameEventContainerSchema,
   ServerMessageSchema,
   ServerMessage_MessageType,
+  type GameEventContainer,
+  type ServerInfo_Game,
 } from './generated';
 
 import {
   AdminCommands,
   AuthenticationCommands,
+  DeveloperCommands,
   GameCommands,
   ModeratorCommands,
   RoomCommands,
@@ -21,8 +25,9 @@ import type { ClientConfig } from './types/ClientConfig';
 import type { ClientOptions } from './types/ClientOptions';
 import type { ConnectTarget } from './types/WebClientConfig';
 import type { IWebClientResponse } from './types/WebClientResponse';
+import type { ReplayEventOptions } from './types/WebSocketConfig';
 import { StatusEnum } from './types/StatusEnum';
-import { ProtobufService } from './services/ProtobufService';
+import { DEFAULT_COMMAND_TIMEOUT_MS, ProtobufService } from './services/ProtobufService';
 import { WebSocketService } from './services/WebSocketService';
 import { buildWebSocketUrl } from './utils/buildWebSocketUrl';
 import { terminateSocket } from './utils/terminateSocket';
@@ -44,17 +49,30 @@ export class WebClient {
   // Sanctioned reset path: tests, SPA hot-reload, explicit logout.
   // See .github/instructions/sockatrice-transport.instructions.md#webclient-lifecycle.
   public static dispose(): void {
-    if (!WebClient._instance) {
+    if (!WebClient._instance || WebClient._instance.disposed) {
       return;
     }
-    WebClient._instance.disconnect();
-    WebClient._instance = null;
+    const client = WebClient._instance;
+    client.disposed = true;
+    try {
+      client.socket.dispose();
+      client.retireTestSocket();
+      client.protobuf.resetCommands();
+      client.status = StatusEnum.DISCONNECTED;
+      client.response.session.updateStatus(StatusEnum.DISCONNECTED, 'Connection Closed');
+    } finally {
+      WebClient._instance = null;
+    }
   }
 
   protobuf: ProtobufService;
   socket: WebSocketService;
   status: StatusEnum;
+  serverSupportsPasswordHash = false;
   private testSocket: WebSocket | null = null;
+  private clearTestTimer: (() => void) | undefined;
+  private disposed = false;
+  private resetting = false;
 
   request = {
     authentication: AuthenticationCommands,
@@ -63,6 +81,7 @@ export class WebClient {
     game: GameCommands,
     admin: AdminCommands,
     moderator: ModeratorCommands,
+    developer: DeveloperCommands,
   }
 
   constructor(
@@ -78,8 +97,11 @@ export class WebClient {
       keepAliveFn: SessionCommands.ping,
       keepalive: clientOptions.keepalive,
       onStatusChange: (status, description) => {
-        this.response.session.updateStatus(status, description);
+        if (this.disposed) {
+          return;
+        }
         this.updateStatus(status);
+        this.response.session.updateStatus(status, description);
       },
       onConnectionFailed: () => {
         this.response.session.connectionFailed();
@@ -103,9 +125,15 @@ export class WebClient {
     this.protobuf = new ProtobufService(
       {
         send: (data) => this.socket.send(data),
-        isOpen: () => this.socket.checkReadyState(WebSocket.OPEN),
+        isOpen: () => !this.disposed && !this.resetting
+          && this.status !== StatusEnum.DISCONNECTED && this.status !== StatusEnum.RECONNECTING
+          && this.socket.checkReadyState(WebSocket.OPEN),
       },
       { game: GameEvents, room: RoomEvents, session: SessionEvents },
+      DEFAULT_COMMAND_TIMEOUT_MS,
+      (stats, samplesMs) => {
+        this.response.session.updateLatencyStats?.(stats, samplesMs);
+      },
     );
 
     WebClient._instance = this;
@@ -114,19 +142,30 @@ export class WebClient {
   }
 
   public connect(target: ConnectTarget): void {
-    this.response.session.connectionAttempted();
-    this.socket.connect(target);
+    if (this.disposed || this.resetting) {
+      return;
+    }
+    this.resetting = true;
+    try {
+      this.protobuf.resetCommands();
+      if (!this.disposed) {
+        this.response.session.connectionAttempted();
+        this.socket.connect(target);
+      }
+    } finally {
+      this.resetting = false;
+    }
   }
 
   public testConnect(target: ConnectTarget): void {
+    if (this.disposed) {
+      return;
+    }
     // Retire any in-flight test socket via the safe terminate (a superseded probe
     // is usually still CONNECTING, and close() on a CONNECTING socket strands a
     // half-open upstream against Servatrice's per-IP cap).
     // See .github/instructions/sockatrice-transport.instructions.md#webclient-lifecycle.
-    if (this.testSocket) {
-      terminateSocket(this.testSocket);
-      this.testSocket = null;
-    }
+    this.retireTestSocket();
 
     const socket = new WebSocket(buildWebSocketUrl(target.host, target.port));
     socket.binaryType = 'arraybuffer';
@@ -154,16 +193,13 @@ export class WebClient {
         }
         this.testSocket = null;
       }
-      // Safe terminate: the keepalive-timeout path can resolve while the probe is
-      // still CONNECTING, and an abrupt close there strands a half-open upstream.
       terminateSocket(socket);
     };
 
-    // Transport failed before any ServerIdentification — the probe never reached
-    // the server (distinct from a protocol/decode failure, which did).
     const resolveUnreachable = (): void => resolve(false, false, true);
 
     const timeout = setTimeout(resolveUnreachable, this.clientOptions.keepalive);
+    this.clearTestTimer = () => clearTimeout(timeout);
 
     socket.onmessage = (event: MessageEvent) => {
       try {
@@ -190,6 +226,17 @@ export class WebClient {
     socket.onclose = resolveUnreachable;
   }
 
+  private retireTestSocket(): void {
+    this.clearTestTimer?.();
+    this.clearTestTimer = undefined;
+    const socket = this.testSocket;
+    this.testSocket = null;
+    if (socket) {
+      socket.onopen = socket.onclose = socket.onerror = socket.onmessage = null;
+      terminateSocket(socket);
+    }
+  }
+
   public disconnect(): void {
     this.socket.disconnect();
   }
@@ -197,9 +244,24 @@ export class WebClient {
   public updateStatus(status: StatusEnum): void {
     this.status = status;
 
-    if (status === StatusEnum.DISCONNECTED) {
+    if (status === StatusEnum.DISCONNECTED || status === StatusEnum.RECONNECTING) {
       this.protobuf.resetCommands();
     }
+  }
+
+  public replayGameEventContainer(container: GameEventContainer, gameId: number, options?: ReplayEventOptions): void {
+    if (isFieldSet(container, GameEventContainerSchema.field.secondsElapsed)) {
+      this.response.game.replayGameTimeSynced?.(gameId, container.secondsElapsed);
+    }
+    this.protobuf.replayGameEventContainer(container, gameId, options);
+  }
+
+  public loadReplayGame(gameId: number, gameInfo: ServerInfo_Game): void {
+    this.response.game.replayGameLoaded?.(gameId, gameInfo);
+  }
+
+  public unloadReplayGame(gameId: number): void {
+    this.response.game.replayGameUnloaded?.(gameId);
   }
 
   public get isReconnecting(): boolean {

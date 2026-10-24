@@ -25,8 +25,17 @@ function tryConnect(url: string): Promise<boolean> {
   return new Promise((resolve, reject) => {
     const ws = new WebSocket(url);
     const done = (value: boolean, err?: Error) => {
-      try { ws.removeAllListeners(); ws.close(); } catch { /* ignore */ }
-      err ? reject(err) : resolve(value);
+      try {
+        ws.removeAllListeners();
+        ws.close();
+      } catch {
+        // The socket may already be closed; readiness is decided by `value`.
+      }
+      if (err) {
+        reject(err);
+      } else {
+        resolve(value);
+      }
     };
     ws.once('message', () => done(true));
     ws.once('error', (err) => done(false, err));

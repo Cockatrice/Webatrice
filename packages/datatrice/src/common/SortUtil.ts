@@ -1,13 +1,6 @@
 import { App } from '../types';
 import { ServerInfo_User } from '@cockatrice/sockatrice/generated';
 
-// Per-locale collator cache: string sorts over busy-server collections
-// (thousands of users/games) run one comparator per O(N log N) comparison —
-// bare localeCompare re-resolves locale data per call, while a prebuilt
-// collator's compare is a plain function. Callers pass an already-normalized
-// BCP-47 locale (webatrice owns the underscore->hyphen `toBcp47` conversion);
-// undefined falls back to the environment default. A new locale is built once
-// and reused, so switching languages doesn't re-pay collator construction.
 const collators = new Map<string, Intl.Collator>();
 function getCollator(locale?: string): Intl.Collator {
   const key = locale ?? '';

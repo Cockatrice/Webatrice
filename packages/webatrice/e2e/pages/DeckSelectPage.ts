@@ -5,19 +5,20 @@ import { expect, type Locator, type Page } from '@playwright/test';
 // The current app has TWO distinct deck-select surfaces (see
 // GameLobby.tsx and DeckSelectDialog.tsx):
 //
-//   1. `GameLobby` — a full-page Tailwind view rendered by Game.tsx
-//      whenever the game exists but hasn't started. This is where every
-//      player picks a deck the FIRST time. It exposes:
-//        • A hidden `<input type="file" accept=".cod,...">` triggered
-//          by the "Choose .cod file" button. Selecting a file directly
-//          dispatches `deckSelect(gameId, { deck: xml })` — there is no
-//          separate "Submit" step in this view.
-//        • A "Ready up" button that toggles to "Unready" once pressed.
-//        • A "Leave game" button.
+//   1. `GameLobby` — a full-page view (data-testid="game-lobby") rendered
+//      by Game.tsx whenever the game exists but hasn't started. It
+//      follows desktop's DeckViewContainer states:
+//        • deck-select: a hidden `<input type="file" accept=".cod,...">`
+//          behind the "Choose .cod file" button. Selecting a file
+//          dispatches `deckSelect(gameId, { deck: xml })` directly.
+//        • deck-loaded (after the server returns the deck): the deck view
+//          plus "Unload deck", "Ready to start" (toggle, aria-pressed),
+//          "Sideboard locked"/"Sideboard unlocked" (toggle) and, for the
+//          host, "Force start".
+//        • a "Leave game" button in both states.
 //
-//   2. `DeckSelectDialog` — an MUI modal that only mounts once the
-//      game has been started and then reverts to lobby state (e.g. an
-//      opponent leaves and drops the seat count below the minimum).
+//   2. `DeckSelectDialog` — an MUI modal that only mounts on the board
+//      route without a game id in the URL (the revert-to-lobby edge case).
 //      Exposes the pre-redo "Choose .cod file" / paste-XML / "Submit
 //      Deck" / "Ready" / "Leave Game" trio inside a role="dialog".
 //
@@ -33,16 +34,27 @@ export class DeckSelectPage {
     return this.page.locator('.DeckSelectDialog');
   }
 
-  // Full-page GameLobby's Ready button, unique to that surface.
-  get lobbyReadyButton(): Locator {
-    return this.page.getByRole('button', { name: /^(ready up|unready)$/i });
+  get lobby(): Locator {
+    return this.page.getByTestId('game-lobby');
   }
 
-  // Either surface counts as "open". Waits until the local player can
-  // interact with either the lobby's Ready button or the fallback
-  // dialog — whichever the app is currently showing.
+  get lobbyReadyButton(): Locator {
+    return this.lobby.getByRole('button', { name: /^ready to start$/i });
+  }
+
+  get deckView(): Locator {
+    return this.page.getByTestId('lobby-deck-view');
+  }
+
+  async openLobbyGameInfo(): Promise<Locator> {
+    await this.lobby.getByRole('button', { name: /^game info$/i }).click();
+    const dialog = this.page.getByRole('dialog').filter({ hasText: /who can join/i });
+    await expect(dialog).toBeVisible();
+    return dialog;
+  }
+
   async waitForOpen(): Promise<void> {
-    await expect(this.lobbyReadyButton.or(this.dialog)).toBeVisible({ timeout: 30_000 });
+    await expect(this.lobby.or(this.dialog)).toBeVisible({ timeout: 30_000 });
   }
 
   // MUI-dialog XML paste-path. Only meaningful when the dialog surface
@@ -55,30 +67,19 @@ export class DeckSelectPage {
   // Picks the hidden <input type="file"> in whichever surface is
   // currently open. GameLobby's input has no `aria-label`, so scope to
   // the `accept=".cod"` filter on the input. The dialog's input HAS
-  // `aria-label="deck file"` — same input scoping picks it up too.
+  // `aria-label="deck file"`.
   async loadDeckFile(filePath: string): Promise<void> {
-    // Prefer the lobby's Ready button as the "am I in the lobby?" signal;
-    // the lobby's file input has no aria-label so we target it by its
-    // `accept=".cod"` attribute (see GameLobby.tsx handleFilePicked).
-    const lobbyOpen = await this.lobbyReadyButton.isVisible();
-    if (lobbyOpen) {
-      const fileInput = this.page.locator('input[type="file"][accept*=".cod"]');
+    if (await this.lobby.isVisible()) {
+      const fileInput = this.lobby.locator('input[type="file"][accept*=".cod"]');
       await fileInput.setInputFiles(filePath);
       return;
     }
-    // Fallback: MUI dialog surface. Its <input> has aria-label="deck file".
     const dialogInput = this.dialog.getByLabel(/deck file/i);
     await dialogInput.setInputFiles(filePath);
   }
 
-  // Only meaningful for the MUI dialog surface — the lobby has no
-  // "Submit" step (file pick fires deckSelect immediately). No-op in
-  // the lobby so callers can keep the pre-redo (loadDeckFile→submit)
-  // sequence without branching.
   async submitDeck(): Promise<void> {
-    if (await this.lobbyReadyButton.isVisible()) {
-      // Lobby's deckSelect fires on file pick; nothing to submit here.
-      // Just wait for the local player's deckHash to make Ready enabled.
+    if (await this.lobby.isVisible()) {
       await expect(this.lobbyReadyButton).toBeEnabled({ timeout: 15_000 });
       return;
     }
@@ -91,17 +92,11 @@ export class DeckSelectPage {
   }
 
   async setReady(): Promise<void> {
-    if (await this.lobbyReadyButton.isVisible()) {
-      // Lobby: single toggle button labelled "Ready up" (unready state)
-      // or "Unready" (ready state). The DOM node isn't recreated on
-      // toggle — only its text changes — so the "Ready up" role-name
-      // lookup stops matching once the label flips. Waiting for
-      // `readyUp` to disappear signals either an in-place text swap or
-      // the lobby unmounting entirely (second-to-ready → game starts).
-      const readyUp = this.page.getByRole('button', { name: /^ready up$/i });
-      await expect(readyUp).toBeEnabled({ timeout: 15_000 });
-      await readyUp.click();
-      await expect(readyUp).toHaveCount(0, { timeout: 30_000 });
+    if (await this.lobby.isVisible()) {
+      const unpressed = this.lobby.getByRole('button', { name: /^ready to start$/i, pressed: false });
+      await expect(unpressed).toBeEnabled({ timeout: 15_000 });
+      await unpressed.click();
+      await expect(unpressed).toHaveCount(0, { timeout: 30_000 });
       return;
     }
     // Dialog surface (revert-to-lobby).
@@ -112,18 +107,44 @@ export class DeckSelectPage {
   }
 
   async setUnready(): Promise<void> {
-    // Both surfaces expose an "Unready" affordance while ready.
+    if (await this.lobby.isVisible()) {
+      const pressed = this.lobby.getByRole('button', { name: /^ready to start$/i, pressed: true });
+      await expect(pressed).toBeEnabled();
+      await pressed.click();
+      return;
+    }
     const unready = this.page.getByRole('button', { name: /^unready$/i });
     await expect(unready).toBeEnabled();
     await unready.click();
+  }
+
+  async unlockSideboard(): Promise<void> {
+    const locked = this.lobby.getByRole('button', { name: /^sideboard locked$/i });
+    await expect(locked).toBeEnabled({ timeout: 15_000 });
+    await locked.click();
+    await expect(this.lobby.getByRole('button', { name: /^sideboard unlocked$/i })).toBeVisible({ timeout: 15_000 });
+  }
+
+  async moveDeckCard(cardName: string, from: 'main' | 'side'): Promise<void> {
+    const to = from === 'main' ? 'side' : 'main';
+    const row = this.page.getByTestId(`lobby-deck-${from}`).getByRole('button', { name: new RegExp(cardName, 'i') });
+    await expect(row).toBeEnabled({ timeout: 15_000 });
+    await row.click();
+    await expect(this.page.getByTestId(`lobby-deck-${to}`).getByText(cardName, { exact: true })).toBeVisible();
+  }
+
+  async forceStart(): Promise<void> {
+    await this.lobby.getByRole('button', { name: /^force start$/i }).click();
+    const confirm = this.page.getByRole('dialog').filter({ hasText: /force start/i });
+    await confirm.getByRole('button', { name: /^yes$/i }).click();
   }
 
   // Leave the game from either surface. GameLobby has a "Leave game"
   // button; the MUI dialog has a "Leave Game" button. `leaveGame(gameId)`
   // is dispatched directly by both — no confirm dialog.
   async leaveGame(): Promise<void> {
-    if (await this.lobbyReadyButton.isVisible()) {
-      const leave = this.page.getByRole('button', { name: /^leave game$/i });
+    if (await this.lobby.isVisible()) {
+      const leave = this.lobby.getByRole('button', { name: /^leave game$/i });
       await expect(leave).toBeEnabled({ timeout: 10_000 });
       await leave.click();
       return;

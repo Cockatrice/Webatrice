@@ -1,0 +1,68 @@
+{
+  "CreateGameDialog": {
+    "title": "Create a game in {room}",
+    "startFrom": "Start from",
+    "preset": {
+      "commanderPod": {
+        "name": "Commander pod"
+      },
+      "oneVsOne": {
+        "name": "Competitive 1v1"
+      },
+      "friendsOnly": {
+        "name": "Friends only"
+      },
+      "duelCommander": {
+        "name": "Duel Commander"
+      },
+      "needsAccount": "Needs a registered account",
+      "customised": "Customised"
+    },
+    "label": {
+      "description": "Description",
+      "format": "Format",
+      "password": "Password (optional)",
+      "maxPlayers": "Seats",
+      "startingLifeTotal": "Starting life",
+      "onlyBuddies": "Buddies only",
+      "onlyRegistered": "Registered only",
+      "spectatorsAllowed": "Can watch",
+      "spectatorsNeedPassword": "Need the password",
+      "spectatorsCanTalk": "Can chat",
+      "spectatorsSeeEverything": "See every hand",
+      "joinAsSpectator": "Host without playing",
+      "shareDecklistsOnLoad": "Share decklists",
+      "joinAsJudge": "Join as judge",
+      "remember": "Remember as my default"
+    },
+    "placeholder": {
+      "password": "Anyone who can see the game can join"
+    },
+    "format": {
+      "any": "Any"
+    },
+    "summary": {
+      "game": "{seats, plural, one {# seat} other {# seats}} for {audience, select, buddies {your buddies} registered {registered players} other {anyone, guests included}}{password, select, yes {, with a password} other {}}, {life} life{hasFormat, select, yes {, {format}} other {}}.",
+      "watch": "{allowed, select, no {No one can watch.} other {People can watch{chat, select, yes { and chat} other {}}{seeAll, select, yes {, seeing every hand} other {}}{needPassword, select, yes {, with the password} other {}}.}}",
+      "decklists": "Decklists are shared when decks load.",
+      "hostWatches": "You host without taking a seat.",
+      "hostJudges": "You join as judge."
+    },
+    "advanced": {
+      "title": "Advanced",
+      "show": "{count, plural, one {Show # setting} other {Show # settings}}",
+      "hide": "Hide"
+    },
+    "section": {
+      "table": "Table",
+      "whoCanJoin": "Who can join",
+      "spectators": "Spectators"
+    },
+    "error": {
+      "range": "Enter a whole number from {min} to {max}"
+    },
+    "action": {
+      "create": "Create game"
+    }
+  }
+}

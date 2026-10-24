@@ -25,22 +25,22 @@ describe('RollDieDialog', () => {
 
   it('seeds the Sides input to the last sides (6) and Count to the last count (1)', () => {
     render();
-    expect((screen.getByLabelText('Sides') as HTMLInputElement).value).toBe('6');
-    expect((screen.getByLabelText('Count') as HTMLInputElement).value).toBe('1');
+    expect((screen.getByLabelText('Number of sides') as HTMLInputElement).value).toBe('6');
+    expect((screen.getByLabelText('Number of dice') as HTMLInputElement).value).toBe('1');
   });
 
   it('seeds the inputs with the most recent values', () => {
     render({ lastDieSides: 20, lastDieCount: 4 });
-    expect((screen.getByLabelText('Sides') as HTMLInputElement).value).toBe('20');
-    expect((screen.getByLabelText('Count') as HTMLInputElement).value).toBe('4');
+    expect((screen.getByLabelText('Number of sides') as HTMLInputElement).value).toBe('20');
+    expect((screen.getByLabelText('Number of dice') as HTMLInputElement).value).toBe('4');
   });
 
   it('dispatches the submit handler with both sides and count on Roll', () => {
     const handleRollDieSubmit = vi.fn();
     render({ handleRollDieSubmit });
 
-    fireEvent.change(screen.getByLabelText('Sides'), { target: { value: '6' } });
-    fireEvent.change(screen.getByLabelText('Count'), { target: { value: '4' } });
+    fireEvent.change(screen.getByLabelText('Number of sides'), { target: { value: '6' } });
+    fireEvent.change(screen.getByLabelText('Number of dice'), { target: { value: '4' } });
     fireEvent.click(screen.getByRole('button', { name: /^roll$/i }));
 
     expect(handleRollDieSubmit).toHaveBeenCalledWith({ sides: 6, count: 4 });
@@ -50,7 +50,7 @@ describe('RollDieDialog', () => {
     const handleRollDieSubmit = vi.fn();
     render({ handleRollDieSubmit });
 
-    fireEvent.change(screen.getByLabelText('Sides'), { target: { value: '1' } });
+    fireEvent.change(screen.getByLabelText('Number of sides'), { target: { value: '1' } });
     fireEvent.click(screen.getByRole('button', { name: /^roll$/i }));
 
     expect(handleRollDieSubmit).toHaveBeenCalledWith({ sides: 1, count: 1 });
@@ -60,7 +60,7 @@ describe('RollDieDialog', () => {
     const handleRollDieSubmit = vi.fn();
     render({ handleRollDieSubmit });
 
-    fireEvent.change(screen.getByLabelText('Sides'), { target: { value: '0' } });
+    fireEvent.change(screen.getByLabelText('Number of sides'), { target: { value: '0' } });
     fireEvent.click(screen.getByRole('button', { name: /^roll$/i }));
 
     expect(handleRollDieSubmit).not.toHaveBeenCalled();
@@ -71,7 +71,7 @@ describe('RollDieDialog', () => {
     const handleRollDieSubmit = vi.fn();
     render({ handleRollDieSubmit });
 
-    fireEvent.change(screen.getByLabelText('Count'), { target: { value: '0' } });
+    fireEvent.change(screen.getByLabelText('Number of dice'), { target: { value: '0' } });
     fireEvent.click(screen.getByRole('button', { name: /^roll$/i }));
 
     expect(handleRollDieSubmit).not.toHaveBeenCalled();

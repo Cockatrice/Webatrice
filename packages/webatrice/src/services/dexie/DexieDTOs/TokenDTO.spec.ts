@@ -13,6 +13,8 @@ vi.mock('../DexieService', () => ({
 
 import { TokenDTO } from './TokenDTO';
 
+const mapToClassCalls = [...tokensTable.mapToClass.mock.calls];
+
 describe('TokenDTO', () => {
   beforeEach(() => {
     tokensTable.put.mockClear();
@@ -21,7 +23,7 @@ describe('TokenDTO', () => {
   });
 
   it('registers itself with the tokens table on import', () => {
-    expect(tokensTable.mapToClass).toHaveBeenCalledWith(TokenDTO);
+    expect(mapToClassCalls).toEqual([[TokenDTO]]);
   });
 
   it('save() puts the instance into the tokens table', async () => {

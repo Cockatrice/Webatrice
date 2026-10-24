@@ -1,0 +1,9 @@
+{
+  "MoveDeck": {
+    "title": "Move {name}",
+    "target": "To folder",
+    "howItWorks": "The deck is copied into the folder and keeps its visibility; the original is deleted once the copy is saved. The copy gets a new deck id. Share links you already made keep working: they hold a copy of the deck from when they were made.",
+    "move": "Move",
+    "cancel": "Cancel"
+  }
+}

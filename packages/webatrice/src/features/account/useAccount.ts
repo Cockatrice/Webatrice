@@ -4,6 +4,7 @@ import { useWebClient } from '@cockatrice/datatrice/react';
 import { server } from '@cockatrice/datatrice';
 import { useAppSelector } from '@app/store';
 import { ServerInfo_User } from '@cockatrice/sockatrice/generated';
+import { clearHomeSnapshot } from '../../services/storage/homeSnapshot';
 export interface Account {
   buddyList: ServerInfo_User[];
   ignoreList: ServerInfo_User[];
@@ -51,6 +52,7 @@ export function useAccount(): Account {
   };
 
   const handleDisconnect = () => {
+    clearHomeSnapshot();
     webClient.request.authentication.disconnect();
   };
 

@@ -1,7 +1,17 @@
 import { create } from '@bufbuild/protobuf';
 import { describe, expect, it } from 'vitest';
 
-import { Command_AdjustMod_ext, Command_ReloadConfig_ext, Command_ShutdownServer_ext, Command_UpdateServerMessage_ext, Event_UserJoinedSchema, Event_UserJoined_ext, Response_ResponseCode, ServerInfo_UserSchema, ServerInfo_User_UserLevelFlag } from '@cockatrice/sockatrice/generated';
+import {
+  Command_AdjustMod_ext,
+  Command_ReloadConfig_ext,
+  Command_ShutdownServer_ext,
+  Command_UpdateServerMessage_ext,
+  Event_UserJoinedSchema,
+  Event_UserJoined_ext,
+  Response_ResponseCode,
+  ServerInfo_UserSchema,
+  ServerInfo_User_UserLevelFlag,
+} from '@cockatrice/sockatrice/generated';
 import { store } from '../helpers/setup';
 import { AdminCommands } from '@cockatrice/sockatrice';
 

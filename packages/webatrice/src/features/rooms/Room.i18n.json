@@ -1,0 +1,6 @@
+{
+  "Room": {
+    "title": "Games in <room>{room}</room>",
+    "createGame": "Create game"
+  }
+}

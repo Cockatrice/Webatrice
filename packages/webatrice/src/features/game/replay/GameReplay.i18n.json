@@ -1,0 +1,30 @@
+{
+  "GameReplay": {
+    "missing": "This replay is no longer open. Replays are kept only until the page is reloaded.",
+    "backToReplays": "Back to replays",
+    "sidebar": {
+      "tag": "Replay",
+      "close": "Close",
+      "closeTitle": "Close the replay"
+    },
+    "timeline": {
+      "label": "Replay timeline",
+      "turns": "Turns",
+      "turn": "T{turn}"
+    },
+    "controls": {
+      "play": "Play",
+      "pause": "Pause",
+      "skipForward": "Skip forward 1 second",
+      "skipBackward": "Skip backward 1 second",
+      "skipForwardBig": "Skip forward 10 seconds",
+      "skipBackwardBig": "Skip backward 10 seconds",
+      "fastForward": "Fast forward ({speed}x)",
+      "settings": "Replay settings"
+    },
+    "settings": {
+      "fastForwardSpeed": "Fast forward speed",
+      "skipEmptySections": "Skip empty sections"
+    }
+  }
+}

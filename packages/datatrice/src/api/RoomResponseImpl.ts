@@ -13,8 +13,8 @@ export class RoomResponseImpl implements WebsocketTypes.IRoomResponse<WebsocketT
     this.store.dispatch(RoomsActions.clearStore());
   }
 
-  joinRoom(roomInfo: ServerInfo_Room): void {
-    this.store.dispatch(RoomsActions.joinRoom({ roomInfo }));
+  joinRoom(roomInfo: ServerInfo_Room, userInitiated?: boolean): void {
+    this.store.dispatch(RoomsActions.joinRoom({ roomInfo, userInitiated }));
   }
 
   leaveRoom(roomId: number): void {
@@ -30,7 +30,11 @@ export class RoomResponseImpl implements WebsocketTypes.IRoomResponse<WebsocketT
   }
 
   addMessage(roomId: number, message: Message): void {
-    this.store.dispatch(RoomsActions.addMessage({ roomId, message }));
+    this.store.dispatch(RoomsActions.roomSayReceived({ roomId, message }));
+  }
+
+  roomSayFailed(roomId: number, message: string, responseCode: number, failure?: WebsocketTypes.CommandFailure): void {
+    this.store.dispatch(RoomsActions.roomSayFailed({ roomId, message, responseCode, failure, timeReceived: Date.now() }));
   }
 
   userJoined(roomId: number, user: ServerInfo_User): void {
@@ -49,15 +53,31 @@ export class RoomResponseImpl implements WebsocketTypes.IRoomResponse<WebsocketT
     this.store.dispatch(RoomsActions.gameCreated({ roomId }));
   }
 
-  joinedGame(roomId: number, gameId: number): void {
-    this.store.dispatch(RoomsActions.joinedGame({ roomId, gameId }));
+  joinedGame(roomId: number, gameId: number, requestId?: string): void {
+    this.store.dispatch(RoomsActions.joinedGame({ roomId, gameId, ...(requestId === undefined ? {} : { requestId }) }));
   }
 
-  setJoinGamePending(pending: boolean): void {
-    this.store.dispatch(RoomsActions.setJoinGamePending({ pending }));
+  setJoinGamePending(pending: boolean, requestId?: string): void {
+    this.store.dispatch(RoomsActions.setJoinGamePending({ pending, ...(requestId === undefined ? {} : { requestId }) }));
   }
 
-  setJoinGameError(code: number, message: string): void {
-    this.store.dispatch(RoomsActions.setJoinGameError({ code, message }));
+  setJoinGameError(code: number, message: string, failure?: WebsocketTypes.CommandFailure, requestId?: string): void {
+    this.store.dispatch(RoomsActions.setJoinGameError({
+      code, message,
+      ...(failure === undefined ? {} : { failure }),
+      ...(requestId === undefined ? {} : { requestId }),
+    }));
+  }
+
+  joinRoomFailed(
+    roomId: number, responseCode: number, failure?: WebsocketTypes.CommandFailure, userInitiated = true, requestId?: string,
+  ): void {
+    this.store.dispatch(RoomsActions.joinRoomFailed({ roomId, responseCode, failure, userInitiated, requestId }));
+  }
+
+  createGameFailed(
+    roomId: number, responseCode: number, failure?: WebsocketTypes.CommandFailure, requestId?: string,
+  ): void {
+    this.store.dispatch(RoomsActions.createGameFailed({ roomId, responseCode, failure, requestId }));
   }
 }

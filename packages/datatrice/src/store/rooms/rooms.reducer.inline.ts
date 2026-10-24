@@ -1,17 +1,15 @@
 import type { CaseReducer, PayloadAction } from '@reduxjs/toolkit';
+import { create } from '@bufbuild/protobuf';
 import { App, Enriched } from '../../types';
-import { ServerInfo_Game, ServerInfo_Room, ServerInfo_User } from '@cockatrice/sockatrice/generated';
+import { Event_RoomSaySchema, ServerInfo_Game, ServerInfo_Room, ServerInfo_User } from '@cockatrice/sockatrice/generated';
 
 import { normalizeRoomInfo, normalizeUserMessage } from '../../common';
 
-import type { GameFilters, RoomsState } from './rooms.interfaces';
+import type { GameFilters, JoinGameError, JoinRoomFailedPayload, RoomCommandFailedPayload, RoomsState } from './rooms.interfaces';
 import { DEFAULT_GAME_FILTERS } from './gameFilters';
 
 export const MAX_ROOM_MESSAGES = 1000;
 
-// Monotonic client id stamped on each stored room message so chat rows key on a
-// stable identity. Indexes shift when the head is trimmed at MAX_ROOM_MESSAGES;
-// this never does. Session-scoped and never persisted, so plain increment.
 let nextMessageId = 0;
 
 export const initialState: RoomsState = {
@@ -31,6 +29,7 @@ export const initialState: RoomsState = {
   gameFilters: {},
   joinGamePending: false,
   joinGameError: null,
+  joinRoomError: null,
 };
 
 export function removeGameFromRooms(state: RoomsState, gameId: number): void {
@@ -50,7 +49,10 @@ export const clearStore: CaseReducer<RoomsState> = () => initialState;
 
 export const updateRooms: CaseReducer<RoomsState, PayloadAction<{ rooms: ServerInfo_Room[] }>> = () => {};
 
-export const joinRoom: CaseReducer<RoomsState, PayloadAction<{ roomInfo: ServerInfo_Room }>> = (state, action) => {
+export const joinRoom: CaseReducer<RoomsState, PayloadAction<{ roomInfo: ServerInfo_Room; userInitiated?: boolean }>> = (
+  state,
+  action,
+) => {
   const { roomInfo: rawRoomInfo } = action.payload;
 
   const roomEntry = normalizeRoomInfo(rawRoomInfo);
@@ -76,12 +78,7 @@ export const leaveRoom: CaseReducer<RoomsState, PayloadAction<{ roomId: number }
   }
 };
 
-export const addMessage: CaseReducer<
-  RoomsState,
-  PayloadAction<{ roomId: number; message: Enriched.Message }>
-> = (state, action) => {
-  const { roomId, message } = action.payload;
-
+function appendMessage(state: RoomsState, roomId: number, message: Enriched.Message): void {
   if (!state.messages[roomId]) {
     state.messages[roomId] = [];
   }
@@ -89,7 +86,27 @@ export const addMessage: CaseReducer<
   if (msgs.length >= MAX_ROOM_MESSAGES) {
     state.messages[roomId] = msgs.slice(msgs.length - MAX_ROOM_MESSAGES + 1);
   }
-  state.messages[roomId].push({ ...normalizeUserMessage(message), id: nextMessageId++ });
+  state.messages[roomId].push({ ...message, id: nextMessageId++ });
+}
+
+export const addMessage: CaseReducer<
+  RoomsState,
+  PayloadAction<{ roomId: number; message: Enriched.Message }>
+> = (state, action) => {
+  const { roomId, message } = action.payload;
+  appendMessage(state, roomId, normalizeUserMessage(message));
+};
+
+export const roomSayFailed: CaseReducer<
+  RoomsState,
+  PayloadAction<RoomCommandFailedPayload & { message: string; timeReceived: number }>
+> = (state, action) => {
+  const { roomId, timeReceived, failure } = action.payload;
+  appendMessage(state, roomId, {
+    ...create(Event_RoomSaySchema, { name: '', message: '' }),
+    timeReceived,
+    ...(failure ? { notice: 'notSent' as const, failure } : { notice: 'chatFlood' as const }),
+  });
 };
 
 export const updateGames: CaseReducer<
@@ -159,7 +176,7 @@ export const gameCreated: CaseReducer<RoomsState, PayloadAction<{ roomId: number
 
 export const joinedGame: CaseReducer<
   RoomsState,
-  PayloadAction<{ gameId: number; roomId: number }>
+  PayloadAction<{ gameId: number; roomId: number; requestId?: string }>
 > = (state, action) => {
   const { gameId, roomId } = action.payload;
 
@@ -195,21 +212,33 @@ export const clearGameFilters: CaseReducer<
 
 export const setJoinGamePending: CaseReducer<
   RoomsState,
-  PayloadAction<{ pending: boolean }>
+  PayloadAction<{ pending: boolean; requestId?: string }>
 > = (state, action) => {
   state.joinGamePending = action.payload.pending;
 };
 
 export const setJoinGameError: CaseReducer<
   RoomsState,
-  PayloadAction<{ code: number; message: string }>
+  PayloadAction<JoinGameError>
 > = (state, action) => {
-  state.joinGameError = { code: action.payload.code, message: action.payload.message };
+  state.joinGameError = action.payload;
   state.joinGamePending = false;
 };
 
 export const clearJoinGameError: CaseReducer<RoomsState> = (state) => {
   state.joinGameError = null;
+};
+
+export const joinRoomFailed: CaseReducer<RoomsState, PayloadAction<JoinRoomFailedPayload>> = (state, action) => {
+  const { roomId, responseCode, failure, userInitiated } = action.payload;
+  if (!userInitiated) {
+    return;
+  }
+  state.joinRoomError = { roomId, responseCode, failure };
+};
+
+export const clearJoinRoomError: CaseReducer<RoomsState> = (state) => {
+  state.joinRoomError = null;
 };
 
 export const inlineReducers = {
@@ -218,6 +247,7 @@ export const inlineReducers = {
   joinRoom,
   leaveRoom,
   addMessage,
+  roomSayFailed,
   updateGames,
   userJoined,
   userLeft,
@@ -231,4 +261,6 @@ export const inlineReducers = {
   setJoinGamePending,
   setJoinGameError,
   clearJoinGameError,
+  joinRoomFailed,
+  clearJoinRoomError,
 };

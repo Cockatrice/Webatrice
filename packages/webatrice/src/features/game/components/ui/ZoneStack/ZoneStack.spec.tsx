@@ -1,184 +1,130 @@
-import { ZoneName, type ZoneNameValue } from '@cockatrice/sockatrice';
-import { screen, fireEvent } from '@testing-library/react';
-import { makeStoreState, renderWithProviders } from '../../../../../__test-utils__';
-import {
-  makeCard,
-  makeGameEntry,
-  makePlayerEntry,
-  makeZoneEntry,
-} from '@cockatrice/datatrice/testing';
-import ZoneStack from './ZoneStack';
+import { act, fireEvent, screen } from '@testing-library/react';
+import { makeCard } from '@cockatrice/datatrice/testing';
+import { testI18n } from '../../../../../__test-utils__/renderWithProviders';
 
-function stateWithZone(zoneName: ZoneNameValue, overrides: Parameters<typeof makeZoneEntry>[0]) {
-  return makeStoreState({
-    games: {
-      games: {
-        1: makeGameEntry({
-          localPlayerId: 1,
-          players: {
-            1: makePlayerEntry({
-              zones: {
-                [zoneName]: makeZoneEntry({ name: zoneName, ...overrides }),
-              },
-            }),
-          },
-        }),
-      },
-    },
-  });
-}
+import {
+  chooseMenuPath,
+  menuLabels,
+  openContextMenu,
+  openMenus,
+  pileEl,
+  renderSeatCell,
+  type SeatGameSpec,
+} from '../../../__test-utils__/seatFixtures';
+
+vi.mock('../../../../../services/cards/catalog/lookup', async () =>
+  (await import('../../../__test-utils__/unknownCardCatalog')).unknownCardCatalog());
+
+const SPEC: SeatGameSpec = {
+  localPlayerId: 1,
+  seats: [
+    { playerId: 1, deckCount: 40, grave: [makeCard({ id: 40, name: 'Duress' }), makeCard({ id: 41, name: 'Opt' })], exile: [] },
+    { playerId: 2, deckCount: 33, grave: [] },
+  ],
+};
 
 describe('ZoneStack', () => {
-  it('renders the label', () => {
-    renderWithProviders(
-      <ZoneStack zoneName={ZoneName.GRAVE} label="Graveyard" />,
-      { preloadedState: stateWithZone(ZoneName.GRAVE, { cardCount: 0 }) },
-    );
-
-    expect(screen.getByText('Graveyard')).toBeInTheDocument();
-  });
-
-  it('shows the authoritative cardCount, even when order is empty (hidden zone)', () => {
-    renderWithProviders(
-      <ZoneStack zoneName={ZoneName.DECK} label="Deck" />,
-      {
-        preloadedState: stateWithZone(ZoneName.DECK, {
-          cardCount: 40,
-          cards: [],
-        }),
+  it('updates the pile name and count when the UI language changes', async () => {
+    renderSeatCell(SPEC);
+    testI18n.addResourceBundle('fr', 'translation', {
+      ZoneStack: {
+        library: 'Bibliothèque',
+        pile: '{zone}, {count, plural, one {# carte} other {# cartes}}',
       },
-    );
-
-    expect(screen.getByText('40')).toBeInTheDocument();
+    });
+    try {
+      await act(async () => {
+        await testI18n.changeLanguage('fr');
+      });
+      const library = screen.getByRole('button', { name: 'Bibliothèque, 40 cartes' });
+      expect(library).toHaveAttribute('title', 'Bibliothèque, 40 cartes');
+    } finally {
+      await act(async () => {
+        await testI18n.changeLanguage('en-US');
+      });
+      testI18n.removeResourceBundle('fr', 'translation');
+    }
+    expect(screen.getByRole('button', { name: 'Library, 40 cards' })).toHaveAttribute('title', 'Library, 40 cards');
   });
 
-  it('renders the top (last) card image as the thumb', () => {
-    const a = makeCard({ id: 1, name: 'Bottom Card' });
-    const b = makeCard({ id: 2, name: 'Top Card' });
-    renderWithProviders(
-      <ZoneStack zoneName={ZoneName.GRAVE} label="Graveyard" />,
-      {
-        preloadedState: stateWithZone(ZoneName.GRAVE, {
-          cardCount: 2,
-          cards: [a, b],
-        }),
-      },
-    );
-
-    expect(screen.getByAltText('Top Card')).toBeInTheDocument();
-    expect(screen.queryByAltText('Bottom Card')).not.toBeInTheDocument();
+  it('draws the library, graveyard and exile piles with their counts and top card', () => {
+    renderSeatCell(SPEC);
+    expect(pileEl('Library')).toHaveAttribute('title', 'Library, 40 cards');
+    expect(pileEl('Graveyard')).toHaveAttribute('title', 'Graveyard, 2 cards, top: Opt');
+    expect(pileEl('Exile')).toHaveAttribute('title', 'Exile, 0 cards');
+    expect(pileEl('Library')).toHaveAttribute('data-pile-count', '40');
+    expect(pileEl('Graveyard')).toHaveAttribute('data-pile-count', '2');
+    expect(pileEl('Exile')).toHaveAttribute('data-pile-count', '0');
   });
 
-  it('renders a placeholder when the zone has no visible cards', () => {
-    const { container } = renderWithProviders(
-      <ZoneStack zoneName={ZoneName.EXILE} label="Exile" />,
-      { preloadedState: stateWithZone(ZoneName.EXILE, { cardCount: 0 }) },
-    );
-
-    expect(container.querySelector('.zone-stack__placeholder')).not.toBeNull();
-    expect(container.querySelector('.zone-stack__image')).toBeNull();
+  it('gives the owner the library menu, and its first item draws', () => {
+    const { game } = renderSeatCell(SPEC);
+    expect(menuLabels(openContextMenu(pileEl('Library'))).slice(0, 3)).toEqual(['Draw card', 'Draw cards...', 'Undo last draw']);
+    chooseMenuPath('Draw card');
+    expect(game.drawCards).toHaveBeenCalledWith(1, { number: 1 });
   });
 
-  it('hides the image when the top card is face-down', () => {
-    const hidden = makeCard({ id: 1, name: 'Secret', faceDown: true });
-    const { container } = renderWithProviders(
-      <ZoneStack zoneName={ZoneName.EXILE} label="Exile" />,
-      {
-        preloadedState: stateWithZone(ZoneName.EXILE, {
-          cardCount: 1,
-          cards: [hidden],
-        }),
-      },
-    );
-
-    expect(container.querySelector('.zone-stack__placeholder')).not.toBeNull();
-    expect(container.querySelector('.zone-stack__image')).toBeNull();
-  });
-
-  it('renders count 0 when the zone entry is missing entirely', () => {
-    renderWithProviders(
-      <ZoneStack zoneName="nonexistent" label="Missing" />,
-      {
-        preloadedState: makeStoreState({
-          games: {
-            games: {
-              1: makeGameEntry({
-                players: { 1: makePlayerEntry({ zones: {} }) },
-              }),
-            },
-          },
-        }),
-      },
-    );
-
-    expect(screen.getByText('0')).toBeInTheDocument();
-  });
-
-  it('fires onClick with the zone name when clicked', () => {
-    const onClick = vi.fn();
-    renderWithProviders(
-      <ZoneStack
-        zoneName={ZoneName.GRAVE}
-        label="Graveyard"
-        onClick={onClick}
-      />,
-      { preloadedState: stateWithZone(ZoneName.GRAVE, { cardCount: 0 }) },
-    );
-
-    fireEvent.click(screen.getByTestId(`zone-stack-${ZoneName.GRAVE}`));
-
-    expect(onClick).toHaveBeenCalledWith(ZoneName.GRAVE);
-  });
-
-  it('does not gain button semantics when onClick is omitted', () => {
-    renderWithProviders(
-      <ZoneStack zoneName={ZoneName.GRAVE} label="Graveyard" />,
-      { preloadedState: stateWithZone(ZoneName.GRAVE, { cardCount: 0 }) },
-    );
-
-    const el = screen.getByTestId(`zone-stack-${ZoneName.GRAVE}`);
-    expect(el).not.toHaveAttribute('role', 'button');
-    expect(el).not.toHaveAttribute('tabindex');
-  });
-
-  it('applies the rotated modifier class when rotated is true', () => {
-    renderWithProviders(
-      <ZoneStack
-        zoneName={ZoneName.GRAVE}
-        label="Graveyard"
-        rotated
-      />,
-      { preloadedState: stateWithZone(ZoneName.GRAVE, { cardCount: 0 }) },
-    );
-
-    expect(screen.getByTestId(`zone-stack-${ZoneName.GRAVE}`)).toHaveClass(
-      'zone-stack--rotated',
+  it('gives the owner the graveyard menu and another viewer only its view', () => {
+    renderSeatCell(SPEC);
+    expect(menuLabels(openContextMenu(pileEl('Graveyard')))).toEqual(
+      expect.arrayContaining(['View graveyard', 'Reveal random card to...', 'Move graveyard to...']),
     );
   });
 
-  it('omits the rotated modifier by default', () => {
-    renderWithProviders(
-      <ZoneStack zoneName={ZoneName.DECK} label="Deck" />,
-      { preloadedState: stateWithZone(ZoneName.DECK, { cardCount: 0 }) },
-    );
-
-    expect(screen.getByTestId(`zone-stack-${ZoneName.DECK}`)).not.toHaveClass(
-      'zone-stack--rotated',
-    );
+  it('opens no menu on another player\'s library, and only views on their piles', () => {
+    renderSeatCell(SPEC, 2);
+    fireEvent.contextMenu(pileEl('Library'));
+    expect(openMenus()).toEqual([]);
+    expect(menuLabels(openContextMenu(pileEl('Exile')))).toEqual(['View exile (disabled)']);
   });
 
-  it.each([['Enter'], [' ']])('fires onClick on %s keypress when focusable', (key) => {
-    const onClick = vi.fn();
-    renderWithProviders(
-      <ZoneStack
-        zoneName={ZoneName.GRAVE}
-        label="Graveyard"
-        onClick={onClick}
-      />,
-      { preloadedState: stateWithZone(ZoneName.GRAVE, { cardCount: 0 }) },
-    );
+  it('makes each pile a menu button named by its zone, count and top card', () => {
+    renderSeatCell(SPEC);
+    expect(screen.getByRole('button', { name: 'Graveyard, 2 cards, top: Opt' })).toBe(pileEl('Graveyard'));
+    expect(screen.getByRole('button', { name: 'Library, 40 cards' })).toHaveAttribute('aria-haspopup', 'menu');
+    expect(screen.getByRole('button', { name: 'Exile, 0 cards' })).toHaveAttribute('tabindex', '0');
+  });
 
-    fireEvent.keyDown(screen.getByTestId(`zone-stack-${ZoneName.GRAVE}`), { key });
-    expect(onClick).toHaveBeenCalledWith(ZoneName.GRAVE);
+  it('shows another player\'s library, which opens no menu, as a labelled picture out of the tab order', () => {
+    renderSeatCell(SPEC, 2);
+    expect(screen.getByRole('img', { name: 'Library, 33 cards' })).not.toHaveAttribute('tabindex');
+  });
+
+  it.each(['Enter', ' ', 'ContextMenu'])('opens the pile menu from the keyboard (%j) and hands focus back on Escape', (key) => {
+    renderSeatCell(SPEC);
+    const grave = pileEl('Graveyard');
+    act(() => grave.focus());
+    act(() => {
+      fireEvent.keyDown(grave, { key });
+    });
+    const [menu] = openMenus();
+    expect(menu).toHaveAccessibleName('Graveyard');
+    expect(grave).toHaveAttribute('aria-expanded', 'true');
+    expect(menu).toContainElement(document.activeElement as HTMLElement);
+    act(() => {
+      fireEvent.keyDown(document.activeElement!, { key: 'Escape' });
+    });
+    expect(openMenus()).toEqual([]);
+    expect(grave).toHaveFocus();
+  });
+
+  it('draws a pile\'s top card from its printing, else from its exact name', () => {
+    renderSeatCell({
+      localPlayerId: 1,
+      seats: [{
+        playerId: 1,
+        deckCount: 40,
+        grave: [makeCard({ id: 40, name: 'Rhino, Warrior Token', providerId: '0f1a2b3c-4d5e-4f60-8a7b-9c0d1e2f3a4b' })],
+        exile: [makeCard({ id: 41, name: 'Rhino, Warrior Token' })],
+      }],
+    });
+    expect(pileEl('Graveyard').querySelector('img')).toHaveAttribute(
+      'src',
+      'https://api.scryfall.com/cards/0f1a2b3c-4d5e-4f60-8a7b-9c0d1e2f3a4b?format=image&version=large',
+    );
+    expect(pileEl('Exile').querySelector('img')).toHaveAttribute(
+      'src',
+      'https://api.scryfall.com/cards/named?exact=Rhino%2C%20Warrior%20Token&format=image&version=large',
+    );
   });
 });

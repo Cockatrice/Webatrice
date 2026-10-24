@@ -1,4 +1,9 @@
+import { create } from '@bufbuild/protobuf';
 import { ZoneName } from '@cockatrice/sockatrice';
+import {
+  ServerInfo_PlayerPropertiesSchema,
+  ServerInfo_PlayerProperties_PlaymatParamsSchema,
+} from '@cockatrice/sockatrice/generated';
 
 import { Selectors, seatedPlayersOf } from './game.selectors';
 import { gamesReducer } from './game.reducer';
@@ -86,6 +91,49 @@ describe('Selectors', () => {
   it('getPlayerPing → returns 0 when the game has no ping map', () => {
     const state = makeState();
     expect(Selectors.getPlayerPing(rootState(state), 999, 1)).toBe(0);
+  });
+
+  describe('getPlayerPlaymat', () => {
+    const island = create(ServerInfo_PlayerProperties_PlaymatParamsSchema, { cardName: 'Island', cardProviderId: 'uuid-1', zoom: 2 });
+
+    function stateWithPlaymat(playmatParams?: typeof island) {
+      const players = { 7: makePlayerEntry({ properties: makePlayerProperties({ playerId: 7, playmatParams }) }) };
+      return makeState({ games: { 1: makeGameEntry({ players }) } });
+    }
+
+    const update = (state: GamesState, properties: Parameters<typeof makePlayerProperties>[0]) =>
+      gamesReducer(state, Actions.playerPropertiesUpdated({
+        gameId: 1,
+        playerId: 7,
+        properties: create(ServerInfo_PlayerPropertiesSchema, properties),
+      }));
+
+    it('returns null for an unknown player or one without a playmat', () => {
+      expect(Selectors.getPlayerPlaymat(rootState(makeState()), 1, 7)).toBeNull();
+      expect(Selectors.getPlayerPlaymat(rootState(stateWithPlaymat()), 1, 7)).toBeNull();
+    });
+
+    it('returns the announced playmat, stable across reads', () => {
+      const state = rootState(stateWithPlaymat(island));
+      const playmat = Selectors.getPlayerPlaymat(state, 1, 7);
+      expect(playmat).toMatchObject({ cardName: 'Island', cardProviderId: 'uuid-1', params: { zoom: 2 } });
+      expect(Selectors.getPlayerPlaymat(state, 1, 7)).toBe(playmat);
+    });
+
+    it('keeps its reference through updates that do not carry playmat params', () => {
+      const state = stateWithPlaymat(island);
+      const before = Selectors.getPlayerPlaymat(rootState(state), 1, 7);
+      const next = update(update(state, { pingSeconds: 3 }), { readyStart: true });
+      expect(Selectors.getPlayerPlaymat(rootState(next), 1, 7)).toBe(before);
+    });
+
+    it('follows a SetPlaymat broadcast and clears on an empty card name', () => {
+      const swamp = update(stateWithPlaymat(island), { playmatParams: { cardName: 'Swamp' } });
+      expect(Selectors.getPlayerPlaymat(rootState(swamp), 1, 7)?.cardName).toBe('Swamp');
+
+      const cleared = update(swamp, { playmatParams: { cardName: '' } });
+      expect(Selectors.getPlayerPlaymat(rootState(cleared), 1, 7)).toBeNull();
+    });
   });
 
   describe('seated players (seatOrder)', () => {

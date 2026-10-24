@@ -1,6 +1,9 @@
 /// <reference types="vite/client" />
 /// <reference types="vitest/globals" />
 
+declare const __WEBATRICE_VERSION__: string;
+declare const __WEBATRICE_BUILD_DATE__: string;
+
 // Ambient globals. This file has no imports/exports, so it's already global
 // scope — `interface Window` merges into the DOM lib's Window without a
 // `declare global` wrapper.
@@ -15,6 +18,10 @@ interface Window {
   Cockatrice?: {
     env?: {
       RR_GA_KEY?: string;
+    };
+    browserSupport?: {
+      missingRequired: string[];
+      missingOptional: string[];
     };
   };
 }

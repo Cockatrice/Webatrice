@@ -172,10 +172,10 @@ describe('setActivePhase event', () => {
 });
 
 describe('reverseTurn event', () => {
-  it('delegates to WebClient.instance.response.game.turnReversed with gameId and reversed', () => {
+  it('delegates to WebClient.instance.response.game.turnReversed with gameId, reversed and the actor', () => {
     const data = create(Event_ReverseTurnSchema, { reversed: true });
     reverseTurn(data, meta);
-    expect(WebClient.instance.response.game.turnReversed).toHaveBeenCalledWith(5, true);
+    expect(WebClient.instance.response.game.turnReversed).toHaveBeenCalledWith(5, true, 2);
   });
 });
 

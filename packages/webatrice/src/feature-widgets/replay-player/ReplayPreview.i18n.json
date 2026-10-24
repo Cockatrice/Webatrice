@@ -1,0 +1,37 @@
+{
+  "ReplayPreview": {
+    "seat": "{name}'s seat",
+    "playerNumber": "Player {id}",
+    "counts": "Hand {hand} · Library {library}",
+    "emptyBattlefield": "Nothing on the battlefield",
+    "turnStrip": "Turn {turn} · {player} · {phase}",
+    "stack": "Stack:",
+    "phase": {
+      "0": "Untap",
+      "1": "Upkeep",
+      "2": "Draw",
+      "3": "Main 1",
+      "4": "Start combat",
+      "5": "Attack",
+      "6": "Block",
+      "7": "Damage",
+      "8": "End combat",
+      "9": "Main 2",
+      "10": "End"
+    },
+    "logAt": "Log at {time}",
+    "controls": {
+      "backBig": "Back 10 seconds",
+      "back": "Back 1 second",
+      "play": "Play preview",
+      "pause": "Pause preview",
+      "forward": "Forward 1 second",
+      "forwardBig": "Forward 10 seconds"
+    },
+    "turn": "Turn {turn}",
+    "keySpace": "Space",
+    "hintPlay": "play",
+    "hintStep": "step",
+    "watchFrom": "Watch from {time}"
+  }
+}

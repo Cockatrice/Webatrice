@@ -1,0 +1,45 @@
+{
+  "TopBar": {
+    "replays": {
+      "tab": "Replays"
+    },
+    "replayTab": "Replay",
+    "tab": {
+      "lobby": "Lobby",
+      "room": "Room {id}",
+      "game": "Game {id}",
+      "deck": "Deck #{id}",
+      "unsavedDeck": "Unsaved deck",
+      "publicDecks": "Public decks of {name}",
+      "myDecks": "My Decks",
+      "player": "Player"
+    },
+    "connection": {
+      "connected": "Connected",
+      "disconnected": "Disconnected",
+      "stale": "Server not responding"
+    },
+    "user": {
+      "signedIn": "Signed in",
+      "signOut": "Sign out"
+    },
+    "game": {
+      "snapGrid": "Snap grid",
+      "phaseTrackToggle": "Auto-hide phase tracker",
+      "phaseTrackCollapse": "Collapse the phase track into an auto-hiding HUD",
+      "phaseTrackPin": "Keep the phase track always visible"
+    },
+    "tabs": {
+      "label": "Open tabs",
+      "close": "Close {title}",
+      "spectating": "Spectating"
+    },
+    "group": {
+      "rooms": "Rooms",
+      "games": "Games",
+      "decks": "Decks",
+      "replays": "Replays",
+      "pages": "Page"
+    }
+  }
+}

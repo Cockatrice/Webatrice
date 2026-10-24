@@ -1,10 +1,7 @@
 import { ReactNode } from 'react';
 
-import TopBar from '../../components/layout/TopBar';
-
-// Layout.css intentionally not imported — the pre-redo styles it
-// contained (`.layout`, `.page__body`, `.bottom-bar__container`) don't
-// match any element we render anymore.
+import NavRail from './NavRail';
+import TopBar from './TopBar';
 
 interface LayoutProps {
   showNav?: boolean;
@@ -13,20 +10,16 @@ interface LayoutProps {
   noHeightLimit?: boolean;
 }
 
-/**
- * Every page wraps its content in <Layout>. Previously that meant the
- * MUI-based LeftNav sidebar + a bottom bar; now it's fancy webatrice's
- * TopBar sitting above a flexible content area. Underneath, react-
- * router is still the source of truth for navigation — the TopBar just
- * shows joined rooms / joined games / transient routes as tabs.
- */
 function Layout({ children, className, showNav = true, noHeightLimit = false }: LayoutProps) {
   return (
-    <div className={['flex h-full flex-col bg-bg-base', noHeightLimit ? '' : 'min-h-0'].join(' ')}>
-      {showNav && <TopBar />}
-      <main className="flex-1 min-h-0 overflow-hidden">
-        <div className={`h-full ${className ?? ''}`}>{children}</div>
-      </main>
+    <div className={['flex h-full bg-bg-base', noHeightLimit ? '' : 'min-h-0'].join(' ')}>
+      {showNav && <NavRail />}
+      <div className="flex min-w-0 flex-1 flex-col">
+        {showNav && <TopBar />}
+        <main tabIndex={-1} className="flex-1 min-h-0 overflow-clip">
+          <div className={`h-full ${className ?? ''}`}>{children}</div>
+        </main>
+      </div>
     </div>
   );
 }

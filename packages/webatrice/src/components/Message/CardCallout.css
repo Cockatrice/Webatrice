@@ -1,4 +1,18 @@
 .callout {
   font-weight: bold;
-  color: green;
+  color: rgb(var(--status-success));
+}
+
+.callout__name {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: default;
+}
+
+.callout__name:focus-visible {
+  outline: 2px solid rgb(var(--accent-primary));
+  outline-offset: 2px;
 }

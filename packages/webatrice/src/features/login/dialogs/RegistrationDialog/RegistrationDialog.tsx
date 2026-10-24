@@ -22,7 +22,7 @@ const RegistrationDialog = ({ handleClose, isOpen, onSubmit }: RegistrationDialo
       isOpen={isOpen}
       handleClose={handleClose}
       title={t('RegistrationDialog.title')}
-      maxWidth="xl"
+      maxWidth="max-w-3xl"
     >
       <RegisterForm onSubmit={onSubmit} />
     </DialogShell>

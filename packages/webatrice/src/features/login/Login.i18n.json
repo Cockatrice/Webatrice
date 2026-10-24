@@ -1,25 +1,34 @@
 {
   "Login": {
     "header": {
-      "title": "Login",
-      "subtitle": "A cross-platform virtual tabletop for multiplayer card games."
+      "title": "Sign in",
+      "brand": "Webatrice",
+      "headline": "Play Magic online, free, with anyone."
+    },
+    "action": {
+      "watchReplay": "Watch a replay",
+      "register": "Create an account",
+      "registerOn": "On {server}",
+      "registerHint": "Free, on the server you pick",
+      "watchReplayHint": "No sign-in needed"
     },
     "footer": {
-      "registerPrompt": "Not registered yet?",
-      "registerAction": "Create an account",
-      "credit": "Cockatrice is an open source project",
-      "version": "Version"
-    },
-    "content": {
-      "subtitle1": "Play multiplayer card games online.",
-      "subtitle2": "Cross-platform virtual tabletop for multiplayer card games. Forever free."
+      "version": "Webatrice {version}",
+      "debugLog": "Debug log"
     },
     "toasts": {
-      "passwordResetSuccessToast": "Password Reset Successfully",
-      "accountActivationSuccess": "Account Activated Successfully"
+      "accountActivationSuccess": "Account Activated Successfully",
+      "passwordResetSuccessToast": "Password Reset Successfully"
     },
     "status": {
-      "serverUnreachable": "Trouble reaching the server. Wait a minute and try again."
+      "serverUnreachable": "Trouble reaching the server. Wait a minute and try again.",
+      "passwordChangeRequired": "An administrator has reset your password. The server will not sign you in until you choose a new one: use “Forgot password?” to set it, then sign in with the new password.",
+      "passwordChangeRequiredAction": "Reset password",
+      "serverFull": "The server has reached its maximum number of users. Please check back later."
+    },
+    "art": {
+      "label": "Art:",
+      "shuffle": "Show different card art"
     }
   }
 }

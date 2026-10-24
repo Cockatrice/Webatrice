@@ -36,7 +36,8 @@ async function createVersionFile() {
 
 async function createI18NDefault() {
   try {
-    const files = getAllFiles(ROOT_DIR, i18nFileRegex);
+    const files = getAllFiles(ROOT_DIR, i18nFileRegex)
+      .sort((a, b) => comparePosixPaths(toPosixRelative(a), toPosixRelative(b)));
     const allJson = await Promise.all(files.map(file => fse.readJson(file)));
 
     const rollup = allJson.reduce((acc, json) => {
@@ -62,6 +63,14 @@ async function createI18NDefault() {
 
 async function getCommitHash() {
   return (await exec('git rev-parse HEAD')).stdout.trim();
+}
+
+function toPosixRelative(file) {
+  return path.relative(__dirname, file).split(path.sep).join('/');
+}
+
+function comparePosixPaths(a, b) {
+  return a < b ? -1 : a > b ? 1 : 0;
 }
 
 function getAllFiles(dirPath, regex = /./, allFiles = []) {

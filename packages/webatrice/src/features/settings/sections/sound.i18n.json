@@ -1,0 +1,21 @@
+{
+  "SettingsSound": {
+    "group": {
+      "sound": "Sound settings"
+    },
+    "soundEnabled": {
+      "label": "Enable sounds",
+      "description": "Plays a sound for game events, mentions, private messages and buddies signing on or off."
+    },
+    "soundTheme": {
+      "label": "Current sounds theme"
+    },
+    "test": {
+      "label": "Test system sound engine",
+      "button": "Play test sound"
+    },
+    "masterVolume": {
+      "label": "Master volume"
+    }
+  }
+}

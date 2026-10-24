@@ -1,0 +1,6 @@
+{
+  "HandZone": {
+    "button": "Hand — {count, plural, one {# card} other {# cards}}",
+    "menu": "Hand"
+  }
+}

@@ -1,0 +1,3 @@
+{
+  "Unsupported.missing": "public/preflight.js renders the unsupported screen before i18next loads and reads this key from public/locales by hand"
+}

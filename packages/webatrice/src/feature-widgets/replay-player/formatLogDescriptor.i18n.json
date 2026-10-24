@@ -1,0 +1,267 @@
+{
+  "GameLog": {
+    "cardMoved": {
+      "control": "{actor} gives {target} control over {card}.",
+      "play": "{actor} puts {card} into play{from}{faceDown}.",
+      "grave": "{actor} puts {card}{from} into their graveyard{faceDown}.",
+      "exile": "{actor} exiles {card}{from}{faceDown}.",
+      "hand": "{actor} moves {card}{from} to their hand.",
+      "sideboard": "{actor} moves {card}{from} to sideboard.",
+      "stack": "{actor} plays {card}{from}{faceDown}.",
+      "library": "{actor} puts {card}{from} into their library.",
+      "bottom": "{actor} puts {card}{from} onto the bottom of their library.",
+      "top": "{actor} puts {card}{from} on top of their library.",
+      "position": "{actor} puts {card}{from} into their library {position} cards from the top.",
+      "customFaceDown": "{actor} moves {card}{from} to custom zone ''{targetZone}'' face down.",
+      "custom": "{actor} moves {card}{from} to custom zone ''{targetZone}''."
+    },
+    "cardFlipped": {
+      "down": "{actor} turns {card} face-down.",
+      "up": "{actor} turns {card} face-up."
+    },
+    "cardDestroyed": {
+      "message": "{actor} destroys {card}."
+    },
+    "cardAttached": {
+      "detach": "{actor} unattaches {card}.",
+      "attach": "{actor} attaches {card} to {target}''s {targetCard}."
+    },
+    "tokenCreated": {
+      "faceDown": "{actor} creates a face down token.",
+      "pt": "{actor} creates token: {card} ({pt}).",
+      "name": "{actor} creates token: {card}."
+    },
+    "cardAttrChanged": {
+      "tap": "{actor} taps {card}.",
+      "untap": "{actor} untaps {card}.",
+      "attack": "{actor} declares {card} as an attacker.",
+      "removePT": "{actor} removes the PT of {card}.",
+      "setPT": "{actor} changes the PT of {card} from nothing to {value}.",
+      "changePT": "{actor} changes the PT of {card} from {previous} to {value}.",
+      "annotation": "{actor} sets annotation of {card} to \"{value}\".",
+      "clearAnnotation": "{actor} sets annotation of {card} to \"\".",
+      "doesntUntap": "{actor} sets {card} to not untap normally.",
+      "untaps": "{actor} sets {card} to untap normally."
+    },
+    "cardAttrChangedBulk": {
+      "tap": "{actor} taps their permanents.",
+      "untap": "{actor} untaps their permanents."
+    },
+    "cardCounterChanged": {
+      "add": "{actor} places {delta} counter(s) on {card} (now {value}).",
+      "remove": "{actor} removes {delta} counter(s) from {card} (now {value}).",
+      "set": "{actor} sets counters on {card} to {value}."
+    },
+    "counterSet": {
+      "message": "{actor} sets counter {displayName} to {value} ({delta})."
+    },
+    "cardsDrawn": {
+      "one": "{actor} draws {count} card.",
+      "many": "{actor} draws {count} cards."
+    },
+    "cardUndoneDraw": {
+      "named": "{actor} undoes their last draw ({card}).",
+      "unknown": "{actor} undoes their last draw."
+    },
+    "undoDrawFailed": {
+      "message": "{actor} failed to undo their last draw."
+    },
+    "zoneShuffled": {
+      "message": "{actor} shuffles their library."
+    },
+    "cardPeeked": {
+      "named": "{actor} peeks at face down card #{cardId}: {card}.",
+      "unknown": "{actor} peeks at face down card #{cardId}."
+    },
+    "cardsRevealed": {
+      "lendAll": "{actor} reveals {zone}.",
+      "lendTarget": "{actor} lends {zone} to {target}.",
+      "zoneTarget": "{actor} reveals {zone} to {target}.",
+      "zone": "{actor} reveals {zone}.",
+      "oneTarget": "{actor} reveals {count} card from {zone} to {target}.",
+      "manyTarget": "{actor} reveals {count} cards from {zone} to {target}.",
+      "one": "{actor} reveals {count} card from {zone}.",
+      "many": "{actor} reveals {count} cards from {zone}.",
+      "cardsTarget": "{actor} reveals {count} card(s) from {fromLabel} to {target}.",
+      "cards": "{actor} reveals {count} card(s) from {fromLabel}."
+    },
+    "zoneDumped": {
+      "own": "{actor} is looking at {zoneLabel}.",
+      "other": "{actor} is looking at {owner}''s {zone}.",
+      "topOwn": "{actor} is looking at the top {count} {noun} of {zoneLabel}.",
+      "topOther": "{actor} is looking at the top {count} {noun} of {owner}''s {zone}."
+    },
+    "zonePropertiesChanged": {
+      "reveal": "{actor} is now keeping the top card of {zone} revealed.",
+      "look": "{actor} can now look at top card of {zone} at any time.",
+      "hide": "{actor} is not revealing the top card of {zone} any longer."
+    },
+    "activePhaseSet": {
+      "message": "It is now the {phase}."
+    },
+    "activePlayerSet": {
+      "message": "{actor}''s turn."
+    },
+    "turnReversed": {
+      "reversed": "{actor} reversed turn order, now it''s reversed.",
+      "normal": "{actor} reversed turn order, now it''s normal."
+    },
+    "dieRolled": {
+      "none": "{actor} rolls a {sides}-sided die.",
+      "coin": "{actor} flipped a coin. It landed as {face}.",
+      "single": "{actor} rolls a {roll} with a {sides}-sided die.",
+      "coins": "{actor} flips {count} coins. There are {heads} heads and {tails} tails.",
+      "multiple": "{actor} rolls a {sides}-sided dice {count} times: {rolls}."
+    },
+    "playerJoined": {
+      "message": "{actor} has joined the game."
+    },
+    "leaveMessage": {
+      "message": "{actor} has left the game ({reasonText})."
+    },
+    "arrowCreated": {
+      "selfPlayer": "{actor} points from their {sourceCard} to themselves.",
+      "ownPlayer": "{actor} points from their {sourceCard} to {target}.",
+      "otherSelf": "{actor} points from {source}''s {sourceCard} to themselves.",
+      "otherPlayer": "{actor} points from {source}''s {sourceCard} to {target}.",
+      "selfCard": "{actor} points from their {sourceCard} to their {targetCard}.",
+      "ownCard": "{actor} points from their {sourceCard} to {target}''s {targetCard}.",
+      "otherOwnCard": "{actor} points from {source}''s {sourceCard} to their own {targetCard}.",
+      "otherCard": "{actor} points from {source}''s {sourceCard} to {target}''s {targetCard}."
+    },
+    "gameStarted": {
+      "message": "The game has started."
+    },
+    "gameClosed": {
+      "message": "The game has been closed."
+    },
+    "replayStarted": {
+      "message": "You are watching a replay of game #{gameId}."
+    },
+    "playerConceded": {
+      "message": "{actor} has conceded the game."
+    },
+    "playerUnconceded": {
+      "message": "{actor} has unconceded the game."
+    },
+    "playerReady": {
+      "message": "{actor} is ready to start the game."
+    },
+    "playerUnready": {
+      "message": "{actor} is not ready to start the game any more."
+    },
+    "sideboardLocked": {
+      "message": "{actor} has locked their sideboard."
+    },
+    "sideboardUnlocked": {
+      "message": "{actor} has unlocked their sideboard."
+    },
+    "deckLoaded": {
+      "message": "{actor} has loaded a deck ({hash})."
+    },
+    "player": {
+      "unknown": "Unknown player",
+      "server": "The server",
+      "number": "Player {id}"
+    },
+    "card": {
+      "unknown": "a card",
+      "one": "card",
+      "many": "cards"
+    },
+    "faceDown": " face down",
+    "zone": {
+      "play": "play",
+      "custom": "custom zone ''{zone}''",
+      "battlefield": {
+        "own": "their battlefield",
+        "other": "the battlefield",
+        "bare": "battlefield"
+      },
+      "hand": {
+        "own": "their hand",
+        "other": "the hand",
+        "bare": "hand"
+      },
+      "graveyard": {
+        "own": "their graveyard",
+        "other": "the graveyard",
+        "bare": "graveyard"
+      },
+      "exile": {
+        "own": "their exile",
+        "other": "the exile",
+        "bare": "exile"
+      },
+      "library": {
+        "own": "their library",
+        "other": "the library",
+        "bare": "library"
+      },
+      "sideboard": {
+        "own": "their sideboard",
+        "other": "the sideboard",
+        "bare": "sideboard"
+      },
+      "stack": {
+        "own": "their stack",
+        "other": "the stack",
+        "bare": "stack"
+      }
+    },
+    "coin": {
+      "heads": "Heads (1)",
+      "tails": "Tails (2)"
+    },
+    "leaveReason": {
+      "1": "reason unknown",
+      "2": "kicked by game host or moderator",
+      "3": "player left the game",
+      "4": "player disconnected from server"
+    },
+    "source": {
+      "custom": " from custom zone ''{zone}''",
+      "battlefield": " from play",
+      "graveyard": " from their graveyard",
+      "exile": " from exile",
+      "hand": " from their hand",
+      "sideboard": " from sideboard",
+      "stack": " from the stack",
+      "library": {
+        "top": {
+          "own": " from the top of their library",
+          "other": " from the top of {owner}''s library"
+        },
+        "bottom": {
+          "own": " from the bottom of their library",
+          "other": " from the bottom of {owner}''s library"
+        },
+        "any": {
+          "own": " from their library",
+          "other": " from {owner}''s library"
+        }
+      }
+    },
+    "sourceCard": {
+      "top": {
+        "own": "the top card of their library",
+        "other": "the top card of {owner}''s library"
+      },
+      "bottom": {
+        "own": "the bottom card of their library",
+        "other": "the bottom card of {owner}''s library"
+      }
+    },
+    "counter": {
+      "life": "Life",
+      "white": "White",
+      "blue": "Blue",
+      "black": "Black",
+      "red": "Red",
+      "green": "Green",
+      "colorless": "Colorless",
+      "other": "Other",
+      "unknown": "counter"
+    }
+  }
+}

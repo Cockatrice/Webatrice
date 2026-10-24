@@ -1,0 +1,9 @@
+{
+  "ImportMenu": {
+    "import": "Import",
+    "label": "Import decks",
+    "fromCockatrice": "From Cockatrice desktop…",
+    "pasteOrOpen": "Paste a list or open a deck file…",
+    "disconnected": "Connect to a server first"
+  }
+}

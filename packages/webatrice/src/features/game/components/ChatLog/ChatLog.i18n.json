@@ -1,0 +1,10 @@
+{
+  "ChatLog": {
+    "heading": "Chat & log",
+    "empty": "no messages",
+    "inputLabel": "Game chat message",
+    "placeholder": "Say something…",
+    "unavailable": "Chat unavailable",
+    "spectatorChatDisabled": "Spectators are not allowed to chat in this game."
+  }
+}

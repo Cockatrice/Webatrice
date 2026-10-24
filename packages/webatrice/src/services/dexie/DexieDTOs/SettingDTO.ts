@@ -1,4 +1,4 @@
-import { Setting } from '@app/types';
+import { PREFERENCE_DEFAULTS, SETTINGS_VERSION, Setting } from '@app/types';
 import { dexieService } from '../DexieService';
 
 export class SettingDTO extends Setting {
@@ -6,8 +6,8 @@ export class SettingDTO extends Setting {
     super();
 
     this.user = user;
-    this.autoConnect = false;
-    this.invertVerticalCoordinate = false;
+    this.version = SETTINGS_VERSION;
+    Object.assign(this, structuredClone(PREFERENCE_DEFAULTS));
   }
 
   save() {

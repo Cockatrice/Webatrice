@@ -1,0 +1,10 @@
+{
+  "DeleteFolder": {
+    "title": "Delete folder?",
+    "body": "The folder {name} will be permanently removed from the server.",
+    "scope": "This also deletes {decks, plural, one {# deck} other {# decks}} and {folders, plural, one {# subfolder} other {# subfolders}} inside it.",
+    "irreversible": "This can't be undone.",
+    "delete": "Delete",
+    "cancel": "Cancel"
+  }
+}

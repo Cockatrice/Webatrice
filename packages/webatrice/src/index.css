@@ -1,9 +1,10 @@
-@import url('https://fonts.googleapis.com/css2?family=Teko&family=Open+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,300;1,400;1,500;1,600;1,700;1,800&display=swap');
+@import './styles/fonts.css';
 
 @import './styles/colors.css';
 @import './styles/tokens.css';
+@import './styles/design-system.css';
 @import './styles/thin-scrollbar.css';
-@import './styles/card-flip.css';
+@import './styles/board-motion.css';
 @import './styles/mui-overrides.css';
 
 /* Tailwind preflight is on: this emits the button/anchor/heading/
@@ -24,9 +25,10 @@ body {
   margin: 0;
   /* Body reset. Owned here (not by MUI CssBaseline, which was removed)
      so the fancy palette + Inter typography apply on every page. */
-  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', 'Open Sans', sans-serif;
-  font-size: 14px;
-  line-height: 1.5;
+  font-family: var(--font-body);
+  font-size: var(--fs-ui);
+  line-height: var(--lh-ui);
+  -webkit-font-smoothing: antialiased;
   background-color: rgb(var(--bg-base));
   color: rgb(var(--text-primary));
   -webkit-font-smoothing: antialiased;

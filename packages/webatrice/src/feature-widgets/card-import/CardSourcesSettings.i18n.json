@@ -1,0 +1,27 @@
+{
+  "CardSourcesSettings": {
+    "label": {
+      "url": "URL:",
+      "list": "Picture URL templates",
+      "placeholders": "Available placeholders"
+    },
+    "button": {
+      "add": "Add New URL",
+      "edit": "Edit URL",
+      "remove": "Remove URL",
+      "up": "Move up",
+      "down": "Move down",
+      "reset": "Reset Download URLs"
+    },
+    "validation": {
+      "url": "Enter an http(s) URL"
+    },
+    "message": {
+      "reset": "Download URLs have been reset."
+    },
+    "error": {
+      "load": "Could not read the download URLs: {error}",
+      "save": "Could not save the download URLs: {error}"
+    }
+  }
+}

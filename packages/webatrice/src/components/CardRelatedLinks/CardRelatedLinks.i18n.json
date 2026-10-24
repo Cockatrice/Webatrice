@@ -1,0 +1,9 @@
+{
+  "CardRelatedLinks": {
+    "otherFace": "Other face",
+    "tokens": "{count, plural, one {Token} other {Tokens}}",
+    "meld": "Meld",
+    "usedBy": "Cards that use this token ({count})",
+    "related": "Related"
+  }
+}

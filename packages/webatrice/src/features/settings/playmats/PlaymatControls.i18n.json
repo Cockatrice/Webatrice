@@ -1,0 +1,53 @@
+{
+  "PlaymatSettings": {
+    "title": "Playmats",
+    "serverNote": "Playmats are shown on servers that support them (Servatrice 3.1 and later).",
+    "visibility": {
+      "label": "Playmat visibility",
+      "all": "Show all playmats",
+      "ownOnly": "Show own playmat only",
+      "none": "Don't use playmats"
+    },
+    "mode": {
+      "label": "Default collection behavior",
+      "overrideDeck": "Override deck playmat",
+      "fallback": "Fallback if deck has none",
+      "deckOnly": "Deck only, ignore collection",
+      "description": "When a deck has its own playmat, which one you see."
+    },
+    "collection": {
+      "title": "Default playmat collection",
+      "empty": "No playmats yet.",
+      "listMode": "List mode",
+      "fixed": "Fixed (always the first entry)",
+      "roundRobin": "Round-robin (cycle through entries)",
+      "random": "Random (pick one per game)",
+      "cardName": "Card name",
+      "cardNamePlaceholder": "Type a card name...",
+      "add": "Add",
+      "done": "Done",
+      "description": "Card art used as your playmat. The list mode decides which one each game uses.",
+      "addArt": "Add card art",
+      "moveEarlier": "Move {card} earlier",
+      "moveLater": "Move {card} later",
+      "editCrop": "Edit the crop of {card}",
+      "removeCard": "Remove {card}",
+      "cropOf": "Crop of {card}",
+      "cancel": "Cancel"
+    },
+    "crop": {
+      "title": "Crop",
+      "preview": "Playmat preview",
+      "leftMargin": "Left margin (%):",
+      "rightMargin": "Right margin (%):",
+      "verticalOffset": "Vertical offset:",
+      "zoom": "Zoom:"
+    },
+    "validation": {
+      "unknownCard": "Choose a card from your card database.",
+      "tooLong": "Card names must be at most {max} characters.",
+      "lookupFailed": "Could not check the card name. Try again.",
+      "saveFailed": "Could not save playmat settings. Try again."
+    }
+  }
+}

@@ -1,0 +1,104 @@
+{
+  "DeckMigration": {
+    "title": "Import from Cockatrice",
+    "guest": "Decks are saved to your account on this server. Sign in with a registered account to import decks; replays and custom sets can still be imported into this browser.",
+    "offline": "You're not connected to a server, so decks can't be imported right now. Replays and custom sets can still be imported into this browser.",
+    "os": {
+      "windows": "Windows",
+      "macos": "macOS",
+      "linux": "Linux"
+    },
+    "source": {
+      "intro": "Bring over the decks, replays and custom sets from desktop Cockatrice. Choose your Cockatrice folder (or just its decks folder), or drop files and folders here. You'll see what was found before anything is imported.",
+      "drop": "Drop your Cockatrice folder, a decks folder or deck files here",
+      "pickFolder": "Choose a folder",
+      "pickFiles": "Choose files",
+      "whereTitle": "Where desktop Cockatrice keeps your files",
+      "os": "Your computer",
+      "copy": "Copy",
+      "copied": "Copied",
+      "hint": {
+        "windows": "This folder is hidden. In the folder picker, paste the path into the address bar and press Enter.",
+        "macos": "Library is hidden in Finder. In the folder picker, press Cmd+Shift+G and paste the path.",
+        "linux": "Folders starting with a dot are hidden. In the folder picker, press Ctrl+L and paste the path, or Ctrl+H to show hidden folders."
+      },
+      "what": "Inside it, decks/ holds your decks (with their subfolders), replays/ your replays and customsets/ your custom sets and tokens. If you moved your decks folder in desktop's settings, choose that folder instead.",
+      "pasteLead": "Coming from Moxfield, Archidekt, MTG Arena or MTGO?",
+      "paste": "Paste a deck list"
+    },
+    "scan": {
+      "reading": "Reading deck files: {done} of {total}",
+      "checkingCards": "Checking card names…"
+    },
+    "preview": {
+      "found": "Found {decks, plural, one {# deck} other {# decks}} in {folders, plural, one {# folder} other {# folders}}, {replays, plural, one {# replay} other {# replays}} and {sets, plural, one {# custom set file} other {# custom set files}}.",
+      "decks": "Decks",
+      "all": "Select all",
+      "none": "Select none",
+      "topFolder": "Top level",
+      "cards": "{count, plural, one {# card} other {# cards}}",
+      "unknown": "{count, plural, one {# unknown card} other {# unknown cards}}",
+      "onServer": "Already on server",
+      "destination": "Put them in this folder (subfolders are kept)",
+      "destinationTop": "Top level of your decks",
+      "sameName": "If a deck with the same name is already there",
+      "skip": "Skip it",
+      "keepBoth": "Keep both",
+      "replays": "Import {count, plural, one {# replay} other {# replays}} into this browser",
+      "customSets": "Import {count, plural, one {# custom set file} other {# custom set files}} into this browser's card database",
+      "cardDatabase": "Not needed: {files}. Webatrice gets its card data from Scryfall.",
+      "import": "{count, plural, =0 {Import} one {Import # deck} other {Import # decks}}",
+      "options": "Import options",
+      "ignored": "{count, plural, one {# line wasn't read} other {# lines weren't read}}"
+    },
+    "zone": {
+      "tokens": "{count, plural, one {# token} other {# tokens}}",
+      "maybeboard": "{count} maybeboard"
+    },
+    "problem": {
+      "unreadable": "Couldn't read this file",
+      "empty": "No cards in this file",
+      "tooLarge": "Too large for the server (over 2 MB)",
+      "exists": "skipped, already on the server",
+      "pathTooLong": "skipped, folder path too long for the server"
+    },
+    "failure": {
+      "flood": "The server is busy; try again in a minute",
+      "server": "The server refused it (code {code})",
+      "timeout": "The server didn't answer",
+      "folder": "Not imported: couldn't create the folder {folder}"
+    },
+    "progress": {
+      "decks": "Importing decks: {done} of {total}",
+      "keepOpen": "Keep this window open until the import finishes. The server accepts a few decks per second, so large libraries take a few minutes.",
+      "stop": "Stop after this deck",
+      "folders": "Creating folder {name}",
+      "stopping": "Stopping…"
+    },
+    "summary": {
+      "decks": "{count, plural, =0 {No decks imported.} one {Imported # deck.} other {Imported # decks.}}",
+      "disconnected": "The connection dropped, so {count, plural, one {# deck was} other {# decks were}} not imported.",
+      "cancelled": "Stopped: {count, plural, one {# deck was} other {# decks were}} not imported.",
+      "unknown": "Some cards weren't recognised and were imported with a warning. Open these decks to fix them: {names}",
+      "renamed": "Decks whose names were already taken were imported with a number after the name.",
+      "again": "Run the import again to finish: decks that are already on the server are skipped.",
+      "more": "Import more",
+      "done": "Done",
+      "skippedGroup": "{count, plural, one {# deck} other {# decks}}: {reason}",
+      "stoppedReplays": "Stopped before all replays were imported.",
+      "stoppedCustomSets": "Stopped before all custom set files were imported.",
+      "legFailed": {
+        "replays": "Replays couldn't be imported: {detail}",
+        "customSets": "Custom sets couldn't be imported: {detail}",
+        "decks": "The deck import stopped with an error: {detail}"
+      }
+    },
+    "error": {
+      "nothingFound": "No decks, replays or custom sets were found there. Choose your Cockatrice folder or its decks folder."
+    },
+    "leg": {
+      "replays": "Importing replays into this browser…",
+      "customSets": "Importing custom sets into this browser…"
+    }
+  }
+}

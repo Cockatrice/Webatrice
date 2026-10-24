@@ -1,0 +1,17 @@
+{
+  "DesignSystem": {
+    "availability": {
+      "open": "Open",
+      "password": "Password",
+      "full": "Full",
+      "started": "In progress",
+      "buddies": "Buddies only"
+    },
+    "seats": "{taken} of {max} seats taken",
+    "role": {
+      "admin": "Administrator",
+      "mod": "Moderator",
+      "judge": "Judge"
+    }
+  }
+}

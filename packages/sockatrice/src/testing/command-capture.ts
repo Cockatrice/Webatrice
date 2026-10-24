@@ -17,6 +17,7 @@ type RoomCmd = Data.RoomCommand;
 type GameCmd = Data.GameCommand;
 type AdminCmd = Data.AdminCommand;
 type ModeratorCmd = Data.ModeratorCommand;
+type DeveloperCmd = Data.DeveloperCommand;
 
 /** Decode every CommandContainer sent through the mock socket so far. */
 export function captureAllOutbound(): Data.CommandContainer[] {
@@ -154,5 +155,26 @@ export function findLastModeratorCommand<V>(
   }
   throw new Error(
     `No outbound moderator command with extension ${ext.typeName} has been sent.`
+  );
+}
+
+export function findLastDeveloperCommand<V>(
+  ext: GenExtension<DeveloperCmd, V>
+): { container: Data.CommandContainer; value: V; cmdId: number } {
+  const containers = captureAllOutbound();
+  for (let i = containers.length - 1; i >= 0; i--) {
+    const container = containers[i];
+    for (const devCmd of container.developerCommand ?? []) {
+      if (hasExtension(devCmd, ext)) {
+        return {
+          container,
+          value: getExtension(devCmd, ext),
+          cmdId: Number(container.cmdId),
+        };
+      }
+    }
+  }
+  throw new Error(
+    `No outbound developer command with extension ${ext.typeName} has been sent.`
   );
 }

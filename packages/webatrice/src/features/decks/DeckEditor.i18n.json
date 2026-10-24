@@ -1,0 +1,85 @@
+{
+  "DeckEditor": {
+    "downloadFailed": "Failed to download this deck from the server.",
+    "loadFailedTitle": "Deck could not be loaded",
+    "shell": {
+      "loadingDeck": "Loading deck…",
+      "notFoundTitle": "Deck not found",
+      "notFoundBody": "Servatrice didn''t return this deck. Might have been deleted.",
+      "backToDecks": "Back to My Decks",
+      "emptyMtg": "Empty deck. Use <hl>Find cards</hl> on the left to start adding, or import a list from My Decks.",
+      "emptyPlain": "Empty deck. Type a card name in <hl>Add a card</hl> on the left to start.",
+      "noCards": "No cards in this deck yet."
+    },
+    "dock": {
+      "label": "Find cards"
+    },
+    "inspector": {
+      "label": "Card and stats",
+      "toggle": "Show the selected card and deck stats",
+      "close": "Hide the selected card and deck stats",
+      "stats": "Deck stats"
+    },
+    "layout": {
+      "hideDock": "Hide Find cards",
+      "showDock": "Show Find cards",
+      "resizeDock": "Resize Find cards",
+      "resizeInspector": "Resize the card and stats pane",
+      "resizeHint": "Drag or use the arrow keys. Double-click resets the width; Enter hides the pane.",
+      "collapseAll": "Collapse all card groups",
+      "expandAll": "Expand all card groups",
+      "compactRows": "Compact rows"
+    },
+    "section": {
+      "commander": "{count, plural, one {Commander} other {Commanders}}",
+      "creature": "Creatures",
+      "planeswalker": "Planeswalkers",
+      "battle": "Battles",
+      "instant": "Instants",
+      "sorcery": "Sorceries",
+      "enchantment": "Enchantments",
+      "artifact": "Artifacts",
+      "land": "Lands",
+      "other": "Other",
+      "sideboard": "Sideboard",
+      "main": "Main deck"
+    },
+    "row": {
+      "unknown": "Not in your card DB and Scryfall couldn''t find it. The card is saved but details/images can''t be shown.",
+      "label": "{count} × {card}",
+      "commander": "Commander"
+    },
+    "rowActions": {
+      "trigger": "Actions for {card}",
+      "quantity": "Quantity",
+      "removeOne": "Remove one",
+      "addOne": "Add one",
+      "changePrinting": "Change printing",
+      "markCommander": "Mark as commander",
+      "unmarkCommander": "Unmark as commander",
+      "moveToMain": "Move to main",
+      "moveToSideboard": "Move to sideboard",
+      "details": "Card details",
+      "commanderStaysMain": "The commander stays in the main deck",
+      "quantityNow": "Quantity {count}"
+    },
+    "list": {
+      "addPlaceholder": "Add a card by name",
+      "decrease": "Decrease",
+      "decreaseCard": "Decrease {card}",
+      "increase": "Increase",
+      "increaseCard": "Increase {card}",
+      "removeCard": "Remove {card}",
+      "label": "Cards"
+    },
+    "buy": {
+      "deck": "Buy · ${total}",
+      "disabled": "Add cards to enable",
+      "openDeck": "Open the full deck in TCGplayer''s mass-entry cart (opens in a new tab)",
+      "pricing": "Pricing {count, plural, one {# card} other {# cards}}… ({priced}/{total})",
+      "missing": "{count, plural, one {# card has} other {# cards have}} no price on Scryfall",
+      "missingShort": "{count, plural, one {# unpriced} other {# unpriced}}"
+    },
+    "hydrating": "Loading card data. Editing is available when loading finishes."
+  }
+}

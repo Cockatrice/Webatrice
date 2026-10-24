@@ -1,0 +1,16 @@
+{
+  "GameInfo": {
+    "restriction": {
+      "password": "password",
+      "buddiesOnly": "buddies only",
+      "registeredOnly": "reg. users only",
+      "openDecklists": "open decklists"
+    },
+    "spectators": {
+      "notAllowed": "not allowed",
+      "withChat": "{count} (can chat)",
+      "withHands": "{count} (can see hands)",
+      "withChatAndHands": "{count} (can chat & see hands)"
+    }
+  }
+}

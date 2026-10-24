@@ -54,6 +54,7 @@ function makeCardElement(boundingRect: DOMRect): HTMLElement {
 }
 
 interface SetupOpts {
+  layoutVersion?: unknown;
   registry?: ReturnType<typeof createCardRegistry>;
   gamesState?: Pick<GamesState, 'games'>;
   gameId?: number | undefined;
@@ -84,11 +85,11 @@ function setup(opts: SetupOpts = {}) {
     );
   }
 
-  const { result } = renderHook(
-    () => useGameArrowOverlay({ gameId, containerRef: boardRef }),
-    { wrapper: Wrapper },
+  const { result, rerender } = renderHook(
+    ({ layoutVersion }: { layoutVersion?: unknown }) => useGameArrowOverlay({ gameId, containerRef: boardRef, layoutVersion }),
+    { wrapper: Wrapper, initialProps: { layoutVersion: opts.layoutVersion } },
   );
-  return { result, webClient, registry, boardRef };
+  return { result, rerender, webClient, registry, boardRef };
 }
 
 function stateWithArrow(): GamesState {
@@ -189,6 +190,22 @@ describe('useGameArrowOverlay', () => {
     expect(arrow.x2).toBe(325);
     expect(arrow.y2).toBe(325);
     expect(arrow.color).toMatch(/^rgba\(224, 75, 59/);
+  });
+
+  it('re-measures after a layout change moves the cards without resizing the board', () => {
+    const registry = createCardRegistry();
+    let sourceRect = rect(100, 100);
+    const sourceEl = makeCardElement(rect(0, 0));
+    sourceEl.getBoundingClientRect = () => sourceRect;
+    registry.register(makeCardKey(1, 'table', 10), sourceEl);
+    registry.register(makeCardKey(1, 'table', 11), makeCardElement(rect(300, 300)));
+
+    const { result, rerender } = setup({ registry, gamesState: stateWithArrow(), layoutVersion: 'a' });
+    expect(result.current.arrows[0].x1).toBe(125);
+
+    sourceRect = rect(500, 100);
+    rerender({ layoutVersion: 'b' });
+    expect(result.current.arrows[0].x1).toBe(525);
   });
 
   it('renders Cockatrice-shaped arrows (alpha unset on the wire) with an opaque line', () => {

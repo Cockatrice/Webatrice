@@ -1,0 +1,12 @@
+{
+  "ChangeAvatarDialog": {
+    "title": "Change avatar",
+    "noImage": "No image chosen.",
+    "invalidImage": "Invalid image chosen.",
+    "previewAlt": "New avatar preview",
+    "instructions": "To change your avatar, choose a new image. To remove your current avatar, confirm without choosing a new image.",
+    "browse": "Browse...",
+    "hint": "Images are automatically downscaled to at most {size}x{size} pixels.",
+    "success": "Avatar updated."
+  }
+}

@@ -1,0 +1,5 @@
+{
+  "FeatureDetection": {
+    "degraded": "Some features are unavailable in this browser: {features}."
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "OpenDeckButton": {
+    "label": "Open deck…",
+    "pickerTitle": "Open deck",
+    "empty": "No other decks in your deck storage.",
+    "confirmTitle": "Are you sure?",
+    "confirmMessage": "The decklist has been modified.\nDo you want to save the changes?",
+    "save": "Save",
+    "discard": "Discard",
+    "openInNewTab": "Open in new tab",
+    "cancel": "Cancel"
+  }
+}

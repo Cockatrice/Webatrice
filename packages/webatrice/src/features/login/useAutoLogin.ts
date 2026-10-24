@@ -1,22 +1,18 @@
 import { useEffect } from 'react';
 
-import type { HostDTO } from '@app/services';
-
 import { getKnownHosts } from '@app/feature-widgets/known-hosts';
 import { getSettings } from '../../hooks/useSettings';
+import type { LoginFormValues } from './forms/LoginForm/loginFormSchema';
+import { autoLoginGate } from '../../services/session/autoLoginGate';
+import { clearHomeSnapshot, homePreview, loadHomeSnapshot } from '../../services/storage/homeSnapshot';
+import { getHostKey } from '@app/utils';
 
-export interface LoginFormValues {
-  userName: string;
-  password?: string;
-  selectedHost: HostDTO;
-  remember: boolean;
-  autoConnect?: boolean;
-}
+export type AutoLoginValues = Omit<LoginFormValues, 'autoConnect'>;
 
-export const autoLoginGate = { hasChecked: false };
+export { autoLoginGate };
 
 export function useAutoLogin(
-  onLogin: (values: LoginFormValues) => void,
+  onLogin: (values: AutoLoginValues) => void,
   connectionAttemptMade: boolean,
 ): void {
   useEffect(() => {
@@ -36,6 +32,7 @@ export function useAutoLogin(
       autoLoginGate.hasChecked = true;
 
       if (!settings.autoConnect) {
+        clearHomeSnapshot();
         return;
       }
       const { selectedHost } = hosts;
@@ -43,6 +40,10 @@ export function useAutoLogin(
         return;
       }
 
+      homePreview.set(loadHomeSnapshot(getHostKey(selectedHost), selectedHost.userName ?? ''));
+      autoLoginGate.source = 'page';
+      autoLoginGate.target = getHostKey(selectedHost);
+      autoLoginGate.inFlight = true;
       onLogin({
         selectedHost,
         userName: selectedHost.userName ?? '',

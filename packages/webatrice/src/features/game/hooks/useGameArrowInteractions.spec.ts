@@ -16,6 +16,9 @@ vi.mock('../../../services/dexie/DexieDTOs/CardDTO', () => ({
   CardDTO: { get: vi.fn(() => Promise.resolve(undefined)) },
 }));
 
+vi.mock('../../../services/cards/catalog/lookup', async () =>
+  (await import('../__test-utils__/unknownCardCatalog')).unknownCardCatalog());
+
 vi.mock('../../../hooks/useSettings');
 
 function setup({
@@ -63,11 +66,8 @@ function setup({
     () =>
       useGameArrowInteractions({
         gameId: 1,
-        game: { ...game, info: { ...game.info, gameId: 1 } },
         containerRef: boardRef,
         cardRegistry,
-        selectedCards: [],
-        collapseUnlessSelected: vi.fn(),
       }),
     { wrapper: Wrapper },
   );
@@ -101,7 +101,7 @@ describe('useGameArrowInteractions', () => {
     document.body.innerHTML = '';
   });
 
-  it('creates an arrow after right-click-drag past the 8px threshold', () => {
+  it('creates an arrow after right-click-drag past the 4px threshold', () => {
     const { result, webClient } = setup();
     const targetEl = makeCardElement({ playerId: 2, zone: ZoneName.TABLE, cardId: 99 });
     const origElementFromPoint = document.elementFromPoint;
@@ -163,7 +163,7 @@ describe('useGameArrowInteractions', () => {
       1,
       expect.objectContaining({
         startPlayerId: 1,
-        startZone: ZoneName.TABLE,
+        startZone: ZoneName.STACK,
         startCardId: 5,
         targetPlayerId: 2,
         targetZone: ZoneName.TABLE,
@@ -211,14 +211,10 @@ describe('useGameArrowInteractions', () => {
     vi.mocked(CardDTO.get).mockResolvedValueOnce(undefined);
 
     act(() => {
-      result.current.startPendingArrow({
-        sourcePlayerId: 1,
-        sourceZone: ZoneName.HAND,
-        sourceCardId: 5,
-      });
+      result.current.pendingTarget.startArrow({ playerId: 1, zone: ZoneName.HAND, cardId: 5, name: '' });
     });
     act(() => {
-      result.current.handleCardClick(2, ZoneName.TABLE, makeCard({ id: 99 }));
+      result.current.pendingTarget.pick({ kind: 'card', playerId: 2, zone: ZoneName.TABLE, cardId: 99 });
     });
 
     await waitFor(() => expect(webClient.request.game.createArrow).toHaveBeenCalled());
@@ -227,7 +223,7 @@ describe('useGameArrowInteractions', () => {
       1,
       expect.objectContaining({
         startPlayerId: 1,
-        startZone: ZoneName.TABLE,
+        startZone: ZoneName.STACK,
         startCardId: 5,
         targetPlayerId: 2,
         targetZone: ZoneName.TABLE,
@@ -372,7 +368,7 @@ describe('useGameArrowInteractions', () => {
     const { result } = setup();
 
     act(() => {
-      result.current.startPendingArrow({ sourcePlayerId: 1, sourceZone: ZoneName.TABLE, sourceCardId: 5 });
+      result.current.pendingTarget.startArrow({ playerId: 1, zone: ZoneName.TABLE, cardId: 5, name: '' });
     });
     expect(result.current.arrowSourceKey).not.toBeNull();
 
@@ -386,24 +382,20 @@ describe('useGameArrowInteractions', () => {
     // Regression: dnd-kit's PointerSensor used to fire onDragStart on every
     // pointerdown (no activationConstraint), which routed through
     // cancelPendingOnDragStart and wiped pendingAttach before the click
-    // event reached handleCardClick. The fix adds `distance: 8` to the
-    // sensor in useGame.ts; this spec covers handleCardClick's contract
+    // event reached handleCardClick. GamePointerSensor now starts a drag only
+    // on motion (useGame.ts); this spec covers handleCardClick's contract
     // directly so the click-through-attach path is no longer untested.
 
-    it('dispatches attachCard when handleCardClick fires on a different card while pendingAttach is set', () => {
+    it('dispatches attachCard when a different card is picked while pendingAttach is set', () => {
       const { result, webClient } = setup();
 
       act(() => {
-        result.current.startPendingAttach({
-          sourcePlayerId: 1,
-          sourceZone: ZoneName.TABLE,
-          sourceCardId: 5,
-        });
+        result.current.pendingTarget.startAttach({ playerId: 1, zone: ZoneName.TABLE, cardId: 5, name: '' });
       });
       expect(result.current.arrowSourceKey).not.toBeNull();
 
       act(() => {
-        result.current.handleCardClick(2, ZoneName.TABLE, makeCard({ id: 99 }));
+        result.current.pendingTarget.pick({ kind: 'card', playerId: 2, zone: ZoneName.TABLE, cardId: 99 });
       });
 
       expect(webClient.request.game.attachCard).toHaveBeenCalledTimes(1);
@@ -427,251 +419,15 @@ describe('useGameArrowInteractions', () => {
       const { result, webClient } = setup();
 
       act(() => {
-        result.current.startPendingAttach({
-          sourcePlayerId: 1,
-          sourceZone: ZoneName.TABLE,
-          sourceCardId: 5,
-        });
+        result.current.pendingTarget.startAttach({ playerId: 1, zone: ZoneName.TABLE, cardId: 5, name: '' });
       });
 
       act(() => {
-        result.current.handleCardClick(1, ZoneName.TABLE, makeCard({ id: 5 }));
+        result.current.pendingTarget.pick({ kind: 'card', playerId: 1, zone: ZoneName.TABLE, cardId: 5 });
       });
 
       expect(webClient.request.game.attachCard).not.toHaveBeenCalled();
       expect(result.current.arrowSourceKey).toBeNull();
-    });
-  });
-
-  describe('handleCardDoubleClick — auto-play chain (hand → stack → grave/table)', () => {
-    // The chain: lands play straight to the battlefield; everything else takes
-    // a stack detour on the first double-click, then resolves on the second.
-    //   hand + land           → table (bottom row)
-    //   hand + non-land       → stack
-    //   stack + instant/sorc  → graveyard
-    //   stack + permanent     → table at the tablerow-appropriate row
-    // Card-menu "Play" keeps direct routing via `playCardViaTableRow` and is
-    // covered by that hook's own spec.
-    function makeCardMeta(tablerow: string | null) {
-      if (tablerow == null) {
-        return { name: { value: 'Foo' } };
-      }
-      return { name: { value: 'Foo' }, tablerow: { value: tablerow } };
-    }
-
-    afterEach(() => {
-      vi.mocked(CardDTO.get).mockReset();
-    });
-
-    it('routes a land (tablerow=0) from hand straight to TABLE bottom row y=2', async () => {
-      vi.mocked(CardDTO.get).mockResolvedValue(makeCardMeta('0') as never);
-      const { result, webClient } = setup({ localPlayerId: 1 });
-
-      act(() => {
-        result.current.handleCardDoubleClick(1, ZoneName.HAND, makeCard({ id: 10, name: 'Forest' }));
-      });
-
-      await waitFor(() => {
-        expect(webClient.request.game.moveCard).toHaveBeenCalled();
-      });
-      expect(webClient.request.game.moveCard).toHaveBeenCalledWith(
-        1,
-        expect.objectContaining({
-          startZone: ZoneName.HAND,
-          targetZone: ZoneName.TABLE,
-          y: 2,
-        }),
-        undefined,
-      );
-    });
-
-    it('routes an instant/sorcery (tablerow=3) from hand to the STACK', async () => {
-      vi.mocked(CardDTO.get).mockResolvedValue(makeCardMeta('3') as never);
-      const { result, webClient } = setup({ localPlayerId: 1 });
-
-      act(() => {
-        result.current.handleCardDoubleClick(1, ZoneName.HAND, makeCard({ id: 7, name: 'Counterspell' }));
-      });
-
-      await waitFor(() => {
-        expect(webClient.request.game.moveCard).toHaveBeenCalled();
-      });
-      expect(webClient.request.game.moveCard).toHaveBeenCalledWith(
-        1,
-        expect.objectContaining({
-          startZone: ZoneName.HAND,
-          targetZone: ZoneName.STACK,
-          cardsToMove: { card: [expect.objectContaining({ cardId: 7 })] },
-        }),
-        undefined,
-      );
-    });
-
-    it('routes a creature (tablerow=1) from hand to the STACK', async () => {
-      vi.mocked(CardDTO.get).mockResolvedValue(makeCardMeta('1') as never);
-      const { result, webClient } = setup({ localPlayerId: 1 });
-
-      act(() => {
-        result.current.handleCardDoubleClick(1, ZoneName.HAND, makeCard({ id: 8, name: 'Bear' }));
-      });
-
-      await waitFor(() => {
-        expect(webClient.request.game.moveCard).toHaveBeenCalled();
-      });
-      expect(webClient.request.game.moveCard).toHaveBeenCalledWith(
-        1,
-        expect.objectContaining({
-          startZone: ZoneName.HAND,
-          targetZone: ZoneName.STACK,
-        }),
-        undefined,
-      );
-    });
-
-    it('routes an artifact (tablerow=2) from hand to the STACK', async () => {
-      vi.mocked(CardDTO.get).mockResolvedValue(makeCardMeta('2') as never);
-      const { result, webClient } = setup({ localPlayerId: 1 });
-
-      act(() => {
-        result.current.handleCardDoubleClick(1, ZoneName.HAND, makeCard({ id: 9, name: 'Sol Ring' }));
-      });
-
-      await waitFor(() => {
-        expect(webClient.request.game.moveCard).toHaveBeenCalled();
-      });
-      expect(webClient.request.game.moveCard).toHaveBeenCalledWith(
-        1,
-        expect.objectContaining({
-          startZone: ZoneName.HAND,
-          targetZone: ZoneName.STACK,
-        }),
-        undefined,
-      );
-    });
-
-    it('routes an unknown card (no tablerow) from hand to the STACK', async () => {
-      // A card with no cards.xml entry is presumed non-land — safer to detour
-      // through the stack than to slam an unknown onto the battlefield.
-      vi.mocked(CardDTO.get).mockResolvedValue(makeCardMeta(null) as never);
-      const { result, webClient } = setup({ localPlayerId: 1 });
-
-      act(() => {
-        result.current.handleCardDoubleClick(1, ZoneName.HAND, makeCard({ id: 11, name: 'Mystery Card' }));
-      });
-
-      await waitFor(() => {
-        expect(webClient.request.game.moveCard).toHaveBeenCalled();
-      });
-      expect(webClient.request.game.moveCard).toHaveBeenCalledWith(
-        1,
-        expect.objectContaining({
-          startZone: ZoneName.HAND,
-          targetZone: ZoneName.STACK,
-        }),
-        undefined,
-      );
-    });
-
-    it('routes an unresolved lookup (CardDTO.get → undefined) from hand to the STACK', async () => {
-      vi.mocked(CardDTO.get).mockResolvedValue(undefined as never);
-      const { result, webClient } = setup({ localPlayerId: 1 });
-
-      act(() => {
-        result.current.handleCardDoubleClick(1, ZoneName.HAND, makeCard({ id: 12, name: 'Unknown' }));
-      });
-
-      await waitFor(() => {
-        expect(webClient.request.game.moveCard).toHaveBeenCalled();
-      });
-      expect(webClient.request.game.moveCard).toHaveBeenCalledWith(
-        1,
-        expect.objectContaining({
-          targetZone: ZoneName.STACK,
-        }),
-        undefined,
-      );
-    });
-
-    it('routes an instant/sorcery (tablerow=3) from the STACK to the graveyard', async () => {
-      vi.mocked(CardDTO.get).mockResolvedValue(makeCardMeta('3') as never);
-      const { result, webClient } = setup({ localPlayerId: 1 });
-
-      act(() => {
-        result.current.handleCardDoubleClick(1, ZoneName.STACK, makeCard({ id: 20, name: 'Lightning Bolt' }));
-      });
-
-      await waitFor(() => {
-        expect(webClient.request.game.moveCard).toHaveBeenCalled();
-      });
-      expect(webClient.request.game.moveCard).toHaveBeenCalledWith(
-        1,
-        expect.objectContaining({
-          startZone: ZoneName.STACK,
-          targetZone: ZoneName.GRAVE,
-          cardsToMove: { card: [expect.objectContaining({ cardId: 20 })] },
-        }),
-        undefined,
-      );
-    });
-
-    it('routes a creature (tablerow=1) from the STACK to TABLE row y=1', async () => {
-      vi.mocked(CardDTO.get).mockResolvedValue(makeCardMeta('1') as never);
-      const { result, webClient } = setup({ localPlayerId: 1 });
-
-      act(() => {
-        result.current.handleCardDoubleClick(1, ZoneName.STACK, makeCard({ id: 21, name: 'Bear' }));
-      });
-
-      await waitFor(() => {
-        expect(webClient.request.game.moveCard).toHaveBeenCalled();
-      });
-      expect(webClient.request.game.moveCard).toHaveBeenCalledWith(
-        1,
-        expect.objectContaining({
-          startZone: ZoneName.STACK,
-          targetZone: ZoneName.TABLE,
-          y: 1,
-        }),
-        undefined,
-      );
-    });
-
-    it('routes an artifact (tablerow=2) from the STACK to TABLE top row y=0', async () => {
-      vi.mocked(CardDTO.get).mockResolvedValue(makeCardMeta('2') as never);
-      const { result, webClient } = setup({ localPlayerId: 1 });
-
-      act(() => {
-        result.current.handleCardDoubleClick(1, ZoneName.STACK, makeCard({ id: 22, name: 'Sol Ring' }));
-      });
-
-      await waitFor(() => {
-        expect(webClient.request.game.moveCard).toHaveBeenCalled();
-      });
-      expect(webClient.request.game.moveCard).toHaveBeenCalledWith(
-        1,
-        expect.objectContaining({
-          startZone: ZoneName.STACK,
-          targetZone: ZoneName.TABLE,
-          y: 0,
-        }),
-        undefined,
-      );
-    });
-
-    it('still toggles tap on TABLE double-click (existing behavior preserved)', () => {
-      const { result, webClient } = setup({ localPlayerId: 1 });
-
-      act(() => {
-        result.current.handleCardDoubleClick(
-          1,
-          ZoneName.TABLE,
-          makeCard({ id: 5, tapped: false }),
-        );
-      });
-
-      // A single-card double-click tap rides through the bulkTap command surface.
-      expect(webClient.request.game.bulkTap).toHaveBeenCalled();
-      expect(webClient.request.game.moveCard).not.toHaveBeenCalled();
     });
   });
 
@@ -684,80 +440,12 @@ describe('useGameArrowInteractions', () => {
     document.body.appendChild(dialog);
 
     act(() => {
-      result.current.startPendingArrow({ sourcePlayerId: 1, sourceZone: ZoneName.TABLE, sourceCardId: 5 });
+      result.current.pendingTarget.startArrow({ playerId: 1, zone: ZoneName.TABLE, cardId: 5, name: '' });
     });
     act(() => {
       window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
     });
 
     expect(result.current.arrowSourceKey).not.toBeNull();
-  });
-
-  describe('judge override', () => {
-    type Cards = ReturnType<typeof makeCard>[];
-    function opponent(playerId: number, opts: { tableCards?: Cards; handCards?: Cards } = {}) {
-      return makePlayerEntry({
-        properties: makePlayerProperties({ playerId }),
-        zones: {
-          hand: makeZoneEntry({ name: ZoneName.HAND, cards: opts.handCards ?? [] }),
-          deck: makeZoneEntry({ name: ZoneName.DECK }),
-          table: makeZoneEntry({ name: ZoneName.TABLE, cards: opts.tableCards ?? [] }),
-        },
-      });
-    }
-
-    it('double-click tap on an opponent TABLE card wraps as the owner (judge)', () => {
-      const card = makeCard({ id: 77, tapped: false });
-      const { result, webClient } = setup({ judge: true, extraPlayers: { 2: opponent(2, { tableCards: [card] }) } });
-
-      act(() => {
-        result.current.handleCardDoubleClick(2, ZoneName.TABLE, card);
-      });
-
-      const [gameId, targets, judgeTarget] = vi.mocked(webClient.request.game.bulkTap).mock.calls[0];
-      expect(gameId).toBe(1);
-      expect(targets.map((t) => t.card.id)).toEqual([77]);
-      // Judge wrap target = owner (the resolver wraps a foreign card as its owner).
-      expect((judgeTarget as (o: number) => number | undefined)(2)).toBe(2);
-    });
-
-    it('double-click tap on an OWN TABLE card sends bare (no judge wrap)', () => {
-      const card = makeCard({ id: 78, tapped: false });
-      const { result, webClient } = setup({ judge: true, extraPlayers: { 1: opponent(1, { tableCards: [card] }) } });
-
-      act(() => {
-        result.current.handleCardDoubleClick(1, ZoneName.TABLE, card);
-      });
-
-      const [gameId, targets, judgeTarget] = vi.mocked(webClient.request.game.bulkTap).mock.calls[0];
-      expect(gameId).toBe(1);
-      expect(targets.map((t) => t.card.id)).toEqual([78]);
-      expect((judgeTarget as (o: number) => number | undefined)(1)).toBeUndefined();
-    });
-
-    it('double-click auto-play of an opponent HAND creature lands on the owner stack, wrapped (judge)', async () => {
-      // The auto-play chain always detours non-lands through the stack; the
-      // judge-wrap semantics (target = card owner, not the local judge) apply
-      // to that stack step just as they applied to the pre-chain direct play.
-      vi.mocked(CardDTO.get).mockResolvedValue({ tablerow: { value: '1' } } as never);
-      const card = makeCard({ id: 88, name: 'Bear' });
-      const { result, webClient } = setup({ judge: true, extraPlayers: { 2: opponent(2, { handCards: [card] }) } });
-
-      act(() => {
-        result.current.handleCardDoubleClick(2, ZoneName.HAND, card);
-      });
-
-      await waitFor(() => expect(webClient.request.game.moveCard).toHaveBeenCalled());
-      expect(webClient.request.game.moveCard).toHaveBeenCalledWith(
-        1,
-        expect.objectContaining({
-          startPlayerId: 2,
-          targetPlayerId: 2,
-          startZone: ZoneName.HAND,
-          targetZone: ZoneName.STACK,
-        }),
-        2, // judge wrap target = owner
-      );
-    });
   });
 });

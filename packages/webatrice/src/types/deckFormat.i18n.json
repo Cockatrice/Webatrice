@@ -1,0 +1,23 @@
+{
+  "DeckFormat": {
+    "commander": "Commander",
+    "paupercommander": "Pauper Commander",
+    "duel": "Duel Commander",
+    "oathbreaker": "Oathbreaker",
+    "standard": "Standard",
+    "pioneer": "Pioneer",
+    "modern": "Modern",
+    "legacy": "Legacy",
+    "vintage": "Vintage",
+    "pauper": "Pauper",
+    "premodern": "Premodern",
+    "oldschool": "Old School",
+    "predh": "PreDH",
+    "penny": "Penny Dreadful",
+    "standardbrawl": "Standard Brawl",
+    "historic": "Historic",
+    "timeless": "Timeless",
+    "gladiator": "Gladiator",
+    "future": "Future"
+  }
+}

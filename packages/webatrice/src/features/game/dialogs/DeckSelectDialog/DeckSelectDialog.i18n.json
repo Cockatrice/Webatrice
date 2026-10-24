@@ -1,0 +1,21 @@
+{
+  "DeckSelectDialog": {
+    "title": "Select Deck",
+    "instructions": "Pick a .cod file from your computer or paste its XML below, then click Submit Deck. After the server accepts the deck, the Ready button unlocks.",
+    "deckFile": "Deck file",
+    "chooseFile": "Choose .cod file",
+    "noFile": "No file selected",
+    "pasteDivider": "— or paste XML below —",
+    "deckList": "Deck list",
+    "deckListPlaceholder": "<?xml version=\"1.0\"?>\n<cockatrice_deck version=\"1\">\n  ...\n</cockatrice_deck>",
+    "deckHash": "Deck hash: {hash}",
+    "leave": "Leave Game",
+    "submit": "Submit Deck",
+    "ready": "Ready",
+    "unready": "Unready",
+    "error": {
+      "readFile": "Could not read the selected file",
+      "invalidCod": "Not a valid Cockatrice deck (.cod) file"
+    }
+  }
+}

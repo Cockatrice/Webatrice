@@ -1,23 +1,16 @@
-export { default as Decks, clearDecksListCache } from './Decks';
+export { default as Decks } from './Decks';
+export { clearDecksListCache } from './hooks/useDeckList';
 export { default as DeckEditor } from './DeckEditor';
-export { clearDeckEditorCache } from './useDeckEditor';
+export { default as SharedDeck } from './SharedDeck';
+export { default as PublicDecks } from './PublicDecks';
+export { DeckShareLinkRedirect } from './components/DeckShareLinkRedirect';
+export { clearDeckEditorCache } from './deckEditorCache';
+export { clearBracketSourceCaches } from './bracketSources';
+export { writeBracketLookupsMode } from './bracketConsent';
 
 // --- Data layer (Piece 1: foundation for MyDecks feature) ---
-export type {
-  DeckCard,
-  DeckCategory,
-  DeckMeta,
-  HydratedDeck,
-  ParsedCard,
-  ParsedDeck,
-} from './types';
+// The Cockatrice deck document codec and its types are root owners
+// (`services/decks`, `types/cockatriceDeck`); only hydrated editor shapes live here.
+export type { DeckCard, HydratedDeck } from './types';
 
-export { parseCod, serializeCod, emptyCod } from './cod';
-export { defaultMeta, parseMeta, serializeMeta, touchMeta } from './meta';
-export {
-  lookupCard,
-  lookupCards,
-  type LookupResult,
-  type PrintingSummary,
-} from './cardLookup';
 export { hydrateDeck, loadDeckFromCod, assembleDeckCard } from './hydrate';

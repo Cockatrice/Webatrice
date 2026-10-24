@@ -6,5 +6,8 @@ export function updateServerMessage(): void {
     onSuccess: () => {
       WebClient.instance.response.admin.updateServerMessage();
     },
+    onError: (responseCode, _raw, failure) => {
+      WebClient.instance.response.admin.commandFailed?.('updateServerMessage', responseCode, '', failure);
+    },
   });
 }

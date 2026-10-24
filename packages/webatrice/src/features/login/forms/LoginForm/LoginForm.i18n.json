@@ -1,11 +1,34 @@
 {
   "LoginForm": {
     "label": {
-      "autoConnect": "Auto Connect",
-      "forgot": "Forgot Password",
-      "login": "Login",
-      "savePassword": "Save Password",
-      "savedPassword": "* Saved Password *"
+      "autoConnect": "Sign in automatically",
+      "forgot": "Forgot password?",
+      "login": "Sign in and play",
+      "savePassword": "Save password",
+      "savedPassword": "* Saved Password *",
+      "showPassword": "Show password",
+      "hidePassword": "Hide password"
+    },
+    "phase": {
+      "noServer": "Choose a server to sign in",
+      "testing": "Testing the server…",
+      "unreachable": "Server not reachable",
+      "connecting": "Connecting…",
+      "signingIn": "Signing in…",
+      "entering": "Opening the lobby…"
+    },
+    "steps": {
+      "label": "Connection steps",
+      "server": "Server",
+      "serverTesting": "Testing server",
+      "serverReachable": "Server reachable",
+      "serverUnreachable": "Server not reachable",
+      "signIn": "Sign in",
+      "signingIn": "Signing in",
+      "signedIn": "Signed in",
+      "signInFailed": "Sign-in failed",
+      "lobby": "Lobby",
+      "lobbyOpening": "Opening lobby"
     }
   }
 }

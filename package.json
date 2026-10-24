@@ -11,6 +11,7 @@
     "build": "turbo run build --filter @cockatrice/webatrice",
     "preview": "turbo run preview --filter @cockatrice/webatrice",
     "lint": "turbo run lint",
+    "check:path-case": "node scripts/check-path-case.mjs",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test --concurrency=1",
     "test:integration": "turbo run test:integration --concurrency=1",

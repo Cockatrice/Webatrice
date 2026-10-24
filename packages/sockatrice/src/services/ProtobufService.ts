@@ -10,6 +10,7 @@ import {
   RoomCommandSchema,
   ModeratorCommandSchema,
   AdminCommandSchema,
+  DeveloperCommandSchema,
   ServerMessageSchema,
   ServerMessage_MessageType,
   type Response,
@@ -19,6 +20,7 @@ import {
   type RoomCommand,
   type ModeratorCommand,
   type AdminCommand,
+  type DeveloperCommand,
   type ServerMessage,
   type GameEventContainer,
   type SessionEvent,
@@ -28,8 +30,10 @@ import {
 import type { GameExtensionRegistry } from '../events/game';
 import type { RoomExtensionRegistry } from '../events/room';
 import type { SessionExtensionRegistry } from '../events/session';
-import type { GameEventMeta } from '../types/WebSocketConfig';
-import { type CommandOptions, handleResponse } from './command-options';
+import type { GameEventMeta, ReplayEventOptions } from '../types/WebSocketConfig';
+import type { LatencyStats } from '../types/LatencyStats';
+import { CommandFailure, type CommandOptions, handleFailure, handleResponse } from './command-options';
+import { LatencyTracker } from './LatencyTracker';
 
 export interface SocketTransport {
   send(data: Uint8Array): void;
@@ -51,18 +55,47 @@ export interface GameCommandEntry<V = unknown> {
   judgeTargetId?: number;
 }
 
+export const DEFAULT_COMMAND_TIMEOUT_MS = 18_000;
+
+export const LATENCY_STATS_INTERVAL_MS = 1000;
+
+export type LatencyStatsListener = (stats: LatencyStats, samplesMs: number[]) => void;
+
+interface PendingCommand {
+  onResponse: (response: Response) => void;
+  onFailure?: (failure: CommandFailure) => void;
+  timer: ReturnType<typeof setTimeout>;
+  sentAt: number;
+}
+
 export class ProtobufService {
   private cmdId = 0;
-  private pendingCommands = new Map<number, (response: Response) => void>();
+  private pendingCommands = new Map<number, PendingCommand>();
+  private latency = new LatencyTracker();
+  private lastLatencyEmitAt: number | null = null;
 
   constructor(
     private transport: SocketTransport,
     private events: EventRegistries,
+    private commandTimeoutMs = DEFAULT_COMMAND_TIMEOUT_MS,
+    private onLatencyStats?: LatencyStatsListener,
   ) {}
 
   public resetCommands() {
-    this.cmdId = 0;
+    const pending = [...this.pendingCommands.values()];
     this.pendingCommands.clear();
+    this.clearLatencyStats();
+
+    for (const command of pending) {
+      clearTimeout(command.timer);
+    }
+    for (const command of pending) {
+      try {
+        command.onFailure?.(CommandFailure.Disconnected);
+      } catch (error) {
+        console.error('Command reset callback failed:', error);
+      }
+    }
   }
 
   public sendGameCommand<V, R = unknown>(
@@ -184,28 +217,55 @@ export class ProtobufService {
     this.dispatchCommand(ext.typeName, cmd, options);
   }
 
-  private dispatchCommand<R>(typeName: string, cmd: CommandContainer, options?: CommandOptions<R>): void {
-    const sent = this.sendCommand(cmd, raw => {
-      if (options) {
-        handleResponse(typeName, raw, options);
-      }
-    });
+  public sendDeveloperCommand<V, R = unknown>(
+    ext: GenExtension<DeveloperCommand, V>,
+    value: V,
+    options?: CommandOptions<R>
+  ): void {
+    const devCmd = create(DeveloperCommandSchema);
+    setExtension(devCmd, ext, value);
+    const cmd = create(CommandContainerSchema, { developerCommand: [devCmd] });
+    this.dispatchCommand(ext.typeName, cmd, options);
+  }
 
-    if (!sent) {
-      options?.onError?.(-1, {} as Response);
+  private dispatchCommand<R>(typeName: string, cmd: CommandContainer, options?: CommandOptions<R>): void {
+    const sent = this.sendCommand(
+      cmd,
+      raw => options && handleResponse(typeName, raw, options),
+      failure => options && handleFailure(typeName, failure, options, Number(cmd.cmdId)),
+      options?.timeoutMs,
+    );
+
+    if (!sent && options) {
+      handleFailure(typeName, CommandFailure.NotSent, options);
     }
   }
 
-  public sendCommand(cmd: CommandContainer, callback: (raw: Response) => void): boolean {
+  public sendCommand(
+    cmd: CommandContainer,
+    callback: (raw: Response) => void,
+    onFailure?: (failure: CommandFailure) => void,
+    timeoutMs = this.commandTimeoutMs,
+  ): boolean {
     if (!this.transport.isOpen()) {
       return false;
     }
 
-    this.cmdId++;
-    cmd.cmdId = BigInt(this.cmdId);
-    this.pendingCommands.set(this.cmdId, callback);
+    const cmdId = ++this.cmdId;
+    cmd.cmdId = BigInt(cmdId);
+    const timer = setTimeout(() => this.expireCommand(cmdId), timeoutMs);
+    this.pendingCommands.set(cmdId, { onResponse: callback, onFailure, timer, sentAt: performance.now() });
     this.transport.send(toBinary(CommandContainerSchema, cmd));
     return true;
+  }
+
+  private expireCommand(cmdId: number): void {
+    const command = this.pendingCommands.get(cmdId);
+    if (!command) {
+      return;
+    }
+    this.pendingCommands.delete(cmdId);
+    command.onFailure?.(CommandFailure.Timeout);
   }
 
   public handleMessageEvent({ data }: MessageEvent): void {
@@ -242,11 +302,30 @@ export class ProtobufService {
       return;
     }
     const cmdId = Number(response.cmdId);
+    const command = this.pendingCommands.get(cmdId);
 
-    if (this.pendingCommands.has(cmdId)) {
-      this.pendingCommands.get(cmdId)!(response);
-      this.pendingCommands.delete(cmdId);
+    if (!command) {
+      return;
     }
+    this.pendingCommands.delete(cmdId);
+    clearTimeout(command.timer);
+    this.recordLatency(command);
+    command.onResponse(response);
+  }
+
+  private recordLatency(command: PendingCommand): void {
+    const now = performance.now();
+    this.latency.addSample(Math.round(now - command.sentAt));
+    if (this.lastLatencyEmitAt === null || now - this.lastLatencyEmitAt >= LATENCY_STATS_INTERVAL_MS) {
+      this.lastLatencyEmitAt = now;
+      this.onLatencyStats?.(this.latency.stats(), this.latency.recentSamples());
+    }
+  }
+
+  private clearLatencyStats(): void {
+    this.latency.clear();
+    this.lastLatencyEmitAt = null;
+    this.onLatencyStats?.(this.latency.stats(), []);
   }
 
   private processRoomEvent(event: RoomEvent | undefined) {
@@ -273,20 +352,32 @@ export class ProtobufService {
     }
   }
 
+  public replayGameEventContainer(container: GameEventContainer, gameId: number, options?: ReplayEventOptions): void {
+    this.dispatchGameEvents(container, gameId, options);
+  }
+
   private processGameEvent(container: GameEventContainer | undefined): void {
-    if (!container?.eventList?.length) {
+    if (!container) {
+      return;
+    }
+    this.dispatchGameEvents(container, container.gameId ?? -1);
+  }
+
+  private dispatchGameEvents(container: GameEventContainer, gameId: number, replayOptions?: ReplayEventOptions): void {
+    if (!container.eventList?.length) {
       return;
     }
 
-    const { gameId, context, secondsElapsed, forcedByJudge } = container;
+    const { context, secondsElapsed, forcedByJudge } = container;
 
     for (const event of container.eventList) {
       const meta: GameEventMeta = {
-        gameId: gameId ?? -1,
+        gameId,
         playerId: event.playerId ?? -1,
         context,
         secondsElapsed: secondsElapsed ?? 0,
         forcedByJudge: forcedByJudge ?? 0,
+        replayOptions,
       };
 
       for (const [ext, handler] of this.events.game) {

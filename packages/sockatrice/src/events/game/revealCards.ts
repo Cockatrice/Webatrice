@@ -3,5 +3,5 @@ import type { GameEventMeta } from '../../types/WebSocketConfig';
 import { WebClient } from '../../WebClient';
 
 export function revealCards(data: Event_RevealCards, meta: GameEventMeta): void {
-  WebClient.instance.response.game.cardsRevealed(meta.gameId, meta.playerId, data);
+  WebClient.instance.response.game.cardsRevealed(meta.gameId, meta.playerId, data, meta.replayOptions);
 }

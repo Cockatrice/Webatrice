@@ -1,10 +1,16 @@
 import { screen, fireEvent, within } from '@testing-library/react';
 import { act } from 'react';
+import { ServerInfo_User_UserLevelFlag } from '@cockatrice/sockatrice/generated';
 
 import { renderWithProviders, connectedState, makeUser, createMockWebClient } from '../../__test-utils__';
 import UserRows from './UserRows';
 
 const mockWebClient = createMockWebClient();
+const registeredUser = (name: string) => makeUser({ name, country: 'us', userLevel: ServerInfo_User_UserLevelFlag.IsRegistered });
+const registeredState = {
+  ...connectedState,
+  server: { ...connectedState.server!, user: registeredUser('testUser') },
+};
 
 vi.mock('@cockatrice/datatrice/react', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@cockatrice/datatrice/react')>();
@@ -15,10 +21,6 @@ vi.mock('@app/images', () => ({
   Images: { Countries: { us: 'us.png' } },
 }));
 
-// react-window sizes its viewport via ResizeObserver, which the jsdom harness
-// stubs to a no-op (zero height → zero rows). Install an emitting observer, as
-// VirtualList.spec does, so rows actually mount — otherwise this test would
-// pass vacuously (no rows, no menu, nothing to mis-target).
 type RoCallback = (entries: { contentRect: { height: number; width: number }; target: Element }[]) => void;
 interface RoHandle { callback: RoCallback; targets: Set<Element>; }
 let observers: RoHandle[] = [];
@@ -77,36 +79,32 @@ describe('UserRows', () => {
 
   it('opens a user\'s action menu and sends the action for that user', () => {
     const { container } = renderWithProviders(
-      <UserRows users={[makeUser({ name: 'alice', country: 'us' }), makeUser({ name: 'bob', country: 'us' })]} empty="" />,
-      { preloadedState: connectedState },
+      <UserRows users={[registeredUser('alice'), registeredUser('bob')]} empty="" />,
+      { preloadedState: registeredState },
     );
     mountRows(container);
 
     openMenuFor('alice');
-    fireEvent.click(within(screen.getByRole('menu')).getByRole('menuitem', { name: /Add to Buddy List/i }));
+    fireEvent.click(within(screen.getByRole('menu')).getByRole('menuitem', { name: 'UserActionsMenu.addBuddy' }));
 
     expect(mockWebClient.request.session.addToBuddyList).toHaveBeenCalledWith('alice');
   });
 
   it('never retargets an open menu to the user that slides into its row on roster churn', () => {
-    // Regression guard for the name-keyed rows (not slot index) — see
-    // webatrice.instructions.md § Virtualized lists.
     const { container, rerender } = renderWithProviders(
-      <UserRows users={[makeUser({ name: 'alice', country: 'us' }), makeUser({ name: 'bob', country: 'us' })]} empty="" />,
-      { preloadedState: connectedState },
+      <UserRows users={[registeredUser('alice'), registeredUser('bob')]} empty="" />,
+      { preloadedState: registeredState },
     );
     mountRows(container);
 
     openMenuFor('alice');
     expect(screen.getByRole('menu')).toBeInTheDocument();
 
-    rerender(<UserRows users={[makeUser({ name: 'carol', country: 'us' }), makeUser({ name: 'bob', country: 'us' })]} empty="" />);
+    rerender(<UserRows users={[registeredUser('carol'), registeredUser('bob')]} empty="" />);
 
-    // The menu must be torn down (or still belong to alice); the action must
-    // never fire for carol, who took alice's slot.
     const menu = screen.queryByRole('menu');
     if (menu) {
-      fireEvent.click(within(menu).getByRole('menuitem', { name: /Add to Buddy List/i }));
+      fireEvent.click(within(menu).getByRole('menuitem', { name: 'UserActionsMenu.addBuddy' }));
     }
     expect(mockWebClient.request.session.addToBuddyList).not.toHaveBeenCalledWith('carol');
   });

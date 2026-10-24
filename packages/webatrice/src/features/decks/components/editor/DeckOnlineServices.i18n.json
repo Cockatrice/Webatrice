@@ -1,0 +1,15 @@
+{
+  "DeckTools": {
+    "print": "Print deck...",
+    "sendTo": "Send deck to online service",
+    "decklistOrg": "Create decklist (decklist.org)",
+    "decklistXyz": "Create decklist (decklist.xyz)",
+    "deckstats": "Analyze deck (deckstats.net)",
+    "tappedout": "Analyze deck (tappedout.net)",
+    "empty": "There are no cards in your deck to be exported",
+    "zone": {
+      "main": "Mainboard",
+      "sideboard": "Sideboard"
+    }
+  }
+}

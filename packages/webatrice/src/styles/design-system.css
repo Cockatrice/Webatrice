@@ -1,0 +1,44 @@
+/* Redesign foundation (comfortable density): type, radius, spacing and
+   elevation roles that sit beside the colour tokens in tokens.css. */
+
+:root {
+  --font-body: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display: 'Space Grotesk', 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'Cascadia Mono', monospace;
+  --radius: 8px;
+  --radius-sm: 6px;
+  --radius-lg: 12px;
+  --row-h: 40px;
+  --pad: 16px;
+  --gap: 12px;
+  --fs-scale: 1.0715;
+  --fs-ui: calc(14px * var(--fs-scale));
+  --lh-ui: 1.45;
+  --fs-ui-sm: calc(12px * var(--fs-scale));
+  --shadow-pop: 0 12px 32px -8px rgb(0 0 0 / 0.55);
+  --shadow-panel: none;
+}
+
+:root[data-theme='light'] {
+  --shadow-pop: 0 12px 32px -10px rgb(20 20 40 / 0.22);
+}
+
+.ui-link,
+.ui-links a {
+  color: rgb(var(--text-link));
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+  border-radius: 2px;
+}
+
+.ui-link:hover,
+.ui-links a:hover {
+  text-decoration-thickness: 2px;
+}
+
+.ui-link:focus-visible,
+.ui-links a:focus-visible {
+  outline: 2px solid rgb(var(--accent-primary));
+  outline-offset: 2px;
+}

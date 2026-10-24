@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useTranslation } from 'react-i18next';
@@ -18,6 +18,7 @@ interface KnownHostFormProps {
 }
 
 const KnownHostForm = ({ host, onRemove, onSubmit }: KnownHostFormProps) => {
+  const desktopPortHelpId = useId();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const { t } = useTranslation();
 
@@ -27,6 +28,7 @@ const KnownHostForm = ({ host, onRemove, onSubmit }: KnownHostFormProps) => {
       name: host?.name ?? '',
       host: host?.host ?? '',
       port: host?.port ?? '',
+      desktopPort: host?.desktopPort ?? '',
     },
     resolver: zodResolver(buildKnownHostFormSchema(t)),
   });
@@ -34,7 +36,9 @@ const KnownHostForm = ({ host, onRemove, onSubmit }: KnownHostFormProps) => {
   const submit = handleSubmit(onSubmit);
 
   const handleRemoveClick = () => {
-    if (!host) return;
+    if (!host) {
+      return;
+    }
     if (!confirmDelete) {
       setConfirmDelete(true);
       return;
@@ -50,6 +54,7 @@ const KnownHostForm = ({ host, onRemove, onSubmit }: KnownHostFormProps) => {
         render={({ field, fieldState }) => (
           <InputField
             {...field}
+            disabled={host?.editable === false}
             label={t('Common.label.hostName')}
             error={fieldState.error?.message}
             touched={fieldState.isTouched}
@@ -62,6 +67,7 @@ const KnownHostForm = ({ host, onRemove, onSubmit }: KnownHostFormProps) => {
         render={({ field, fieldState }) => (
           <InputField
             {...field}
+            disabled={host?.editable === false}
             label={t('Common.label.hostAddress')}
             error={fieldState.error?.message}
             touched={fieldState.isTouched}
@@ -74,6 +80,7 @@ const KnownHostForm = ({ host, onRemove, onSubmit }: KnownHostFormProps) => {
         render={({ field, fieldState }) => (
           <InputField
             {...field}
+            disabled={host?.editable === false}
             label={t('Common.label.port')}
             type="number"
             error={fieldState.error?.message}
@@ -82,23 +89,50 @@ const KnownHostForm = ({ host, onRemove, onSubmit }: KnownHostFormProps) => {
         )}
       />
 
+      <Controller
+        name="desktopPort"
+        control={control}
+        render={({ field, fieldState }) => (
+          <div>
+            <InputField
+              {...field}
+              value={field.value ?? ''}
+              label={t('KnownHostForm.label.desktopPort')}
+              type="number"
+              min={1}
+              max={65535}
+              step={1}
+              aria-describedby={desktopPortHelpId}
+              error={fieldState.error?.message}
+              touched={fieldState.isTouched}
+            />
+            <p id={desktopPortHelpId} className="mt-1 text-xs text-text-muted">
+              {t('KnownHostForm.desktopPortHelp')}
+            </p>
+          </div>
+        )}
+      />
+
       <button
         type="submit"
-        className="w-full px-4 py-2.5 rounded-md text-sm font-semibold bg-accent text-white hover:bg-accent-hover shadow-glow transition-colors"
+        className={[
+          'w-full px-4 py-2.5 rounded-md text-sm font-semibold bg-accent',
+          'text-on-accent hover:bg-accent-hover shadow-glow transition-colors',
+        ].join(' ')}
       >
         {host ? t('Common.label.saveChanges') : t('KnownHostForm.label.add')}
       </button>
 
       <div className="flex items-center justify-between pt-1">
         <div>
-          {host && (
+          {host?.editable && (
             <button
               type="button"
               onClick={handleRemoveClick}
               className={[
                 'px-3 py-1.5 rounded-md text-sm font-medium transition-colors',
                 confirmDelete
-                  ? 'bg-red-500/15 text-red-300 border border-red-500/40 hover:bg-red-500/25'
+                  ? 'bg-red-500/15 text-danger border border-red-500/40 hover:bg-red-500/25'
                   : 'text-text-secondary hover:text-text-primary hover:bg-bg-elevated',
               ].join(' ')}
             >

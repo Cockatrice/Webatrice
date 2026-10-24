@@ -1,0 +1,39 @@
+{
+  "UserGamesDialog": {
+    "menu": {
+      "showGames": "Show this user's games",
+      "offline": "This user is offline."
+    },
+    "title": "{name}'s games",
+    "loading": "Loading games…",
+    "empty": "{name} is not in any games.",
+    "column": {
+      "room": "Room",
+      "description": "Description",
+      "creator": "Creator",
+      "type": "Type",
+      "restrictions": "Restrictions",
+      "players": "Players",
+      "spectators": "Spectators"
+    },
+    "action": {
+      "join": "Join",
+      "spectate": "Join as spectator",
+      "joinAsJudge": "Join as judge",
+      "spectateAsJudge": "Join as judge spectator"
+    },
+    "error": {
+      "title": "Error",
+      "userNotFound": "This user does not exist.",
+      "ignored": "You are being ignored by {name} and can't see their games.",
+      "unknown": "Could not get {name}'s games.",
+      "joinRoomFirst": "Please join the respective room first."
+    },
+    "password": {
+      "title": "Password required",
+      "label": "Password for \"{name}\":",
+      "gameIdLabel": "Password for game #{gameId}:",
+      "submit": "Join"
+    }
+  }
+}

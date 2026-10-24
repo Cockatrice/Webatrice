@@ -1,0 +1,7 @@
+{
+  "GameErrorBoundary": {
+    "title": "The game board hit an unexpected error",
+    "message": "You are still in the game. Reload the board to pick up where you left off.",
+    "retry": "Reload board"
+  }
+}

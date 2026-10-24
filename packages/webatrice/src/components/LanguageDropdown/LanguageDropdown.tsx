@@ -1,19 +1,21 @@
 import { useTranslation } from 'react-i18next';
-import { Select, MenuItem, SelectChangeEvent } from '@mui/material';
+import MenuItem from '@mui/material/MenuItem';
+import Select, { type SelectChangeEvent } from '@mui/material/Select';
 import FormControl from '@mui/material/FormControl';
 
+import { useLanguagePreference } from '@app/hooks';
 import { Images } from '@app/images';
 import { Language, LanguageCountry, LanguageNative } from '@app/types';
 import './LanguageDropdown.css';
 
 const LanguageDropdown = () => {
-  const { t, i18n } = useTranslation();
-  const currentLanguage = i18n.resolvedLanguage ?? i18n.language ?? '';
+  const { t } = useTranslation();
+  const { current, choose } = useLanguagePreference();
 
   const onLanguageChange = (event: SelectChangeEvent) => {
     const next = event.target.value as Language;
-    if (next !== currentLanguage) {
-      void i18n.changeLanguage(next);
+    if (next !== current) {
+      void choose(next);
     }
   };
 
@@ -22,11 +24,12 @@ const LanguageDropdown = () => {
       <Select
         id="LanguageDropdown-select"
         margin="dense"
-        value={currentLanguage}
+        value={current}
         fullWidth
         onChange={onLanguageChange}
+        inputProps={{ 'aria-label': t('Common.languagePicker') }}
       >
-        {Object.keys(Language).map((lang) => {
+        {Object.values(Language).map((lang) => {
           const country = LanguageCountry[lang];
           const nativeName = LanguageNative[lang];
           const translatedName = t(`Common.languages.${lang}`);
@@ -34,7 +37,11 @@ const LanguageDropdown = () => {
           return (
             <MenuItem value={lang} key={lang}>
               <div className="LanguageDropdown-item">
-                <img className="LanguageDropdown-item__image" src={Images.Countries[country]} />
+                {country ? (
+                  <img className="LanguageDropdown-item__image" src={Images.Countries[country]} alt="" />
+                ) : (
+                  <span className="LanguageDropdown-item__code">{lang}</span>
+                )}
                 <span className="LanguageDropdown-item__label">
                   {nativeName} {nativeName !== translatedName && <>({translatedName})</>}
                 </span>

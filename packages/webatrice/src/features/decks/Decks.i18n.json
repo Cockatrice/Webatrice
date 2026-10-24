@@ -1,0 +1,47 @@
+{
+  "Decks": {
+    "listError": "Failed to load your decks from the server.",
+    "retry": "Retry",
+    "moveFailed": "Couldn’t move {name}. The original deck is unchanged.",
+    "uploadFailed": "Couldn’t save {name} to the server.",
+    "dismiss": "Dismiss",
+    "list": {
+      "title": "My Decks",
+      "viewMode": "View mode",
+      "view": {
+        "card": "Grid",
+        "compact": "List"
+      },
+      "refreshLabel": "Refresh deck list",
+      "newDeck": "New deck",
+      "defaultDeckName": "New Deck",
+      "loading": "Loading decks…",
+      "emptyTitle": "No decks yet",
+      "emptyBody": "Decks are saved to your account on this server. Bring your decks over from desktop Cockatrice, paste a list from another site, or start a new one.",
+      "created": "Created {age}",
+      "age": {
+        "unknown": "unknown",
+        "justNow": "just now"
+      },
+      "emptyFromDesktop": "Import from Cockatrice",
+      "emptyPaste": "Paste a deck list",
+      "emptySources": "Lists from Moxfield, Archidekt, MTG Arena, MTGO and TappedOut work too."
+    },
+    "badge": {
+      "bracket": "Commander Bracket {level}",
+      "bracketShort": "B{level}",
+      "priceLoading": "Loading price…",
+      "priceNone": "No cached price — open the deck to compute it",
+      "priceTotal": "TCGplayer USD total",
+      "priceTotalMissing": "TCGplayer USD total. {count, plural, one {# card} other {# cards}} had no price on file — actual total is higher.",
+      "identity": "Colour identity: {colours}"
+    },
+    "grid": {
+      "decks": "Decks",
+      "disconnected": "Connect to the server to change this deck.",
+      "stillLoading": "Still loading this deck from the server.",
+      "noMatches": "No decks match these filters."
+    },
+    "dropToImport": "Drop to import into your deck library"
+  }
+}

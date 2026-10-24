@@ -2,19 +2,23 @@ import { CaseReducer, PayloadAction } from '@reduxjs/toolkit';
 import { App } from '../../types';
 import { Event_ServerShutdown } from '@cockatrice/sockatrice/generated';
 import { WebsocketTypes } from '@cockatrice/sockatrice/types';
-import { ServerConnectionHealth, ServerState, ServerStateStatus } from './server.interfaces';
+import { ServerConnectionHealth, ServerLatency, ServerState, ServerStateStatus } from './server.interfaces';
+import { initialStaffState } from './server.reducer.staff';
+import { initialReportsState } from './server.reducer.reports';
 
-// Healthy baseline (no missed pongs) shared by initialState, the updateStatus
-// lifecycle reset, the getConnectionHealth selector fallback, and test fixtures
-// so the four never drift. Never mutated in place — reducers that change health
-// assign a fresh object (see connectionHealthChanged).
 export const HEALTHY_CONNECTION_HEALTH: ServerConnectionHealth = {
   missedPongs: 0,
   silentForMs: 0,
 };
 
+export const EMPTY_LATENCY: ServerLatency = {
+  stats: { lastMs: 0, medianMs: 0, p95Ms: 0, maxMs: 0, sampleCount: 0 },
+  samplesMs: [],
+};
+
 export const initialState: ServerState = {
   initialized: false,
+  sessionEpoch: 0,
   testConnectionStatus: null,
   buddyList: {},
   ignoreList: {},
@@ -25,7 +29,9 @@ export const initialState: ServerState = {
     description: null
   },
   connectionHealth: HEALTHY_CONNECTION_HEALTH,
+  latency: EMPTY_LATENCY,
   connectUnreachable: false,
+  loginFailureCode: null,
   info: {
     message: null,
     name: null,
@@ -44,6 +50,7 @@ export const initialState: ServerState = {
   },
   locale: undefined,
   messages: {},
+  privateChatNotices: {},
   userInfo: {},
   notifications: [],
   serverShutdown: null,
@@ -56,18 +63,22 @@ export const initialState: ServerState = {
   replays: {},
   backendDecks: null,
   downloadedDeck: null,
+  deckSharesMine: null,
+  publicDecks: {},
   downloadedReplay: null,
   gamesOfUser: {},
+  gamesOfUserRoomNames: {},
+  gamesOfUserStatus: {},
   registrationError: null,
+  staff: initialStaffState,
+  reports: initialReportsState,
 };
 
 export const connectionReducers = {
-  // Reset reducers rebuild from initialState, which would drop the chosen UI
-  // locale on connect/disconnect; carry it through so locale-aware sorting
-  // survives a reconnect (see server.interfaces ServerState.locale).
   initialized: ((state) => ({
     ...initialState,
     initialized: true,
+    sessionEpoch: state.sessionEpoch ?? 0,
     locale: state.locale,
   })) as CaseReducer<ServerState>,
 
@@ -78,7 +89,12 @@ export const connectionReducers = {
   connectionAttempted: ((state) => {
     state.status.connectionAttemptMade = true;
     state.connectUnreachable = false;
+    state.loginFailureCode = null;
   }) as CaseReducer<ServerState>,
+
+  loginFailed: ((state, action) => {
+    state.loginFailureCode = action.payload?.responseCode ?? null;
+  }) as CaseReducer<ServerState, PayloadAction<{ responseCode?: number } | undefined>>,
 
   connectUnreachable: ((state) => {
     state.connectUnreachable = true;
@@ -101,14 +117,10 @@ export const connectionReducers = {
     state.testConnectionStatus = 'failed';
   }) as CaseReducer<ServerState>,
 
-  // testConnectionStatus is a login-screen probe result, independent of the
-  // live game socket — carry it through resets (like status/locale) so a
-  // disconnect neither disables the login button (LoginForm gates on 'success')
-  // nor triggers a re-probe that would count against Servatrice's per-IP
-  // connection cap (security/max_users_per_address, default 4).
   clearStore: ((state) => ({
     ...initialState,
     status: { ...state.status },
+    sessionEpoch: (state.sessionEpoch ?? 0) + 1,
     locale: state.locale,
     testConnectionStatus: state.testConnectionStatus,
   })) as CaseReducer<ServerState>,
@@ -116,11 +128,11 @@ export const connectionReducers = {
   disconnected: ((state) => ({
     ...initialState,
     status: { ...state.status },
+    sessionEpoch: (state.sessionEpoch ?? 0) + 1,
     locale: state.locale,
     testConnectionStatus: state.testConnectionStatus,
-    // Load-bearing: the failure sets connectUnreachable just before the same-tick
-    // DISCONNECTED that triggers this rebuild, so carry it or it's wiped before render.
     connectUnreachable: state.connectUnreachable,
+    loginFailureCode: state.loginFailureCode,
   })) as CaseReducer<ServerState>,
 
   serverMessage: ((state, action) => {
@@ -128,17 +140,19 @@ export const connectionReducers = {
   }) as CaseReducer<ServerState, PayloadAction<{ message: string }>>,
 
   updateInfo: ((state, action) => {
-    const { name, version } = action.payload.info;
+    const { name, version, supportsPasswordHash } = action.payload.info;
     state.info.name = name;
     state.info.version = version;
-  }) as CaseReducer<ServerState, PayloadAction<{ info: { name: string; version: string } }>>,
+    state.info.supportsPasswordHash = supportsPasswordHash;
+  }) as CaseReducer<ServerState, PayloadAction<{ info: { name: string; version: string; supportsPasswordHash?: boolean } }>>,
 
   updateStatus: ((state, action) => {
     const { status } = action.payload;
+    if (status.state === WebsocketTypes.StatusEnum.LOGGED_IN && state.status.state !== status.state) {
+      state.sessionEpoch = (state.sessionEpoch ?? 0) + 1;
+    }
     state.status.state = status.state;
     state.status.description = status.description;
-    // Any status transition is a socket lifecycle change; stale degraded
-    // health from the previous socket must not survive it.
     state.connectionHealth = HEALTHY_CONNECTION_HEALTH;
 
     if (status.state === WebsocketTypes.StatusEnum.DISCONNECTED) {
@@ -150,6 +164,10 @@ export const connectionReducers = {
     const { missedPongs, silentForMs } = action.payload;
     state.connectionHealth = { missedPongs, silentForMs };
   }) as CaseReducer<ServerState, PayloadAction<{ missedPongs: number; silentForMs: number }>>,
+
+  latencyStatsUpdated: ((state, action) => {
+    state.latency = action.payload;
+  }) as CaseReducer<ServerState, PayloadAction<ServerLatency>>,
 
   serverShutdown: ((state, action) => {
     state.serverShutdown = action.payload.data;

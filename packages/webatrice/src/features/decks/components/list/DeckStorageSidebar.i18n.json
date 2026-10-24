@@ -1,0 +1,11 @@
+{
+  "DeckStorageSidebar": {
+    "subtitle": "Server deck storage · {count, plural, one {# deck} other {# decks}}",
+    "folders": "Folders",
+    "allDecks": "All decks",
+    "sharing": "Sharing",
+    "publicDecks": "Public decks",
+    "expand": "Expand {name}",
+    "collapse": "Collapse {name}"
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "ServerNotices": {
+    "closed": {
+      "title": "Connection closed"
+    },
+    "shutdown": {
+      "title": "Scheduled server shutdown",
+      "message": "The server is going to be restarted in {countdown}.\nAll running games will be lost.\nReason for shutdown: {reason}"
+    },
+    "unknown": {
+      "title": "Unknown Event",
+      "message": "The server has sent you a message that your client does not understand.\nThis message might mean there is a new version of Cockatrice available or this server is running a custom or pre-release version.\n\nTo update your client, reload this page."
+    },
+    "idle": {
+      "title": "Idle Timeout",
+      "message": "You are about to be logged out due to inactivity."
+    },
+    "promoted": {
+      "title": "Promotion",
+      "message": "You have been promoted. Please log out and back in for changes to take effect."
+    },
+    "warning": {
+      "title": "Warned",
+      "message": "You have received a warning due to {reason}.\nPlease refrain from engaging in this activity or further actions may be taken against you. If you have any questions, please private message a moderator."
+    },
+    "custom": {
+      "message": "You have received the following message from the server.\n(custom messages like these could be untranslated)"
+    }
+  }
+}

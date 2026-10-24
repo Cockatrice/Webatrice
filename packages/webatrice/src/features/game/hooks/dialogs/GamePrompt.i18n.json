@@ -1,0 +1,64 @@
+{
+  "GamePrompt": {
+    "token": {
+      "title": "Create tokens",
+      "label": "Number",
+      "create": "Create",
+      "invalid": "Enter 1 to {max}"
+    },
+    "action": {
+      "save": "Save",
+      "set": "Set"
+    },
+    "life": {
+      "title": "Set life total",
+      "label": "Life total",
+      "description": "Numbers or math (e.g. 40+10)",
+      "invalid": "Enter a number or a sum like 40+10"
+    },
+    "powerToughness": {
+      "title": "Change power/toughness",
+      "label": "Change stats to",
+      "placeholder": "e.g. 3/4, +1/+1, or blank to clear"
+    },
+    "annotation": {
+      "title": "Set annotation",
+      "label": "Please enter the new annotation",
+      "placeholder": "Leave blank to clear"
+    },
+    "counter": {
+      "title": "Set counter {counter}",
+      "label": "Counter value"
+    },
+    "library": {
+      "numberOfCards": "Number of cards",
+      "empty": "The library is empty",
+      "moveFromTopTitle": "Place card X cards from top of library",
+      "position": "Place at position (1 = top, {count} = bottom)"
+    },
+    "mulligan": {
+      "title": "Draw hand",
+      "helper": "0 and lower are in comparison to current hand size"
+    },
+    "draw": {
+      "cardsTitle": "Draw cards"
+    },
+    "view": {
+      "topLibrary": "View top cards of library",
+      "bottomLibrary": "View bottom cards of library",
+      "action": "View",
+      "revealTop": "Reveal top cards of library"
+    },
+    "playerCounter": {
+      "title": "Set counter",
+      "current": "Current: {count}"
+    },
+    "validation": {
+      "integer": "Enter an integer.",
+      "integerRange": "Enter an integer between {min} and {max}.",
+      "positiveInteger": "Enter a positive integer",
+      "zeroOrMore": "Enter 0 or more",
+      "oneOrMore": "Enter 1 or more"
+    }
+  }
+}

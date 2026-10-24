@@ -10,15 +10,20 @@ import {
   makePlayerProperties,
 } from '@cockatrice/datatrice/testing';
 
+import { GameReadOnlyProvider } from '../components/ui/GameReadOnlyContext';
 import { useGameAffordances } from './useGameAffordances';
 
-function makeWrapper(gamesState: Pick<GamesState, 'games'>) {
+function makeWrapper(gamesState: Pick<GamesState, 'games'>, readOnly = false) {
   const store = configureStore({
     reducer: { games: games.gamesReducer },
     preloadedState: { games: { ...gamesState, pings: {} } } as { games: GamesState },
   });
   return function Wrapper({ children }: { children: ReactNode }) {
-    return <Provider store={store}>{children}</Provider>;
+    return (
+      <Provider store={store}>
+        <GameReadOnlyProvider value={readOnly}>{children}</GameReadOnlyProvider>
+      </Provider>
+    );
   };
 }
 
@@ -59,6 +64,29 @@ describe('useGameAffordances', () => {
     expect(result.current.canConcede).toBe(true);
     expect(result.current.canUnconcede).toBe(false);
     expect(result.current.canRoll).toBe(true);
+  });
+
+  it('grants nothing on a read-only (replay) board, even to a seated active player', () => {
+    const game = makeGameEntry({
+      localPlayerId: 7,
+      started: true,
+      activePlayerId: 7,
+      players: { 7: makePlayerEntry({ properties: makePlayerProperties({ playerId: 7 }) }) },
+    });
+    const wrapper = makeWrapper({ games: { 1: { ...game, info: { ...game.info, gameId: 1 } } } }, true);
+
+    const { result } = renderHook(() => useGameAffordances(1), { wrapper });
+
+    expect(result.current).toMatchObject({
+      hasLiveGame: false,
+      isParticipant: false,
+      canPassTurn: false,
+      canReverseTurn: false,
+      canAdvancePhase: false,
+      canConcede: false,
+      canUnconcede: false,
+      canRoll: false,
+    });
   });
 
   it('flips concede/unconcede when the local player has conceded', () => {

@@ -1,7 +1,52 @@
 import { create } from '@bufbuild/protobuf';
 import { describe, expect, it } from 'vitest';
 
-import { Command_Concede_ext, Command_CreateGame_ext, Command_DeckSelect_ext, Command_GameSay_ext, Command_JoinGame_ext, Command_JoinRoom_ext, Command_LeaveGame_ext, Event_CreateCounterSchema, Event_CreateCounter_ext, Event_DrawCardsSchema, Event_DrawCards_ext, Event_GameClosedSchema, Event_GameClosed_ext, Event_GameJoinedSchema, Event_GameJoined_ext, Event_GameSaySchema, Event_GameSay_ext, Event_GameStateChangedSchema, Event_GameStateChanged_ext, Event_LeaveSchema, Event_Leave_LeaveReason, Event_Leave_ext, Event_ListRoomsSchema, Event_ListRooms_ext, Event_MoveCardSchema, Event_MoveCard_ext, Event_PlayerPropertiesChangedSchema, Event_PlayerPropertiesChanged_ext, Event_SetCounterSchema, Event_SetCounter_ext, Response_JoinRoomSchema, Response_JoinRoom_ext, Response_ResponseCode, ServerInfo_CardSchema, ServerInfo_CounterSchema, ServerInfo_GameSchema, ServerInfo_PlayerPropertiesSchema, ServerInfo_PlayerSchema, ServerInfo_RoomSchema, ServerInfo_UserSchema, ServerInfo_ZoneSchema, ServerInfo_Zone_ZoneType } from '@cockatrice/sockatrice/generated';
+import {
+  Command_Concede_ext,
+  Command_CreateGame_ext,
+  Command_DeckSelect_ext,
+  Command_GameSay_ext,
+  Command_JoinGame_ext,
+  Command_JoinRoom_ext,
+  Command_LeaveGame_ext,
+  Event_CreateCounterSchema,
+  Event_CreateCounter_ext,
+  Event_DrawCardsSchema,
+  Event_DrawCards_ext,
+  Event_GameClosedSchema,
+  Event_GameClosed_ext,
+  Event_GameJoinedSchema,
+  Event_GameJoined_ext,
+  Event_GameSaySchema,
+  Event_GameSay_ext,
+  Event_GameStateChangedSchema,
+  Event_GameStateChanged_ext,
+  Event_LeaveSchema,
+  Event_Leave_LeaveReason,
+  Event_Leave_ext,
+  Event_ListRoomsSchema,
+  Event_ListRooms_ext,
+  Event_MoveCardSchema,
+  Event_MoveCard_ext,
+  Event_PlayerPropertiesChangedSchema,
+  Event_PlayerPropertiesChanged_ext,
+  Event_ReverseTurnSchema,
+  Event_ReverseTurn_ext,
+  Event_SetCounterSchema,
+  Event_SetCounter_ext,
+  Response_JoinRoomSchema,
+  Response_JoinRoom_ext,
+  Response_ResponseCode,
+  ServerInfo_CardSchema,
+  ServerInfo_CounterSchema,
+  ServerInfo_GameSchema,
+  ServerInfo_PlayerPropertiesSchema,
+  ServerInfo_PlayerSchema,
+  ServerInfo_RoomSchema,
+  ServerInfo_UserSchema,
+  ServerInfo_ZoneSchema,
+  ServerInfo_Zone_ZoneType,
+} from '@cockatrice/sockatrice/generated';
 import { store } from '../helpers/setup';
 import { GameCommands, RoomCommands } from '@cockatrice/sockatrice';
 
@@ -10,7 +55,6 @@ import {
   buildResponse,
   buildResponseMessage,
   buildSessionEventMessage,
-  buildRoomEventMessage,
   buildGameEventMessage,
   deliverMessage,
 } from '../helpers/protobuf-builders';
@@ -153,6 +197,37 @@ describe('game', () => {
     }));
 
     expect(store.getState().games.games[42]).toBeUndefined();
+  });
+
+  it('logs Event_ReverseTurn under the player who reversed the order', () => {
+    connectAndLogin();
+    joinGame(42);
+    const seat = (playerId: number, name: string) => create(ServerInfo_PlayerSchema, {
+      properties: create(ServerInfo_PlayerPropertiesSchema, {
+        playerId,
+        userInfo: create(ServerInfo_UserSchema, { name }),
+      }),
+    });
+    deliverMessage(buildGameEventMessage({
+      gameId: 42,
+      ext: Event_GameStateChanged_ext,
+      value: create(Event_GameStateChangedSchema, {
+        playerList: [seat(1, 'alice'), seat(2, 'bob')],
+        gameStarted: true,
+        activePlayerId: 1,
+      }),
+    }));
+
+    deliverMessage(buildGameEventMessage({
+      gameId: 42,
+      playerId: 2,
+      ext: Event_ReverseTurn_ext,
+      value: create(Event_ReverseTurnSchema, { reversed: true }),
+    }));
+
+    const game = store.getState().games.games[42];
+    expect(game.reversed).toBe(true);
+    expect(game.messages.at(-1)).toMatchObject({ playerId: 2, message: 'bob reversed turn order, now it\'s reversed.' });
   });
 
   it('sends outbound Command_GameSay with correct gameId and message', () => {

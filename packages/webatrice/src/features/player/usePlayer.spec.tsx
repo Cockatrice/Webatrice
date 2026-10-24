@@ -7,6 +7,7 @@ import { createStore } from '@cockatrice/datatrice';
 import { WebClientContext } from '@cockatrice/datatrice/react';
 
 import { rootReducerMap, type RootState } from '../../store';
+import { getSettings, settingsStore } from '../../hooks/useSettings';
 import { createMockWebClient, connectedState, makeUser } from '../../__test-utils__';
 import { usePlayer } from './usePlayer';
 
@@ -34,7 +35,7 @@ function setup(preloadedState: Partial<RootState>, name: string | undefined) {
     );
   }
   const { result } = renderHook(() => usePlayer(), { wrapper: Wrapper });
-  return { result, webClient };
+  return { result, webClient, store };
 }
 
 const stateWithPlayer = (name: string, overrides = {}) => ({
@@ -65,6 +66,16 @@ describe('usePlayer', () => {
     expect(webClient.request.session.getUserInfo).not.toHaveBeenCalled();
   });
 
+  it('opens the conversation while the page shows another player, so presence notices land in it', () => {
+    const { store } = setup(stateWithPlayer('alice'), 'alice');
+    expect(store.getState().server.messages.alice).toEqual([]);
+  });
+
+  it('opens no conversation with yourself', () => {
+    const { store } = setup(stateWithPlayer('testUser'), 'testUser');
+    expect(store.getState().server.messages.testUser).toBeUndefined();
+  });
+
   it('marks the current user as self', () => {
     const { result } = setup(stateWithPlayer('testUser'), 'testUser');
     expect(result.current.isSelf).toBe(true);
@@ -77,6 +88,26 @@ describe('usePlayer', () => {
     );
     expect(result.current.isABuddy).toBe(true);
     expect(result.current.isIgnored).toBe(false);
+  });
+
+  it('exposes the conversation with its notices and the player presence', () => {
+    const { result } = setup(
+      stateWithPlayer('alice', {
+        users: { alice: makeUser({ name: 'alice' }) },
+        privateChatNotices: { alice: [{ id: 1, kind: 'userJoined', position: 0 }] },
+      }),
+      'alice',
+    );
+    expect(result.current.isOnline).toBe(true);
+    expect(result.current.conversation).toEqual([
+      { type: 'notice', notice: { id: 1, kind: 'userJoined', position: 0 } },
+    ]);
+  });
+
+  it('reports a player missing from the online list as offline', () => {
+    const { result } = setup(stateWithPlayer('alice'), 'alice');
+    expect(result.current.isOnline).toBe(false);
+    expect(result.current.conversation).toEqual([]);
   });
 
   it('onAddBuddy / onRemoveBuddy hit the web client with the player name', () => {
@@ -95,20 +126,10 @@ describe('usePlayer', () => {
     expect(webClient.request.session.removeFromIgnoreList).toHaveBeenCalledWith('alice');
   });
 
-  it('onSendMessage / onWarnUser / onBanFromServer forward to the web client', () => {
+  it('onSendMessage forwards to the web client', () => {
     const { result, webClient } = setup(stateWithPlayer('alice'), 'alice');
     result.current.onSendMessage('hi');
     expect(webClient.request.session.message).toHaveBeenCalledWith('alice', 'hi');
-    result.current.onWarnUser('bad');
-    expect(webClient.request.moderator.warnUser).toHaveBeenCalledWith('alice', 'bad');
-    result.current.onBanFromServer(60, 'reason', 'visible');
-    expect(webClient.request.moderator.banFromServer).toHaveBeenCalledWith(
-      60,
-      'alice',
-      undefined,
-      'reason',
-      'visible',
-    );
   });
 
   it('handlers no-op when there is no player name', () => {
@@ -117,5 +138,42 @@ describe('usePlayer', () => {
     result.current.onSendMessage('x');
     expect(webClient.request.session.addToBuddyList).not.toHaveBeenCalled();
     expect(webClient.request.session.message).not.toHaveBeenCalled();
+  });
+
+  describe('private messages', () => {
+    const conversation = () => [
+      { senderName: 'alice', receiverName: 'TestUser', message: 'hi' },
+      { senderName: 'TestUser', receiverName: 'alice', message: 'hello' },
+      { senderName: 'alice', receiverName: 'TestUser', message: 'how are you' },
+    ];
+    const withConversation = (overrides = {}) => stateWithPlayer('alice', {
+      user: makeUser({ name: 'TestUser' }),
+      users: { alice: makeUser({ name: 'alice', userLevel: 3 }) },
+      messages: { alice: conversation() },
+      ...overrides,
+    });
+    const texts = (entries: { type: string; message?: { message: string }; notice?: { kind: string } }[]) =>
+      entries.map((entry) => (entry.type === 'message' ? entry.message!.message : `notice:${entry.notice!.kind}`));
+
+    beforeEach(async () => {
+      settingsStore.reset();
+      await getSettings();
+    });
+
+    it('returns the whole conversation by default', () => {
+      const { result } = setup(withConversation(), 'alice');
+      expect(texts(result.current.conversation)).toEqual(['hi', 'hello', 'how are you']);
+    });
+
+    it('applies the Chat preferences, e.g. ignoring non-buddies until you write to them', async () => {
+      const settings = await getSettings();
+      settings.ignoreNonBuddyUserMessages = true;
+      settingsStore.setValue(settings);
+
+      const { result } = setup(withConversation({
+        privateChatNotices: { alice: [{ id: 1, kind: 'userLeft', position: 1 }] },
+      }), 'alice');
+      expect(texts(result.current.conversation)).toEqual(['notice:userLeft', 'hello', 'how are you']);
+    });
   });
 });
